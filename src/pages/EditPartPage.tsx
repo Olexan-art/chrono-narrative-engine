@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Save, Sparkles, Trash2, Eye, Image, Loader2, Calendar, ExternalLink } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, Trash2, Eye, Image, Loader2, Calendar, ExternalLink, Languages } from "lucide-react";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction, generateImage, fetchNews, generateStory } from "@/lib/api";
@@ -27,6 +28,7 @@ export default function EditPartPage() {
   
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isTranslating, setIsTranslating] = useState<'en' | 'pl' | null>(null);
 
   const { data: part, isLoading } = useQuery({
     queryKey: ['part', id],
@@ -46,11 +48,35 @@ export default function EditPartPage() {
   const [formData, setFormData] = useState<Partial<Part>>({});
 
   // Initialize form data when part loads
-  useState(() => {
+  useEffect(() => {
     if (part) {
       setFormData(part);
     }
-  });
+  }, [part]);
+
+  const handleTranslate = async (targetLanguage: 'en' | 'pl') => {
+    setIsTranslating(targetLanguage);
+    try {
+      const { error } = await supabase.functions.invoke('translate', {
+        body: { partId: id, targetLanguage }
+      });
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['part', id] });
+      toast({ 
+        title: `Перекладено на ${targetLanguage === 'en' ? 'англійську' : 'польську'}!` 
+      });
+    } catch (error) {
+      toast({
+        title: "Помилка перекладу",
+        description: error instanceof Error ? error.message : "Не вдалося перекласти",
+        variant: "destructive"
+      });
+    } finally {
+      setIsTranslating(null);
+    }
+  };
 
   const updateMutation = useMutation({
     mutationFn: async (data: Partial<Part>) => {
@@ -245,6 +271,74 @@ export default function EditPartPage() {
                     <SelectItem value="published">Опубліковано</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Translations */}
+          <Card className="cosmic-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Languages className="w-5 h-5" />
+                    Переклади
+                  </CardTitle>
+                  <CardDescription>Автоматичний переклад на англійську та польську</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-[200px] p-4 border border-border rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium">🇬🇧 English</span>
+                    {part.title_en ? (
+                      <Badge variant="outline" className="text-primary border-primary">Є переклад</Badge>
+                    ) : (
+                      <Badge variant="secondary">Немає</Badge>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTranslate('en')}
+                    disabled={isTranslating === 'en'}
+                    className="w-full gap-2"
+                  >
+                    {isTranslating === 'en' ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Languages className="w-4 h-4" />
+                    )}
+                    {part.title_en ? 'Оновити переклад' : 'Перекласти'}
+                  </Button>
+                </div>
+                
+                <div className="flex-1 min-w-[200px] p-4 border border-border rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium">🇵🇱 Polski</span>
+                    {part.title_pl ? (
+                      <Badge variant="outline" className="text-primary border-primary">Є переклад</Badge>
+                    ) : (
+                      <Badge variant="secondary">Немає</Badge>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTranslate('pl')}
+                    disabled={isTranslating === 'pl'}
+                    className="w-full gap-2"
+                  >
+                    {isTranslating === 'pl' ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Languages className="w-4 h-4" />
+                    )}
+                    {part.title_pl ? 'Оновити переклад' : 'Перекласти'}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -336,7 +336,8 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
         cover_image_prompt: part3Data.story?.imagePrompt || '',
         cover_image_prompt_2: part3Data.story?.imagePrompt2 || '',
         cover_image_prompt_3: part3Data.story?.imagePrompt3 || '',
-        tweets: part3Data.story?.tweets || []
+        tweets: part3Data.story?.tweets || [],
+        chat_dialogue: part3Data.story?.chatDialogue || []
       });
       updateLastLog('success');
 
