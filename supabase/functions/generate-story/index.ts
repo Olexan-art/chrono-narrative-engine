@@ -137,7 +137,9 @@ serve(async (req) => {
   ],
   "tweets": [
     {"author": "Cosmic Observer 🌌", "handle": "@sync_point_ai", "content": "Іронічний твіт про головну подію оповідання з емодзі", "likes": 1234, "retweets": 567},
-    {"author": "Future Historian 📚", "handle": "@narrator_2077", "content": "Другий саркастичний твіт з іншого кута зору", "likes": 890, "retweets": 234}
+    {"author": "Future Historian 📚", "handle": "@narrator_2077", "content": "Другий саркастичний твіт з іншого кута зору", "likes": 890, "retweets": 234},
+    {"author": "Digital Prophet ⚡", "handle": "@future_now", "content": "Третій твіт з філософським поглядом на події", "likes": 456, "retweets": 123},
+    {"author": "Reality Check 🔍", "handle": "@truth_seeker", "content": "Четвертий скептичний твіт", "likes": 321, "retweets": 89}
   ]
 }`;
 
@@ -151,7 +153,7 @@ ${newsContext}
 Також створи:
 1. Два різних промти для ілюстрацій (різні сцени)
 2. Діалог між персонажами ${selectedCharacters[0].name} та ${selectedCharacters[1].name}, де вони коментують події оповідання у своєму характерному стилі (3-4 репліки)
-3. Два іронічних твіти про головну подію`;
+3. ЧОТИРИ іронічних твіти про головну подію від різних персонажів`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -193,7 +195,9 @@ ${newsContext}
         ],
         tweets: [
           { author: "Cosmic Observer 🌌", handle: "@sync_point_ai", content: "Коли думав що бачив все... 🌍", likes: 1234, retweets: 567 },
-          { author: "Future Historian 📚", handle: "@narrator_2077", content: "Записую для нащадків 📝", likes: 890, retweets: 234 }
+          { author: "Future Historian 📚", handle: "@narrator_2077", content: "Записую для нащадків 📝", likes: 890, retweets: 234 },
+          { author: "Digital Prophet ⚡", handle: "@future_now", content: "Майбутнє вже тут ⚡", likes: 456, retweets: 123 },
+          { author: "Reality Check 🔍", handle: "@truth_seeker", content: "А чи правда це? 🤔", likes: 321, retweets: 89 }
         ]
       };
     }

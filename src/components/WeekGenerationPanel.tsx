@@ -78,6 +78,7 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
       
       for (let i = 0; i < 5; i++) {
         const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+        // Use sequential week number (i + 1) consistently
         const weekOfMonth = i + 1;
         
         const weekParts = (parts || []).filter((p: Part) => {
@@ -135,7 +136,11 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
       const weekStart = selectedWeek.start;
       const year = getYear(weekStart);
       const month = getMonth(weekStart) + 1;
-      const weekOfMonth = Math.ceil(weekStart.getDate() / 7) || 1;
+      // Find which week index this is in the current view
+      const weekIndex = weeksData.findIndex(w => 
+        w.start.getTime() === selectedWeek.start.getTime()
+      );
+      const weekOfMonth = weekIndex !== -1 ? weekIndex + 1 : 1;
 
       addLog('=== ГЕНЕРАЦІЯ ГЛАВИ ТИЖНЯ ===', 'info');
       addLog(`Тиждень: ${format(selectedWeek.start, 'd MMMM', { locale: uk })} - ${format(selectedWeek.end, 'd MMMM yyyy', { locale: uk })}`);
@@ -328,13 +333,22 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
         description: part3Data.story?.summary || `Синтез тижня ${format(selectedWeek.start, 'd', { locale: uk })}-${format(selectedWeek.end, 'd MMMM', { locale: uk })}`,
         narrator_monologue: part3Data.story?.strangerMonologue || '',
         narrator_commentary: part3Data.story?.narratorCommentary || '',
-        cover_image_prompt: part3Data.story?.imagePrompt || ''
+        cover_image_prompt: part3Data.story?.imagePrompt || '',
+        cover_image_prompt_2: part3Data.story?.imagePrompt2 || '',
+        cover_image_prompt_3: part3Data.story?.imagePrompt3 || '',
+        tweets: part3Data.story?.tweets || []
       });
       updateLastLog('success');
 
-      // Step 6: Generate cover image
-      if (part3Data.story?.imagePrompt) {
-        addLog('Генерація обкладинки глави...');
+      // Step 6: Generate cover images (3 images)
+      const imagePrompts = [
+        { prompt: part3Data.story?.imagePrompt, index: 1, field: 'cover_image_url' },
+        { prompt: part3Data.story?.imagePrompt2, index: 2, field: 'cover_image_url_2' },
+        { prompt: part3Data.story?.imagePrompt3, index: 3, field: 'cover_image_url_3' }
+      ].filter(p => p.prompt);
+
+      for (const imgData of imagePrompts) {
+        addLog(`Генерація обкладинки #${imgData.index}...`);
         try {
           const imageResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image`, {
             method: 'POST',
@@ -343,8 +357,9 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
               'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
             },
             body: JSON.stringify({
-              prompt: part3Data.story.imagePrompt,
-              chapterId: chapter.id
+              prompt: imgData.prompt,
+              chapterId: chapter.id,
+              imageIndex: imgData.index
             }),
           });
           
@@ -352,12 +367,12 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
             updateLastLog('success');
           } else {
             updateLastLog('error');
-            addLog('Попередження: обкладинку не вдалося згенерувати');
+            addLog(`Попередження: обкладинку #${imgData.index} не вдалося згенерувати`);
             updateLastLog('error');
           }
         } catch (imgError) {
           updateLastLog('error');
-          addLog('Попередження: помилка генерації обкладинки');
+          addLog(`Попередження: помилка генерації обкладинки #${imgData.index}`);
           updateLastLog('error');
         }
       }

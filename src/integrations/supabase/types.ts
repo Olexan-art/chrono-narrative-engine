@@ -17,7 +17,11 @@ export type Database = {
       chapters: {
         Row: {
           cover_image_prompt: string | null
+          cover_image_prompt_2: string | null
+          cover_image_prompt_3: string | null
           cover_image_url: string | null
+          cover_image_url_2: string | null
+          cover_image_url_3: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -25,13 +29,18 @@ export type Database = {
           narrator_monologue: string | null
           number: number
           title: string
+          tweets: Json | null
           updated_at: string | null
           volume_id: string
           week_of_month: number
         }
         Insert: {
           cover_image_prompt?: string | null
+          cover_image_prompt_2?: string | null
+          cover_image_prompt_3?: string | null
           cover_image_url?: string | null
+          cover_image_url_2?: string | null
+          cover_image_url_3?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -39,13 +48,18 @@ export type Database = {
           narrator_monologue?: string | null
           number: number
           title: string
+          tweets?: Json | null
           updated_at?: string | null
           volume_id: string
           week_of_month: number
         }
         Update: {
           cover_image_prompt?: string | null
+          cover_image_prompt_2?: string | null
+          cover_image_prompt_3?: string | null
           cover_image_url?: string | null
+          cover_image_url_2?: string | null
+          cover_image_url_3?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -53,6 +67,7 @@ export type Database = {
           narrator_monologue?: string | null
           number?: number
           title?: string
+          tweets?: Json | null
           updated_at?: string | null
           volume_id?: string
           week_of_month?: number
@@ -66,6 +81,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      daily_views: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          view_date: string
+          views: number
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          view_date?: string
+          views?: number
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          view_date?: string
+          views?: number
+        }
+        Relationships: []
       }
       generations: {
         Row: {
@@ -368,6 +410,36 @@ export type Database = {
             | Database["public"]["Enums"]["narrative_structure"]
             | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      view_counts: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          unique_visitors: number
+          updated_at: string
+          views: number
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          unique_visitors?: number
+          updated_at?: string
+          views?: number
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          unique_visitors?: number
+          updated_at?: string
+          views?: number
         }
         Relationships: []
       }
