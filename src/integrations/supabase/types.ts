@@ -14,7 +14,383 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      chapters: {
+        Row: {
+          cover_image_prompt: string | null
+          cover_image_url: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          narrator_commentary: string | null
+          narrator_monologue: string | null
+          number: number
+          title: string
+          updated_at: string | null
+          volume_id: string
+          week_of_month: number
+        }
+        Insert: {
+          cover_image_prompt?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          narrator_commentary?: string | null
+          narrator_monologue?: string | null
+          number: number
+          title: string
+          updated_at?: string | null
+          volume_id: string
+          week_of_month: number
+        }
+        Update: {
+          cover_image_prompt?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          narrator_commentary?: string | null
+          narrator_monologue?: string | null
+          number?: number
+          title?: string
+          updated_at?: string | null
+          volume_id?: string
+          week_of_month?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chapters_volume_id_fkey"
+            columns: ["volume_id"]
+            isOneToOne: false
+            referencedRelation: "volumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generations: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          model_used: string | null
+          news_used: Json | null
+          part_id: string | null
+          prompt: string | null
+          result: string | null
+          success: boolean | null
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          model_used?: string | null
+          news_used?: Json | null
+          part_id?: string | null
+          prompt?: string | null
+          result?: string | null
+          success?: boolean | null
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          model_used?: string | null
+          news_used?: Json | null
+          part_id?: string | null
+          prompt?: string | null
+          result?: string | null
+          success?: boolean | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generations_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_items: {
+        Row: {
+          category: string | null
+          content: string | null
+          description: string | null
+          external_id: string | null
+          fetched_at: string | null
+          id: string
+          image_url: string | null
+          part_id: string | null
+          published_at: string | null
+          source_name: string | null
+          source_url: string | null
+          title: string
+          url: string
+          used_in_generation: boolean | null
+        }
+        Insert: {
+          category?: string | null
+          content?: string | null
+          description?: string | null
+          external_id?: string | null
+          fetched_at?: string | null
+          id?: string
+          image_url?: string | null
+          part_id?: string | null
+          published_at?: string | null
+          source_name?: string | null
+          source_url?: string | null
+          title: string
+          url: string
+          used_in_generation?: boolean | null
+        }
+        Update: {
+          category?: string | null
+          content?: string | null
+          description?: string | null
+          external_id?: string | null
+          fetched_at?: string | null
+          id?: string
+          image_url?: string | null
+          part_id?: string | null
+          published_at?: string | null
+          source_name?: string | null
+          source_url?: string | null
+          title?: string
+          url?: string
+          used_in_generation?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_items_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parts: {
+        Row: {
+          chapter_id: string
+          content: string
+          content_html: string | null
+          cover_image_prompt: string | null
+          cover_image_url: string | null
+          created_at: string | null
+          date: string
+          id: string
+          narrative_plot: Database["public"]["Enums"]["narrative_plot"] | null
+          narrative_purpose:
+            | Database["public"]["Enums"]["narrative_purpose"]
+            | null
+          narrative_source:
+            | Database["public"]["Enums"]["narrative_source"]
+            | null
+          narrative_special:
+            | Database["public"]["Enums"]["narrative_special"]
+            | null
+          narrative_structure:
+            | Database["public"]["Enums"]["narrative_structure"]
+            | null
+          news_sources: Json | null
+          number: number
+          published_at: string | null
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["story_status"] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          chapter_id: string
+          content?: string
+          content_html?: string | null
+          cover_image_prompt?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          date: string
+          id?: string
+          narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
+          narrative_purpose?:
+            | Database["public"]["Enums"]["narrative_purpose"]
+            | null
+          narrative_source?:
+            | Database["public"]["Enums"]["narrative_source"]
+            | null
+          narrative_special?:
+            | Database["public"]["Enums"]["narrative_special"]
+            | null
+          narrative_structure?:
+            | Database["public"]["Enums"]["narrative_structure"]
+            | null
+          news_sources?: Json | null
+          number: number
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["story_status"] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          chapter_id?: string
+          content?: string
+          content_html?: string | null
+          cover_image_prompt?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
+          narrative_purpose?:
+            | Database["public"]["Enums"]["narrative_purpose"]
+            | null
+          narrative_source?:
+            | Database["public"]["Enums"]["narrative_source"]
+            | null
+          narrative_special?:
+            | Database["public"]["Enums"]["narrative_special"]
+            | null
+          narrative_structure?:
+            | Database["public"]["Enums"]["narrative_structure"]
+            | null
+          news_sources?: Json | null
+          number?: number
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["story_status"] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parts_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settings: {
+        Row: {
+          auto_generation_enabled: boolean | null
+          bradbury_weight: number | null
+          clarke_weight: number | null
+          created_at: string | null
+          gaiman_weight: number | null
+          generation_interval_hours: number | null
+          id: string
+          last_auto_generation: string | null
+          narrative_plot: Database["public"]["Enums"]["narrative_plot"] | null
+          narrative_purpose:
+            | Database["public"]["Enums"]["narrative_purpose"]
+            | null
+          narrative_source:
+            | Database["public"]["Enums"]["narrative_source"]
+            | null
+          narrative_special:
+            | Database["public"]["Enums"]["narrative_special"]
+            | null
+          narrative_structure:
+            | Database["public"]["Enums"]["narrative_structure"]
+            | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_generation_enabled?: boolean | null
+          bradbury_weight?: number | null
+          clarke_weight?: number | null
+          created_at?: string | null
+          gaiman_weight?: number | null
+          generation_interval_hours?: number | null
+          id?: string
+          last_auto_generation?: string | null
+          narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
+          narrative_purpose?:
+            | Database["public"]["Enums"]["narrative_purpose"]
+            | null
+          narrative_source?:
+            | Database["public"]["Enums"]["narrative_source"]
+            | null
+          narrative_special?:
+            | Database["public"]["Enums"]["narrative_special"]
+            | null
+          narrative_structure?:
+            | Database["public"]["Enums"]["narrative_structure"]
+            | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_generation_enabled?: boolean | null
+          bradbury_weight?: number | null
+          clarke_weight?: number | null
+          created_at?: string | null
+          gaiman_weight?: number | null
+          generation_interval_hours?: number | null
+          id?: string
+          last_auto_generation?: string | null
+          narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
+          narrative_purpose?:
+            | Database["public"]["Enums"]["narrative_purpose"]
+            | null
+          narrative_source?:
+            | Database["public"]["Enums"]["narrative_source"]
+            | null
+          narrative_special?:
+            | Database["public"]["Enums"]["narrative_special"]
+            | null
+          narrative_structure?:
+            | Database["public"]["Enums"]["narrative_structure"]
+            | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      volumes: {
+        Row: {
+          cover_image_prompt: string | null
+          cover_image_url: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          month: number
+          number: number
+          summary: string | null
+          title: string
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          cover_image_prompt?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          month: number
+          number: number
+          summary?: string | null
+          title: string
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          cover_image_prompt?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          month?: number
+          number?: number
+          summary?: string | null
+          title?: string
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +399,37 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      narrative_plot:
+        | "overcoming_monster"
+        | "rags_to_riches"
+        | "quest"
+        | "comedy"
+        | "tragedy"
+        | "resurrection"
+        | "forbidden"
+        | "mystery"
+      narrative_purpose:
+        | "informational"
+        | "evaluative"
+        | "artistic"
+        | "instructive"
+        | "identificational"
+      narrative_source: "author" | "character" | "inconspicuous" | "polyphonic"
+      narrative_special:
+        | "conspiratorial"
+        | "transmedia"
+        | "personal"
+        | "corporate"
+        | "escapist"
+        | "propaganda"
+      narrative_structure:
+        | "linear"
+        | "retrospective"
+        | "flashforward"
+        | "circular"
+        | "parallel"
+        | "episodic"
+      story_status: "draft" | "scheduled" | "published"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +556,42 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      narrative_plot: [
+        "overcoming_monster",
+        "rags_to_riches",
+        "quest",
+        "comedy",
+        "tragedy",
+        "resurrection",
+        "forbidden",
+        "mystery",
+      ],
+      narrative_purpose: [
+        "informational",
+        "evaluative",
+        "artistic",
+        "instructive",
+        "identificational",
+      ],
+      narrative_source: ["author", "character", "inconspicuous", "polyphonic"],
+      narrative_special: [
+        "conspiratorial",
+        "transmedia",
+        "personal",
+        "corporate",
+        "escapist",
+        "propaganda",
+      ],
+      narrative_structure: [
+        "linear",
+        "retrospective",
+        "flashforward",
+        "circular",
+        "parallel",
+        "episodic",
+      ],
+      story_status: ["draft", "scheduled", "published"],
+    },
   },
 } as const
