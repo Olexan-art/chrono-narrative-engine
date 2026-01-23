@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot } from "lucide-react";
+import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -446,6 +446,10 @@ function SettingsPanel({ password }: { password: string }) {
 }
 
 function PartsPanel({ password }: { password: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const { data: parts = [] } = useQuery({
     queryKey: ['admin-parts'],
     queryFn: async () => {
@@ -465,6 +469,34 @@ function PartsPanel({ password }: { password: string }) {
       return data;
     }
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (partId: string) => {
+      await adminAction('deletePart', password, { id: partId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-parts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['latest-parts'] });
+      toast({ title: "Оповідання видалено" });
+      setDeletingId(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Помилка",
+        description: error instanceof Error ? error.message : "Не вдалося видалити",
+        variant: "destructive"
+      });
+      setDeletingId(null);
+    }
+  });
+
+  const handleDelete = (partId: string, partTitle: string) => {
+    if (window.confirm(`Видалити оповідання "${partTitle}"?`)) {
+      setDeletingId(partId);
+      deleteMutation.mutate(partId);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -502,6 +534,19 @@ function PartsPanel({ password }: { password: string }) {
               <Link to={`/read/${part.date}`}>
                 <Button size="sm" variant="ghost">Переглянути</Button>
               </Link>
+              <Button 
+                size="sm" 
+                variant="destructive" 
+                onClick={() => handleDelete(part.id, part.title)}
+                disabled={deletingId === part.id}
+                className="ml-auto"
+              >
+                {deletingId === part.id ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
