@@ -46,7 +46,7 @@ export default function Index() {
     queryFn: async () => {
       const { data } = await supabase
         .from('parts')
-        .select('*')
+        .select('id, title, content, date, status, tweets, cover_image_url')
         .eq('status', 'published')
         .order('date', { ascending: false })
         .limit(10);
@@ -59,7 +59,7 @@ export default function Index() {
     queryFn: async () => {
       const { data } = await supabase
         .from('parts')
-        .select('*')
+        .select('id, title, date, status')
         .eq('status', 'published')
         .gte('date', format(weekStart, 'yyyy-MM-dd'))
         .lte('date', format(weekEnd, 'yyyy-MM-dd'))
