@@ -8,6 +8,7 @@ import { Header } from "@/components/Header";
 import { CharacterChat } from "@/components/CharacterChat";
 import { TweetCard } from "@/components/TweetCard";
 import { supabase } from "@/integrations/supabase/client";
+import { useTrackView } from "@/hooks/useTrackView";
 
 function parseContentWithLinks(content: string): React.ReactNode {
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
@@ -73,6 +74,9 @@ export default function ReadPage() {
   const part = partId 
     ? parts.find((p: any) => p.id === partId) || parts[0]
     : parts[0];
+
+  // Track view
+  useTrackView('part', part?.id);
 
   const { data: adjacentParts } = useQuery({
     queryKey: ['adjacent-parts', date],

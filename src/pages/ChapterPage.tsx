@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Calendar, BookOpen, Loader2, Sparkles, Messa
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
+import { useTrackView } from "@/hooks/useTrackView";
 
 function parseContentWithLinks(content: string): React.ReactNode {
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
@@ -109,6 +110,9 @@ export default function ChapterPage() {
     },
     enabled: !!chapter
   });
+
+  // Track view
+  useTrackView('chapter', chapter?.id);
 
   if (isLoading) {
     return (

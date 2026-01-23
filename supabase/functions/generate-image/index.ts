@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, partId, imageIndex = 1 } = await req.json();
+    const { prompt, partId, chapterId, imageIndex = 1 } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -61,7 +61,7 @@ serve(async (req) => {
       throw new Error('No image generated');
     }
 
-    // If partId provided, save to database
+    // If partId provided, save to database (for parts)
     if (partId) {
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL')!,
@@ -82,6 +82,39 @@ serve(async (req) => {
         .from('generations')
         .insert({
           part_id: partId,
+          type: 'image',
+          prompt: enhancedPrompt,
+          result: imageUrl,
+          model_used: 'google/gemini-3-pro-image-preview',
+          success: true
+        });
+    }
+
+    // If chapterId provided, save to database (for chapters)
+    if (chapterId) {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+
+      // Update the appropriate image field based on imageIndex
+      let updateData: Record<string, string> = {};
+      if (imageIndex === 1) {
+        updateData = { cover_image_url: imageUrl, cover_image_prompt: prompt };
+      } else if (imageIndex === 2) {
+        updateData = { cover_image_url_2: imageUrl, cover_image_prompt_2: prompt };
+      } else if (imageIndex === 3) {
+        updateData = { cover_image_url_3: imageUrl, cover_image_prompt_3: prompt };
+      }
+
+      await supabase
+        .from('chapters')
+        .update(updateData)
+        .eq('id', chapterId);
+
+      await supabase
+        .from('generations')
+        .insert({
           type: 'image',
           prompt: enhancedPrompt,
           result: imageUrl,
