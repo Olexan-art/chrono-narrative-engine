@@ -5,6 +5,8 @@ export type NarrativePlot = 'overcoming_monster' | 'rags_to_riches' | 'quest' | 
 export type NarrativeSpecial = 'conspiratorial' | 'transmedia' | 'personal' | 'corporate' | 'escapist' | 'propaganda';
 export type StoryStatus = 'draft' | 'scheduled' | 'published';
 
+export type LLMProvider = 'lovable' | 'openai' | 'gemini' | 'anthropic';
+
 export interface Settings {
   id: string;
   auto_generation_enabled: boolean;
@@ -18,9 +20,64 @@ export interface Settings {
   bradbury_weight: number;
   clarke_weight: number;
   gaiman_weight: number;
+  // LLM settings
+  llm_provider: LLMProvider;
+  llm_text_model: string;
+  llm_image_model: string;
+  openai_api_key: string | null;
+  gemini_api_key: string | null;
+  anthropic_api_key: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export const LLM_MODELS = {
+  lovable: {
+    text: [
+      { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash Preview (швидкий)' },
+      { value: 'google/gemini-3-pro-preview', label: 'Gemini 3 Pro Preview (потужний)' },
+      { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+      { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+      { value: 'openai/gpt-5', label: 'GPT-5 (найпотужніший)' },
+      { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini' },
+      { value: 'openai/gpt-5.2', label: 'GPT-5.2 (новітній)' },
+    ],
+    image: [
+      { value: 'google/gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (новітній)' },
+      { value: 'google/gemini-2.5-flash-image-preview', label: 'Gemini 2.5 Flash Image' },
+    ]
+  },
+  openai: {
+    text: [
+      { value: 'gpt-4o', label: 'GPT-4o' },
+      { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+      { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+      { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+    ],
+    image: [
+      { value: 'dall-e-3', label: 'DALL-E 3' },
+      { value: 'dall-e-2', label: 'DALL-E 2' },
+    ]
+  },
+  gemini: {
+    text: [
+      { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+      { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+      { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+    ],
+    image: [
+      { value: 'imagen-3', label: 'Imagen 3' },
+    ]
+  },
+  anthropic: {
+    text: [
+      { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+      { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
+      { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
+    ],
+    image: []
+  }
+};
 
 export interface Volume {
   id: string;

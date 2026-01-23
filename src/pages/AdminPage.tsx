@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp } from "lucide-react";
+import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +19,8 @@ import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
 import { supabase } from "@/integrations/supabase/client";
-import type { Settings as SettingsType, AdminStats, Part, Volume, Chapter } from "@/types/database";
-import { NARRATIVE_OPTIONS } from "@/types/database";
+import type { Settings as SettingsType, AdminStats, Part, Volume, Chapter, LLMProvider } from "@/types/database";
+import { NARRATIVE_OPTIONS, LLM_MODELS } from "@/types/database";
 
 function AdminLogin({ onLogin }: { onLogin: (password: string) => void }) {
   const [password, setPassword] = useState("");
@@ -109,6 +109,7 @@ function StatsCard({ stats }: { stats: AdminStats }) {
 function SettingsPanel({ password }: { password: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
   
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -135,12 +136,218 @@ function SettingsPanel({ password }: { password: string }) {
     }
   });
 
+  const toggleApiKeyVisibility = (key: string) => {
+    setShowApiKeys(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   if (isLoading || !settings) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   }
 
+  const currentProvider = (settings.llm_provider || 'lovable') as LLMProvider;
+  const availableTextModels = LLM_MODELS[currentProvider]?.text || [];
+  const availableImageModels = LLM_MODELS[currentProvider]?.image || [];
+
   return (
     <div className="space-y-6">
+      {/* LLM Configuration */}
+      <Card className="cosmic-card border-primary/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="w-5 h-5 text-primary" />
+            AI/LLM Налаштування
+          </CardTitle>
+          <CardDescription>Підключення до штучного інтелекту для генерації контенту</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Provider Selection */}
+          <div className="space-y-2">
+            <Label>Провайдер LLM</Label>
+            <Select
+              value={currentProvider}
+              onValueChange={(v) => {
+                const provider = v as LLMProvider;
+                const defaultTextModel = LLM_MODELS[provider]?.text[0]?.value || '';
+                const defaultImageModel = LLM_MODELS[provider]?.image[0]?.value || '';
+                updateMutation.mutate({ 
+                  llm_provider: provider, 
+                  llm_text_model: defaultTextModel,
+                  llm_image_model: defaultImageModel
+                });
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="lovable">
+                  <div className="flex items-center gap-2">
+                    <span className="text-primary">✨</span>
+                    Lovable AI (безкоштовно)
+                  </div>
+                </SelectItem>
+                <SelectItem value="openai">
+                  <div className="flex items-center gap-2">
+                    <span>🤖</span>
+                    OpenAI (ChatGPT)
+                  </div>
+                </SelectItem>
+                <SelectItem value="gemini">
+                  <div className="flex items-center gap-2">
+                    <span>💎</span>
+                    Google Gemini
+                  </div>
+                </SelectItem>
+                <SelectItem value="anthropic">
+                  <div className="flex items-center gap-2">
+                    <span>🧠</span>
+                    Anthropic (Claude)
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {currentProvider === 'lovable' && (
+              <p className="text-xs text-muted-foreground">
+                Використовує вбудований AI шлюз Lovable без потреби в API ключі
+              </p>
+            )}
+          </div>
+
+          {/* API Keys for external providers */}
+          {currentProvider !== 'lovable' && (
+            <div className="space-y-4 p-4 border border-dashed border-primary/30 rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Key className="w-4 h-4" />
+                API Ключ
+              </div>
+              
+              {currentProvider === 'openai' && (
+                <div className="space-y-2">
+                  <Label>OpenAI API Key</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type={showApiKeys.openai ? 'text' : 'password'}
+                      value={settings.openai_api_key || ''}
+                      onChange={(e) => updateMutation.mutate({ openai_api_key: e.target.value })}
+                      placeholder="sk-..."
+                      className="font-mono"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => toggleApiKeyVisibility('openai')}
+                    >
+                      {showApiKeys.openai ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Отримати ключ: <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" className="text-primary hover:underline">platform.openai.com</a>
+                  </p>
+                </div>
+              )}
+
+              {currentProvider === 'gemini' && (
+                <div className="space-y-2">
+                  <Label>Google AI API Key</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type={showApiKeys.gemini ? 'text' : 'password'}
+                      value={settings.gemini_api_key || ''}
+                      onChange={(e) => updateMutation.mutate({ gemini_api_key: e.target.value })}
+                      placeholder="AIza..."
+                      className="font-mono"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => toggleApiKeyVisibility('gemini')}
+                    >
+                      {showApiKeys.gemini ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Отримати ключ: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" className="text-primary hover:underline">aistudio.google.com</a>
+                  </p>
+                </div>
+              )}
+
+              {currentProvider === 'anthropic' && (
+                <div className="space-y-2">
+                  <Label>Anthropic API Key</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type={showApiKeys.anthropic ? 'text' : 'password'}
+                      value={settings.anthropic_api_key || ''}
+                      onChange={(e) => updateMutation.mutate({ anthropic_api_key: e.target.value })}
+                      placeholder="sk-ant-..."
+                      className="font-mono"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => toggleApiKeyVisibility('anthropic')}
+                    >
+                      {showApiKeys.anthropic ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Отримати ключ: <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" className="text-primary hover:underline">console.anthropic.com</a>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Text Model Selection */}
+          {availableTextModels.length > 0 && (
+            <div className="space-y-2">
+              <Label>Модель для тексту</Label>
+              <Select
+                value={settings.llm_text_model || availableTextModels[0]?.value}
+                onValueChange={(v) => updateMutation.mutate({ llm_text_model: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTextModels.map(model => (
+                    <SelectItem key={model.value} value={model.value}>
+                      {model.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Image Model Selection */}
+          {availableImageModels.length > 0 ? (
+            <div className="space-y-2">
+              <Label>Модель для зображень</Label>
+              <Select
+                value={settings.llm_image_model || availableImageModels[0]?.value}
+                onValueChange={(v) => updateMutation.mutate({ llm_image_model: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableImageModels.map(model => (
+                    <SelectItem key={model.value} value={model.value}>
+                      {model.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : currentProvider === 'anthropic' && (
+            <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+              ⚠️ Anthropic не підтримує генерацію зображень. Для картинок буде використано Lovable AI.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card className="cosmic-card">
         <CardHeader>
           <CardTitle>Автогенерація</CardTitle>
