@@ -121,7 +121,7 @@ export default function CalendarPage() {
         chapter = chapterResult.chapter;
       }
 
-      // Create part
+      // Create part with new fields
       const partResult = await adminAction<{ part: Part }>(
         'createPart',
         password,
@@ -133,13 +133,19 @@ export default function CalendarPage() {
           date: dateStr,
           status: 'draft',
           cover_image_prompt: storyResult.story.imagePrompt,
+          cover_image_prompt_2: storyResult.story.imagePrompt2 || null,
+          chat_dialogue: storyResult.story.chatDialogue || [],
+          tweets: storyResult.story.tweets || [],
           news_sources: newsResult.articles.slice(0, 10).map(a => ({ url: a.url, title: a.title }))
         }
       );
 
-      // Generate image
+      // Generate images (both)
       if (storyResult.story.imagePrompt) {
-        await generateImage(storyResult.story.imagePrompt, partResult.part.id);
+        await generateImage(storyResult.story.imagePrompt, partResult.part.id, 1);
+      }
+      if (storyResult.story.imagePrompt2) {
+        await generateImage(storyResult.story.imagePrompt2, partResult.part.id, 2);
       }
 
       toast({

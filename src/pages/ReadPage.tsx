@@ -1,27 +1,25 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar, BookOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
+import { CharacterChat } from "@/components/CharacterChat";
+import { TweetCard } from "@/components/TweetCard";
 import { supabase } from "@/integrations/supabase/client";
-import type { Part } from "@/types/database";
 
 function parseContentWithLinks(content: string): React.ReactNode {
-  // Parse markdown-style links [text](url)
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   let match;
 
   while ((match = linkRegex.exec(content)) !== null) {
-    // Add text before the link
     if (match.index > lastIndex) {
       parts.push(content.slice(lastIndex, match.index));
     }
     
-    // Add the link
     parts.push(
       <a
         key={match.index}
@@ -37,7 +35,6 @@ function parseContentWithLinks(content: string): React.ReactNode {
     lastIndex = match.index + match[0].length;
   }
 
-  // Add remaining text
   if (lastIndex < content.length) {
     parts.push(content.slice(lastIndex));
   }
@@ -47,9 +44,11 @@ function parseContentWithLinks(content: string): React.ReactNode {
 
 export default function ReadPage() {
   const { date } = useParams<{ date: string }>();
+  const [searchParams] = useSearchParams();
+  const partId = searchParams.get('id');
 
-  const { data: part, isLoading, error } = useQuery({
-    queryKey: ['read-part', date],
+  const { data: parts = [], isLoading } = useQuery({
+    queryKey: ['read-parts', date],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('parts')
@@ -61,13 +60,19 @@ export default function ReadPage() {
           )
         `)
         .eq('date', date)
-        .maybeSingle();
+        .eq('status', 'published')
+        .order('created_at', { ascending: true });
       
       if (error) throw error;
-      return data as any;
+      return data || [];
     },
     enabled: !!date
   });
+
+  // Select which part to display
+  const part = partId 
+    ? parts.find((p: any) => p.id === partId) || parts[0]
+    : parts[0];
 
   const { data: adjacentParts } = useQuery({
     queryKey: ['adjacent-parts', date],
@@ -128,6 +133,10 @@ export default function ReadPage() {
     );
   }
 
+  // Parse chat dialogue and tweets from JSONB
+  const chatDialogue = part.chat_dialogue as any[] || [];
+  const tweets = part.tweets as any[] || [];
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -153,7 +162,29 @@ export default function ReadPage() {
             </span>
           </div>
 
-          {/* Cover Image */}
+          {/* Multiple stories selector */}
+          {parts.length > 1 && (
+            <div className="mb-6 flex flex-wrap gap-2">
+              <span className="text-xs font-mono text-muted-foreground mr-2 self-center">
+                ОПОВІДАННЯ:
+              </span>
+              {parts.map((p: any, idx: number) => (
+                <Link
+                  key={p.id}
+                  to={`/read/${date}?id=${p.id}`}
+                  className={`px-3 py-1 text-sm border rounded-md transition-colors ${
+                    p.id === part.id
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  #{idx + 1}
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* Cover Image 1 */}
           {part.cover_image_url && (
             <div className="mb-8 -mx-4 md:mx-0">
               <img 
@@ -176,23 +207,43 @@ export default function ReadPage() {
             <span>{format(new Date(part.date), 'd MMMM yyyy', { locale: uk })}</span>
           </div>
 
-          {/* Content */}
+          {/* Content - First Half */}
           <div className="prose font-serif text-lg leading-relaxed text-foreground">
-            {part.content.split('\n\n').map((paragraph, i) => (
+            {part.content.split('\n\n').slice(0, Math.ceil(part.content.split('\n\n').length / 2)).map((paragraph: string, i: number) => (
               <p key={i} className="mb-6">
                 {parseContentWithLinks(paragraph)}
               </p>
             ))}
           </div>
 
+          {/* Cover Image 2 - In the middle */}
+          {part.cover_image_url_2 && (
+            <div className="my-10 -mx-4 md:mx-0">
+              <img 
+                src={part.cover_image_url_2} 
+                alt={`${part.title} - ілюстрація 2`}
+                className="w-full max-h-80 object-cover border-y md:border border-border"
+              />
+            </div>
+          )}
+
+          {/* Content - Second Half */}
+          <div className="prose font-serif text-lg leading-relaxed text-foreground">
+            {part.content.split('\n\n').slice(Math.ceil(part.content.split('\n\n').length / 2)).map((paragraph: string, i: number) => (
+              <p key={`second-${i}`} className="mb-6">
+                {parseContentWithLinks(paragraph)}
+              </p>
+            ))}
+          </div>
+
           {/* News Sources */}
-          {part.news_sources && part.news_sources.length > 0 && (
+          {part.news_sources && (part.news_sources as any[]).length > 0 && (
             <div className="mt-12 pt-8 border-t border-border">
               <h3 className="text-sm font-mono text-muted-foreground mb-4">
                 ДЖЕРЕЛА РЕАЛЬНИХ ПОДІЙ
               </h3>
               <ul className="space-y-2">
-                {part.news_sources.map((source, i) => (
+                {(part.news_sources as any[]).map((source: any, i: number) => (
                   <li key={i}>
                     <a
                       href={source.url}
@@ -207,6 +258,12 @@ export default function ReadPage() {
               </ul>
             </div>
           )}
+
+          {/* Character Chat Dialogue */}
+          <CharacterChat messages={chatDialogue} />
+
+          {/* Tweets */}
+          <TweetCard tweets={tweets} />
 
           {/* Navigation */}
           <nav className="flex items-center justify-between mt-12 pt-8 border-t border-border">

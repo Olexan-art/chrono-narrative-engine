@@ -60,15 +60,30 @@ export async function generateStory(params: {
       title: string;
       content: string;
       imagePrompt: string;
+      imagePrompt2?: string;
+      chatDialogue?: Array<{
+        character: string;
+        name: string;
+        avatar: string;
+        message: string;
+      }>;
+      tweets?: Array<{
+        author: string;
+        handle: string;
+        content: string;
+        likes: number;
+        retweets: number;
+      }>;
     };
   }>('generate-story', params);
 }
 
-export async function generateImage(prompt: string, partId?: string) {
+export async function generateImage(prompt: string, partId?: string, imageIndex: number = 1) {
   return callEdgeFunction<{
     success: boolean;
     imageUrl: string;
-  }>('generate-image', { prompt, partId });
+    imageIndex: number;
+  }>('generate-image', { prompt, partId, imageIndex });
 }
 
 export async function adminAction<T>(
