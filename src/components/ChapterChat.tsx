@@ -18,30 +18,30 @@ export function ChapterChat({ messages }: ChapterChatProps) {
   if (!messages || messages.length === 0) return null;
 
   return (
-    <section className="my-16">
-      <h3 className="text-sm font-mono text-muted-foreground mb-6 flex items-center gap-2">
-        <span className="text-xl">💬</span>
+    <section className="my-8 md:my-16">
+      <h3 className="text-xs md:text-sm font-mono text-muted-foreground mb-4 md:mb-6 flex items-center gap-2">
+        <span className="text-lg md:text-xl">💬</span>
         ДІАЛОГ СПОСТЕРІГАЧІВ
       </h3>
       
-      <div className="space-y-4 max-w-3xl">
+      <div className="space-y-3 md:space-y-4 max-w-3xl">
         {messages.map((msg, i) => (
           <div
             key={i}
             className={cn(
-              "flex gap-4 p-4 rounded-lg border transition-all hover:scale-[1.01]",
+              "flex gap-2 md:gap-4 p-3 md:p-4 rounded-lg border transition-all hover:scale-[1.01]",
               characterColors[msg.character] || "border-border bg-card/50"
             )}
           >
-            <div className="text-3xl shrink-0">{msg.avatar}</div>
+            <div className="text-2xl md:text-3xl shrink-0">{msg.avatar}</div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="font-semibold text-sm">{msg.name}</span>
-                <span className="text-xs text-muted-foreground font-mono">
+              <div className="flex items-center gap-2 mb-1 md:mb-2">
+                <span className="font-semibold text-xs md:text-sm">{msg.name}</span>
+                <span className="text-[10px] md:text-xs text-muted-foreground font-mono">
                   #{String(i + 1).padStart(2, '0')}
                 </span>
               </div>
-              <p className="text-foreground/90 font-serif leading-relaxed">
+              <p className="text-sm md:text-base text-foreground/90 font-serif leading-relaxed">
                 {msg.message}
               </p>
             </div>

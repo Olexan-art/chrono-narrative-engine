@@ -1,4 +1,5 @@
-import { BookOpen, Calendar, Clock, Sparkles, Library } from "lucide-react";
+import { useState } from "react";
+import { BookOpen, Calendar, Clock, Sparkles, Library, Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -6,52 +7,99 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 export function Header() {
   const { t } = useLanguage();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="p-2 bg-primary/10 border border-primary/30 group-hover:border-glow transition-all">
-            <Sparkles className="w-6 h-6 text-primary" />
+      <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 md:gap-3 group">
+          <div className="p-1.5 md:p-2 bg-primary/10 border border-primary/30 group-hover:border-glow transition-all">
+            <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           </div>
           <div>
-            <h1 className="font-sans font-bold text-lg tracking-tight text-foreground">
+            <h1 className="font-sans font-bold text-base md:text-lg tracking-tight text-foreground">
               {t('hero.title')}
             </h1>
-            <p className="text-xs text-muted-foreground font-mono">
+            <p className="text-[10px] md:text-xs text-muted-foreground font-mono hidden sm:block">
               {t('header.subtitle')}
             </p>
           </div>
         </Link>
         
-        <nav className="flex items-center gap-2">
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-2">
           <Link to="/">
             <Button variant="ghost" size="sm" className="gap-2">
               <BookOpen className="w-4 h-4" />
-              <span className="hidden sm:inline">{t('nav.read')}</span>
+              <span>{t('nav.read')}</span>
             </Button>
           </Link>
           <Link to="/volumes">
             <Button variant="ghost" size="sm" className="gap-2">
               <Library className="w-4 h-4" />
-              <span className="hidden sm:inline">{t('nav.volumes')}</span>
+              <span>{t('nav.volumes')}</span>
             </Button>
           </Link>
           <Link to="/calendar">
             <Button variant="ghost" size="sm" className="gap-2">
               <Calendar className="w-4 h-4" />
-              <span className="hidden sm:inline">{t('nav.calendar')}</span>
+              <span>{t('nav.calendar')}</span>
             </Button>
           </Link>
           <LanguageSwitcher />
           <Link to="/admin">
             <Button variant="outline" size="sm" className="gap-2">
               <Clock className="w-4 h-4" />
-              <span className="hidden sm:inline">{t('nav.admin')}</span>
+              <span>{t('nav.admin')}</span>
             </Button>
           </Link>
         </nav>
+
+        {/* Mobile Navigation */}
+        <div className="flex md:hidden items-center gap-2">
+          <LanguageSwitcher />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-9 w-9"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
+        </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-border bg-card/95 backdrop-blur-sm">
+          <nav className="container mx-auto px-4 py-3 flex flex-col gap-1">
+            <Link to="/" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start gap-3">
+                <BookOpen className="w-4 h-4" />
+                {t('nav.read')}
+              </Button>
+            </Link>
+            <Link to="/volumes" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start gap-3">
+                <Library className="w-4 h-4" />
+                {t('nav.volumes')}
+              </Button>
+            </Link>
+            <Link to="/calendar" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start gap-3">
+                <Calendar className="w-4 h-4" />
+                {t('nav.calendar')}
+              </Button>
+            </Link>
+            <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="outline" className="w-full justify-start gap-3 mt-2">
+                <Clock className="w-4 h-4" />
+                {t('nav.admin')}
+              </Button>
+            </Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

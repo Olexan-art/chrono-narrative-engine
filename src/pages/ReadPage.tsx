@@ -178,38 +178,38 @@ export default function ReadPage() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-3 md:px-4 py-4 md:py-8">
         <article className="max-w-3xl mx-auto">
           {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8 font-mono">
+          <div className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm text-muted-foreground mb-4 md:mb-8 font-mono overflow-x-auto">
             {part.chapter?.volume && (
               <>
-                <span>{part.chapter.volume.title}</span>
-                <span>/</span>
+                <span className="shrink-0">{part.chapter.volume.title}</span>
+                <span className="shrink-0">/</span>
               </>
             )}
             {part.chapter && (
               <>
-                <span>{part.chapter.title}</span>
-                <span>/</span>
+                <span className="shrink-0 truncate max-w-[120px] md:max-w-none">{part.chapter.title}</span>
+                <span className="shrink-0">/</span>
               </>
             )}
-            <span className="text-foreground">
-              {format(new Date(part.date), 'd MMMM yyyy', { locale: dateLocale })}
+            <span className="text-foreground shrink-0">
+              {format(new Date(part.date), 'd MMM yyyy', { locale: dateLocale })}
             </span>
           </div>
 
           {/* Multiple stories selector */}
           {parts.length > 1 && (
-            <div className="mb-6 flex flex-wrap gap-2">
-              <span className="text-xs font-mono text-muted-foreground mr-2 self-center">
+            <div className="mb-4 md:mb-6 flex flex-wrap gap-1.5 md:gap-2">
+              <span className="text-[10px] md:text-xs font-mono text-muted-foreground mr-1 md:mr-2 self-center">
                 {language === 'en' ? 'STORIES:' : language === 'pl' ? 'OPOWIADANIA:' : 'ОПОВІДАННЯ:'}
               </span>
               {parts.map((p: any, idx: number) => (
                 <Link
                   key={p.id}
                   to={`/read/${date}?id=${p.id}`}
-                  className={`px-3 py-1 text-sm border rounded-md transition-colors ${
+                  className={`px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm border rounded-md transition-colors ${
                     p.id === part.id
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-border hover:border-primary/50'
@@ -223,31 +223,31 @@ export default function ReadPage() {
 
           {/* Cover Image 1 */}
           {part.cover_image_url && (
-            <div className="mb-8 -mx-4 md:mx-0">
+            <div className="mb-4 md:mb-8 -mx-3 md:mx-0">
               <img 
                 src={part.cover_image_url} 
                 alt={localizedTitle}
-                className="w-full max-h-96 object-cover border-y md:border border-border"
+                className="w-full max-h-64 md:max-h-96 object-cover border-y md:border border-border"
               />
             </div>
           )}
 
           {/* Title */}
-          <h1 className="text-3xl md:text-4xl font-serif font-bold mb-4 text-glow">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold mb-2 md:mb-4 text-glow">
             {localizedTitle}
           </h1>
 
           {/* Meta */}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-8 font-mono">
+          <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground mb-4 md:mb-8 font-mono">
             <span>{language === 'en' ? 'PART' : language === 'pl' ? 'CZĘŚĆ' : 'ЧАСТИНА'} {part.number}</span>
             <span>•</span>
             <span>{format(new Date(part.date), 'd MMMM yyyy', { locale: dateLocale })}</span>
           </div>
 
           {/* Content - First Half */}
-          <div className="prose font-serif text-lg leading-relaxed text-foreground">
+          <div className="prose font-serif text-base md:text-lg leading-relaxed text-foreground">
             {localizedContent.split('\n\n').slice(0, Math.ceil(localizedContent.split('\n\n').length / 2)).map((paragraph: string, i: number) => (
-              <p key={i} className="mb-6">
+              <p key={i} className="mb-4 md:mb-6">
                 {parseContentWithLinks(paragraph)}
               </p>
             ))}
@@ -255,19 +255,19 @@ export default function ReadPage() {
 
           {/* Cover Image 2 - In the middle */}
           {part.cover_image_url_2 && (
-            <div className="my-10 -mx-4 md:mx-0">
+            <div className="my-6 md:my-10 -mx-3 md:mx-0">
               <img 
                 src={part.cover_image_url_2} 
                 alt={`${localizedTitle} - ${language === 'en' ? 'illustration' : language === 'pl' ? 'ilustracja' : 'ілюстрація'} 2`}
-                className="w-full max-h-80 object-cover border-y md:border border-border"
+                className="w-full max-h-60 md:max-h-80 object-cover border-y md:border border-border"
               />
             </div>
           )}
 
           {/* Content - Second Half */}
-          <div className="prose font-serif text-lg leading-relaxed text-foreground">
+          <div className="prose font-serif text-base md:text-lg leading-relaxed text-foreground">
             {localizedContent.split('\n\n').slice(Math.ceil(localizedContent.split('\n\n').length / 2)).map((paragraph: string, i: number) => (
-              <p key={`second-${i}`} className="mb-6">
+              <p key={`second-${i}`} className="mb-4 md:mb-6">
                 {parseContentWithLinks(paragraph)}
               </p>
             ))}
@@ -275,18 +275,18 @@ export default function ReadPage() {
 
           {/* News Sources */}
           {part.news_sources && (part.news_sources as any[]).length > 0 && (
-            <div className="mt-12 pt-8 border-t border-border">
-              <h3 className="text-sm font-mono text-muted-foreground mb-4">
+            <div className="mt-8 md:mt-12 pt-4 md:pt-8 border-t border-border">
+              <h3 className="text-xs md:text-sm font-mono text-muted-foreground mb-3 md:mb-4">
                 {language === 'en' ? 'REAL NEWS SOURCES' : language === 'pl' ? 'ŹRÓDŁA WIADOMOŚCI' : 'ДЖЕРЕЛА РЕАЛЬНИХ ПОДІЙ'}
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-1.5 md:space-y-2">
                 {(part.news_sources as any[]).map((source: any, i: number) => (
                   <li key={i}>
                     <a
                       href={source.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm news-link"
+                      className="text-xs md:text-sm news-link"
                     >
                       {source.title}
                     </a>
@@ -303,7 +303,7 @@ export default function ReadPage() {
           <TweetCard tweets={tweets} />
 
           {/* Navigation */}
-          <nav className="flex items-center justify-between mt-12 pt-8 border-t border-border">
+          <nav className="flex items-center justify-between mt-8 md:mt-12 pt-4 md:pt-8 border-t border-border">
             {adjacentParts?.prev ? (
               <Link to={`/read/${adjacentParts.prev.date}`}>
                 <Button variant="outline" className="gap-2">
