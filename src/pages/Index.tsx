@@ -84,6 +84,24 @@ export default function Index() {
     }
   });
 
+  // Get all parts for current month for calendar (separate from pagination)
+  const { data: calendarParts = [] } = useQuery({
+    queryKey: ['calendar-parts', getYear(now), getMonth(now)],
+    queryFn: async () => {
+      const monthStart = new Date(getYear(now), getMonth(now), 1);
+      const monthEnd = new Date(getYear(now), getMonth(now) + 1, 0);
+      
+      const { data } = await supabase
+        .from('parts')
+        .select('id, title, date, status')
+        .eq('status', 'published')
+        .gte('date', format(monthStart, 'yyyy-MM-dd'))
+        .lte('date', format(monthEnd, 'yyyy-MM-dd'))
+        .order('date', { ascending: true });
+      return (data || []) as Part[];
+    }
+  });
+
   const { data: monthData } = useQuery({
     queryKey: ['month-volume', getYear(now), getMonth(now) + 1],
     queryFn: async () => {
@@ -147,9 +165,9 @@ export default function Index() {
         <div className="container mx-auto px-4 relative">
           <div className="grid lg:grid-cols-2 gap-6 md:gap-8 items-center">
             {/* Left - Main Content */}
-            <div className="text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-2 md:px-3 py-1 border border-primary/30 bg-primary/5 mb-2 md:mb-3">
-                <Sparkles className="w-3 h-3 text-primary" />
+            <div className="text-center lg:text-left animate-fade-in">
+              <div className="inline-flex items-center gap-2 px-2 md:px-3 py-1 border border-primary/30 bg-primary/5 mb-2 md:mb-3 transition-all duration-300 hover:border-primary/60 hover:bg-primary/10">
+                <Sparkles className="w-3 h-3 text-primary animate-pulse" />
                 <span className="text-[10px] md:text-xs font-mono text-primary">{t('hero.badge')}</span>
               </div>
               
@@ -163,14 +181,14 @@ export default function Index() {
               
               <div className="flex flex-wrap gap-2 md:gap-3 justify-center lg:justify-start">
                 <Link to="/calendar">
-                  <Button size="sm" className="gap-2 text-xs md:text-sm">
+                  <Button size="sm" className="gap-2 text-xs md:text-sm transition-all duration-300 hover:scale-105 active:scale-95">
                     <Calendar className="w-3 h-3 md:w-4 md:h-4" />
                     {t('hero.archive')}
                   </Button>
                 </Link>
                 {latestParts[0] && (
                   <Link to={`/read/${latestParts[0].date}`}>
-                    <Button size="sm" variant="outline" className="gap-2 text-xs md:text-sm">
+                    <Button size="sm" variant="outline" className="gap-2 text-xs md:text-sm transition-all duration-300 hover:scale-105 active:scale-95">
                       <BookOpen className="w-3 h-3 md:w-4 md:h-4" />
                       {t('hero.latest')}
                     </Button>
@@ -180,7 +198,7 @@ export default function Index() {
             </div>
 
             {/* Right - Tweets Carousel (hidden on small screens) */}
-            <div className="hidden sm:block lg:pl-4">
+            <div className="hidden sm:block lg:pl-4 animate-fade-in" style={{ animationDelay: '150ms' }}>
               <div className="flex items-center gap-2 mb-3 justify-center lg:justify-start">
                 <span className="text-lg font-bold">MW</span>
                 <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
@@ -227,18 +245,23 @@ export default function Index() {
               </div>
 
               <div className="space-y-3 md:space-y-4">
-                {latestParts.map((part) => {
+                {latestParts.map((part, index) => {
                   const partLabel = getPartLabel(part, t);
                   
                   return (
-                    <Link key={part.id} to={`/read/${part.date}`} className="group block">
-                      <article className="cosmic-card p-3 md:p-4 border border-border hover:border-primary/50 transition-all">
+                    <Link 
+                      key={part.id} 
+                      to={`/read/${part.date}`} 
+                      className="group block animate-fade-in"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <article className="cosmic-card p-3 md:p-4 border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]">
                         <div className="flex items-start gap-3 md:gap-4">
                           {part.cover_image_url && (
                             <img 
                               src={part.cover_image_url} 
                               alt=""
-                              className="w-16 h-16 md:w-24 md:h-24 object-cover border border-border shrink-0"
+                              className="w-16 h-16 md:w-24 md:h-24 object-cover border border-border shrink-0 transition-transform duration-300 group-hover:scale-105"
                             />
                           )}
                           <div className="flex-1 min-w-0">
@@ -253,14 +276,14 @@ export default function Index() {
                                 {format(new Date(part.date), 'd MMM yyyy', { locale: dateLocale })}
                               </span>
                             </div>
-                            <h3 className="font-serif font-medium text-sm md:text-lg group-hover:text-primary transition-colors line-clamp-2">
+                            <h3 className="font-serif font-medium text-sm md:text-lg group-hover:text-primary transition-colors duration-200 line-clamp-2">
                               {part.title}
                             </h3>
                             <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 mt-1 font-serif hidden sm:block">
                               {part.content?.slice(0, 120)}...
                             </p>
                           </div>
-                          <ArrowRight className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0 hidden sm:block" />
+                          <ArrowRight className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200 shrink-0 hidden sm:block" />
                         </div>
                       </article>
                     </Link>
@@ -326,12 +349,16 @@ export default function Index() {
 
             {/* Sidebar - shown first on mobile */}
             <div className="space-y-4 md:space-y-6 order-1 lg:order-2">
-              <MiniCalendar parts={latestParts} chapters={monthData?.monthChapters} />
-              <NarrativeSummary 
-                weekParts={weekParts} 
-                monthVolume={monthData?.volume}
-                monthChapter={monthData?.chapter}
-              />
+              <div className="animate-fade-in">
+                <MiniCalendar parts={calendarParts} chapters={monthData?.monthChapters} />
+              </div>
+              <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+                <NarrativeSummary 
+                  weekParts={weekParts} 
+                  monthVolume={monthData?.volume}
+                  monthChapter={monthData?.chapter}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -351,13 +378,14 @@ export default function Index() {
             </div>
             
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {allChapters.map((chapter: any) => (
+              {allChapters.map((chapter: any, index: number) => (
                 <Link 
                   key={chapter.id} 
                   to={`/chapter/${chapter.id}`}
-                  className="group block"
+                  className="group block animate-fade-in"
+                  style={{ animationDelay: `${index * 75}ms` }}
                 >
-                  <article className="cosmic-card border border-border hover:border-primary/50 transition-all overflow-hidden h-full">
+                  <article className="cosmic-card border border-border hover:border-primary/50 transition-all duration-300 overflow-hidden h-full hover:shadow-lg hover:-translate-y-1 active:scale-[0.98]">
                     {/* Cover Image */}
                     <div className="relative h-48 bg-muted">
                       {chapter.cover_image_url ? (
