@@ -158,9 +158,21 @@ export default function ReadPage() {
   const localizedTitle = getLocalizedTitle();
   const localizedContent = getLocalizedContent();
 
-  // Parse chat dialogue and tweets from JSONB
-  const chatDialogue = part.chat_dialogue as any[] || [];
-  const tweets = part.tweets as any[] || [];
+  // Parse chat dialogue and tweets with localization
+  const getLocalizedChatDialogue = () => {
+    if (language === 'en' && part.chat_dialogue_en) return part.chat_dialogue_en as any[];
+    if (language === 'pl' && part.chat_dialogue_pl) return part.chat_dialogue_pl as any[];
+    return part.chat_dialogue as any[] || [];
+  };
+
+  const getLocalizedTweets = () => {
+    if (language === 'en' && part.tweets_en) return part.tweets_en as any[];
+    if (language === 'pl' && part.tweets_pl) return part.tweets_pl as any[];
+    return part.tweets as any[] || [];
+  };
+
+  const chatDialogue = getLocalizedChatDialogue();
+  const tweets = getLocalizedTweets();
 
   return (
     <div className="min-h-screen bg-background">
