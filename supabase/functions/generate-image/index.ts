@@ -6,6 +6,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface LLMSettings {
+  llm_provider: string;
+  llm_image_model: string;
+  openai_api_key: string | null;
+  gemini_api_key: string | null;
+}
+
 async function uploadBase64ToStorage(
   supabase: any,
   base64Data: string,
@@ -36,6 +43,110 @@ async function uploadBase64ToStorage(
   return urlData.publicUrl;
 }
 
+async function generateWithLovable(prompt: string): Promise<string> {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
+
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.5-flash-image-preview',
+      messages: [{ role: 'user', content: prompt }],
+      modalities: ['image', 'text']
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) throw new Error('Rate limit exceeded, please try again later');
+    if (response.status === 402) throw new Error('Credits exhausted, please add funds');
+    const errorText = await response.text();
+    console.error('Lovable AI error:', response.status, errorText);
+    throw new Error(`Lovable AI error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.images?.[0]?.image_url?.url || '';
+}
+
+async function generateWithOpenAI(prompt: string, apiKey: string, model: string): Promise<string> {
+  const response = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: model || 'dall-e-3',
+      prompt: prompt,
+      n: 1,
+      size: '1792x1024',
+      response_format: 'b64_json'
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('OpenAI image error:', response.status, errorText);
+    throw new Error(`OpenAI error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const b64 = data.data?.[0]?.b64_json;
+  if (!b64) throw new Error('No image generated from OpenAI');
+  return `data:image/png;base64,${b64}`;
+}
+
+async function generateWithGemini(prompt: string, apiKey: string, model: string): Promise<string> {
+  // Gemini Imagen API
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model || 'imagen-3'}:generate?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prompt: { text: prompt },
+      numberOfImages: 1,
+      aspectRatio: "16:9"
+    }),
+  });
+
+  if (!response.ok) {
+    // Fallback to Lovable if Gemini image fails
+    console.log('Gemini image failed, falling back to Lovable AI');
+    return generateWithLovable(prompt);
+  }
+
+  const data = await response.json();
+  const b64 = data.generatedImages?.[0]?.image?.imageBytes;
+  if (!b64) {
+    console.log('No Gemini image, falling back to Lovable AI');
+    return generateWithLovable(prompt);
+  }
+  return `data:image/png;base64,${b64}`;
+}
+
+async function generateImage(settings: LLMSettings, prompt: string): Promise<string> {
+  const provider = settings.llm_provider || 'lovable';
+  
+  // Anthropic doesn't support images, always use Lovable
+  if (provider === 'anthropic' || provider === 'lovable') {
+    return generateWithLovable(prompt);
+  }
+
+  if (provider === 'openai' && settings.openai_api_key) {
+    return generateWithOpenAI(prompt, settings.openai_api_key, settings.llm_image_model);
+  }
+
+  if (provider === 'gemini' && settings.gemini_api_key) {
+    return generateWithGemini(prompt, settings.gemini_api_key, settings.llm_image_model);
+  }
+
+  // Fallback to Lovable
+  return generateWithLovable(prompt);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -44,55 +155,30 @@ serve(async (req) => {
   try {
     const { prompt, partId, chapterId, volumeId, imageIndex = 1 } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
-    }
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
+    // Get LLM settings from database
+    const { data: settingsData } = await supabase
+      .from('settings')
+      .select('llm_provider, llm_image_model, openai_api_key, gemini_api_key')
+      .limit(1)
+      .single();
+
+    const llmSettings: LLMSettings = settingsData || {
+      llm_provider: 'lovable',
+      llm_image_model: 'google/gemini-2.5-flash-image-preview',
+      openai_api_key: null,
+      gemini_api_key: null
+    };
+
     const enhancedPrompt = `${prompt}. Ultra high resolution, 16:9 aspect ratio, sci-fi digital art style, cosmic atmosphere with deep space blues and cyan glows, cinematic lighting, detailed futuristic elements.`;
 
-    console.log('Generating image for prompt:', prompt.slice(0, 50));
+    console.log('Generating image with provider:', llmSettings.llm_provider, 'prompt:', prompt.slice(0, 50));
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image-preview',
-        messages: [
-          { role: 'user', content: enhancedPrompt }
-        ],
-        modalities: ['image', 'text']
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded, please try again later' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'Credits exhausted, please add funds' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      const errorText = await response.text();
-      console.error('AI Gateway error:', response.status, errorText);
-      throw new Error(`AI Gateway error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const base64ImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    const base64ImageUrl = await generateImage(llmSettings, enhancedPrompt);
 
     if (!base64ImageUrl) {
       throw new Error('No image generated');
@@ -117,7 +203,7 @@ serve(async (req) => {
         type: 'image',
         prompt: enhancedPrompt,
         result: finalImageUrl,
-        model_used: 'google/gemini-2.5-flash-image-preview',
+        model_used: llmSettings.llm_image_model || 'google/gemini-2.5-flash-image-preview',
         success: true
       });
     } else if (chapterId) {
@@ -139,7 +225,7 @@ serve(async (req) => {
         type: 'image',
         prompt: enhancedPrompt,
         result: finalImageUrl,
-        model_used: 'google/gemini-2.5-flash-image-preview',
+        model_used: llmSettings.llm_image_model || 'google/gemini-2.5-flash-image-preview',
         success: true
       });
     } else if (volumeId) {

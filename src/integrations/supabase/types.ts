@@ -421,14 +421,19 @@ export type Database = {
       }
       settings: {
         Row: {
+          anthropic_api_key: string | null
           auto_generation_enabled: boolean | null
           bradbury_weight: number | null
           clarke_weight: number | null
           created_at: string | null
           gaiman_weight: number | null
+          gemini_api_key: string | null
           generation_interval_hours: number | null
           id: string
           last_auto_generation: string | null
+          llm_image_model: string | null
+          llm_provider: string | null
+          llm_text_model: string | null
           narrative_plot: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose:
             | Database["public"]["Enums"]["narrative_purpose"]
@@ -442,17 +447,23 @@ export type Database = {
           narrative_structure:
             | Database["public"]["Enums"]["narrative_structure"]
             | null
+          openai_api_key: string | null
           updated_at: string | null
         }
         Insert: {
+          anthropic_api_key?: string | null
           auto_generation_enabled?: boolean | null
           bradbury_weight?: number | null
           clarke_weight?: number | null
           created_at?: string | null
           gaiman_weight?: number | null
+          gemini_api_key?: string | null
           generation_interval_hours?: number | null
           id?: string
           last_auto_generation?: string | null
+          llm_image_model?: string | null
+          llm_provider?: string | null
+          llm_text_model?: string | null
           narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose?:
             | Database["public"]["Enums"]["narrative_purpose"]
@@ -466,17 +477,23 @@ export type Database = {
           narrative_structure?:
             | Database["public"]["Enums"]["narrative_structure"]
             | null
+          openai_api_key?: string | null
           updated_at?: string | null
         }
         Update: {
+          anthropic_api_key?: string | null
           auto_generation_enabled?: boolean | null
           bradbury_weight?: number | null
           clarke_weight?: number | null
           created_at?: string | null
           gaiman_weight?: number | null
+          gemini_api_key?: string | null
           generation_interval_hours?: number | null
           id?: string
           last_auto_generation?: string | null
+          llm_image_model?: string | null
+          llm_provider?: string | null
+          llm_text_model?: string | null
           narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose?:
             | Database["public"]["Enums"]["narrative_purpose"]
@@ -490,6 +507,7 @@ export type Database = {
           narrative_structure?:
             | Database["public"]["Enums"]["narrative_structure"]
             | null
+          openai_api_key?: string | null
           updated_at?: string | null
         }
         Relationships: []
