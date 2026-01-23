@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, startOfWeek, endOfWeek, getMonth, getYear } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
 import { Link } from "react-router-dom";
-import { BookOpen, Calendar, Sparkles, ArrowRight } from "lucide-react";
+import { BookOpen, Calendar, Sparkles, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/Header";
@@ -13,6 +14,8 @@ import { SEOHead } from "@/components/SEOHead";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Part } from "@/types/database";
+
+const ITEMS_PER_PAGE = 10;
 
 function getPartLabel(part: any, t: (key: string) => string): { type: 'day' | 'week' | 'month'; label: string } {
   const date = new Date(part.date);
@@ -40,19 +43,32 @@ export default function Index() {
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const { data: latestParts = [] } = useQuery({
-    queryKey: ['latest-parts'],
+  const { data: partsData } = useQuery({
+    queryKey: ['latest-parts', currentPage],
     queryFn: async () => {
-      const { data } = await supabase
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      
+      const { data, count } = await supabase
         .from('parts')
-        .select('id, title, content, date, status, tweets, cover_image_url')
+        .select('id, title, content, date, status, tweets, cover_image_url', { count: 'exact' })
         .eq('status', 'published')
         .order('date', { ascending: false })
-        .limit(50);
-      return (data || []) as Part[];
+        .range(from, to);
+      
+      return {
+        parts: (data || []) as Part[],
+        totalCount: count || 0,
+        totalPages: Math.ceil((count || 0) / ITEMS_PER_PAGE)
+      };
     }
   });
+
+  const latestParts = partsData?.parts || [];
+  const totalPages = partsData?.totalPages || 1;
+  const totalCount = partsData?.totalCount || 0;
 
   const { data: weekParts = [] } = useQuery({
     queryKey: ['week-parts'],
@@ -201,10 +217,15 @@ export default function Index() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Latest Parts */}
             <div className="lg:col-span-2">
-              <h2 className="text-xl font-bold chapter-title mb-6">
-                {t('latest.title')}
-              </h2>
-              
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold chapter-title">
+                  {t('latest.title')}
+                </h2>
+                <Badge variant="outline" className="font-mono">
+                  {totalCount} {language === 'en' ? 'stories' : language === 'pl' ? 'opowieści' : 'оповідань'}
+                </Badge>
+              </div>
+
               <div className="space-y-4">
                 {latestParts.map((part) => {
                   const partLabel = getPartLabel(part, t);
@@ -246,6 +267,58 @@ export default function Index() {
                   );
                 })}
               </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-8">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {currentPage > 2 && (
+                      <>
+                        <Button variant="ghost" size="sm" onClick={() => setCurrentPage(1)}>1</Button>
+                        {currentPage > 3 && <span className="text-muted-foreground">...</span>}
+                      </>
+                    )}
+                    
+                    {[currentPage - 1, currentPage, currentPage + 1]
+                      .filter(p => p >= 1 && p <= totalPages)
+                      .map(p => (
+                        <Button
+                          key={p}
+                          variant={p === currentPage ? "default" : "ghost"}
+                          size="sm"
+                          onClick={() => setCurrentPage(p)}
+                        >
+                          {p}
+                        </Button>
+                      ))}
+                    
+                    {currentPage < totalPages - 1 && (
+                      <>
+                        {currentPage < totalPages - 2 && <span className="text-muted-foreground">...</span>}
+                        <Button variant="ghost" size="sm" onClick={() => setCurrentPage(totalPages)}>{totalPages}</Button>
+                      </>
+                    )}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Sidebar */}
