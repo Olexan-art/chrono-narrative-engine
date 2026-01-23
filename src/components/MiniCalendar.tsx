@@ -1,18 +1,26 @@
 import { useState } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek, isSameWeek } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Part } from "@/types/database";
 
-interface MiniCalendarProps {
-  parts: Part[];
+interface Chapter {
+  id: string;
+  title: string;
+  week_of_month: number;
+  volume_id: string;
 }
 
-export function MiniCalendar({ parts }: MiniCalendarProps) {
+interface MiniCalendarProps {
+  parts: Part[];
+  chapters?: Chapter[];
+}
+
+export function MiniCalendar({ parts, chapters = [] }: MiniCalendarProps) {
   const { language } = useLanguage();
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -24,6 +32,11 @@ export function MiniCalendar({ parts }: MiniCalendarProps) {
   // Get all parts for a specific date (count)
   const getPartsForDate = (date: Date) => {
     return parts.filter(p => isSameDay(new Date(p.date), date));
+  };
+
+  // Get chapter for a specific week
+  const getChapterForWeek = (date: Date, weekOfMonth: number) => {
+    return chapters.find(c => c.week_of_month === weekOfMonth);
   };
 
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
@@ -103,6 +116,28 @@ export function MiniCalendar({ parts }: MiniCalendarProps) {
             );
           })}
         </div>
+
+        {/* Chapters for this month */}
+        {chapters.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-border space-y-2">
+            <span className="text-xs font-mono text-muted-foreground uppercase">
+              {language === 'en' ? 'Chapters' : language === 'pl' ? 'Rozdziały' : 'Глави'}
+            </span>
+            {chapters.map(chapter => (
+              <Link 
+                key={chapter.id}
+                to={`/chapter/${chapter.id}`}
+                className="flex items-center gap-2 p-2 rounded-sm bg-secondary/30 hover:bg-secondary/50 transition-colors"
+              >
+                <BookOpen className="w-3 h-3 text-primary shrink-0" />
+                <span className="text-xs truncate">{chapter.title}</span>
+                <span className="text-[10px] font-mono text-muted-foreground ml-auto shrink-0">
+                  {language === 'en' ? 'W' : language === 'pl' ? 'T' : 'Т'}{chapter.week_of_month}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
 
         <Link to="/calendar">
           <Button variant="outline" size="sm" className="w-full mt-4 text-xs">

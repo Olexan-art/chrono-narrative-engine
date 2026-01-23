@@ -73,24 +73,34 @@ export default function Index() {
     queryFn: async () => {
       const { data: volume } = await supabase
         .from('volumes')
-        .select('*')
+        .select('id, title, year, month')
         .eq('year', getYear(now))
         .eq('month', getMonth(now) + 1)
         .maybeSingle();
       
       let chapter = null;
+      let monthChapters: { id: string; title: string; week_of_month: number; volume_id: string }[] = [];
+      
       if (volume) {
         const weekOfMonth = Math.ceil(now.getDate() / 7);
         const { data: chapterData } = await supabase
           .from('chapters')
-          .select('*')
+          .select('id, title, week_of_month, volume_id')
           .eq('volume_id', volume.id)
           .eq('week_of_month', weekOfMonth)
           .maybeSingle();
         chapter = chapterData;
+        
+        // Get all chapters for current month for calendar
+        const { data: allMonthChapters } = await supabase
+          .from('chapters')
+          .select('id, title, week_of_month, volume_id')
+          .eq('volume_id', volume.id)
+          .order('week_of_month', { ascending: true });
+        monthChapters = allMonthChapters || [];
       }
       
-      return { volume, chapter };
+      return { volume, chapter, monthChapters };
     }
   });
 
@@ -240,7 +250,7 @@ export default function Index() {
 
             {/* Sidebar */}
             <div className="space-y-6">
-              <MiniCalendar parts={latestParts} />
+              <MiniCalendar parts={latestParts} chapters={monthData?.monthChapters} />
               <NarrativeSummary 
                 weekParts={weekParts} 
                 monthVolume={monthData?.volume}

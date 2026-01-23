@@ -5,12 +5,29 @@ import { BookOpen, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { Part, Volume, Chapter } from "@/types/database";
+import type { Part } from "@/types/database";
+
+interface PartialVolume {
+  id: string;
+  title: string;
+  year: number;
+  month: number;
+  description?: string | null;
+  cover_image_url?: string | null;
+}
+
+interface PartialChapter {
+  id: string;
+  title: string;
+  week_of_month: number;
+  volume_id: string;
+  narrator_monologue?: string | null;
+}
 
 interface NarrativeSummaryProps {
   weekParts: Part[];
-  monthVolume?: Volume | null;
-  monthChapter?: Chapter | null;
+  monthVolume?: PartialVolume | null;
+  monthChapter?: PartialChapter | null;
 }
 
 export function NarrativeSummary({ weekParts, monthVolume, monthChapter }: NarrativeSummaryProps) {

@@ -1,3 +1,4 @@
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, Repeat2, ArrowUpRight } from "lucide-react";
 import {
@@ -6,6 +7,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  type CarouselApi,
 } from "@/components/ui/carousel";
 import type { Part } from "@/types/database";
 import type { Tweet } from "@/types/database";
@@ -43,8 +45,26 @@ export function HeroTweets({ parts }: HeroTweetsProps) {
 
   if (tweetsWithLinks.length === 0) return null;
 
+  const [api, setApi] = useState<CarouselApi>();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!api) return;
+
+    intervalRef.current = setInterval(() => {
+      api.scrollNext();
+    }, 5000);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [api]);
+
   return (
     <Carousel
+      setApi={setApi}
       opts={{
         align: "start",
         loop: true,
