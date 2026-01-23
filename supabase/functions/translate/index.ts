@@ -26,27 +26,33 @@ serve(async (req) => {
     let textToTranslate = '';
     let entityType = '';
     let entityId = '';
+    let chatDialogue: any[] | null = null;
+    let tweets: any[] | null = null;
 
     if (partId) {
       const { data: part } = await supabase
         .from('parts')
-        .select('title, content')
+        .select('title, content, chat_dialogue, tweets')
         .eq('id', partId)
         .single();
       
       if (!part) throw new Error('Part not found');
       textToTranslate = `TITLE:\n${part.title}\n\nCONTENT:\n${part.content}`;
+      chatDialogue = part.chat_dialogue as any[] | null;
+      tweets = part.tweets as any[] | null;
       entityType = 'part';
       entityId = partId;
     } else if (chapterId) {
       const { data: chapter } = await supabase
         .from('chapters')
-        .select('title, description, narrator_monologue, narrator_commentary')
+        .select('title, description, narrator_monologue, narrator_commentary, chat_dialogue, tweets')
         .eq('id', chapterId)
         .single();
       
       if (!chapter) throw new Error('Chapter not found');
       textToTranslate = `TITLE:\n${chapter.title}\n\nDESCRIPTION:\n${chapter.description || ''}\n\nNARRATOR_MONOLOGUE:\n${chapter.narrator_monologue || ''}\n\nNARRATOR_COMMENTARY:\n${chapter.narrator_commentary || ''}`;
+      chatDialogue = chapter.chat_dialogue as any[] | null;
+      tweets = chapter.tweets as any[] | null;
       entityType = 'chapter';
       entityId = chapterId;
     } else if (volumeId) {
@@ -66,6 +72,24 @@ serve(async (req) => {
 
     const langName = targetLanguage === 'en' ? 'English' : 'Polish';
     
+    // Build chat dialogue text for translation
+    let chatDialogueText = '';
+    if (chatDialogue && chatDialogue.length > 0) {
+      chatDialogueText = '\n\nCHAT_DIALOGUE:\n' + chatDialogue.map((msg, i) => 
+        `[${i}] ${msg.name}: ${msg.message}`
+      ).join('\n');
+    }
+
+    // Build tweets text for translation
+    let tweetsText = '';
+    if (tweets && tweets.length > 0) {
+      tweetsText = '\n\nTWEETS:\n' + tweets.map((tweet, i) => 
+        `[${i}] @${tweet.handle} (${tweet.author}): ${tweet.content}`
+      ).join('\n');
+    }
+
+    const fullTextToTranslate = textToTranslate + chatDialogueText + tweetsText;
+    
     const systemPrompt = `You are a professional literary translator specializing in science fiction. Translate the following Ukrainian text to ${langName}.
 
 IMPORTANT RULES:
@@ -73,7 +97,8 @@ IMPORTANT RULES:
 2. Keep proper nouns like "Точка Синхронізації" as "Synchronization Point" (EN) or "Punkt Synchronizacji" (PL)
 3. Maintain the same tone and literary style
 4. Do NOT translate section markers (TITLE:, CONTENT:, DESCRIPTION:, etc.)
-5. Return the translated text with the same section markers
+5. For CHAT_DIALOGUE, translate only the message text, keep character names
+6. For TWEETS, translate only the content, keep author names and handles
 
 RESPONSE FORMAT (JSON):
 {
@@ -82,12 +107,16 @@ RESPONSE FORMAT (JSON):
   "description": "translated description (if present)",
   "narrator_monologue": "translated monologue (if present)",
   "narrator_commentary": "translated commentary (if present)",
-  "summary": "translated summary (if present)"
+  "summary": "translated summary (if present)",
+  "chat_dialogue": [{"index": 0, "message": "translated message"}, ...],
+  "tweets": [{"index": 0, "content": "translated content"}, ...]
 }
 
 Only include fields that were present in the input.`;
 
     console.log(`Translating ${entityType} ${entityId} to ${targetLanguage}`);
+    console.log(`Has chat_dialogue: ${chatDialogue?.length || 0} messages`);
+    console.log(`Has tweets: ${tweets?.length || 0} tweets`);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -99,7 +128,7 @@ Only include fields that were present in the input.`;
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: textToTranslate }
+          { role: 'user', content: fullTextToTranslate }
         ],
         response_format: { type: "json_object" }
       }),
@@ -116,7 +145,7 @@ Only include fields that were present in the input.`;
 
     // Update database with translations
     const langSuffix = `_${targetLanguage}`;
-    const updateData: Record<string, string> = {};
+    const updateData: Record<string, any> = {};
 
     if (translatedContent.title) updateData[`title${langSuffix}`] = translatedContent.title;
     if (translatedContent.content) updateData[`content${langSuffix}`] = translatedContent.content;
@@ -124,6 +153,30 @@ Only include fields that were present in the input.`;
     if (translatedContent.narrator_monologue) updateData[`narrator_monologue${langSuffix}`] = translatedContent.narrator_monologue;
     if (translatedContent.narrator_commentary) updateData[`narrator_commentary${langSuffix}`] = translatedContent.narrator_commentary;
     if (translatedContent.summary) updateData[`summary${langSuffix}`] = translatedContent.summary;
+
+    // Process translated chat dialogue
+    if (translatedContent.chat_dialogue && chatDialogue) {
+      const translatedChatDialogue = chatDialogue.map((msg, i) => {
+        const translatedMsg = translatedContent.chat_dialogue.find((t: any) => t.index === i);
+        return {
+          ...msg,
+          message: translatedMsg?.message || msg.message
+        };
+      });
+      updateData[`chat_dialogue${langSuffix}`] = translatedChatDialogue;
+    }
+
+    // Process translated tweets
+    if (translatedContent.tweets && tweets) {
+      const translatedTweets = tweets.map((tweet, i) => {
+        const translatedTweet = translatedContent.tweets.find((t: any) => t.index === i);
+        return {
+          ...tweet,
+          content: translatedTweet?.content || tweet.content
+        };
+      });
+      updateData[`tweets${langSuffix}`] = translatedTweets;
+    }
 
     let table = '';
     if (entityType === 'part') table = 'parts';
@@ -141,6 +194,7 @@ Only include fields that were present in the input.`;
     }
 
     console.log(`Successfully translated ${entityType} to ${targetLanguage}`);
+    console.log(`Updated fields: ${Object.keys(updateData).join(', ')}`);
 
     return new Response(
       JSON.stringify({ success: true, translated: translatedContent }),

@@ -18,7 +18,7 @@ export function ChapterTweets({ tweets }: ChapterTweetsProps) {
   return (
     <section className="my-16">
       <h3 className="text-sm font-mono text-muted-foreground mb-6 flex items-center gap-2">
-        <span className="text-xl">𝕏</span>
+        <span className="text-xl font-bold">MW</span>
         РЕАКЦІЇ СПОСТЕРІГАЧІВ
       </h3>
       
