@@ -49,16 +49,26 @@ export function MiniCalendar({ parts, chapters = [] }: MiniCalendarProps) {
     : ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 
   return (
-    <Card className="cosmic-card">
+    <Card className="cosmic-card overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prevMonth}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 transition-all duration-200 hover:scale-110 active:scale-95" 
+            onClick={prevMonth}
+          >
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <CardTitle className="text-sm font-mono">
             {format(currentDate, 'LLLL yyyy', { locale: dateLocale })}
           </CardTitle>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={nextMonth}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 transition-all duration-200 hover:scale-110 active:scale-95" 
+            onClick={nextMonth}
+          >
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
@@ -88,14 +98,14 @@ export function MiniCalendar({ parts, chapters = [] }: MiniCalendarProps) {
                 to={`/read/${format(day, 'yyyy-MM-dd')}`}
                 className={`
                   aspect-square flex flex-col items-center justify-center text-xs rounded-sm
-                  transition-all hover:scale-110 relative
-                  ${isToday(day) ? 'font-bold' : ''}
-                  bg-primary/20 text-primary hover:bg-primary/30
+                  transition-all duration-200 hover:scale-110 active:scale-95 relative
+                  ${isToday(day) ? 'font-bold ring-1 ring-primary' : ''}
+                  bg-primary/20 text-primary hover:bg-primary/30 hover:shadow-md
                 `}
               >
                 <span>{format(day, 'd')}</span>
                 {partCount > 1 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-secondary text-secondary-foreground rounded-full text-[10px] flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-secondary text-secondary-foreground rounded-full text-[10px] flex items-center justify-center font-bold animate-scale-in">
                     {partCount}
                   </span>
                 )}
@@ -123,11 +133,12 @@ export function MiniCalendar({ parts, chapters = [] }: MiniCalendarProps) {
             <span className="text-xs font-mono text-muted-foreground uppercase">
               {language === 'en' ? 'Chapters' : language === 'pl' ? 'Rozdziały' : 'Глави'}
             </span>
-            {chapters.map(chapter => (
+            {chapters.map((chapter, index) => (
               <Link 
                 key={chapter.id}
                 to={`/chapter/${chapter.id}`}
-                className="flex items-center gap-2 p-2 rounded-sm bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                className="flex items-center gap-2 p-2 rounded-sm bg-secondary/30 hover:bg-secondary/50 transition-all duration-200 hover:translate-x-1 active:scale-[0.98] animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
                 <BookOpen className="w-3 h-3 text-primary shrink-0" />
                 <span className="text-xs truncate">{chapter.title}</span>
@@ -140,7 +151,7 @@ export function MiniCalendar({ parts, chapters = [] }: MiniCalendarProps) {
         )}
 
         <Link to="/calendar">
-          <Button variant="outline" size="sm" className="w-full mt-4 text-xs">
+          <Button variant="outline" size="sm" className="w-full mt-4 text-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
             {language === 'en' ? 'Full Calendar' : language === 'pl' ? 'Pełny Kalendarz' : 'Повний календар'}
           </Button>
         </Link>
