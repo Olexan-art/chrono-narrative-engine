@@ -365,11 +365,11 @@ export default function ChapterPage() {
             </section>
           )}
 
-          {/* Character Chat */}
-          <ChapterChat messages={chapterChat} />
-
           {/* Tweets */}
           <ChapterTweets tweets={chapterTweets} />
+
+          {/* Character Chat */}
+          <ChapterChat messages={chapterChat} />
 
           {/* News Sources */}
           {allNewsSources.length > 0 && (
