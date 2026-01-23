@@ -49,7 +49,7 @@ export default function Index() {
         .select('id, title, content, date, status, tweets, cover_image_url')
         .eq('status', 'published')
         .order('date', { ascending: false })
-        .limit(10);
+        .limit(50);
       return (data || []) as Part[];
     }
   });

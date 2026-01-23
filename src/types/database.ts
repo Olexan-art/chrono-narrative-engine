@@ -41,10 +41,18 @@ export interface Chapter {
   volume_id: string;
   number: number;
   title: string;
+  title_en: string | null;
+  title_pl: string | null;
   description: string | null;
+  description_en: string | null;
+  description_pl: string | null;
   week_of_month: number;
   narrator_monologue: string | null;
+  narrator_monologue_en: string | null;
+  narrator_monologue_pl: string | null;
   narrator_commentary: string | null;
+  narrator_commentary_en: string | null;
+  narrator_commentary_pl: string | null;
   cover_image_url: string | null;
   cover_image_prompt: string | null;
   cover_image_url_2: string | null;
