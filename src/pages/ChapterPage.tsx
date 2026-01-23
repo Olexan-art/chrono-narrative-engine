@@ -1,0 +1,369 @@
+import { useParams, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
+import { uk } from "date-fns/locale";
+import { ChevronLeft, ChevronRight, Calendar, BookOpen, Loader2, Sparkles, MessageCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Header } from "@/components/Header";
+import { supabase } from "@/integrations/supabase/client";
+
+function parseContentWithLinks(content: string): React.ReactNode {
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = linkRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(content.slice(lastIndex, match.index));
+    }
+    
+    parts.push(
+      <a
+        key={match.index}
+        href={match[2]}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="news-link"
+      >
+        {match[1]}
+      </a>
+    );
+    
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push(content.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : content;
+}
+
+export default function ChapterPage() {
+  const { id } = useParams<{ id: string }>();
+
+  const { data: chapter, isLoading } = useQuery({
+    queryKey: ['chapter', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('chapters')
+        .select(`
+          *,
+          volume:volumes(*)
+        `)
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id
+  });
+
+  // Fetch parts for this chapter
+  const { data: parts = [] } = useQuery({
+    queryKey: ['chapter-parts', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('parts')
+        .select('*')
+        .eq('chapter_id', id)
+        .order('date', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id
+  });
+
+  // Fetch adjacent chapters
+  const { data: adjacentChapters } = useQuery({
+    queryKey: ['adjacent-chapters', chapter?.volume_id, chapter?.number],
+    queryFn: async () => {
+      if (!chapter) return { prev: null, next: null };
+      
+      const [prevResult, nextResult] = await Promise.all([
+        supabase
+          .from('chapters')
+          .select('id, title, number')
+          .eq('volume_id', chapter.volume_id)
+          .lt('number', chapter.number)
+          .order('number', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('chapters')
+          .select('id, title, number')
+          .eq('volume_id', chapter.volume_id)
+          .gt('number', chapter.number)
+          .order('number', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+      ]);
+
+      return {
+        prev: prevResult.data,
+        next: nextResult.data
+      };
+    },
+    enabled: !!chapter
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!chapter) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="container mx-auto px-4 py-16 text-center">
+          <BookOpen className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Главу не знайдено</h1>
+          <p className="text-muted-foreground mb-8">
+            Ця глава ще не існує
+          </p>
+          <Link to="/calendar">
+            <Button className="gap-2">
+              <Calendar className="w-4 h-4" />
+              Переглянути календар
+            </Button>
+          </Link>
+        </main>
+      </div>
+    );
+  }
+
+  // Combine all parts content
+  const combinedContent = parts.map((p: any) => p.content).join('\n\n---\n\n');
+  const allNewsSources = parts.flatMap((p: any) => (p.news_sources as any[]) || []);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      
+      <main className="container mx-auto px-4 py-8">
+        <article className="max-w-4xl mx-auto">
+          {/* Breadcrumbs */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8 font-mono">
+            {chapter.volume && (
+              <>
+                <span>{(chapter.volume as any).title}</span>
+                <span>/</span>
+              </>
+            )}
+            <span className="text-foreground">Тиждень {chapter.week_of_month}</span>
+          </div>
+
+          {/* Cover Image */}
+          {chapter.cover_image_url && (
+            <div className="mb-8 -mx-4 md:mx-0 relative">
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10" />
+              <img 
+                src={chapter.cover_image_url} 
+                alt={chapter.title}
+                className="w-full max-h-[500px] object-cover border-y md:border md:rounded-lg border-border"
+              />
+            </div>
+          )}
+
+          {/* Chapter Badge */}
+          <div className="flex items-center gap-2 mb-4">
+            <span className="px-3 py-1 bg-primary/20 border border-primary/30 rounded-full text-xs font-mono text-primary">
+              ГЛАВА {chapter.number}
+            </span>
+            <span className="px-3 py-1 bg-secondary/50 border border-border rounded-full text-xs font-mono text-muted-foreground">
+              ТИЖДЕНЬ {chapter.week_of_month}
+            </span>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-4xl md:text-5xl font-serif font-bold mb-6 text-glow leading-tight">
+            {chapter.title}
+          </h1>
+
+          {/* Description */}
+          {chapter.description && (
+            <p className="text-xl text-muted-foreground font-serif italic mb-8 border-l-2 border-primary/30 pl-4">
+              {chapter.description}
+            </p>
+          )}
+
+          {/* Parts Timeline */}
+          {parts.length > 0 && (
+            <div className="mb-12 p-4 bg-card/50 border border-border rounded-lg">
+              <h3 className="text-xs font-mono text-muted-foreground mb-3">ДЕННІ ЗАПИСИ ТИЖНЯ</h3>
+              <div className="flex flex-wrap gap-2">
+                {parts.map((p: any) => (
+                  <Link
+                    key={p.id}
+                    to={`/read/${p.date}`}
+                    className="px-3 py-1 text-sm border border-border rounded hover:border-primary/50 transition-colors"
+                  >
+                    {format(new Date(p.date), 'd MMM', { locale: uk })}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Main Content */}
+          <div className="prose font-serif text-lg leading-relaxed text-foreground mb-16">
+            {combinedContent.split('\n\n').map((paragraph: string, i: number) => {
+              if (paragraph === '---') {
+                return <hr key={i} className="my-8 border-border" />;
+              }
+              return (
+                <p key={i} className="mb-6">
+                  {parseContentWithLinks(paragraph)}
+                </p>
+              );
+            })}
+          </div>
+
+          {/* Stranger's Monologue */}
+          {chapter.narrator_monologue && (
+            <section className="relative my-16">
+              {/* Decorative elements */}
+              <div className="absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-primary/50 to-transparent" />
+              
+              <div className="bg-gradient-to-br from-primary/5 via-card/80 to-primary/5 border border-primary/20 rounded-lg p-8 md:p-10 relative overflow-hidden">
+                {/* Glow effect */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-6 relative">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-serif font-bold text-primary">Монолог Незнайомця</h2>
+                    <p className="text-xs font-mono text-muted-foreground">ТАЄМНИЧИЙ ГІСТЬ</p>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="relative font-serif text-lg leading-relaxed italic text-foreground/90 space-y-4">
+                  {chapter.narrator_monologue.split('\n\n').map((paragraph: string, i: number) => (
+                    <p key={i} className="first-letter:text-3xl first-letter:font-bold first-letter:text-primary first-letter:mr-1">
+                      {parseContentWithLinks(paragraph)}
+                    </p>
+                  ))}
+                </div>
+
+                {/* Signature */}
+                <div className="mt-8 text-right">
+                  <span className="text-sm font-mono text-primary/60">— Незнайомець</span>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Narrator's Commentary */}
+          {chapter.narrator_commentary && (
+            <section className="relative my-16">
+              {/* Decorative elements */}
+              <div className="absolute -right-4 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-secondary/50 to-transparent" />
+              
+              <div className="bg-gradient-to-bl from-secondary/10 via-muted/30 to-secondary/5 border border-border rounded-lg p-8 md:p-10 relative overflow-hidden">
+                {/* Circuit pattern hint */}
+                <div className="absolute bottom-0 left-0 w-48 h-48 opacity-5">
+                  <svg viewBox="0 0 100 100" className="w-full h-full">
+                    <pattern id="circuit" patternUnits="userSpaceOnUse" width="20" height="20">
+                      <path d="M10 0v10h10M0 10h10" stroke="currentColor" fill="none" strokeWidth="0.5"/>
+                    </pattern>
+                    <rect width="100" height="100" fill="url(#circuit)"/>
+                  </svg>
+                </div>
+                
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-6 relative">
+                  <div className="w-12 h-12 rounded-full bg-secondary/30 border border-secondary/40 flex items-center justify-center">
+                    <MessageCircle className="w-6 h-6 text-secondary-foreground" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-serif font-bold">Коментар Наратора</h2>
+                    <p className="text-xs font-mono text-muted-foreground">ШІ-АРХІВАТОР</p>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="relative font-serif text-lg leading-relaxed text-foreground/90 space-y-4">
+                  {chapter.narrator_commentary.split('\n\n').map((paragraph: string, i: number) => (
+                    <p key={i}>
+                      {parseContentWithLinks(paragraph)}
+                    </p>
+                  ))}
+                </div>
+
+                {/* Signature */}
+                <div className="mt-8 text-right">
+                  <span className="text-sm font-mono text-muted-foreground">— Наратор Точки Синхронізації</span>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* News Sources */}
+          {allNewsSources.length > 0 && (
+            <div className="mt-12 pt-8 border-t border-border">
+              <h3 className="text-sm font-mono text-muted-foreground mb-4">
+                ДЖЕРЕЛА РЕАЛЬНИХ ПОДІЙ ({allNewsSources.length})
+              </h3>
+              <ul className="space-y-2 columns-1 md:columns-2 gap-8">
+                {allNewsSources.slice(0, 20).map((source: any, i: number) => (
+                  <li key={i} className="break-inside-avoid">
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm news-link"
+                    >
+                      {source.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <nav className="flex items-center justify-between mt-12 pt-8 border-t border-border">
+            {adjacentChapters?.prev ? (
+              <Link to={`/chapter/${adjacentChapters.prev.id}`}>
+                <Button variant="outline" className="gap-2">
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Глава {adjacentChapters.prev.number}</span>
+                </Button>
+              </Link>
+            ) : (
+              <div />
+            )}
+            
+            <Link to="/calendar">
+              <Button variant="ghost" size="icon">
+                <Calendar className="w-5 h-5" />
+              </Button>
+            </Link>
+            
+            {adjacentChapters?.next ? (
+              <Link to={`/chapter/${adjacentChapters.next.id}`}>
+                <Button variant="outline" className="gap-2">
+                  <span className="hidden sm:inline">Глава {adjacentChapters.next.number}</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            ) : (
+              <div />
+            )}
+          </nav>
+        </article>
+      </main>
+    </div>
+  );
+}
