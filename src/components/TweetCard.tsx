@@ -25,7 +25,7 @@ export function TweetCard({ tweets }: TweetCardProps) {
   return (
     <div className="mt-12 pt-8 border-t border-border">
       <h3 className="text-sm font-mono text-muted-foreground mb-6 flex items-center gap-2">
-        <span className="text-xl">𝕏</span>
+        <span className="text-xl font-bold">MW</span>
         ВІДГУКИ З МАЙБУТНЬОГО
       </h3>
       

@@ -182,7 +182,7 @@ export default function Index() {
             {/* Right - Tweets Carousel */}
             <div className="lg:pl-4">
               <div className="flex items-center gap-2 mb-3 justify-center lg:justify-start">
-                <span className="text-lg">𝕏</span>
+                <span className="text-lg font-bold">MW</span>
                 <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
                   {t('tweets.title')}
                 </span>
