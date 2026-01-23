@@ -24,11 +24,22 @@ export type Database = {
           cover_image_url_3: string | null
           created_at: string | null
           description: string | null
+          description_en: string | null
+          description_pl: string | null
           id: string
           narrator_commentary: string | null
+          narrator_commentary_en: string | null
+          narrator_commentary_pl: string | null
           narrator_monologue: string | null
+          narrator_monologue_en: string | null
+          narrator_monologue_pl: string | null
           number: number
+          seo_description: string | null
+          seo_keywords: string[] | null
+          seo_title: string | null
           title: string
+          title_en: string | null
+          title_pl: string | null
           tweets: Json | null
           updated_at: string | null
           volume_id: string
@@ -43,11 +54,22 @@ export type Database = {
           cover_image_url_3?: string | null
           created_at?: string | null
           description?: string | null
+          description_en?: string | null
+          description_pl?: string | null
           id?: string
           narrator_commentary?: string | null
+          narrator_commentary_en?: string | null
+          narrator_commentary_pl?: string | null
           narrator_monologue?: string | null
+          narrator_monologue_en?: string | null
+          narrator_monologue_pl?: string | null
           number: number
+          seo_description?: string | null
+          seo_keywords?: string[] | null
+          seo_title?: string | null
           title: string
+          title_en?: string | null
+          title_pl?: string | null
           tweets?: Json | null
           updated_at?: string | null
           volume_id: string
@@ -62,11 +84,22 @@ export type Database = {
           cover_image_url_3?: string | null
           created_at?: string | null
           description?: string | null
+          description_en?: string | null
+          description_pl?: string | null
           id?: string
           narrator_commentary?: string | null
+          narrator_commentary_en?: string | null
+          narrator_commentary_pl?: string | null
           narrator_monologue?: string | null
+          narrator_monologue_en?: string | null
+          narrator_monologue_pl?: string | null
           number?: number
+          seo_description?: string | null
+          seo_keywords?: string[] | null
+          seo_title?: string | null
           title?: string
+          title_en?: string | null
+          title_pl?: string | null
           tweets?: Json | null
           updated_at?: string | null
           volume_id?: string
@@ -230,7 +263,9 @@ export type Database = {
           chapter_id: string
           chat_dialogue: Json | null
           content: string
+          content_en: string | null
           content_html: string | null
+          content_pl: string | null
           cover_image_prompt: string | null
           cover_image_prompt_2: string | null
           cover_image_url: string | null
@@ -255,8 +290,13 @@ export type Database = {
           number: number
           published_at: string | null
           scheduled_at: string | null
+          seo_description: string | null
+          seo_keywords: string[] | null
+          seo_title: string | null
           status: Database["public"]["Enums"]["story_status"] | null
           title: string
+          title_en: string | null
+          title_pl: string | null
           tweets: Json | null
           updated_at: string | null
         }
@@ -264,7 +304,9 @@ export type Database = {
           chapter_id: string
           chat_dialogue?: Json | null
           content?: string
+          content_en?: string | null
           content_html?: string | null
+          content_pl?: string | null
           cover_image_prompt?: string | null
           cover_image_prompt_2?: string | null
           cover_image_url?: string | null
@@ -289,8 +331,13 @@ export type Database = {
           number: number
           published_at?: string | null
           scheduled_at?: string | null
+          seo_description?: string | null
+          seo_keywords?: string[] | null
+          seo_title?: string | null
           status?: Database["public"]["Enums"]["story_status"] | null
           title: string
+          title_en?: string | null
+          title_pl?: string | null
           tweets?: Json | null
           updated_at?: string | null
         }
@@ -298,7 +345,9 @@ export type Database = {
           chapter_id?: string
           chat_dialogue?: Json | null
           content?: string
+          content_en?: string | null
           content_html?: string | null
+          content_pl?: string | null
           cover_image_prompt?: string | null
           cover_image_prompt_2?: string | null
           cover_image_url?: string | null
@@ -323,8 +372,13 @@ export type Database = {
           number?: number
           published_at?: string | null
           scheduled_at?: string | null
+          seo_description?: string | null
+          seo_keywords?: string[] | null
+          seo_title?: string | null
           status?: Database["public"]["Enums"]["story_status"] | null
           title?: string
+          title_en?: string | null
+          title_pl?: string | null
           tweets?: Json | null
           updated_at?: string | null
         }
@@ -449,11 +503,17 @@ export type Database = {
           cover_image_url: string | null
           created_at: string | null
           description: string | null
+          description_en: string | null
+          description_pl: string | null
           id: string
           month: number
           number: number
           summary: string | null
+          summary_en: string | null
+          summary_pl: string | null
           title: string
+          title_en: string | null
+          title_pl: string | null
           updated_at: string | null
           year: number
         }
@@ -462,11 +522,17 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string | null
           description?: string | null
+          description_en?: string | null
+          description_pl?: string | null
           id?: string
           month: number
           number: number
           summary?: string | null
+          summary_en?: string | null
+          summary_pl?: string | null
           title: string
+          title_en?: string | null
+          title_pl?: string | null
           updated_at?: string | null
           year: number
         }
@@ -475,11 +541,17 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string | null
           description?: string | null
+          description_en?: string | null
+          description_pl?: string | null
           id?: string
           month?: number
           number?: number
           summary?: string | null
+          summary_en?: string | null
+          summary_pl?: string | null
           title?: string
+          title_en?: string | null
+          title_pl?: string | null
           updated_at?: string | null
           year?: number
         }

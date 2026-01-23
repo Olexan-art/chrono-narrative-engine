@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { format, startOfWeek, endOfWeek, getMonth, getYear } from "date-fns";
-import { uk } from "date-fns/locale";
+import { uk, enUS, pl } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { BookOpen, Calendar, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,33 +8,35 @@ import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/Header";
 import { MiniCalendar } from "@/components/MiniCalendar";
 import { NarrativeSummary } from "@/components/NarrativeSummary";
+import { HeroTweets } from "@/components/HeroTweets";
+import { SEOHead } from "@/components/SEOHead";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { Part } from "@/types/database";
 
-function getPartLabel(part: any): { type: 'day' | 'week' | 'month'; label: string } {
-  // This is a simplified version - in a real app you'd check if it's a special entry
+function getPartLabel(part: any, t: (key: string) => string): { type: 'day' | 'week' | 'month'; label: string } {
   const date = new Date(part.date);
   const dayOfWeek = date.getDay();
   const dayOfMonth = date.getDate();
   
-  // Sunday = summary of the week
   if (dayOfWeek === 0) {
-    return { type: 'week', label: 'ТИЖДЕНЬ' };
+    return { type: 'week', label: t('month') === 'MONTH' ? 'WEEK' : 'ТИЖДЕНЬ' };
   }
   
-  // Last day of month = month summary (simplified check)
   if (dayOfMonth >= 28) {
     const nextDay = new Date(date);
     nextDay.setDate(dayOfMonth + 1);
     if (nextDay.getMonth() !== date.getMonth()) {
-      return { type: 'month', label: 'МІСЯЦЬ' };
+      return { type: 'month', label: t('month') };
     }
   }
   
-  return { type: 'day', label: 'ДЕНЬ' };
+  return { type: 'day', label: t('day') };
 }
 
 export default function Index() {
+  const { t, language } = useLanguage();
+  const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
@@ -92,7 +94,6 @@ export default function Index() {
     }
   });
 
-  // Fetch all chapters with their volumes
   const { data: allChapters = [] } = useQuery({
     queryKey: ['all-chapters'],
     queryFn: async () => {
@@ -111,59 +112,62 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead />
       <Header />
       
-      {/* Hero */}
-      <section className="relative py-16 md:py-24 overflow-hidden">
+      {/* Hero - Compact */}
+      <section className="relative py-8 md:py-12 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
         <div className="container mx-auto px-4 relative">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 border border-primary/30 bg-primary/5 mb-8">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-mono text-primary">AI-ГЕНЕРОВАНА НАУКОВА ФАНТАСТИКА</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 border border-primary/30 bg-primary/5 mb-4">
+              <Sparkles className="w-3 h-3 text-primary" />
+              <span className="text-xs font-mono text-primary">{t('hero.badge')}</span>
             </div>
             
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 text-glow font-sans tracking-tight">
-              Точка Синхронізації
+            <h1 className="text-3xl md:text-4xl font-bold mb-3 text-glow font-sans tracking-tight">
+              {t('hero.title')}
             </h1>
             
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 font-serif leading-relaxed">
-              Книга, що пише сама себе. Штучний інтелект-архіватор структурує хаос 
-              людської історії через призму наукової фантастики.
+            <p className="text-sm md:text-base text-muted-foreground mb-4 font-serif leading-relaxed max-w-xl mx-auto">
+              {t('hero.description')}
             </p>
             
-            <div className="flex flex-wrap gap-4 justify-center">
+            <div className="flex flex-wrap gap-3 justify-center mb-6">
               <Link to="/calendar">
-                <Button size="lg" className="gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Переглянути архів
+                <Button size="sm" className="gap-2">
+                  <Calendar className="w-4 h-4" />
+                  {t('hero.archive')}
                 </Button>
               </Link>
               {latestParts[0] && (
                 <Link to={`/read/${latestParts[0].date}`}>
-                  <Button size="lg" variant="outline" className="gap-2">
-                    <BookOpen className="w-5 h-5" />
-                    Читати останнє
+                  <Button size="sm" variant="outline" className="gap-2">
+                    <BookOpen className="w-4 h-4" />
+                    {t('hero.latest')}
                   </Button>
                 </Link>
               )}
             </div>
+
+            {/* Hero Tweets */}
+            <HeroTweets parts={latestParts} />
           </div>
         </div>
       </section>
 
       {/* Structure */}
-      <section className="py-12 border-y border-border">
+      <section className="py-8 border-y border-border">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {[
-              { title: 'МІСЯЦЬ → ТОМ', desc: 'Цілісна сюжетна арка глобального вектора людства' },
-              { title: 'ТИЖДЕНЬ → ГЛАВА', desc: 'Синтез подій з монологом Наратора' },
-              { title: 'ДЕНЬ → ЧАСТИНА', desc: 'Яскравий спалах через метафори та прогнози' },
+              { title: t('structure.month'), desc: t('structure.month.desc') },
+              { title: t('structure.week'), desc: t('structure.week.desc') },
+              { title: t('structure.day'), desc: t('structure.day.desc') },
             ].map(({ title, desc }) => (
               <div key={title} className="text-center">
                 <h3 className="font-mono text-sm text-primary mb-2">{title}</h3>
-                <p className="text-muted-foreground font-serif">{desc}</p>
+                <p className="text-sm text-muted-foreground font-serif">{desc}</p>
               </div>
             ))}
           </div>
@@ -177,12 +181,12 @@ export default function Index() {
             {/* Latest Parts */}
             <div className="lg:col-span-2">
               <h2 className="text-xl font-bold chapter-title mb-6">
-                ОСТАННІ ЗАПИСИ
+                {t('latest.title')}
               </h2>
               
               <div className="space-y-4">
                 {latestParts.map((part) => {
-                  const partLabel = getPartLabel(part);
+                  const partLabel = getPartLabel(part, t);
                   
                   return (
                     <Link key={part.id} to={`/read/${part.date}`} className="group block">
@@ -204,7 +208,7 @@ export default function Index() {
                                 {partLabel.label}
                               </Badge>
                               <span className="text-xs font-mono text-muted-foreground">
-                                {format(new Date(part.date), 'd MMMM yyyy', { locale: uk })}
+                                {format(new Date(part.date), 'd MMMM yyyy', { locale: dateLocale })}
                               </span>
                             </div>
                             <h3 className="font-serif font-medium text-base md:text-lg group-hover:text-primary transition-colors line-clamp-1">
@@ -242,10 +246,10 @@ export default function Index() {
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold chapter-title">
-                ГЛАВИ ТИЖНІВ
+                {t('chapters.title')}
               </h2>
               <Badge variant="outline" className="font-mono">
-                {allChapters.length} глав
+                {allChapters.length} {t('chapters.count')}
               </Badge>
             </div>
             
@@ -275,7 +279,7 @@ export default function Index() {
                       {/* Chapter Badge */}
                       <div className="absolute top-3 left-3">
                         <Badge className="font-mono text-xs">
-                          ГЛАВА {chapter.number}
+                          {t('chapter')} {chapter.number}
                         </Badge>
                       </div>
                     </div>
@@ -288,7 +292,7 @@ export default function Index() {
                         </span>
                         <span className="text-muted-foreground">•</span>
                         <span className="text-xs font-mono text-muted-foreground">
-                          Тиждень {chapter.week_of_month}
+                          {t('week')} {chapter.week_of_month}
                         </span>
                       </div>
                       
@@ -306,12 +310,12 @@ export default function Index() {
                       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                         {chapter.narrator_monologue && (
                           <span className="text-xs text-primary font-mono">
-                            ✦ Монолог
+                            ✦ {t('monologue')}
                           </span>
                         )}
                         {chapter.narrator_commentary && (
                           <span className="text-xs text-secondary-foreground font-mono">
-                            ◆ Коментар
+                            ◆ {t('commentary')}
                           </span>
                         )}
                       </div>
@@ -327,7 +331,7 @@ export default function Index() {
       <footer className="py-8 border-t border-border">
         <div className="container mx-auto px-4 text-center">
           <p className="text-sm text-muted-foreground font-mono">
-            Стилістика: Рей Бредбері • Артур Кларк • Ніл Гейман
+            {t('footer.style')}
           </p>
         </div>
       </footer>

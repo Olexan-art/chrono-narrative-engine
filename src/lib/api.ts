@@ -93,3 +93,15 @@ export async function adminAction<T>(
 ): Promise<T> {
   return callEdgeFunction<T>('admin', { action, password, data });
 }
+
+export async function translateContent(params: {
+  partId?: string;
+  chapterId?: string;
+  volumeId?: string;
+  targetLanguage: 'en' | 'pl';
+}) {
+  return callEdgeFunction<{
+    success: boolean;
+    translated: Record<string, string>;
+  }>('translate', params);
+}
