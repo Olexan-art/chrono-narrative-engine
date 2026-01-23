@@ -92,6 +92,23 @@ export default function Index() {
     }
   });
 
+  // Fetch all chapters with their volumes
+  const { data: allChapters = [] } = useQuery({
+    queryKey: ['all-chapters'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('chapters')
+        .select(`
+          *,
+          volume:volumes(*)
+        `)
+        .not('narrator_monologue', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(6);
+      return data || [];
+    }
+  });
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -219,6 +236,93 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Chapters Section */}
+      {allChapters.length > 0 && (
+        <section className="py-12 border-t border-border">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold chapter-title">
+                ГЛАВИ ТИЖНІВ
+              </h2>
+              <Badge variant="outline" className="font-mono">
+                {allChapters.length} глав
+              </Badge>
+            </div>
+            
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {allChapters.map((chapter: any) => (
+                <Link 
+                  key={chapter.id} 
+                  to={`/chapter/${chapter.id}`}
+                  className="group block"
+                >
+                  <article className="cosmic-card border border-border hover:border-primary/50 transition-all overflow-hidden h-full">
+                    {/* Cover Image */}
+                    <div className="relative h-48 bg-muted">
+                      {chapter.cover_image_url ? (
+                        <img 
+                          src={chapter.cover_image_url} 
+                          alt={chapter.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-secondary/10">
+                          <BookOpen className="w-12 h-12 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+                      
+                      {/* Chapter Badge */}
+                      <div className="absolute top-3 left-3">
+                        <Badge className="font-mono text-xs">
+                          ГЛАВА {chapter.number}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    {/* Content */}
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {chapter.volume?.title || 'Том'}
+                        </span>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="text-xs font-mono text-muted-foreground">
+                          Тиждень {chapter.week_of_month}
+                        </span>
+                      </div>
+                      
+                      <h3 className="font-serif font-medium text-lg group-hover:text-primary transition-colors line-clamp-2 mb-2">
+                        {chapter.title}
+                      </h3>
+                      
+                      {chapter.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2 font-serif">
+                          {chapter.description}
+                        </p>
+                      )}
+                      
+                      {/* Indicators */}
+                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+                        {chapter.narrator_monologue && (
+                          <span className="text-xs text-primary font-mono">
+                            ✦ Монолог
+                          </span>
+                        )}
+                        {chapter.narrator_commentary && (
+                          <span className="text-xs text-secondary-foreground font-mono">
+                            ◆ Коментар
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
       {/* Footer */}
       <footer className="py-8 border-t border-border">
         <div className="container mx-auto px-4 text-center">
