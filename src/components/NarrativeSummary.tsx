@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { uk } from "date-fns/locale";
-import { Calendar, BookOpen } from "lucide-react";
+import { BookOpen, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Part, Volume, Chapter } from "@/types/database";
@@ -102,7 +103,16 @@ export function NarrativeSummary({ weekParts, monthVolume, monthChapter }: Narra
             {monthChapter && (
               <div className="mt-3 pt-3 border-t border-border">
                 <p className="text-xs text-muted-foreground font-mono mb-1">ПОТОЧНА ГЛАВА</p>
-                <p className="text-sm">{monthChapter.title}</p>
+                <p className="text-sm mb-2">{monthChapter.title}</p>
+                {monthChapter.narrator_monologue && (
+                  <Link to={`/chapter/${monthChapter.id}`}>
+                    <Button variant="outline" size="sm" className="w-full gap-2">
+                      <BookOpen className="w-4 h-4" />
+                      Читати главу
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                )}
               </div>
             )}
           </CardContent>
