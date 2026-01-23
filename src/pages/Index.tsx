@@ -53,13 +53,13 @@ export default function Index() {
       
       const { data, count } = await supabase
         .from('parts')
-        .select('id, title, content, date, status, tweets, cover_image_url', { count: 'exact' })
+        .select('id, title, title_en, title_pl, content, content_en, content_pl, date, status, tweets, tweets_en, tweets_pl, cover_image_url', { count: 'exact' })
         .eq('status', 'published')
         .order('date', { ascending: false })
         .range(from, to);
       
       return {
-        parts: (data || []) as Part[],
+        parts: (data || []) as unknown as Part[],
         totalCount: count || 0,
         totalPages: Math.ceil((count || 0) / ITEMS_PER_PAGE)
       };
@@ -248,6 +248,19 @@ export default function Index() {
                 {latestParts.map((part, index) => {
                   const partLabel = getPartLabel(part, t);
                   
+                  // Localize title and content
+                  const localizedTitle = language === 'en' 
+                    ? ((part as any).title_en || part.title)
+                    : language === 'pl'
+                    ? ((part as any).title_pl || part.title)
+                    : part.title;
+                  
+                  const localizedContent = language === 'en'
+                    ? ((part as any).content_en || part.content)
+                    : language === 'pl'
+                    ? ((part as any).content_pl || part.content)
+                    : part.content;
+                  
                   return (
                     <Link 
                       key={part.id} 
@@ -277,10 +290,10 @@ export default function Index() {
                               </span>
                             </div>
                             <h3 className="font-serif font-medium text-sm md:text-lg group-hover:text-primary transition-colors duration-200 line-clamp-2">
-                              {part.title}
+                              {localizedTitle}
                             </h3>
                             <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 mt-1 font-serif hidden sm:block">
-                              {part.content?.slice(0, 120)}...
+                              {localizedContent?.slice(0, 120)}...
                             </p>
                           </div>
                           <ArrowRight className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200 shrink-0 hidden sm:block" />
