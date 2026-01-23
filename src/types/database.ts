@@ -47,6 +47,12 @@ export interface Chapter {
   narrator_commentary: string | null;
   cover_image_url: string | null;
   cover_image_prompt: string | null;
+  cover_image_url_2: string | null;
+  cover_image_prompt_2: string | null;
+  cover_image_url_3: string | null;
+  cover_image_prompt_3: string | null;
+  chat_dialogue: ChatMessage[] | unknown;
+  tweets: Tweet[] | unknown;
   created_at: string;
   updated_at: string;
 }

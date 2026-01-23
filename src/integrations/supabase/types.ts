@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       chapters: {
         Row: {
+          chat_dialogue: Json | null
           cover_image_prompt: string | null
           cover_image_prompt_2: string | null
           cover_image_prompt_3: string | null
@@ -46,6 +47,7 @@ export type Database = {
           week_of_month: number
         }
         Insert: {
+          chat_dialogue?: Json | null
           cover_image_prompt?: string | null
           cover_image_prompt_2?: string | null
           cover_image_prompt_3?: string | null
@@ -76,6 +78,7 @@ export type Database = {
           week_of_month: number
         }
         Update: {
+          chat_dialogue?: Json | null
           cover_image_prompt?: string | null
           cover_image_prompt_2?: string | null
           cover_image_prompt_3?: string | null
