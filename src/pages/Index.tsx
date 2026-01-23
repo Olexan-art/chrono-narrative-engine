@@ -115,25 +115,25 @@ export default function Index() {
       <SEOHead />
       <Header />
       
-      {/* Hero - Compact */}
-      <section className="relative py-8 md:py-12 overflow-hidden">
+      {/* Hero Part 1 - Main */}
+      <section className="relative py-8 md:py-10 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
         <div className="container mx-auto px-4 relative">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 border border-primary/30 bg-primary/5 mb-4">
+          <div className="max-w-2xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 border border-primary/30 bg-primary/5 mb-3">
               <Sparkles className="w-3 h-3 text-primary" />
               <span className="text-xs font-mono text-primary">{t('hero.badge')}</span>
             </div>
             
-            <h1 className="text-3xl md:text-4xl font-bold mb-3 text-glow font-sans tracking-tight">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2 text-glow font-sans tracking-tight">
               {t('hero.title')}
             </h1>
             
-            <p className="text-sm md:text-base text-muted-foreground mb-4 font-serif leading-relaxed max-w-xl mx-auto">
+            <p className="text-sm text-muted-foreground mb-4 font-serif leading-relaxed max-w-lg mx-auto">
               {t('hero.description')}
             </p>
             
-            <div className="flex flex-wrap gap-3 justify-center mb-6">
+            <div className="flex flex-wrap gap-3 justify-center">
               <Link to="/calendar">
                 <Button size="sm" className="gap-2">
                   <Calendar className="w-4 h-4" />
@@ -149,10 +149,20 @@ export default function Index() {
                 </Link>
               )}
             </div>
-
-            {/* Hero Tweets */}
-            <HeroTweets parts={latestParts} />
           </div>
+        </div>
+      </section>
+
+      {/* Hero Part 2 - Tweets */}
+      <section className="py-6 border-y border-border bg-card/30">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className="text-lg">𝕏</span>
+            <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+              {t('tweets.title')}
+            </span>
+          </div>
+          <HeroTweets parts={latestParts} />
         </div>
       </section>
 
