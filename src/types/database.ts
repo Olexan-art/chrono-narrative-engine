@@ -51,6 +51,21 @@ export interface Chapter {
   updated_at: string;
 }
 
+export interface ChatMessage {
+  character: string;
+  name: string;
+  avatar: string;
+  message: string;
+}
+
+export interface Tweet {
+  author: string;
+  handle: string;
+  content: string;
+  likes: number;
+  retweets: number;
+}
+
 export interface Part {
   id: string;
   chapter_id: string;
@@ -64,7 +79,11 @@ export interface Part {
   published_at: string | null;
   cover_image_url: string | null;
   cover_image_prompt: string | null;
-  news_sources: Array<{ url: string; title: string }>;
+  cover_image_url_2: string | null;
+  cover_image_prompt_2: string | null;
+  news_sources: Array<{ url: string; title: string }> | unknown;
+  chat_dialogue: ChatMessage[] | unknown;
+  tweets: Tweet[] | unknown;
   narrative_source: NarrativeSource | null;
   narrative_structure: NarrativeStructure | null;
   narrative_purpose: NarrativePurpose | null;

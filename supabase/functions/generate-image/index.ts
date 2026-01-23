@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, partId } = await req.json();
+    const { prompt, partId, imageIndex = 1 } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -68,12 +68,14 @@ serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       );
 
+      // Update the appropriate image field based on imageIndex
+      const updateData = imageIndex === 2 
+        ? { cover_image_url_2: imageUrl, cover_image_prompt_2: prompt }
+        : { cover_image_url: imageUrl, cover_image_prompt: prompt };
+
       await supabase
         .from('parts')
-        .update({ 
-          cover_image_url: imageUrl,
-          cover_image_prompt: prompt 
-        })
+        .update(updateData)
         .eq('id', partId);
 
       await supabase
@@ -88,10 +90,10 @@ serve(async (req) => {
         });
     }
 
-    console.log('Generated image for prompt:', prompt.slice(0, 50));
+    console.log('Generated image', imageIndex, 'for prompt:', prompt.slice(0, 50));
 
     return new Response(
-      JSON.stringify({ success: true, imageUrl }),
+      JSON.stringify({ success: true, imageUrl, imageIndex }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

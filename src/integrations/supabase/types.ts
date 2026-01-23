@@ -129,6 +129,7 @@ export type Database = {
           source_url: string | null
           title: string
           url: string
+          used_for_part_id: string | null
           used_in_generation: boolean | null
         }
         Insert: {
@@ -145,6 +146,7 @@ export type Database = {
           source_url?: string | null
           title: string
           url: string
+          used_for_part_id?: string | null
           used_in_generation?: boolean | null
         }
         Update: {
@@ -161,6 +163,7 @@ export type Database = {
           source_url?: string | null
           title?: string
           url?: string
+          used_for_part_id?: string | null
           used_in_generation?: boolean | null
         }
         Relationships: [
@@ -171,15 +174,25 @@ export type Database = {
             referencedRelation: "parts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "news_items_used_for_part_id_fkey"
+            columns: ["used_for_part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       parts: {
         Row: {
           chapter_id: string
+          chat_dialogue: Json | null
           content: string
           content_html: string | null
           cover_image_prompt: string | null
+          cover_image_prompt_2: string | null
           cover_image_url: string | null
+          cover_image_url_2: string | null
           created_at: string | null
           date: string
           id: string
@@ -202,14 +215,18 @@ export type Database = {
           scheduled_at: string | null
           status: Database["public"]["Enums"]["story_status"] | null
           title: string
+          tweets: Json | null
           updated_at: string | null
         }
         Insert: {
           chapter_id: string
+          chat_dialogue?: Json | null
           content?: string
           content_html?: string | null
           cover_image_prompt?: string | null
+          cover_image_prompt_2?: string | null
           cover_image_url?: string | null
+          cover_image_url_2?: string | null
           created_at?: string | null
           date: string
           id?: string
@@ -232,14 +249,18 @@ export type Database = {
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["story_status"] | null
           title: string
+          tweets?: Json | null
           updated_at?: string | null
         }
         Update: {
           chapter_id?: string
+          chat_dialogue?: Json | null
           content?: string
           content_html?: string | null
           cover_image_prompt?: string | null
+          cover_image_prompt_2?: string | null
           cover_image_url?: string | null
+          cover_image_url_2?: string | null
           created_at?: string | null
           date?: string
           id?: string
@@ -262,6 +283,7 @@ export type Database = {
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["story_status"] | null
           title?: string
+          tweets?: Json | null
           updated_at?: string | null
         }
         Relationships: [

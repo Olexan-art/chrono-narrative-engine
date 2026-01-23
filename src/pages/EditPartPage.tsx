@@ -308,14 +308,14 @@ export default function EditPartPage() {
             </CardContent>
           </Card>
 
-          {currentData.news_sources && currentData.news_sources.length > 0 && (
+          {currentData.news_sources && Array.isArray(currentData.news_sources) && (currentData.news_sources as any[]).length > 0 && (
             <Card className="cosmic-card">
               <CardHeader>
                 <CardTitle>Джерела новин</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {currentData.news_sources.map((source, i) => (
+                  {(currentData.news_sources as Array<{ url: string; title: string }>).map((source, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
                       <ExternalLink className="w-4 h-4 mt-0.5 text-primary shrink-0" />
                       <a 
