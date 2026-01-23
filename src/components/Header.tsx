@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, Clock, Sparkles } from "lucide-react";
+import { BookOpen, Calendar, Clock, Sparkles, Library } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
@@ -25,6 +25,12 @@ export function Header() {
             <Button variant="ghost" size="sm" className="gap-2">
               <BookOpen className="w-4 h-4" />
               <span className="hidden sm:inline">Читати</span>
+            </Button>
+          </Link>
+          <Link to="/chapters">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <Library className="w-4 h-4" />
+              <span className="hidden sm:inline">Глави</span>
             </Button>
           </Link>
           <Link to="/calendar">
