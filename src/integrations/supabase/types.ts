@@ -17,6 +17,8 @@ export type Database = {
       chapters: {
         Row: {
           chat_dialogue: Json | null
+          chat_dialogue_en: Json | null
+          chat_dialogue_pl: Json | null
           cover_image_prompt: string | null
           cover_image_prompt_2: string | null
           cover_image_prompt_3: string | null
@@ -42,12 +44,16 @@ export type Database = {
           title_en: string | null
           title_pl: string | null
           tweets: Json | null
+          tweets_en: Json | null
+          tweets_pl: Json | null
           updated_at: string | null
           volume_id: string
           week_of_month: number
         }
         Insert: {
           chat_dialogue?: Json | null
+          chat_dialogue_en?: Json | null
+          chat_dialogue_pl?: Json | null
           cover_image_prompt?: string | null
           cover_image_prompt_2?: string | null
           cover_image_prompt_3?: string | null
@@ -73,12 +79,16 @@ export type Database = {
           title_en?: string | null
           title_pl?: string | null
           tweets?: Json | null
+          tweets_en?: Json | null
+          tweets_pl?: Json | null
           updated_at?: string | null
           volume_id: string
           week_of_month: number
         }
         Update: {
           chat_dialogue?: Json | null
+          chat_dialogue_en?: Json | null
+          chat_dialogue_pl?: Json | null
           cover_image_prompt?: string | null
           cover_image_prompt_2?: string | null
           cover_image_prompt_3?: string | null
@@ -104,6 +114,8 @@ export type Database = {
           title_en?: string | null
           title_pl?: string | null
           tweets?: Json | null
+          tweets_en?: Json | null
+          tweets_pl?: Json | null
           updated_at?: string | null
           volume_id?: string
           week_of_month?: number
@@ -265,6 +277,8 @@ export type Database = {
         Row: {
           chapter_id: string
           chat_dialogue: Json | null
+          chat_dialogue_en: Json | null
+          chat_dialogue_pl: Json | null
           content: string
           content_en: string | null
           content_html: string | null
@@ -301,11 +315,15 @@ export type Database = {
           title_en: string | null
           title_pl: string | null
           tweets: Json | null
+          tweets_en: Json | null
+          tweets_pl: Json | null
           updated_at: string | null
         }
         Insert: {
           chapter_id: string
           chat_dialogue?: Json | null
+          chat_dialogue_en?: Json | null
+          chat_dialogue_pl?: Json | null
           content?: string
           content_en?: string | null
           content_html?: string | null
@@ -342,11 +360,15 @@ export type Database = {
           title_en?: string | null
           title_pl?: string | null
           tweets?: Json | null
+          tweets_en?: Json | null
+          tweets_pl?: Json | null
           updated_at?: string | null
         }
         Update: {
           chapter_id?: string
           chat_dialogue?: Json | null
+          chat_dialogue_en?: Json | null
+          chat_dialogue_pl?: Json | null
           content?: string
           content_en?: string | null
           content_html?: string | null
@@ -383,6 +405,8 @@ export type Database = {
           title_en?: string | null
           title_pl?: string | null
           tweets?: Json | null
+          tweets_en?: Json | null
+          tweets_pl?: Json | null
           updated_at?: string | null
         }
         Relationships: [
