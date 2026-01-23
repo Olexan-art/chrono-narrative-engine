@@ -77,7 +77,11 @@ export interface Part {
   chapter_id: string;
   number: number;
   title: string;
+  title_en: string | null;
+  title_pl: string | null;
   content: string;
+  content_en: string | null;
+  content_pl: string | null;
   content_html: string | null;
   date: string;
   status: StoryStatus;

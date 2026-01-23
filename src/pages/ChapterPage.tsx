@@ -1,12 +1,16 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
-import { uk } from "date-fns/locale";
+import { format } from "date-fns";
+import { uk, enUS, pl } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar, BookOpen, Loader2, Sparkles, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
+import { ChapterTweets } from "@/components/ChapterTweets";
+import { ChapterChat } from "@/components/ChapterChat";
 import { supabase } from "@/integrations/supabase/client";
 import { useTrackView } from "@/hooks/useTrackView";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { Tweet, ChatMessage } from "@/types/database";
 
 function parseContentWithLinks(content: string): React.ReactNode {
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
@@ -43,6 +47,7 @@ function parseContentWithLinks(content: string): React.ReactNode {
 
 export default function ChapterPage() {
   const { id } = useParams<{ id: string }>();
+  const { language } = useLanguage();
 
   const { data: chapter, isLoading } = useQuery({
     queryKey: ['chapter', id],
@@ -143,9 +148,30 @@ export default function ChapterPage() {
     );
   }
 
-  // Combine all parts content
-  const combinedContent = parts.map((p: any) => p.content).join('\n\n---\n\n');
+  // Get localized content
+  const getLocalizedField = (field: string, enField: string, plField: string) => {
+    if (language === 'en' && (chapter as any)[enField]) return (chapter as any)[enField];
+    if (language === 'pl' && (chapter as any)[plField]) return (chapter as any)[plField];
+    return (chapter as any)[field];
+  };
+
+  const localizedTitle = getLocalizedField('title', 'title_en', 'title_pl');
+  const localizedDescription = getLocalizedField('description', 'description_en', 'description_pl');
+  const localizedMonologue = getLocalizedField('narrator_monologue', 'narrator_monologue_en', 'narrator_monologue_pl');
+  const localizedCommentary = getLocalizedField('narrator_commentary', 'narrator_commentary_en', 'narrator_commentary_pl');
+
+  // Combine all parts content with localization
+  const combinedContent = parts.map((p: any) => {
+    if (language === 'en' && p.content_en) return p.content_en;
+    if (language === 'pl' && p.content_pl) return p.content_pl;
+    return p.content;
+  }).join('\n\n---\n\n');
+  
   const allNewsSources = parts.flatMap((p: any) => (p.news_sources as any[]) || []);
+  const chapterTweets = Array.isArray(chapter.tweets) ? (chapter.tweets as unknown as Tweet[]) : [];
+  const chapterChat = Array.isArray(chapter.chat_dialogue) ? (chapter.chat_dialogue as unknown as ChatMessage[]) : [];
+
+  const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
 
   return (
     <div className="min-h-screen bg-background">
@@ -188,13 +214,13 @@ export default function ChapterPage() {
 
           {/* Title */}
           <h1 className="text-4xl md:text-5xl font-serif font-bold mb-6 text-glow leading-tight">
-            {chapter.title}
+            {localizedTitle}
           </h1>
 
           {/* Description */}
-          {chapter.description && (
+          {localizedDescription && (
             <p className="text-xl text-muted-foreground font-serif italic mb-8 border-l-2 border-primary/30 pl-4">
-              {chapter.description}
+              {localizedDescription}
             </p>
           )}
 
@@ -231,7 +257,7 @@ export default function ChapterPage() {
           </div>
 
           {/* Stranger's Monologue */}
-          {chapter.narrator_monologue && (
+          {localizedMonologue && (
             <section className="relative my-16">
               {/* Decorative elements */}
               <div className="absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-primary/50 to-transparent" />
@@ -246,14 +272,18 @@ export default function ChapterPage() {
                     <Sparkles className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-serif font-bold text-primary">Монолог Незнайомця</h2>
-                    <p className="text-xs font-mono text-muted-foreground">ТАЄМНИЧИЙ ГІСТЬ</p>
+                    <h2 className="text-xl font-serif font-bold text-primary">
+                      {language === 'en' ? "Stranger's Monologue" : language === 'pl' ? "Monolog Nieznajomego" : "Монолог Незнайомця"}
+                    </h2>
+                    <p className="text-xs font-mono text-muted-foreground">
+                      {language === 'en' ? "MYSTERIOUS GUEST" : language === 'pl' ? "TAJEMNICZY GOŚĆ" : "ТАЄМНИЧИЙ ГІСТЬ"}
+                    </p>
                   </div>
                 </div>
 
                 {/* Content */}
                 <div className="relative font-serif text-lg leading-relaxed italic text-foreground/90 space-y-4">
-                  {chapter.narrator_monologue.split('\n\n').map((paragraph: string, i: number) => (
+                  {localizedMonologue.split('\n\n').map((paragraph: string, i: number) => (
                     <p key={i} className="first-letter:text-3xl first-letter:font-bold first-letter:text-primary first-letter:mr-1">
                       {parseContentWithLinks(paragraph)}
                     </p>
@@ -262,14 +292,16 @@ export default function ChapterPage() {
 
                 {/* Signature */}
                 <div className="mt-8 text-right">
-                  <span className="text-sm font-mono text-primary/60">— Незнайомець</span>
+                  <span className="text-sm font-mono text-primary/60">
+                    — {language === 'en' ? "The Stranger" : language === 'pl' ? "Nieznajomy" : "Незнайомець"}
+                  </span>
                 </div>
               </div>
             </section>
           )}
 
           {/* Narrator's Commentary */}
-          {chapter.narrator_commentary && (
+          {localizedCommentary && (
             <section className="relative my-16">
               {/* Decorative elements */}
               <div className="absolute -right-4 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-secondary/50 to-transparent" />
@@ -291,14 +323,18 @@ export default function ChapterPage() {
                     <MessageCircle className="w-6 h-6 text-secondary-foreground" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-serif font-bold">Коментар Наратора</h2>
-                    <p className="text-xs font-mono text-muted-foreground">ШІ-АРХІВАТОР</p>
+                    <h2 className="text-xl font-serif font-bold">
+                      {language === 'en' ? "Narrator's Commentary" : language === 'pl' ? "Komentarz Narratora" : "Коментар Наратора"}
+                    </h2>
+                    <p className="text-xs font-mono text-muted-foreground">
+                      {language === 'en' ? "AI ARCHIVIST" : language === 'pl' ? "ARCHIWISTA AI" : "ШІ-АРХІВАТОР"}
+                    </p>
                   </div>
                 </div>
 
                 {/* Content */}
                 <div className="relative font-serif text-lg leading-relaxed text-foreground/90 space-y-4">
-                  {chapter.narrator_commentary.split('\n\n').map((paragraph: string, i: number) => (
+                  {localizedCommentary.split('\n\n').map((paragraph: string, i: number) => (
                     <p key={i}>
                       {parseContentWithLinks(paragraph)}
                     </p>
@@ -307,11 +343,19 @@ export default function ChapterPage() {
 
                 {/* Signature */}
                 <div className="mt-8 text-right">
-                  <span className="text-sm font-mono text-muted-foreground">— Наратор Точки Синхронізації</span>
+                  <span className="text-sm font-mono text-muted-foreground">
+                    — {language === 'en' ? "Synchronization Point Narrator" : language === 'pl' ? "Narrator Punktu Synchronizacji" : "Наратор Точки Синхронізації"}
+                  </span>
                 </div>
               </div>
             </section>
           )}
+
+          {/* Character Chat */}
+          <ChapterChat messages={chapterChat} />
+
+          {/* Tweets */}
+          <ChapterTweets tweets={chapterTweets} />
 
           {/* News Sources */}
           {allNewsSources.length > 0 && (
