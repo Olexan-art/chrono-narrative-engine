@@ -51,7 +51,7 @@ const RSS_FEEDS = [
 ];
 
 // Simple XML parser for RSS feeds
-function parseRSSItem(itemXml: string, source: string, category: string): ParsedArticle | null {
+function parseRSSItem(itemXml: string, source: string, category: string, targetDate?: string): ParsedArticle | null {
   try {
     const getTagContent = (tag: string): string => {
       const regex = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>|<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i');
@@ -63,6 +63,17 @@ function parseRSSItem(itemXml: string, source: string, category: string): Parsed
     const link = getTagContent('link') || getTagContent('guid');
     const description = getTagContent('description');
     const pubDate = getTagContent('pubDate');
+    
+    // Parse and validate date
+    const articleDate = pubDate ? new Date(pubDate) : null;
+    
+    // If target date is specified, filter by date
+    if (targetDate && articleDate) {
+      const articleDateStr = articleDate.toISOString().split('T')[0];
+      if (articleDateStr !== targetDate) {
+        return null; // Skip articles that don't match the target date
+      }
+    }
     
     // Try to get image from media:content or enclosure
     let imageUrl = '';
@@ -82,7 +93,7 @@ function parseRSSItem(itemXml: string, source: string, category: string): Parsed
       content: description.replace(/<[^>]*>/g, ''),
       url: link,
       image_url: imageUrl,
-      published_at: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+      published_at: articleDate ? articleDate.toISOString() : new Date().toISOString(),
       category
     };
   } catch {
@@ -90,7 +101,7 @@ function parseRSSItem(itemXml: string, source: string, category: string): Parsed
   }
 }
 
-async function fetchRSSFeed(feedUrl: string, source: string, category: string): Promise<ParsedArticle[]> {
+async function fetchRSSFeed(feedUrl: string, source: string, category: string, targetDate?: string): Promise<ParsedArticle[]> {
   try {
     const response = await fetch(feedUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' }
@@ -109,15 +120,15 @@ async function fetchRSSFeed(feedUrl: string, source: string, category: string): 
     let match;
     let count = 0;
     
-    while ((match = itemRegex.exec(xml)) !== null && count < 10) {
-      const article = parseRSSItem(match[1], source, category);
+    while ((match = itemRegex.exec(xml)) !== null && count < 30) { // Parse more to find matching dates
+      const article = parseRSSItem(match[1], source, category, targetDate);
       if (article) {
         items.push(article);
         count++;
       }
     }
     
-    console.log(`RSS ${source}: ${items.length} articles`);
+    console.log(`RSS ${source}: ${items.length} articles for date ${targetDate || 'any'}`);
     return items;
   } catch (e) {
     console.error(`RSS ${source} error:`, e);
@@ -150,15 +161,15 @@ serve(async (req) => {
     console.log(`API keys: NewsAPI=${!!NEWSAPI_KEY}, GNews=${!!GNEWS_API_KEY}`);
 
     // 1. First try RSS feeds (always available, no limits)
-    console.log('Fetching RSS feeds...');
+    console.log(`Fetching RSS feeds for date: ${dateStr}...`);
     const rssPromises = RSS_FEEDS.map(feed => 
-      fetchRSSFeed(feed.url, feed.source, feed.category)
+      fetchRSSFeed(feed.url, feed.source, feed.category, dateStr)
     );
     const rssResults = await Promise.all(rssPromises);
     for (const articles of rssResults) {
       allArticles.push(...articles);
     }
-    console.log(`RSS total: ${allArticles.length} articles`);
+    console.log(`RSS total: ${allArticles.length} articles matching ${dateStr}`);
 
     // 2. Fetch from NewsAPI (if available and RSS didn't get enough)
     if (NEWSAPI_KEY && allArticles.length < 20) {
@@ -166,11 +177,12 @@ serve(async (req) => {
         const newsApiQueries = ['technology AI', 'science space', 'Ukraine'];
         
         for (const query of newsApiQueries) {
-          const newsApiUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${fromDate}&to=${toDate}&sortBy=publishedAt&pageSize=5&apiKey=${NEWSAPI_KEY}`;
+          // Use exact target date for NewsAPI
+          const newsApiUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${dateStr}&to=${dateStr}&sortBy=publishedAt&pageSize=10&apiKey=${NEWSAPI_KEY}`;
           const response = await fetch(newsApiUrl);
           const data = await response.json();
           
-          console.log(`NewsAPI "${query}": status=${data.status}, articles=${data.articles?.length || 0}`);
+          console.log(`NewsAPI "${query}": status=${data.status}, articles=${data.articles?.length || 0} for ${dateStr}`);
           
           if (data.status === 'error') {
             console.error(`NewsAPI error: ${data.message}`);
@@ -180,18 +192,22 @@ serve(async (req) => {
           if (data.articles) {
             for (const article of data.articles as NewsArticle[]) {
               if (article.title && article.url && !article.title.includes('[Removed]')) {
-                allArticles.push({
-                  external_id: `newsapi_${btoa(article.url).slice(0, 20)}`,
-                  source_name: article.source?.name || 'Unknown',
-                  source_url: article.url,
-                  title: article.title || '',
-                  description: article.description || '',
-                  content: article.content || article.description || '',
-                  url: article.url,
-                  image_url: article.urlToImage || '',
-                  published_at: article.publishedAt,
-                  category: query.split(' ')[0].toLowerCase()
-                });
+                // Double-check date matches
+                const articleDateStr = article.publishedAt ? article.publishedAt.split('T')[0] : '';
+                if (articleDateStr === dateStr) {
+                  allArticles.push({
+                    external_id: `newsapi_${btoa(article.url).slice(0, 20)}`,
+                    source_name: article.source?.name || 'Unknown',
+                    source_url: article.url,
+                    title: article.title || '',
+                    description: article.description || '',
+                    content: article.content || article.description || '',
+                    url: article.url,
+                    image_url: article.urlToImage || '',
+                    published_at: article.publishedAt,
+                    category: query.split(' ')[0].toLowerCase()
+                  });
+                }
               }
             }
           }
@@ -207,7 +223,7 @@ serve(async (req) => {
         const topics = ['technology', 'science', 'world'];
         
         for (const topic of topics) {
-          const gnewsUrl = `https://gnews.io/api/v4/top-headlines?topic=${topic}&lang=en&max=5&apikey=${GNEWS_API_KEY}`;
+          const gnewsUrl = `https://gnews.io/api/v4/top-headlines?topic=${topic}&lang=en&max=10&apikey=${GNEWS_API_KEY}`;
           const response = await fetch(gnewsUrl);
           const data = await response.json();
           
@@ -221,18 +237,22 @@ serve(async (req) => {
           if (data.articles) {
             for (const article of data.articles as GNewsArticle[]) {
               if (article.title && article.url) {
-                allArticles.push({
-                  external_id: `gnews_${btoa(article.url).slice(0, 20)}`,
-                  source_name: article.source?.name || 'Unknown',
-                  source_url: article.source?.url || '',
-                  title: article.title || '',
-                  description: article.description || '',
-                  content: article.content || article.description || '',
-                  url: article.url,
-                  image_url: article.image || '',
-                  published_at: article.publishedAt,
-                  category: topic
-                });
+                // Filter by target date
+                const articleDateStr = article.publishedAt ? article.publishedAt.split('T')[0] : '';
+                if (articleDateStr === dateStr) {
+                  allArticles.push({
+                    external_id: `gnews_${btoa(article.url).slice(0, 20)}`,
+                    source_name: article.source?.name || 'Unknown',
+                    source_url: article.source?.url || '',
+                    title: article.title || '',
+                    description: article.description || '',
+                    content: article.content || article.description || '',
+                    url: article.url,
+                    image_url: article.image || '',
+                    published_at: article.publishedAt,
+                    category: topic
+                  });
+                }
               }
             }
           }
