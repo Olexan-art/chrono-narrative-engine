@@ -168,8 +168,22 @@ export default function ChapterPage() {
   }).join('\n\n---\n\n');
   
   const allNewsSources = parts.flatMap((p: any) => (p.news_sources as any[]) || []);
-  const chapterTweets = Array.isArray(chapter.tweets) ? (chapter.tweets as unknown as Tweet[]) : [];
-  const chapterChat = Array.isArray(chapter.chat_dialogue) ? (chapter.chat_dialogue as unknown as ChatMessage[]) : [];
+  
+  // Get localized chat dialogue and tweets
+  const getLocalizedChatDialogue = () => {
+    if (language === 'en' && (chapter as any).chat_dialogue_en) return (chapter as any).chat_dialogue_en as ChatMessage[];
+    if (language === 'pl' && (chapter as any).chat_dialogue_pl) return (chapter as any).chat_dialogue_pl as ChatMessage[];
+    return Array.isArray(chapter.chat_dialogue) ? (chapter.chat_dialogue as unknown as ChatMessage[]) : [];
+  };
+
+  const getLocalizedTweets = () => {
+    if (language === 'en' && (chapter as any).tweets_en) return (chapter as any).tweets_en as Tweet[];
+    if (language === 'pl' && (chapter as any).tweets_pl) return (chapter as any).tweets_pl as Tweet[];
+    return Array.isArray(chapter.tweets) ? (chapter.tweets as unknown as Tweet[]) : [];
+  };
+
+  const chapterChat = getLocalizedChatDialogue();
+  const chapterTweets = getLocalizedTweets();
 
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
 
