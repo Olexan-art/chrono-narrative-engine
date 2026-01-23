@@ -13,6 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { Header } from "@/components/Header";
 import { GenerationPanel } from "@/components/GenerationPanel";
 import { WeekGenerationPanel } from "@/components/WeekGenerationPanel";
+import { ChaptersPanel } from "@/components/ChaptersPanel";
 import { AnalyticsPanel } from "@/components/AnalyticsPanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
@@ -340,7 +341,7 @@ export default function AdminPage() {
         {stats && <StatsCard stats={stats} />}
 
         <Tabs defaultValue="generate" className="mt-8">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="generate" className="gap-2">
               <Sparkles className="w-4 h-4" />
               День
@@ -348,6 +349,10 @@ export default function AdminPage() {
             <TabsTrigger value="week" className="gap-2">
               <Calendar className="w-4 h-4" />
               Тиждень
+            </TabsTrigger>
+            <TabsTrigger value="chapters" className="gap-2">
+              <BookOpen className="w-4 h-4" />
+              Глави
             </TabsTrigger>
             <TabsTrigger value="parts" className="gap-2">
               <FileText className="w-4 h-4" />
@@ -369,6 +374,10 @@ export default function AdminPage() {
 
           <TabsContent value="week" className="mt-6">
             <WeekGenerationPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="chapters" className="mt-6">
+            <ChaptersPanel password={password} />
           </TabsContent>
 
           <TabsContent value="parts" className="mt-6">
