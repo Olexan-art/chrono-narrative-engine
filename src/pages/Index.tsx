@@ -115,54 +115,55 @@ export default function Index() {
       <SEOHead />
       <Header />
       
-      {/* Hero Part 1 - Main */}
-      <section className="relative py-8 md:py-10 overflow-hidden">
+      {/* Hero - Split Layout */}
+      <section className="relative py-8 md:py-12 overflow-hidden border-b border-border">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
         <div className="container mx-auto px-4 relative">
-          <div className="max-w-2xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 border border-primary/30 bg-primary/5 mb-3">
-              <Sparkles className="w-3 h-3 text-primary" />
-              <span className="text-xs font-mono text-primary">{t('hero.badge')}</span>
-            </div>
-            
-            <h1 className="text-3xl md:text-4xl font-bold mb-2 text-glow font-sans tracking-tight">
-              {t('hero.title')}
-            </h1>
-            
-            <p className="text-sm text-muted-foreground mb-4 font-serif leading-relaxed max-w-lg mx-auto">
-              {t('hero.description')}
-            </p>
-            
-            <div className="flex flex-wrap gap-3 justify-center">
-              <Link to="/calendar">
-                <Button size="sm" className="gap-2">
-                  <Calendar className="w-4 h-4" />
-                  {t('hero.archive')}
-                </Button>
-              </Link>
-              {latestParts[0] && (
-                <Link to={`/read/${latestParts[0].date}`}>
-                  <Button size="sm" variant="outline" className="gap-2">
-                    <BookOpen className="w-4 h-4" />
-                    {t('hero.latest')}
+          <div className="grid lg:grid-cols-2 gap-8 items-center">
+            {/* Left - Main Content */}
+            <div className="text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 border border-primary/30 bg-primary/5 mb-3">
+                <Sparkles className="w-3 h-3 text-primary" />
+                <span className="text-xs font-mono text-primary">{t('hero.badge')}</span>
+              </div>
+              
+              <h1 className="text-3xl md:text-4xl font-bold mb-2 text-glow font-sans tracking-tight">
+                {t('hero.title')}
+              </h1>
+              
+              <p className="text-sm text-muted-foreground mb-4 font-serif leading-relaxed max-w-lg mx-auto lg:mx-0">
+                {t('hero.description')}
+              </p>
+              
+              <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
+                <Link to="/calendar">
+                  <Button size="sm" className="gap-2">
+                    <Calendar className="w-4 h-4" />
+                    {t('hero.archive')}
                   </Button>
                 </Link>
-              )}
+                {latestParts[0] && (
+                  <Link to={`/read/${latestParts[0].date}`}>
+                    <Button size="sm" variant="outline" className="gap-2">
+                      <BookOpen className="w-4 h-4" />
+                      {t('hero.latest')}
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* Right - Tweets Carousel */}
+            <div className="lg:pl-4">
+              <div className="flex items-center gap-2 mb-3 justify-center lg:justify-start">
+                <span className="text-lg">𝕏</span>
+                <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                  {t('tweets.title')}
+                </span>
+              </div>
+              <HeroTweets parts={latestParts} />
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Hero Part 2 - Tweets */}
-      <section className="py-6 border-y border-border bg-card/30">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <span className="text-lg">𝕏</span>
-            <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-              {t('tweets.title')}
-            </span>
-          </div>
-          <HeroTweets parts={latestParts} />
         </div>
       </section>
 
