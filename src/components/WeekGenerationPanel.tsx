@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { format, startOfWeek, endOfWeek, getMonth, getYear, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
 import { uk } from "date-fns/locale";
-import { Sparkles, Loader2, CheckCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Sparkles, Loader2, CheckCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, BookOpen, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -457,11 +458,18 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
                     <Badge variant={week.partsCount > 0 ? "default" : "secondary"}>
                       {week.partsCount} оповід.
                     </Badge>
-                    {week.hasChapter && (
-                      <Badge variant="outline" className="border-primary text-primary">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Глава
-                      </Badge>
+                    {week.hasChapter && week.chapter && (
+                      <Link 
+                        to={`/chapter/${week.chapter.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex"
+                      >
+                        <Badge variant="outline" className="border-primary text-primary hover:bg-primary/10 transition-colors gap-1">
+                          <CheckCircle className="w-3 h-3" />
+                          Глава
+                          <ExternalLink className="w-3 h-3" />
+                        </Badge>
+                      </Link>
                     )}
                   </div>
                 </div>
