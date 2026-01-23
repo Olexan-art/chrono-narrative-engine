@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import Index from "./pages/Index";
 import CalendarPage from "./pages/CalendarPage";
+import DateStoriesPage from "./pages/DateStoriesPage";
 import ReadPage from "./pages/ReadPage";
 import ChapterPage from "./pages/ChapterPage";
 import ChaptersPage from "./pages/ChaptersPage";
@@ -27,6 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/date/:date" element={<DateStoriesPage />} />
             <Route path="/chapters" element={<ChaptersPage />} />
             <Route path="/volumes" element={<VolumesPage />} />
             <Route path="/read/:date" element={<ReadPage />} />

@@ -95,7 +95,7 @@ export function MiniCalendar({ parts, chapters = [] }: MiniCalendarProps) {
             return hasParts ? (
               <Link
                 key={day.toISOString()}
-                to={`/read/${format(day, 'yyyy-MM-dd')}`}
+                to={`/date/${format(day, 'yyyy-MM-dd')}`}
                 className={`
                   aspect-square flex flex-col items-center justify-center text-xs rounded-sm
                   transition-all duration-200 hover:scale-110 active:scale-95 relative

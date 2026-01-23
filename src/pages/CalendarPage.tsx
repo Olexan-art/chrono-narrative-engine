@@ -155,10 +155,10 @@ export default function CalendarPage() {
                             {part.content.slice(0, 150)}...
                           </p>
                           <div className="flex gap-2 mt-3">
-                            <Link to={`/read/${part.date}?id=${part.id}`}>
+                            <Link to={`/date/${part.date}`}>
                               <Button size="sm" className="gap-2">
                                 <BookOpen className="w-4 h-4" />
-                                Читати
+                                Переглянути
                               </Button>
                             </Link>
                             {isAuthenticated && (
