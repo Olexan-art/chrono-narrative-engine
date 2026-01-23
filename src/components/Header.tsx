@@ -27,10 +27,10 @@ export function Header() {
               <span className="hidden sm:inline">Читати</span>
             </Button>
           </Link>
-          <Link to="/chapters">
+          <Link to="/volumes">
             <Button variant="ghost" size="sm" className="gap-2">
               <Library className="w-4 h-4" />
-              <span className="hidden sm:inline">Глави</span>
+              <span className="hidden sm:inline">Томи</span>
             </Button>
           </Link>
           <Link to="/calendar">
