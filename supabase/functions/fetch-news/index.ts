@@ -36,6 +36,13 @@ serve(async (req) => {
     const targetDate = date ? new Date(date) : new Date();
     const dateStr = targetDate.toISOString().split('T')[0];
     
+    // For NewsAPI, use a date range from 7 days ago to today (API doesn't support future dates)
+    const today = new Date();
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const fromDate = weekAgo.toISOString().split('T')[0];
+    const toDate = today.toISOString().split('T')[0];
+    
     const NEWSAPI_KEY = Deno.env.get('NEWSAPI_KEY');
     const GNEWS_API_KEY = Deno.env.get('GNEWS_API_KEY');
     
@@ -52,6 +59,9 @@ serve(async (req) => {
       category: string;
     }> = [];
 
+    console.log(`Fetching news: target=${dateStr}, from=${fromDate}, to=${toDate}`);
+    console.log(`API keys: NewsAPI=${!!NEWSAPI_KEY}, GNews=${!!GNEWS_API_KEY}`);
+
     // Fetch from NewsAPI
     if (NEWSAPI_KEY) {
       try {
@@ -64,24 +74,32 @@ serve(async (req) => {
         ];
         
         for (const query of newsApiQueries) {
-          const newsApiUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${dateStr}&sortBy=relevancy&pageSize=5&apiKey=${NEWSAPI_KEY}`;
+          const newsApiUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&from=${fromDate}&to=${toDate}&sortBy=publishedAt&pageSize=5&apiKey=${NEWSAPI_KEY}`;
           const response = await fetch(newsApiUrl);
           const data = await response.json();
           
+          console.log(`NewsAPI query "${query}": status=${data.status}, articles=${data.articles?.length || 0}`);
+          
+          if (data.status === 'error') {
+            console.error(`NewsAPI error for "${query}":`, data.message);
+          }
+          
           if (data.articles) {
             for (const article of data.articles as NewsArticle[]) {
-              allArticles.push({
-                external_id: `newsapi_${btoa(article.url).slice(0, 20)}`,
-                source_name: article.source?.name || 'Unknown',
-                source_url: article.url,
-                title: article.title || '',
-                description: article.description || '',
-                content: article.content || article.description || '',
-                url: article.url,
-                image_url: article.urlToImage || '',
-                published_at: article.publishedAt,
-                category: query.split(' ')[0].toLowerCase()
-              });
+              if (article.title && article.url && !article.title.includes('[Removed]')) {
+                allArticles.push({
+                  external_id: `newsapi_${btoa(article.url).slice(0, 20)}`,
+                  source_name: article.source?.name || 'Unknown',
+                  source_url: article.url,
+                  title: article.title || '',
+                  description: article.description || '',
+                  content: article.content || article.description || '',
+                  url: article.url,
+                  image_url: article.urlToImage || '',
+                  published_at: article.publishedAt,
+                  category: query.split(' ')[0].toLowerCase()
+                });
+              }
             }
           }
         }
@@ -93,27 +111,31 @@ serve(async (req) => {
     // Fetch from GNews
     if (GNEWS_API_KEY) {
       try {
-        const topics = ['technology', 'science', 'world'];
+        const topics = ['technology', 'science', 'world', 'nation'];
         
         for (const topic of topics) {
-          const gnewsUrl = `https://gnews.io/api/v4/top-headlines?topic=${topic}&lang=en&max=5&apikey=${GNEWS_API_KEY}`;
+          const gnewsUrl = `https://gnews.io/api/v4/top-headlines?topic=${topic}&lang=en&max=10&apikey=${GNEWS_API_KEY}`;
           const response = await fetch(gnewsUrl);
           const data = await response.json();
           
+          console.log(`GNews topic "${topic}": articles=${data.articles?.length || 0}, error=${data.errors?.[0] || 'none'}`);
+          
           if (data.articles) {
             for (const article of data.articles as GNewsArticle[]) {
-              allArticles.push({
-                external_id: `gnews_${btoa(article.url).slice(0, 20)}`,
-                source_name: article.source?.name || 'Unknown',
-                source_url: article.source?.url || '',
-                title: article.title || '',
-                description: article.description || '',
-                content: article.content || article.description || '',
-                url: article.url,
-                image_url: article.image || '',
-                published_at: article.publishedAt,
-                category: topic
-              });
+              if (article.title && article.url) {
+                allArticles.push({
+                  external_id: `gnews_${btoa(article.url).slice(0, 20)}`,
+                  source_name: article.source?.name || 'Unknown',
+                  source_url: article.source?.url || '',
+                  title: article.title || '',
+                  description: article.description || '',
+                  content: article.content || article.description || '',
+                  url: article.url,
+                  image_url: article.image || '',
+                  published_at: article.publishedAt,
+                  category: topic
+                });
+              }
             }
           }
         }
