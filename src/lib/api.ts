@@ -58,7 +58,11 @@ export async function generateStory(params: {
     success: boolean;
     story: {
       title: string;
+      title_en?: string;
+      title_pl?: string;
       content: string;
+      content_en?: string;
+      content_pl?: string;
       imagePrompt: string;
       imagePrompt2?: string;
       chatDialogue?: Array<{

@@ -138,7 +138,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
       
       const partNumber = (count || 0) + 1;
 
-      // Step 6: Create part
+      // Step 6: Create part with multilingual content
       addLog(`[${format(date, 'd MMM', { locale: uk })} #${storyNumber}] Збереження...`);
       const partResult = await adminAction<{ part: Part }>(
         'createPart',
@@ -147,7 +147,11 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
           chapter_id: chapter.id,
           number: date.getDate(),
           title: storyResult.story.title,
+          title_en: storyResult.story.title_en || null,
+          title_pl: storyResult.story.title_pl || null,
           content: storyResult.story.content,
+          content_en: storyResult.story.content_en || null,
+          content_pl: storyResult.story.content_pl || null,
           date: dateStr,
           status: 'published',
           cover_image_prompt: storyResult.story.imagePrompt,
