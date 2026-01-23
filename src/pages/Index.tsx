@@ -142,36 +142,36 @@ export default function Index() {
       <Header />
       
       {/* Hero - Split Layout */}
-      <section className="relative py-8 md:py-12 overflow-hidden border-b border-border">
+      <section className="relative py-6 md:py-12 overflow-hidden border-b border-border">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
         <div className="container mx-auto px-4 relative">
-          <div className="grid lg:grid-cols-2 gap-8 items-center">
+          <div className="grid lg:grid-cols-2 gap-6 md:gap-8 items-center">
             {/* Left - Main Content */}
             <div className="text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 border border-primary/30 bg-primary/5 mb-3">
+              <div className="inline-flex items-center gap-2 px-2 md:px-3 py-1 border border-primary/30 bg-primary/5 mb-2 md:mb-3">
                 <Sparkles className="w-3 h-3 text-primary" />
-                <span className="text-xs font-mono text-primary">{t('hero.badge')}</span>
+                <span className="text-[10px] md:text-xs font-mono text-primary">{t('hero.badge')}</span>
               </div>
               
-              <h1 className="text-3xl md:text-4xl font-bold mb-2 text-glow font-sans tracking-tight">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 text-glow font-sans tracking-tight">
                 {t('hero.title')}
               </h1>
               
-              <p className="text-sm text-muted-foreground mb-4 font-serif leading-relaxed max-w-lg mx-auto lg:mx-0">
+              <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4 font-serif leading-relaxed max-w-lg mx-auto lg:mx-0">
                 {t('hero.description')}
               </p>
               
-              <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
+              <div className="flex flex-wrap gap-2 md:gap-3 justify-center lg:justify-start">
                 <Link to="/calendar">
-                  <Button size="sm" className="gap-2">
-                    <Calendar className="w-4 h-4" />
+                  <Button size="sm" className="gap-2 text-xs md:text-sm">
+                    <Calendar className="w-3 h-3 md:w-4 md:h-4" />
                     {t('hero.archive')}
                   </Button>
                 </Link>
                 {latestParts[0] && (
                   <Link to={`/read/${latestParts[0].date}`}>
-                    <Button size="sm" variant="outline" className="gap-2">
-                      <BookOpen className="w-4 h-4" />
+                    <Button size="sm" variant="outline" className="gap-2 text-xs md:text-sm">
+                      <BookOpen className="w-3 h-3 md:w-4 md:h-4" />
                       {t('hero.latest')}
                     </Button>
                   </Link>
@@ -179,8 +179,8 @@ export default function Index() {
               </div>
             </div>
 
-            {/* Right - Tweets Carousel */}
-            <div className="lg:pl-4">
+            {/* Right - Tweets Carousel (hidden on small screens) */}
+            <div className="hidden sm:block lg:pl-4">
               <div className="flex items-center gap-2 mb-3 justify-center lg:justify-start">
                 <span className="text-lg font-bold">MW</span>
                 <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
@@ -194,17 +194,17 @@ export default function Index() {
       </section>
 
       {/* Structure */}
-      <section className="py-8 border-y border-border">
+      <section className="py-4 md:py-8 border-y border-border">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-3 gap-2 md:gap-6 max-w-4xl mx-auto">
             {[
               { title: t('structure.month'), desc: t('structure.month.desc') },
               { title: t('structure.week'), desc: t('structure.week.desc') },
               { title: t('structure.day'), desc: t('structure.day.desc') },
             ].map(({ title, desc }) => (
               <div key={title} className="text-center">
-                <h3 className="font-mono text-sm text-primary mb-2">{title}</h3>
-                <p className="text-sm text-muted-foreground font-serif">{desc}</p>
+                <h3 className="font-mono text-[10px] md:text-sm text-primary mb-1 md:mb-2">{title}</h3>
+                <p className="text-[10px] md:text-sm text-muted-foreground font-serif line-clamp-2 md:line-clamp-none">{desc}</p>
               </div>
             ))}
           </div>
@@ -212,55 +212,55 @@ export default function Index() {
       </section>
 
       {/* Main Content Grid */}
-      <section className="py-12">
+      <section className="py-6 md:py-12">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
             {/* Latest Parts */}
-            <div className="lg:col-span-2">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold chapter-title">
+            <div className="lg:col-span-2 order-2 lg:order-1">
+              <div className="flex items-center justify-between mb-4 md:mb-6">
+                <h2 className="text-lg md:text-xl font-bold chapter-title">
                   {t('latest.title')}
                 </h2>
-                <Badge variant="outline" className="font-mono">
+                <Badge variant="outline" className="font-mono text-xs">
                   {totalCount} {language === 'en' ? 'stories' : language === 'pl' ? 'opowieści' : 'оповідань'}
                 </Badge>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3 md:space-y-4">
                 {latestParts.map((part) => {
                   const partLabel = getPartLabel(part, t);
                   
                   return (
                     <Link key={part.id} to={`/read/${part.date}`} className="group block">
-                      <article className="cosmic-card p-4 border border-border hover:border-primary/50 transition-all">
-                        <div className="flex items-start gap-4">
+                      <article className="cosmic-card p-3 md:p-4 border border-border hover:border-primary/50 transition-all">
+                        <div className="flex items-start gap-3 md:gap-4">
                           {part.cover_image_url && (
                             <img 
                               src={part.cover_image_url} 
                               alt=""
-                              className="w-20 h-20 md:w-24 md:h-24 object-cover border border-border shrink-0"
+                              className="w-16 h-16 md:w-24 md:h-24 object-cover border border-border shrink-0"
                             />
                           )}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-1.5 md:gap-2 mb-1">
                               <Badge 
                                 variant={partLabel.type === 'day' ? 'secondary' : 'default'}
-                                className="text-xs font-mono"
+                                className="text-[10px] md:text-xs font-mono px-1.5 md:px-2"
                               >
                                 {partLabel.label}
                               </Badge>
-                              <span className="text-xs font-mono text-muted-foreground">
-                                {format(new Date(part.date), 'd MMMM yyyy', { locale: dateLocale })}
+                              <span className="text-[10px] md:text-xs font-mono text-muted-foreground">
+                                {format(new Date(part.date), 'd MMM yyyy', { locale: dateLocale })}
                               </span>
                             </div>
-                            <h3 className="font-serif font-medium text-base md:text-lg group-hover:text-primary transition-colors line-clamp-1">
+                            <h3 className="font-serif font-medium text-sm md:text-lg group-hover:text-primary transition-colors line-clamp-2">
                               {part.title}
                             </h3>
-                            <p className="text-sm text-muted-foreground line-clamp-2 mt-1 font-serif">
+                            <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 mt-1 font-serif hidden sm:block">
                               {part.content?.slice(0, 120)}...
                             </p>
                           </div>
-                          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0 hidden md:block" />
+                          <ArrowRight className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0 hidden sm:block" />
                         </div>
                       </article>
                     </Link>
@@ -270,21 +270,22 @@ export default function Index() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-8">
+                <div className="flex items-center justify-center gap-1 md:gap-2 mt-6 md:mt-8">
                   <Button
                     variant="outline"
                     size="icon"
+                    className="h-8 w-8 md:h-9 md:w-9"
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
                   
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-0.5 md:gap-1">
                     {currentPage > 2 && (
                       <>
-                        <Button variant="ghost" size="sm" onClick={() => setCurrentPage(1)}>1</Button>
-                        {currentPage > 3 && <span className="text-muted-foreground">...</span>}
+                        <Button variant="ghost" size="sm" className="h-8 w-8 md:h-9 md:w-9 p-0" onClick={() => setCurrentPage(1)}>1</Button>
+                        {currentPage > 3 && <span className="text-muted-foreground text-xs">...</span>}
                       </>
                     )}
                     
@@ -295,6 +296,7 @@ export default function Index() {
                           key={p}
                           variant={p === currentPage ? "default" : "ghost"}
                           size="sm"
+                          className="h-8 w-8 md:h-9 md:w-9 p-0 text-xs md:text-sm"
                           onClick={() => setCurrentPage(p)}
                         >
                           {p}
@@ -303,8 +305,8 @@ export default function Index() {
                     
                     {currentPage < totalPages - 1 && (
                       <>
-                        {currentPage < totalPages - 2 && <span className="text-muted-foreground">...</span>}
-                        <Button variant="ghost" size="sm" onClick={() => setCurrentPage(totalPages)}>{totalPages}</Button>
+                        {currentPage < totalPages - 2 && <span className="text-muted-foreground text-xs">...</span>}
+                        <Button variant="ghost" size="sm" className="h-8 w-8 md:h-9 md:w-9 p-0" onClick={() => setCurrentPage(totalPages)}>{totalPages}</Button>
                       </>
                     )}
                   </div>
@@ -312,6 +314,7 @@ export default function Index() {
                   <Button
                     variant="outline"
                     size="icon"
+                    className="h-8 w-8 md:h-9 md:w-9"
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
                   >
@@ -321,8 +324,8 @@ export default function Index() {
               )}
             </div>
 
-            {/* Sidebar */}
-            <div className="space-y-6">
+            {/* Sidebar - shown first on mobile */}
+            <div className="space-y-4 md:space-y-6 order-1 lg:order-2">
               <MiniCalendar parts={latestParts} chapters={monthData?.monthChapters} />
               <NarrativeSummary 
                 weekParts={weekParts} 

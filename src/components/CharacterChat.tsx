@@ -25,27 +25,27 @@ export function CharacterChat({ messages }: CharacterChatProps) {
   if (!messages || messages.length === 0) return null;
 
   return (
-    <div className="mt-12 pt-8 border-t border-border">
-      <h3 className="text-sm font-mono text-muted-foreground mb-6 flex items-center gap-2">
-        <span className="text-xl">💬</span>
+    <div className="mt-8 md:mt-12 pt-4 md:pt-8 border-t border-border">
+      <h3 className="text-xs md:text-sm font-mono text-muted-foreground mb-4 md:mb-6 flex items-center gap-2">
+        <span className="text-lg md:text-xl">💬</span>
         РЕАКЦІЯ ПЕРСОНАЖІВ
       </h3>
       
-      <div className="space-y-4 max-w-2xl">
+      <div className="space-y-3 md:space-y-4 max-w-2xl">
         {messages.map((msg, i) => (
           <div
             key={i}
             className={cn(
-              "flex gap-3 p-4 rounded-lg border transition-all hover:scale-[1.01]",
+              "flex gap-2 md:gap-3 p-3 md:p-4 rounded-lg border transition-all hover:scale-[1.01]",
               characterColors[msg.character] || "border-border bg-card/50"
             )}
           >
-            <div className="text-3xl shrink-0">{msg.avatar}</div>
+            <div className="text-2xl md:text-3xl shrink-0">{msg.avatar}</div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="font-semibold text-sm">{msg.name}</span>
+                <span className="font-semibold text-xs md:text-sm">{msg.name}</span>
               </div>
-              <p className="text-foreground/90 font-serif leading-relaxed">
+              <p className="text-sm md:text-base text-foreground/90 font-serif leading-relaxed">
                 {msg.message}
               </p>
             </div>
