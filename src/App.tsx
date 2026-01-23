@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import CalendarPage from "./pages/CalendarPage";
 import ReadPage from "./pages/ReadPage";
+import ChapterPage from "./pages/ChapterPage";
 import AdminPage from "./pages/AdminPage";
 import EditPartPage from "./pages/EditPartPage";
 import NotFound from "./pages/NotFound";
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/read/:date" element={<ReadPage />} />
+          <Route path="/chapter/:id" element={<ChapterPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/part/:id" element={<EditPartPage />} />
           <Route path="*" element={<NotFound />} />
