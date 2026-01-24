@@ -347,34 +347,98 @@ export default function EditPartPage() {
 
           <Card className="cosmic-card">
             <CardHeader>
-              <CardTitle>Зображення</CardTitle>
+              <CardTitle>Головне зображення</CardTitle>
+              <CardDescription>Оберіть яке зображення показувати як головну обкладинку</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {currentData.cover_image_url && (
-                <img 
-                  src={currentData.cover_image_url} 
-                  alt="" 
-                  className="w-full max-h-64 object-cover border border-border"
-                />
-              )}
+            <CardContent className="space-y-6">
+              {/* Cover image type selection */}
               <div className="space-y-2">
-                <Label>Промт для AI зображення</Label>
+                <Label>Тип головного зображення</Label>
+                <Select
+                  value={currentData.cover_image_type || 'generated'}
+                  onValueChange={(v) => setFormData(prev => ({ ...prev, cover_image_type: v as any }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="generated">🎨 AI згенероване</SelectItem>
+                    <SelectItem value="news">📰 З новин</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Preview current selection */}
+              {(() => {
+                const coverType = currentData.cover_image_type || 'generated';
+                const newsSources = currentData.news_sources as any[] || [];
+                const selectedNewsImage = newsSources.find((s: any) => s.is_selected && s.image_url);
+                const firstNewsImage = newsSources.find((s: any) => s.image_url);
+                const newsImage = selectedNewsImage || firstNewsImage;
+                
+                return (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Generated Image */}
+                    <div className={`p-3 border rounded-lg transition-all ${coverType === 'generated' ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">🎨 AI зображення</span>
+                        {coverType === 'generated' && <Badge>Активне</Badge>}
+                      </div>
+                      {currentData.cover_image_url ? (
+                        <img 
+                          src={currentData.cover_image_url} 
+                          alt="AI generated" 
+                          className="w-full aspect-video object-cover border border-border rounded"
+                        />
+                      ) : (
+                        <div className="w-full aspect-video bg-muted/20 border border-border rounded flex items-center justify-center text-muted-foreground text-sm">
+                          Не згенеровано
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* News Image */}
+                    <div className={`p-3 border rounded-lg transition-all ${coverType === 'news' ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">📰 З новин</span>
+                        {coverType === 'news' && <Badge>Активне</Badge>}
+                      </div>
+                      {newsImage ? (
+                        <img 
+                          src={newsImage.image_url} 
+                          alt={newsImage.title}
+                          className="w-full aspect-video object-cover border border-border rounded"
+                        />
+                      ) : (
+                        <div className="w-full aspect-video bg-muted/20 border border-border rounded flex items-center justify-center text-muted-foreground text-sm">
+                          Немає зображень
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+              
+              {/* AI Image Generation section */}
+              <div className="pt-4 border-t border-border">
+                <Label className="mb-2 block">Промт для AI зображення</Label>
                 <Textarea
                   value={currentData.cover_image_prompt || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, cover_image_prompt: e.target.value }))}
                   rows={3}
                   placeholder="Опишіть бажане зображення англійською..."
+                  className="mb-3"
                 />
+                <Button
+                  variant="outline"
+                  onClick={handleGenerateImage}
+                  disabled={isGeneratingImage}
+                  className="w-full gap-2"
+                >
+                  {isGeneratingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
+                  Згенерувати зображення
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                onClick={handleGenerateImage}
-                disabled={isGeneratingImage}
-                className="w-full gap-2"
-              >
-                {isGeneratingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
-                Згенерувати зображення
-              </Button>
             </CardContent>
           </Card>
 
