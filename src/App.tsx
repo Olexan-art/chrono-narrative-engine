@@ -14,6 +14,7 @@ import VolumesPage from "./pages/VolumesPage";
 import AdminPage from "./pages/AdminPage";
 import EditPartPage from "./pages/EditPartPage";
 import EditChapterPage from "./pages/EditChapterPage";
+import InstallPage from "./pages/InstallPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/part/:id" element={<EditPartPage />} />
             <Route path="/admin/chapter/:id" element={<EditChapterPage />} />
+            <Route path="/install" element={<InstallPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
