@@ -213,7 +213,8 @@ serve(async (req) => {
       narrativeSource,
       narrativeStructure,
       useOpenAI = false,
-      messageCount = 8 // Default 8 messages (was 4, now +4)
+      messageCount = 8,
+      characters: selectedCharactersParam // Optional: specific characters to use
     } = await req.json();
 
     const supabase = createClient(
@@ -249,23 +250,48 @@ serve(async (req) => {
       throw new Error('Need at least 2 active characters for dialogue');
     }
 
-    // Select 2 main characters
-    const shuffled = [...allCharacters].sort(() => Math.random() - 0.5);
-    const mainCharacters = shuffled.slice(0, 2);
-
-    // 50% chance of 3rd character intervention
-    const includeThirdCharacter = Math.random() < 0.5 && allCharacters.length >= 3;
+    let mainCharacters: Character[];
     let thirdCharacter: Character | null = null;
-    if (includeThirdCharacter) {
-      const remaining = shuffled.filter(c => !mainCharacters.includes(c));
-      thirdCharacter = remaining[0] || null;
+    let includeThirdCharacter = false;
+
+    // If specific characters are provided, use them
+    if (selectedCharactersParam && typeof selectedCharactersParam === 'string' && selectedCharactersParam.trim()) {
+      // Parse selected characters info - format: "Name (avatar) - style, Name2 (avatar2) - style2"
+      const selectedNames = selectedCharactersParam.split(',').map(s => s.trim().split(' ')[0]);
+      const filteredChars = allCharacters.filter(c => 
+        selectedNames.some(name => c.name.toLowerCase().includes(name.toLowerCase()))
+      );
+      
+      if (filteredChars.length >= 2) {
+        mainCharacters = filteredChars.slice(0, 2);
+        if (filteredChars.length >= 3) {
+          thirdCharacter = filteredChars[2];
+          includeThirdCharacter = true;
+        }
+      } else {
+        // Fallback to random selection if not enough matches
+        const shuffled = [...allCharacters].sort(() => Math.random() - 0.5);
+        mainCharacters = shuffled.slice(0, 2);
+      }
+    } else {
+      // Random selection when no specific characters specified
+      const shuffled = [...allCharacters].sort(() => Math.random() - 0.5);
+      mainCharacters = shuffled.slice(0, 2);
+
+      // 50% chance of 3rd character intervention
+      includeThirdCharacter = Math.random() < 0.5 && allCharacters.length >= 3;
+      if (includeThirdCharacter) {
+        const remaining = shuffled.filter(c => !mainCharacters.includes(c));
+        thirdCharacter = remaining[0] || null;
+      }
     }
 
     console.log('Dialogue generation:', {
       mainCharacters: mainCharacters.map(c => c.name),
       thirdCharacter: thirdCharacter?.name || 'none',
       messageCount,
-      useOpenAI
+      useOpenAI,
+      selectedCharactersParam: selectedCharactersParam || 'auto'
     });
 
     const charactersList = thirdCharacter 
