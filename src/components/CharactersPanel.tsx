@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -18,9 +17,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, User, LayoutGrid, IdCard } from "lucide-react";
+import { Plus, Pencil, Trash2, User, LayoutGrid, IdCard, Network } from "lucide-react";
 import { adminAction } from "@/lib/api";
 import { CharacterCard } from "./CharacterCard";
+import { CharacterRelationshipGraph } from "./CharacterRelationshipGraph";
 
 interface Character {
   id: string;
@@ -45,7 +45,7 @@ export default function CharactersPanel({ password }: CharactersPanelProps) {
   const queryClient = useQueryClient();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "cards">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "cards" | "graph">("grid");
   const [formData, setFormData] = useState({
     character_id: "",
     name: "",
@@ -64,6 +64,24 @@ export default function CharactersPanel({ password }: CharactersPanelProps) {
         .order("name");
       if (error) throw error;
       return data as Character[];
+    },
+  });
+
+  // Fetch all relationships for graph view
+  const { data: allRelationships } = useQuery({
+    queryKey: ["all-character-relationships"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("character_relationships")
+        .select("id, character_id, related_character_id, relationship_type, strength");
+      if (error) throw error;
+      return data as {
+        id: string;
+        character_id: string;
+        related_character_id: string;
+        relationship_type: "friendly" | "hostile" | "neutral";
+        strength: number;
+      }[];
     },
   });
 
@@ -176,6 +194,7 @@ export default function CharactersPanel({ password }: CharactersPanelProps) {
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setViewMode("grid")}
+              title="Сітка"
             >
               <LayoutGrid className="h-4 w-4" />
             </Button>
@@ -183,8 +202,17 @@ export default function CharactersPanel({ password }: CharactersPanelProps) {
               variant={viewMode === "cards" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setViewMode("cards")}
+              title="Картки"
             >
               <IdCard className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "graph" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("graph")}
+              title="Граф зв'язків"
+            >
+              <Network className="h-4 w-4" />
             </Button>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -371,7 +399,7 @@ export default function CharactersPanel({ password }: CharactersPanelProps) {
       </Dialog>
 
       {/* View Mode Toggle Content */}
-      {viewMode === "grid" ? (
+      {viewMode === "grid" && (
         <>
           {/* Characters Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -427,7 +455,9 @@ export default function CharactersPanel({ password }: CharactersPanelProps) {
             </div>
           )}
         </>
-      ) : (
+      )}
+
+      {viewMode === "cards" && (
         <>
           {/* Character Cards with Stats and Relationships */}
           <div className="grid gap-4 md:grid-cols-2">
@@ -441,6 +471,21 @@ export default function CharactersPanel({ password }: CharactersPanelProps) {
             ))}
           </div>
 
+          {characters?.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              Персонажі відсутні. Додайте першого персонажа.
+            </div>
+          )}
+        </>
+      )}
+
+      {viewMode === "graph" && (
+        <>
+          <CharacterRelationshipGraph
+            characters={characters || []}
+            relationships={allRelationships || []}
+          />
+          
           {characters?.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               Персонажі відсутні. Додайте першого персонажа.

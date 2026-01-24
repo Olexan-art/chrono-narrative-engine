@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { MessageSquare, RefreshCw, Loader2, Calendar, Check, X } from "lucide-react";
+import { MessageSquare, RefreshCw, Loader2, Calendar, Check, X, Users } from "lucide-react";
 import { generateDialogue } from "@/lib/api";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
@@ -19,15 +19,23 @@ interface DialogueManagementPanelProps {
   password: string;
 }
 
+interface DialogueMessage {
+  character?: string;
+  name?: string;
+  avatar?: string;
+  message?: string;
+  likes?: number;
+}
+
 interface Part {
   id: string;
   title: string;
   content: string;
   date: string;
   status: string;
-  chat_dialogue: unknown;
-  chat_dialogue_en: unknown;
-  chat_dialogue_pl: unknown;
+  chat_dialogue: DialogueMessage[] | unknown;
+  chat_dialogue_en: DialogueMessage[] | unknown;
+  chat_dialogue_pl: DialogueMessage[] | unknown;
   chapter: {
     id: string;
     title: string;
@@ -115,6 +123,15 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
 
   const selectedPart = parts?.find((p) => p.id === selectedPartId);
   const dialogueCount = (arr: unknown) => Array.isArray(arr) ? arr.length : 0;
+  
+  // Get unique character count from dialogue
+  const getCharacterCount = (dialogue: unknown) => {
+    if (!Array.isArray(dialogue)) return 0;
+    const uniqueCharacters = new Set(
+      dialogue.map((msg: DialogueMessage) => msg.character || msg.name).filter(Boolean)
+    );
+    return uniqueCharacters.size;
+  };
 
   return (
     <div className="space-y-6">
@@ -210,6 +227,12 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
+                          {getCharacterCount(part.chat_dialogue) > 0 && (
+                            <Badge variant="outline" className="text-xs">
+                              <Users className="h-3 w-3 mr-1" />
+                              {getCharacterCount(part.chat_dialogue)}
+                            </Badge>
+                          )}
                           {dialogueCount(part.chat_dialogue) > 0 ? (
                             <Badge variant="secondary" className="text-xs">
                               <Check className="h-3 w-3 mr-1" />

@@ -361,6 +361,49 @@ ${newsContext}
     const dialogueEnWithLikes = addLikesToDialogue(result.dialogue_en || []);
     const dialoguePlWithLikes = addLikesToDialogue(result.dialogue_pl || []);
 
+    // Update character statistics
+    const characterStats: Record<string, { dialogueCount: number; totalLikes: number }> = {};
+    
+    // Count dialogues and sum likes per character
+    for (const msg of dialogueWithLikes) {
+      if (!characterStats[msg.character]) {
+        characterStats[msg.character] = { dialogueCount: 0, totalLikes: 0 };
+      }
+      characterStats[msg.character].dialogueCount++;
+      characterStats[msg.character].totalLikes += msg.likes || 0;
+    }
+
+    // Update each character's stats in the database
+    const now = new Date().toISOString();
+    for (const [characterId, stats] of Object.entries(characterStats)) {
+      const char = allCharacters.find(c => c.character_id === characterId);
+      if (char) {
+        try {
+          // Direct update - increment dialogue count and likes
+          const { data: currentChar } = await supabase
+            .from('characters')
+            .select('dialogue_count, total_likes')
+            .eq('id', char.id)
+            .single();
+          
+          if (currentChar) {
+            await supabase
+              .from('characters')
+              .update({
+                dialogue_count: (currentChar.dialogue_count || 0) + stats.dialogueCount,
+                total_likes: (currentChar.total_likes || 0) + stats.totalLikes,
+                last_dialogue_at: now
+              })
+              .eq('id', char.id);
+            
+            console.log(`Updated stats for ${characterId}: +${stats.dialogueCount} dialogues, +${stats.totalLikes} likes`);
+          }
+        } catch (err) {
+          console.error(`Failed to update stats for ${characterId}:`, err);
+        }
+      }
+    }
+
     console.log('Generated multilingual dialogue with', dialogueWithLikes.length, 'messages per language');
 
     return new Response(
