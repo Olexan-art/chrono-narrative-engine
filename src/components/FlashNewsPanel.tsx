@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
 import { uk } from "date-fns/locale";
 import { Link } from "react-router-dom";
-import { Plus, Loader2, Trash2, ChevronLeft, ChevronRight, Zap, Edit } from "lucide-react";
+import { Plus, Loader2, Trash2, ChevronLeft, ChevronRight, Zap, Edit, Link as LinkIcon, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,10 @@ export function FlashNewsPanel({ password }: FlashNewsPanelProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isCreating, setIsCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [scrapeUrl, setScrapeUrl] = useState('');
+  const [isScraping, setIsScraping] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [scrapedImageUrl, setScrapedImageUrl] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     title_en: '',
@@ -116,7 +120,15 @@ export function FlashNewsPanel({ password }: FlashNewsPanelProps) {
         chapter_id: formData.chapter_id,
         number: partNumber,
         status: 'published',
-        is_flash_news: true
+        is_flash_news: true,
+        // Add scraped image as news source
+        news_sources: scrapedImageUrl ? [{
+          title: formData.title,
+          url: scrapeUrl || '',
+          image_url: scrapedImageUrl,
+          is_selected: true
+        }] : [],
+        cover_image_type: scrapedImageUrl ? 'news' : 'generated'
       });
       return result.part;
     },
@@ -127,6 +139,8 @@ export function FlashNewsPanel({ password }: FlashNewsPanelProps) {
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       toast({ title: "Flash News створено!" });
       setIsCreating(false);
+      setScrapeUrl('');
+      setScrapedImageUrl('');
       setFormData({
         title: '',
         title_en: '',
@@ -176,6 +190,107 @@ export function FlashNewsPanel({ password }: FlashNewsPanelProps) {
     }
   };
 
+  // Scrape URL handler
+  const handleScrapeUrl = async () => {
+    if (!scrapeUrl.trim()) {
+      toast({
+        title: "Помилка",
+        description: "Введіть URL новини",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsScraping(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('scrape-news', {
+        body: { url: scrapeUrl.trim() }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Failed to scrape');
+
+      const scraped = data.data;
+      
+      // Update form with scraped data
+      setFormData(prev => ({
+        ...prev,
+        title: scraped.title || prev.title,
+        content: scraped.content || scraped.description || prev.content
+      }));
+      
+      // Store image URL separately
+      if (scraped.imageUrl) {
+        setScrapedImageUrl(scraped.imageUrl);
+      }
+
+      toast({
+        title: "Успішно",
+        description: "Дані новини витягнуто. Натисніть 'Перекласти' для автоперекладу."
+      });
+
+    } catch (error) {
+      console.error('Scrape error:', error);
+      toast({
+        title: "Помилка",
+        description: error instanceof Error ? error.message : "Не вдалося витягнути дані",
+        variant: "destructive"
+      });
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
+  // Translate handler
+  const handleTranslate = async () => {
+    if (!formData.title && !formData.content) {
+      toast({
+        title: "Помилка",
+        description: "Спочатку заповніть заголовок або контент",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('translate-flash-news', {
+        body: { 
+          title: formData.title,
+          content: formData.content
+        }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Failed to translate');
+
+      const translations = data.translations;
+      
+      setFormData(prev => ({
+        ...prev,
+        title_en: translations.title_en || prev.title_en,
+        title_pl: translations.title_pl || prev.title_pl,
+        content_en: translations.content_en || prev.content_en,
+        content_pl: translations.content_pl || prev.content_pl
+      }));
+
+      toast({
+        title: "Успішно",
+        description: "Переклад виконано!"
+      });
+
+    } catch (error) {
+      console.error('Translate error:', error);
+      toast({
+        title: "Помилка",
+        description: error instanceof Error ? error.message : "Не вдалося перекласти",
+        variant: "destructive"
+      });
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with Create Button */}
@@ -205,6 +320,48 @@ export function FlashNewsPanel({ password }: FlashNewsPanelProps) {
             <CardDescription>Ручне створення швидкої новини з власним контентом</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* URL Scraper Section */}
+            <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-lg space-y-3">
+              <Label className="flex items-center gap-2 text-amber-500">
+                <LinkIcon className="w-4 h-4" />
+                Витягнути з URL (опційно)
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={scrapeUrl}
+                  onChange={(e) => setScrapeUrl(e.target.value)}
+                  placeholder="https://example.com/news-article"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleScrapeUrl}
+                  disabled={isScraping || !scrapeUrl.trim()}
+                  className="gap-2"
+                >
+                  {isScraping ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <LinkIcon className="w-4 h-4" />
+                  )}
+                  Витягнути
+                </Button>
+              </div>
+              {scrapedImageUrl && (
+                <div className="flex items-center gap-3 p-2 bg-background/50 rounded">
+                  <img 
+                    src={scrapedImageUrl} 
+                    alt="Preview" 
+                    className="w-16 h-16 object-cover rounded border border-border"
+                  />
+                  <div className="text-xs text-muted-foreground flex-1">
+                    Зображення знайдено
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Дата</Label>
@@ -292,6 +449,22 @@ export function FlashNewsPanel({ password }: FlashNewsPanelProps) {
                 />
               </div>
             </div>
+
+            {/* Translate Button */}
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={handleTranslate}
+              disabled={isTranslating || (!formData.title && !formData.content)}
+              className="w-full gap-2 border-primary/30 hover:border-primary/60"
+            >
+              {isTranslating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Languages className="w-4 h-4" />
+              )}
+              Автоперекласти на EN / PL
+            </Button>
 
             <Button 
               onClick={() => createMutation.mutate()}
