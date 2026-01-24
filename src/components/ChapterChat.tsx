@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { ChatMessage } from "@/types/database";
 
 interface ChapterChatProps {
@@ -15,13 +16,15 @@ const characterColors: Record<string, string> = {
 };
 
 export function ChapterChat({ messages }: ChapterChatProps) {
+  const { t } = useLanguage();
+  
   if (!messages || messages.length === 0) return null;
 
   return (
     <section className="my-8 md:my-16">
       <h3 className="text-xs md:text-sm font-mono text-muted-foreground mb-4 md:mb-6 flex items-center gap-2">
         <span className="text-lg md:text-xl">💬</span>
-        ДІАЛОГ СПОСТЕРІГАЧІВ
+        {t('chat.observers')}
       </h3>
       
       <div className="space-y-3 md:space-y-4 max-w-3xl">

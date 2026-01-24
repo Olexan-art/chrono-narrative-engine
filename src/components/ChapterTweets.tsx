@@ -1,4 +1,5 @@
 import { Heart, Repeat2 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { Tweet } from "@/types/database";
 
 interface ChapterTweetsProps {
@@ -13,13 +14,15 @@ function formatNumber(num: number): string {
 }
 
 export function ChapterTweets({ tweets }: ChapterTweetsProps) {
+  const { t } = useLanguage();
+  
   if (!tweets || tweets.length === 0) return null;
 
   return (
     <section className="my-8 md:my-16">
       <h3 className="text-xs md:text-sm font-mono text-muted-foreground mb-4 md:mb-6 flex items-center gap-2">
         <span className="text-lg md:text-xl font-bold">MW</span>
-        РЕАКЦІЇ СПОСТЕРІГАЧІВ
+        {t('tweets.observers')}
       </h3>
       
       <div className="grid gap-3 md:gap-4 sm:grid-cols-2">

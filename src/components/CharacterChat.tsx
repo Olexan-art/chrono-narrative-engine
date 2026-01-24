@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Heart, ThumbsUp } from "lucide-react";
 import { useState, useCallback } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CharacterLike {
   characterId: string;
@@ -75,6 +76,7 @@ function ConfettiEffect({ particles }: { particles: ConfettiParticle[] }) {
 }
 
 export function CharacterChat({ messages }: CharacterChatProps) {
+  const { t } = useLanguage();
   const [likedMessages, setLikedMessages] = useState<Set<number>>(new Set());
   const [localLikes, setLocalLikes] = useState<Record<number, number>>({});
   const [animatingLikes, setAnimatingLikes] = useState<Set<number>>(new Set());
@@ -145,7 +147,7 @@ export function CharacterChat({ messages }: CharacterChatProps) {
     <div className="mt-8 md:mt-12 pt-4 md:pt-8 border-t border-border">
       <h3 className="text-xs md:text-sm font-mono text-muted-foreground mb-4 md:mb-6 flex items-center gap-2">
         <span className="text-lg md:text-xl">💬</span>
-        РЕАКЦІЯ ПЕРСОНАЖІВ
+        {t('chat.title')}
       </h3>
       
       <div className="space-y-3 md:space-y-4 max-w-2xl">
