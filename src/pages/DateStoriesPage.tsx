@@ -127,17 +127,26 @@ export default function DateStoriesPage() {
                 >
                   <div className="flex flex-col md:flex-row">
                     {/* Cover image */}
-                    {part.cover_image_url && (
-                      <div className="md:w-48 lg:w-64 shrink-0">
-                        <div className="aspect-video md:aspect-[4/5] overflow-hidden">
-                          <img 
-                            src={part.cover_image_url} 
-                            alt={getLocalizedTitle(part)}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
+                    {(() => {
+                      const coverType = (part as any).cover_image_type || 'generated';
+                      const newsSources = ((part as any).news_sources as any[]) || [];
+                      const selectedNewsImage = newsSources.find((s: any) => s.is_selected && s.image_url);
+                      const firstNewsImage = newsSources.find((s: any) => s.image_url);
+                      const newsImage = selectedNewsImage || firstNewsImage;
+                      const imageUrl = coverType === 'news' && newsImage ? newsImage.image_url : part.cover_image_url;
+                      
+                      return imageUrl ? (
+                        <div className="md:w-48 lg:w-64 shrink-0">
+                          <div className="aspect-video md:aspect-[4/5] overflow-hidden">
+                            <img 
+                              src={imageUrl} 
+                              alt={getLocalizedTitle(part)}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      ) : null;
+                    })()}
                     
                     {/* Content */}
                     <CardContent className="flex-1 p-4 md:p-6 flex flex-col">

@@ -53,7 +53,7 @@ export default function Index() {
       
       const { data, count } = await supabase
         .from('parts')
-        .select('id, title, title_en, title_pl, content, content_en, content_pl, date, status, tweets, tweets_en, tweets_pl, cover_image_url, number', { count: 'exact' })
+        .select('id, title, title_en, title_pl, content, content_en, content_pl, date, status, tweets, tweets_en, tweets_pl, cover_image_url, cover_image_type, news_sources, number', { count: 'exact' })
         .eq('status', 'published')
         .order('date', { ascending: false })
         .range(from, to);
@@ -273,13 +273,22 @@ export default function Index() {
                     >
                       <article className="cosmic-card p-3 md:p-4 border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]">
                         <div className="flex items-start gap-3 md:gap-4">
-                          {part.cover_image_url && (
-                            <img 
-                              src={part.cover_image_url} 
-                              alt=""
-                              className="w-16 h-16 md:w-24 md:h-24 object-cover border border-border shrink-0 transition-transform duration-300 group-hover:scale-105"
-                            />
-                          )}
+                          {(() => {
+                            const coverType = (part as any).cover_image_type || 'generated';
+                            const newsSources = ((part as any).news_sources as any[]) || [];
+                            const selectedNewsImage = newsSources.find((s: any) => s.is_selected && s.image_url);
+                            const firstNewsImage = newsSources.find((s: any) => s.image_url);
+                            const newsImage = selectedNewsImage || firstNewsImage;
+                            const imageUrl = coverType === 'news' && newsImage ? newsImage.image_url : part.cover_image_url;
+                            
+                            return imageUrl ? (
+                              <img 
+                                src={imageUrl} 
+                                alt=""
+                                className="w-16 h-16 md:w-24 md:h-24 object-cover border border-border shrink-0 transition-transform duration-300 group-hover:scale-105"
+                              />
+                            ) : null;
+                          })()}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 md:gap-2 mb-1">
                               <Badge 
