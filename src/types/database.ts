@@ -22,6 +22,8 @@ export interface Settings {
   gaiman_weight: number;
   // LLM settings
   llm_provider: LLMProvider;
+  llm_text_provider: LLMProvider;
+  llm_image_provider: LLMProvider;
   llm_text_model: string;
   llm_image_model: string;
   openai_api_key: string | null;

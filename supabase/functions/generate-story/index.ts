@@ -26,6 +26,7 @@ const narrativeStructureDescriptions = {
 
 interface LLMSettings {
   llm_provider: string;
+  llm_text_provider: string | null;
   llm_text_model: string;
   openai_api_key: string | null;
   gemini_api_key: string | null;
@@ -33,7 +34,7 @@ interface LLMSettings {
 }
 
 async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: string): Promise<string> {
-  const provider = settings.llm_provider || 'lovable';
+  const provider = settings.llm_text_provider || settings.llm_provider || 'lovable';
   
   if (provider === 'lovable') {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -179,19 +180,21 @@ serve(async (req) => {
 
     const { data: settingsData } = await supabase
       .from('settings')
-      .select('llm_provider, llm_text_model, openai_api_key, gemini_api_key, anthropic_api_key')
+      .select('llm_provider, llm_text_provider, llm_text_model, openai_api_key, gemini_api_key, anthropic_api_key')
       .limit(1)
       .single();
 
     const llmSettings: LLMSettings = settingsData || {
       llm_provider: 'lovable',
+      llm_text_provider: null,
       llm_text_model: 'google/gemini-3-flash-preview',
       openai_api_key: null,
       gemini_api_key: null,
       anthropic_api_key: null
     };
 
-    console.log('Using LLM provider:', llmSettings.llm_provider, 'model:', llmSettings.llm_text_model);
+    const effectiveProvider = llmSettings.llm_text_provider || llmSettings.llm_provider || 'lovable';
+    console.log('Using text LLM provider:', effectiveProvider, 'model:', llmSettings.llm_text_model);
 
     // Fetch active characters from database
     const { data: charactersData } = await supabase

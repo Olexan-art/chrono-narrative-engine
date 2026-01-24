@@ -471,8 +471,10 @@ export type Database = {
           id: string
           last_auto_generation: string | null
           llm_image_model: string | null
+          llm_image_provider: string | null
           llm_provider: string | null
           llm_text_model: string | null
+          llm_text_provider: string | null
           narrative_plot: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose:
             | Database["public"]["Enums"]["narrative_purpose"]
@@ -501,8 +503,10 @@ export type Database = {
           id?: string
           last_auto_generation?: string | null
           llm_image_model?: string | null
+          llm_image_provider?: string | null
           llm_provider?: string | null
           llm_text_model?: string | null
+          llm_text_provider?: string | null
           narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose?:
             | Database["public"]["Enums"]["narrative_purpose"]
@@ -531,8 +535,10 @@ export type Database = {
           id?: string
           last_auto_generation?: string | null
           llm_image_model?: string | null
+          llm_image_provider?: string | null
           llm_provider?: string | null
           llm_text_model?: string | null
+          llm_text_provider?: string | null
           narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose?:
             | Database["public"]["Enums"]["narrative_purpose"]

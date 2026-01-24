@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface LLMSettings {
   llm_provider: string;
+  llm_image_provider: string | null;
   llm_image_model: string;
   openai_api_key: string | null;
   gemini_api_key: string | null;
@@ -128,7 +129,7 @@ async function generateWithGemini(prompt: string, apiKey: string, model: string)
 }
 
 async function generateImage(settings: LLMSettings, prompt: string): Promise<string> {
-  const provider = settings.llm_provider || 'lovable';
+  const provider = settings.llm_image_provider || settings.llm_provider || 'lovable';
   
   // Anthropic doesn't support images, always use Lovable
   if (provider === 'anthropic' || provider === 'lovable') {
@@ -163,12 +164,13 @@ serve(async (req) => {
     // Get LLM settings from database
     const { data: settingsData } = await supabase
       .from('settings')
-      .select('llm_provider, llm_image_model, openai_api_key, gemini_api_key')
+      .select('llm_provider, llm_image_provider, llm_image_model, openai_api_key, gemini_api_key')
       .limit(1)
       .single();
 
     const llmSettings: LLMSettings = settingsData || {
       llm_provider: 'lovable',
+      llm_image_provider: null,
       llm_image_model: 'google/gemini-2.5-flash-image-preview',
       openai_api_key: null,
       gemini_api_key: null
@@ -176,7 +178,8 @@ serve(async (req) => {
 
     const enhancedPrompt = `${prompt}. Ultra high resolution, 16:9 aspect ratio, sci-fi digital art style, cosmic atmosphere with deep space blues and cyan glows, cinematic lighting, detailed futuristic elements.`;
 
-    console.log('Generating image with provider:', llmSettings.llm_provider, 'prompt:', prompt.slice(0, 50));
+    const effectiveProvider = llmSettings.llm_image_provider || llmSettings.llm_provider || 'lovable';
+    console.log('Generating image with provider:', effectiveProvider, 'prompt:', prompt.slice(0, 50));
 
     const base64ImageUrl = await generateImage(llmSettings, enhancedPrompt);
 
