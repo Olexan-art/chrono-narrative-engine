@@ -144,10 +144,13 @@ export async function generateDialogue(params: {
   useOpenAI?: boolean;
   messageCount?: number;
   characters?: string;
+  enableThreading?: boolean;
+  threadProbability?: number;
 }) {
   return callEdgeFunction<{
     success: boolean;
     dialogue: Array<{
+      id: string;
       character: string;
       name: string;
       avatar: string;
@@ -158,8 +161,11 @@ export async function generateDialogue(params: {
         name: string;
         avatar: string;
       }>;
+      replyTo?: string;
+      threadId?: string;
     }>;
     dialogue_en?: Array<{
+      id: string;
       character: string;
       name: string;
       avatar: string;
@@ -170,8 +176,11 @@ export async function generateDialogue(params: {
         name: string;
         avatar: string;
       }>;
+      replyTo?: string;
+      threadId?: string;
     }>;
     dialogue_pl?: Array<{
+      id: string;
       character: string;
       name: string;
       avatar: string;
@@ -182,6 +191,8 @@ export async function generateDialogue(params: {
         name: string;
         avatar: string;
       }>;
+      replyTo?: string;
+      threadId?: string;
     }>;
     thirdCharacterIncluded: boolean;
   }>('generate-dialogue', params);

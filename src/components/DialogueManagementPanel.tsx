@@ -9,8 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { MessageSquare, RefreshCw, Loader2, Calendar, Check, X, Users, UserPlus } from "lucide-react";
+import { MessageSquare, RefreshCw, Loader2, Calendar, Check, X, Users, UserPlus, GitBranch, Reply, CornerDownRight } from "lucide-react";
 import { generateDialogue } from "@/lib/api";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
@@ -30,11 +32,14 @@ interface DialogueManagementPanelProps {
 }
 
 interface DialogueMessage {
+  id?: string;
   character?: string;
   name?: string;
   avatar?: string;
   message?: string;
   likes?: number;
+  replyTo?: string;
+  threadId?: string;
 }
 
 interface Part {
@@ -60,6 +65,10 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
   const [selectedModel, setSelectedModel] = useState("google/gemini-3-flash-preview");
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([]);
+  
+  // Threading options
+  const [enableThreading, setEnableThreading] = useState(false);
+  const [threadProbability, setThreadProbability] = useState(30); // 0-100%
 
   // Get text models for provider
   const getTextModels = (provider: LLMProvider) => {
@@ -148,6 +157,8 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
         useOpenAI: selectedProvider === "openai",
         messageCount,
         characters: characterContext,
+        enableThreading,
+        threadProbability,
       });
 
       if (!result.success) throw new Error("Failed to generate dialogue");
@@ -188,6 +199,12 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
       dialogue.map((msg: DialogueMessage) => msg.character || msg.name).filter(Boolean)
     );
     return uniqueCharacters.size;
+  };
+
+  // Count threads/replies in dialogue
+  const getThreadCount = (dialogue: unknown) => {
+    if (!Array.isArray(dialogue)) return 0;
+    return dialogue.filter((msg: DialogueMessage) => msg.replyTo).length;
   };
 
   return (
@@ -249,6 +266,43 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
                 onChange={(e) => setMessageCount(Number(e.target.value))}
               />
             </div>
+          </div>
+
+          {/* Threading Options */}
+          <div className="space-y-3 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-4 w-4 text-primary" />
+                <Label htmlFor="threading-switch">Гілки та відповіді</Label>
+              </div>
+              <Switch
+                id="threading-switch"
+                checked={enableThreading}
+                onCheckedChange={setEnableThreading}
+              />
+            </div>
+            
+            {enableThreading && (
+              <div className="space-y-2 pl-6">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-muted-foreground">
+                    Ймовірність відповідей: {threadProbability}%
+                  </Label>
+                </div>
+                <Slider
+                  value={[threadProbability]}
+                  onValueChange={([val]) => setThreadProbability(val)}
+                  min={10}
+                  max={70}
+                  step={5}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <CornerDownRight className="inline h-3 w-3 mr-1" />
+                  Кожне повідомлення з шансом {threadProbability}% стане відповіддю на попереднє
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Character Selection */}
@@ -326,7 +380,13 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
                             {format(new Date(part.date), "d MMM yyyy", { locale: uk })}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {getThreadCount(part.chat_dialogue) > 0 && (
+                            <Badge variant="outline" className="text-xs bg-primary/5">
+                              <GitBranch className="h-3 w-3 mr-1" />
+                              {getThreadCount(part.chat_dialogue)}
+                            </Badge>
+                          )}
                           {getCharacterCount(part.chat_dialogue) > 0 && (
                             <Badge variant="outline" className="text-xs">
                               <Users className="h-3 w-3 mr-1" />
@@ -379,15 +439,31 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
                   </div>
                 </div>
 
+                {/* Thread stats */}
+                {getThreadCount(selectedPart.chat_dialogue) > 0 && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-primary/5 p-2 rounded">
+                    <GitBranch className="h-4 w-4" />
+                    <span>{getThreadCount(selectedPart.chat_dialogue)} відповідей на повідомлення</span>
+                  </div>
+                )}
+
                 {Array.isArray(selectedPart.chat_dialogue) && selectedPart.chat_dialogue.length > 0 && (
                   <ScrollArea className="h-[200px] border rounded-md p-2">
                     <div className="space-y-2">
-                      {(selectedPart.chat_dialogue as Array<{ name: string; avatar: string; message: string }>).map((msg, idx) => (
-                        <div key={idx} className="flex items-start gap-2 text-sm">
-                          <span className="text-lg">{msg.avatar}</span>
-                          <div>
-                            <span className="font-medium">{msg.name}:</span>
-                            <span className="text-muted-foreground ml-1">{msg.message}</span>
+                      {(selectedPart.chat_dialogue as Array<DialogueMessage>).map((msg, idx) => (
+                        <div 
+                          key={idx} 
+                          className={`flex items-start gap-2 text-sm ${msg.replyTo ? 'ml-4 pl-2 border-l-2 border-primary/30' : ''}`}
+                        >
+                          <span className="text-lg shrink-0">{msg.avatar}</span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">{msg.name}:</span>
+                              {msg.replyTo && (
+                                <Reply className="h-3 w-3 text-muted-foreground" />
+                              )}
+                            </div>
+                            <span className="text-muted-foreground">{msg.message}</span>
                           </div>
                         </div>
                       ))}

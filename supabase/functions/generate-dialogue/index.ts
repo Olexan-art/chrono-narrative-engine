@@ -25,18 +25,25 @@ interface Character {
 }
 
 interface DialogueMessage {
+  id: string;
   character: string;
   name: string;
   avatar: string;
   message: string;
   likes: number;
   characterLikes: CharacterLike[];
+  replyTo?: string;
+  threadId?: string;
 }
 
 interface CharacterLike {
   characterId: string;
   name: string;
   avatar: string;
+}
+
+function generateMessageId(): string {
+  return `msg-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 }
 
 async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: string, useOpenAI: boolean = false): Promise<string> {
@@ -214,7 +221,9 @@ serve(async (req) => {
       narrativeStructure,
       useOpenAI = false,
       messageCount = 8,
-      characters: selectedCharactersParam // Optional: specific characters to use
+      characters: selectedCharactersParam,
+      enableThreading = false,
+      threadProbability = 30
     } = await req.json();
 
     const supabase = createClient(
@@ -291,7 +300,9 @@ serve(async (req) => {
       thirdCharacter: thirdCharacter?.name || 'none',
       messageCount,
       useOpenAI,
-      selectedCharactersParam: selectedCharactersParam || 'auto'
+      selectedCharactersParam: selectedCharactersParam || 'auto',
+      enableThreading,
+      threadProbability
     });
 
     const charactersList = thirdCharacter 
@@ -359,9 +370,9 @@ ${newsContext}
       };
     }
 
-    // Add likes and character likes to each message
-    const addLikesToDialogue = (dialogue: any[]) => {
-      return dialogue.map((msg: any) => {
+    // Add IDs, likes, character likes, and threading to each message
+    const addEnhancementsToDialogue = (dialogue: any[], dialogueIds: string[]) => {
+      return dialogue.map((msg: any, idx: number) => {
         const baseLikes = generateRandomLikes();
         const likeGiversCount = Math.floor(Math.random() * 3) + 1;
         const likeGivers = selectRelatedCharacters(allCharacters, [mainCharacters.find(c => c.character_id === msg.character)!].filter(Boolean), likeGiversCount);
@@ -372,7 +383,8 @@ ${newsContext}
           avatar: c.avatar
         }));
 
-        return {
+        const enhanced: DialogueMessage = {
+          id: dialogueIds[idx],
           character: msg.character,
           name: msg.name,
           avatar: msg.avatar,
@@ -380,12 +392,31 @@ ${newsContext}
           likes: baseLikes,
           characterLikes
         };
+
+        // Add threading if enabled and not the first message
+        if (enableThreading && idx > 0) {
+          // Random chance to make this a reply to a previous message
+          if (Math.random() * 100 < threadProbability) {
+            // Reply to a random previous message (preferring recent ones)
+            const possibleParents = dialogueIds.slice(0, idx);
+            const weightedIdx = Math.floor(Math.pow(Math.random(), 0.5) * possibleParents.length);
+            const parentIdx = possibleParents.length - 1 - weightedIdx;
+            enhanced.replyTo = dialogueIds[parentIdx];
+            enhanced.threadId = dialogueIds[0]; // Root of the thread
+          }
+        }
+
+        return enhanced;
       });
     };
 
-    const dialogueWithLikes = addLikesToDialogue(result.dialogue || []);
-    const dialogueEnWithLikes = addLikesToDialogue(result.dialogue_en || []);
-    const dialoguePlWithLikes = addLikesToDialogue(result.dialogue_pl || []);
+    // Generate shared IDs for all languages
+    const dialogueLength = (result.dialogue || []).length;
+    const sharedDialogueIds = Array.from({ length: dialogueLength }, () => generateMessageId());
+
+    const dialogueWithLikes = addEnhancementsToDialogue(result.dialogue || [], sharedDialogueIds);
+    const dialogueEnWithLikes = addEnhancementsToDialogue(result.dialogue_en || [], sharedDialogueIds);
+    const dialoguePlWithLikes = addEnhancementsToDialogue(result.dialogue_pl || [], sharedDialogueIds);
 
     // Update character statistics
     const characterStats: Record<string, { dialogueCount: number; totalLikes: number }> = {};
