@@ -10,6 +10,7 @@ import { TweetCard } from "@/components/TweetCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useTrackView } from "@/hooks/useTrackView";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { SEOHead } from "@/components/SEOHead";
 
 function parseContentWithLinks(content: string): React.ReactNode {
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
@@ -174,8 +175,18 @@ export default function ReadPage() {
   const chatDialogue = getLocalizedChatDialogue();
   const tweets = getLocalizedTweets();
 
+  // SEO description - first 500 characters of content
+  const seoDescription = localizedContent.replace(/\n/g, ' ').substring(0, 500);
+
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead 
+        title={localizedTitle}
+        description={seoDescription}
+        type="article"
+        image={part.cover_image_url || undefined}
+        publishedAt={part.published_at || part.created_at || undefined}
+      />
       <Header />
       
       <main className="container mx-auto px-3 md:px-4 py-4 md:py-8">
