@@ -190,6 +190,46 @@ serve(async (req) => {
         );
       }
 
+      case 'createCharacter': {
+        const { data: character, error } = await supabase
+          .from('characters')
+          .insert(data)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true, character }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'updateCharacter': {
+        const { error } = await supabase
+          .from('characters')
+          .update(data)
+          .eq('id', data.id);
+        
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'deleteCharacter': {
+        const { error } = await supabase
+          .from('characters')
+          .delete()
+          .eq('id', data.id);
+        
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       case 'getStats': {
         const [volumes, chapters, parts, generations] = await Promise.all([
           supabase.from('volumes').select('id', { count: 'exact' }),

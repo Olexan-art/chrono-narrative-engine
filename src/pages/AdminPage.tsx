@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2 } from "lucide-react";
+import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { GenerationPanel } from "@/components/GenerationPanel";
 import { WeekGenerationPanel } from "@/components/WeekGenerationPanel";
 import { ChaptersPanel } from "@/components/ChaptersPanel";
 import { AnalyticsPanel } from "@/components/AnalyticsPanel";
+import CharactersPanel from "@/components/CharactersPanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -593,7 +594,7 @@ export default function AdminPage() {
         {stats && <StatsCard stats={stats} />}
 
         <Tabs defaultValue="generate" className="mt-8">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="generate" className="gap-2">
               <Sparkles className="w-4 h-4" />
               День
@@ -609,6 +610,10 @@ export default function AdminPage() {
             <TabsTrigger value="parts" className="gap-2">
               <FileText className="w-4 h-4" />
               Частини
+            </TabsTrigger>
+            <TabsTrigger value="characters" className="gap-2">
+              <Users className="w-4 h-4" />
+              Персонажі
             </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <TrendingUp className="w-4 h-4" />
@@ -634,6 +639,10 @@ export default function AdminPage() {
 
           <TabsContent value="parts" className="mt-6">
             <PartsPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="characters" className="mt-6">
+            <CharactersPanel password={password} />
           </TabsContent>
 
           <TabsContent value="analytics" className="mt-6">
