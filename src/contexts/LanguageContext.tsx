@@ -15,12 +15,12 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.volumes': 'Томи',
     'nav.calendar': 'Календар',
     'nav.admin': 'Адмінка',
-    'header.subtitle': 'AI-АРХІВ ЛЮДСЬКОЇ ІСТОРІЇ',
+    'header.subtitle': 'КРОТОВИНА ІСТОРІЇ',
     
     // Hero
     'hero.badge': 'AI-ГЕНЕРОВАНА НАУКОВА ФАНТАСТИКА',
     'hero.title': 'Точка Синхронізації',
-    'hero.description': 'Книга, що пише сама себе. Штучний інтелект-архіватор структурує хаос людської історії через призму наукової фантастики.',
+    'hero.description': 'Книга, що пише сама себе. Архіватор структурує хаос людської історії через призму наукової фантастики.',
     'hero.archive': 'Переглянути архів',
     'hero.latest': 'Читати останнє',
     
@@ -44,7 +44,7 @@ const translations: Record<Language, Record<string, string>> = {
     'commentary': 'Коментар',
     
     // Footer
-    'footer.style': 'Стилістика: Рей Бредбері • Артур Кларк • Ніл Гейман',
+    'footer.style': 'З великим натхненням: Рей Бредбері • Артур Кларк • Ніл Гейман',
     
     // News
     'news.sources': 'Джерела новин',
