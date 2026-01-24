@@ -146,9 +146,10 @@ function SettingsPanel({ password }: { password: string }) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   }
 
-  const currentProvider = (settings.llm_provider || 'lovable') as LLMProvider;
-  const availableTextModels = LLM_MODELS[currentProvider]?.text || [];
-  const availableImageModels = LLM_MODELS[currentProvider]?.image || [];
+  const textProvider = (settings.llm_text_provider || settings.llm_provider || 'lovable') as LLMProvider;
+  const imageProvider = (settings.llm_image_provider || settings.llm_provider || 'lovable') as LLMProvider;
+  const availableTextModels = LLM_MODELS[textProvider]?.text || [];
+  const availableImageModels = LLM_MODELS[imageProvider]?.image || [];
 
   return (
     <div className="space-y-6">
@@ -162,68 +163,17 @@ function SettingsPanel({ password }: { password: string }) {
           <CardDescription>Підключення до штучного інтелекту для генерації контенту</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Provider Selection */}
-          <div className="space-y-2">
-            <Label>Провайдер LLM</Label>
-            <Select
-              value={currentProvider}
-              onValueChange={(v) => {
-                const provider = v as LLMProvider;
-                const defaultTextModel = LLM_MODELS[provider]?.text[0]?.value || '';
-                const defaultImageModel = LLM_MODELS[provider]?.image[0]?.value || '';
-                updateMutation.mutate({ 
-                  llm_provider: provider, 
-                  llm_text_model: defaultTextModel,
-                  llm_image_model: defaultImageModel
-                });
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lovable">
-                  <div className="flex items-center gap-2">
-                    <span className="text-primary">✨</span>
-                    Lovable AI (безкоштовно)
-                  </div>
-                </SelectItem>
-                <SelectItem value="openai">
-                  <div className="flex items-center gap-2">
-                    <span>🤖</span>
-                    OpenAI (ChatGPT)
-                  </div>
-                </SelectItem>
-                <SelectItem value="gemini">
-                  <div className="flex items-center gap-2">
-                    <span>💎</span>
-                    Google Gemini
-                  </div>
-                </SelectItem>
-                <SelectItem value="anthropic">
-                  <div className="flex items-center gap-2">
-                    <span>🧠</span>
-                    Anthropic (Claude)
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            {currentProvider === 'lovable' && (
-              <p className="text-xs text-muted-foreground">
-                Використовує вбудований AI шлюз Lovable без потреби в API ключі
-              </p>
-            )}
-          </div>
+          {/* Removed single provider - now using separate providers for text and image */}
 
-          {/* API Keys for external providers */}
-          {currentProvider !== 'lovable' && (
+          {/* API Keys - show when any provider needs them */}
+          {(textProvider !== 'lovable' || imageProvider !== 'lovable') && (
             <div className="space-y-4 p-4 border border-dashed border-primary/30 rounded-lg">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Key className="w-4 h-4" />
-                API Ключ
+                API Ключі
               </div>
               
-              {currentProvider === 'openai' && (
+              {(textProvider === 'openai' || imageProvider === 'openai') && (
                 <div className="space-y-2">
                   <Label>OpenAI API Key</Label>
                   <div className="flex gap-2">
@@ -248,7 +198,7 @@ function SettingsPanel({ password }: { password: string }) {
                 </div>
               )}
 
-              {currentProvider === 'gemini' && (
+              {(textProvider === 'gemini' || imageProvider === 'gemini') && (
                 <div className="space-y-2">
                   <Label>Google AI API Key</Label>
                   <div className="flex gap-2">
@@ -273,7 +223,7 @@ function SettingsPanel({ password }: { password: string }) {
                 </div>
               )}
 
-              {currentProvider === 'anthropic' && (
+              {textProvider === 'anthropic' && (
                 <div className="space-y-2">
                   <Label>Anthropic API Key</Label>
                   <div className="flex gap-2">
@@ -300,53 +250,158 @@ function SettingsPanel({ password }: { password: string }) {
             </div>
           )}
 
-          {/* Text Model Selection */}
-          {availableTextModels.length > 0 && (
-            <div className="space-y-2">
-              <Label>Модель для тексту</Label>
-              <Select
-                value={settings.llm_text_model || availableTextModels[0]?.value}
-                onValueChange={(v) => updateMutation.mutate({ llm_text_model: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableTextModels.map(model => (
-                    <SelectItem key={model.value} value={model.value}>
-                      {model.label}
+          {/* Text Provider + Model Selection */}
+          <div className="space-y-3 p-4 border border-border/50 rounded-lg">
+            <Label className="text-base font-medium">Модель для тексту</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Провайдер</Label>
+                <Select
+                  value={textProvider}
+                  onValueChange={(v) => {
+                    const provider = v as LLMProvider;
+                    const defaultModel = LLM_MODELS[provider]?.text[0]?.value || '';
+                    updateMutation.mutate({ 
+                      llm_text_provider: provider, 
+                      llm_text_model: defaultModel
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lovable">
+                      <div className="flex items-center gap-2">
+                        <span className="text-primary">✨</span>
+                        Lovable AI
+                      </div>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    <SelectItem value="openai">
+                      <div className="flex items-center gap-2">
+                        <span>🤖</span>
+                        OpenAI
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="gemini">
+                      <div className="flex items-center gap-2">
+                        <span>💎</span>
+                        Google Gemini
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="anthropic">
+                      <div className="flex items-center gap-2">
+                        <span>🧠</span>
+                        Anthropic
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Модель</Label>
+                <Select
+                  value={settings.llm_text_model || availableTextModels[0]?.value}
+                  onValueChange={(v) => updateMutation.mutate({ llm_text_model: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableTextModels.map(model => (
+                      <SelectItem key={model.value} value={model.value}>
+                        {model.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          )}
+            {textProvider === 'lovable' && (
+              <p className="text-xs text-muted-foreground">
+                Використовує вбудований AI шлюз Lovable без потреби в API ключі
+              </p>
+            )}
+          </div>
 
-          {/* Image Model Selection */}
-          {availableImageModels.length > 0 ? (
-            <div className="space-y-2">
-              <Label>Модель для зображень</Label>
-              <Select
-                value={settings.llm_image_model || availableImageModels[0]?.value}
-                onValueChange={(v) => updateMutation.mutate({ llm_image_model: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableImageModels.map(model => (
-                    <SelectItem key={model.value} value={model.value}>
-                      {model.label}
+          {/* Image Provider + Model Selection */}
+          <div className="space-y-3 p-4 border border-border/50 rounded-lg">
+            <Label className="text-base font-medium">Модель для зображень</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Провайдер</Label>
+                <Select
+                  value={imageProvider}
+                  onValueChange={(v) => {
+                    const provider = v as LLMProvider;
+                    const defaultModel = LLM_MODELS[provider]?.image[0]?.value || '';
+                    updateMutation.mutate({ 
+                      llm_image_provider: provider, 
+                      llm_image_model: defaultModel
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lovable">
+                      <div className="flex items-center gap-2">
+                        <span className="text-primary">✨</span>
+                        Lovable AI
+                      </div>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    <SelectItem value="openai">
+                      <div className="flex items-center gap-2">
+                        <span>🤖</span>
+                        OpenAI
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="gemini">
+                      <div className="flex items-center gap-2">
+                        <span>💎</span>
+                        Google Gemini
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Модель</Label>
+                {availableImageModels.length > 0 ? (
+                  <Select
+                    value={settings.llm_image_model || availableImageModels[0]?.value}
+                    onValueChange={(v) => updateMutation.mutate({ llm_image_model: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableImageModels.map(model => (
+                        <SelectItem key={model.value} value={model.value}>
+                          {model.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="p-2 bg-muted/50 rounded text-sm text-muted-foreground">
+                    Немає моделей
+                  </div>
+                )}
+              </div>
             </div>
-          ) : currentProvider === 'anthropic' && (
-            <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-              ⚠️ Anthropic не підтримує генерацію зображень. Для картинок буде використано Lovable AI.
-            </div>
-          )}
+            {imageProvider === 'lovable' && (
+              <p className="text-xs text-muted-foreground">
+                Використовує вбудований AI шлюз Lovable без потреби в API ключі
+              </p>
+            )}
+            {imageProvider === 'anthropic' && (
+              <div className="p-2 bg-destructive/10 rounded text-sm text-destructive">
+                ⚠️ Anthropic не підтримує генерацію зображень
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
