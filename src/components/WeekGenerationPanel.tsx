@@ -325,19 +325,36 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
         part3Data.story?.content || ''
       ].join('\n\n---\n\n');
 
-      // Step 5: Update chapter with generated content
-      addLog('Збереження глави в базу...');
+      // Step 5: Update chapter with generated content (all 3 languages)
+      addLog('Збереження глави в базу (UA, EN, PL)...');
+      const story = part3Data.story;
       await adminAction('updateChapter', password, {
         id: chapter.id,
-        title: part3Data.story?.title || chapter.title,
-        description: part3Data.story?.summary || `Синтез тижня ${format(selectedWeek.start, 'd', { locale: uk })}-${format(selectedWeek.end, 'd MMMM', { locale: uk })}`,
-        narrator_monologue: part3Data.story?.strangerMonologue || '',
-        narrator_commentary: part3Data.story?.narratorCommentary || '',
-        cover_image_prompt: part3Data.story?.imagePrompt || '',
-        cover_image_prompt_2: part3Data.story?.imagePrompt2 || '',
-        cover_image_prompt_3: part3Data.story?.imagePrompt3 || '',
-        tweets: part3Data.story?.tweets || [],
-        chat_dialogue: part3Data.story?.chatDialogue || []
+        // Ukrainian (default)
+        title: story?.title || chapter.title,
+        description: story?.summary || `Синтез тижня ${format(selectedWeek.start, 'd', { locale: uk })}-${format(selectedWeek.end, 'd MMMM', { locale: uk })}`,
+        narrator_monologue: story?.strangerMonologue || '',
+        narrator_commentary: story?.narratorCommentary || '',
+        tweets: story?.tweets || [],
+        chat_dialogue: story?.chatDialogue || [],
+        // English
+        title_en: story?.title_en || '',
+        description_en: story?.summary_en || '',
+        narrator_monologue_en: story?.strangerMonologue_en || '',
+        narrator_commentary_en: story?.narratorCommentary_en || '',
+        tweets_en: story?.tweets_en || [],
+        chat_dialogue_en: story?.chatDialogue_en || [],
+        // Polish
+        title_pl: story?.title_pl || '',
+        description_pl: story?.summary_pl || '',
+        narrator_monologue_pl: story?.strangerMonologue_pl || '',
+        narrator_commentary_pl: story?.narratorCommentary_pl || '',
+        tweets_pl: story?.tweets_pl || [],
+        chat_dialogue_pl: story?.chatDialogue_pl || [],
+        // Image prompts
+        cover_image_prompt: story?.imagePrompt || '',
+        cover_image_prompt_2: story?.imagePrompt2 || '',
+        cover_image_prompt_3: story?.imagePrompt3 || ''
       });
       updateLastLog('success');
 
