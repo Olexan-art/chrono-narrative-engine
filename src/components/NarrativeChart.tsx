@@ -1,5 +1,6 @@
 import { NARRATIVE_OPTIONS } from "@/types/database";
 import { useMemo } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface NarrativeChartProps {
   narrativeSource?: string | null;
@@ -35,6 +36,7 @@ export function NarrativeChart({
   narrativePlot,
   narrativeSpecial,
 }: NarrativeChartProps) {
+  const { t } = useLanguage();
   const hasAnyNarrative = narrativeSource || narrativeStructure || narrativePurpose || narrativePlot || narrativeSpecial;
   
   if (!hasAnyNarrative) return null;
@@ -47,7 +49,7 @@ export function NarrativeChart({
         label: NARRATIVE_OPTIONS.source[narrativeSource as keyof typeof NARRATIVE_OPTIONS.source]?.label || narrativeSource,
         color: narrativeColors.source,
         icon: '📖',
-        category: 'Джерело'
+        categoryKey: 'narrative.source'
       },
       { 
         key: 'structure', 
@@ -55,7 +57,7 @@ export function NarrativeChart({
         label: NARRATIVE_OPTIONS.structure[narrativeStructure as keyof typeof NARRATIVE_OPTIONS.structure]?.label || narrativeStructure,
         color: narrativeColors.structure,
         icon: '🏗️',
-        category: 'Структура'
+        categoryKey: 'narrative.structure'
       },
       { 
         key: 'purpose', 
@@ -63,7 +65,7 @@ export function NarrativeChart({
         label: NARRATIVE_OPTIONS.purpose[narrativePurpose as keyof typeof NARRATIVE_OPTIONS.purpose]?.label || narrativePurpose,
         color: narrativeColors.purpose,
         icon: '🎯',
-        category: 'Мета'
+        categoryKey: 'narrative.purpose'
       },
       { 
         key: 'plot', 
@@ -71,7 +73,7 @@ export function NarrativeChart({
         label: NARRATIVE_OPTIONS.plot[narrativePlot as keyof typeof NARRATIVE_OPTIONS.plot]?.label || narrativePlot,
         color: narrativeColors.plot,
         icon: '📜',
-        category: 'Сюжет'
+        categoryKey: 'narrative.plot'
       },
       { 
         key: 'special', 
@@ -79,7 +81,7 @@ export function NarrativeChart({
         label: NARRATIVE_OPTIONS.special[narrativeSpecial as keyof typeof NARRATIVE_OPTIONS.special]?.label || narrativeSpecial,
         color: narrativeColors.special,
         icon: '✨',
-        category: 'Особливість'
+        categoryKey: 'narrative.special'
       },
     ].filter(n => n.value);
 
@@ -102,7 +104,7 @@ export function NarrativeChart({
     <div className="mt-6 md:mt-8 pt-4 md:pt-6 border-t border-border">
       <h4 className="text-xs font-mono text-muted-foreground mb-4 flex items-center gap-2">
         <span className="text-base">📊</span>
-        НАРАТИВНА СТРУКТУРА
+        {t('narrative.title')}
       </h4>
       
       {/* Main chart area */}
@@ -114,7 +116,7 @@ export function NarrativeChart({
               <div className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                   <span>{narrative.icon}</span>
-                  <span className="font-medium">{narrative.category}</span>
+                  <span className="font-medium">{t(narrative.categoryKey)}</span>
                 </span>
                 <span className="font-mono text-foreground">{narrative.percentage}%</span>
               </div>
@@ -179,7 +181,7 @@ export function NarrativeChart({
                 {narratives.length}
               </span>
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                елементів
+                {t('narrative.elements')}
               </span>
             </div>
           </div>

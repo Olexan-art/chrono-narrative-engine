@@ -139,7 +139,7 @@ export default function Index() {
   });
 
   const { data: allChapters = [] } = useQuery({
-    queryKey: ['all-chapters'],
+    queryKey: ['all-chapters', language],
     queryFn: async () => {
       const { data } = await supabase
         .from('chapters')
@@ -407,7 +407,28 @@ export default function Index() {
             </div>
             
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {allChapters.map((chapter: any, index: number) => (
+              {allChapters.map((chapter: any, index: number) => {
+                // Localize chapter title and description
+                const localizedChapterTitle = language === 'en' 
+                  ? (chapter.title_en || chapter.title)
+                  : language === 'pl'
+                  ? (chapter.title_pl || chapter.title)
+                  : chapter.title;
+                  
+                const localizedChapterDesc = language === 'en'
+                  ? (chapter.description_en || chapter.description)
+                  : language === 'pl'
+                  ? (chapter.description_pl || chapter.description)
+                  : chapter.description;
+                
+                // Localize volume title
+                const localizedVolumeTitle = language === 'en'
+                  ? (chapter.volume?.title_en || chapter.volume?.title || 'Volume')
+                  : language === 'pl'
+                  ? (chapter.volume?.title_pl || chapter.volume?.title || 'Tom')
+                  : (chapter.volume?.title || 'Том');
+                
+                return (
                 <Link 
                   key={chapter.id} 
                   to={`/chapter/${chapter.id}`}
@@ -420,7 +441,7 @@ export default function Index() {
                       {chapter.cover_image_url ? (
                         <img 
                           src={chapter.cover_image_url} 
-                          alt={chapter.title}
+                          alt={localizedChapterTitle}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
@@ -442,7 +463,7 @@ export default function Index() {
                     <div className="p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-mono text-muted-foreground">
-                          {chapter.volume?.title || 'Том'}
+                          {localizedVolumeTitle}
                         </span>
                         <span className="text-muted-foreground">•</span>
                         <span className="text-xs font-mono text-muted-foreground">
@@ -451,12 +472,12 @@ export default function Index() {
                       </div>
                       
                       <h3 className="font-serif font-medium text-lg group-hover:text-primary transition-colors line-clamp-2 mb-2">
-                        {chapter.title}
+                        {localizedChapterTitle}
                       </h3>
                       
-                      {chapter.description && (
+                      {localizedChapterDesc && (
                         <p className="text-sm text-muted-foreground line-clamp-2 font-serif">
-                          {chapter.description}
+                          {localizedChapterDesc}
                         </p>
                       )}
                       
@@ -476,7 +497,8 @@ export default function Index() {
                     </div>
                   </article>
                 </Link>
-              ))}
+              );
+              })}
             </div>
           </div>
         </section>
