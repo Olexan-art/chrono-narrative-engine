@@ -58,6 +58,12 @@ const translations: Record<Language, Record<string, string>> = {
     // Chapters
     'chapters.count': 'глав',
     
+    // Calendar
+    'calendar.title': 'КАЛЕНДАР',
+    'calendar.view_full': 'Переглянути повний календар',
+    'calendar.latest_chapter': 'ОСТАННЯ ГЛАВА',
+    'calendar.read_chapter': 'Читати главу',
+    
     // Narrative Chart
     'narrative.title': 'НАРАТИВНА СТРУКТУРА',
     'narrative.elements': 'елементів',
@@ -153,6 +159,12 @@ const translations: Record<Language, Record<string, string>> = {
     // Chapters
     'chapters.count': 'chapters',
     
+    // Calendar
+    'calendar.title': 'CALENDAR',
+    'calendar.view_full': 'View Full Calendar',
+    'calendar.latest_chapter': 'LATEST CHAPTER',
+    'calendar.read_chapter': 'Read Chapter',
+    
     // Narrative Chart
     'narrative.title': 'NARRATIVE STRUCTURE',
     'narrative.elements': 'elements',
@@ -247,6 +259,12 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Chapters
     'chapters.count': 'rozdziałów',
+    
+    // Calendar
+    'calendar.title': 'KALENDARZ',
+    'calendar.view_full': 'Wyświetl pełny kalendarz',
+    'calendar.latest_chapter': 'OSTATNI ROZDZIAŁ',
+    'calendar.read_chapter': 'Czytaj rozdział',
     
     // Narrative Chart
     'narrative.title': 'STRUKTURA NARRACYJNA',
