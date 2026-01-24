@@ -125,11 +125,24 @@ export function SEOHead({
 
     // LLM crawler tags
     const ensureLLMTags = () => {
-      // AI/LLM friendly meta tags
+      // AI/LLM friendly meta tags - enhanced for modern crawlers
       updateMeta('ai:summary', description);
       updateMeta('ai:content_type', type === 'article' ? 'narrative_story' : 'website');
+      updateMeta('ai:language', language);
       
-      // Robots directive
+      // Site identity for LLMs
+      updateMeta('application-name', 'Synchronization Point');
+      updateMeta('generator', 'Lovable AI');
+      
+      // Dublin Core metadata (used by some AI systems)
+      updateMeta('DC.title', fullTitle);
+      updateMeta('DC.description', description);
+      updateMeta('DC.language', language === 'uk' ? 'uk-UA' : language === 'pl' ? 'pl-PL' : 'en-US');
+      updateMeta('DC.creator', author);
+      updateMeta('DC.type', type === 'article' ? 'Text.Article' : 'Text.Website');
+      if (publishedAt) updateMeta('DC.date', publishedAt);
+      
+      // Robots directive - optimized for both traditional and AI crawlers
       let robotsContent: string;
       if (noIndex) {
         robotsContent = 'noindex, nofollow';
@@ -141,35 +154,87 @@ export function SEOHead({
       updateMeta('robots', robotsContent);
       updateMeta('googlebot', robotsContent);
       
+      // Specific AI bot directives
+      updateMeta('googlebot-news', type === 'article' ? 'index, follow' : robotsContent);
+      
       // Schema.org JSON-LD - use array for multiple schemas
       const schemas: Record<string, unknown>[] = [];
 
-      // Main content schema
+      // Organization schema (for brand recognition by AI)
+      const organizationSchema: Record<string, unknown> = {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'Synchronization Point',
+        alternateName: 'Точка Синхронізації',
+        description: 'AI-powered narrative generation system that transforms real-world news into science fiction stories',
+        url: 'https://chrono-narrative-engine.lovable.app',
+        logo: 'https://chrono-narrative-engine.lovable.app/favicon.png',
+        sameAs: [],
+        knowsAbout: ['Artificial Intelligence', 'Science Fiction', 'News Analysis', 'Narrative Generation', 'Ukrainian Literature']
+      };
+      schemas.push(organizationSchema);
+
+      // Main content schema - enhanced for LLM understanding
       const mainSchema: Record<string, unknown> = {
         '@context': 'https://schema.org',
-        '@type': type === 'article' ? 'Article' : 'WebSite',
+        '@type': type === 'article' ? 'NewsArticle' : 'WebSite',
         name: fullTitle,
+        headline: fullTitle,
         description,
+        abstract: description,
         inLanguage: language === 'uk' ? 'uk-UA' : language === 'pl' ? 'pl-PL' : 'en-US',
         author: {
           '@type': 'Organization',
           name: 'Synchronization Point AI',
-          description: 'AI-powered narrative generation system'
+          description: 'AI-powered narrative generation system',
+          url: 'https://chrono-narrative-engine.lovable.app'
         },
         publisher: {
           '@type': 'Organization',
-          name: 'Точка Синхронізації'
+          name: 'Точка Синхронізації',
+          logo: {
+            '@type': 'ImageObject',
+            url: 'https://chrono-narrative-engine.lovable.app/favicon.png'
+          }
         },
-        keywords: keywords.join(', ')
+        keywords: keywords.join(', '),
+        isAccessibleForFree: true,
+        creativeWorkStatus: 'Published'
       };
 
       if (type === 'article') {
-        mainSchema['@type'] = 'Article';
+        mainSchema['@type'] = 'NewsArticle';
         mainSchema.articleSection = 'Science Fiction';
-        mainSchema.genre = ['Science Fiction', 'AI Generated Content', 'News-based Narrative'];
-        if (publishedAt) mainSchema.datePublished = publishedAt;
-        if (image) mainSchema.image = image;
-        if (canonicalUrl) mainSchema.mainEntityOfPage = canonicalUrl;
+        mainSchema.genre = ['Science Fiction', 'AI Generated Content', 'News-based Narrative', 'Speculative Fiction'];
+        mainSchema.about = {
+          '@type': 'Thing',
+          name: 'AI-generated narrative based on current events'
+        };
+        if (publishedAt) {
+          mainSchema.datePublished = publishedAt;
+          mainSchema.dateModified = publishedAt;
+        }
+        if (image) {
+          mainSchema.image = {
+            '@type': 'ImageObject',
+            url: image
+          };
+          mainSchema.thumbnailUrl = image;
+        }
+        if (canonicalUrl) {
+          mainSchema.mainEntityOfPage = {
+            '@type': 'WebPage',
+            '@id': canonicalUrl
+          };
+          mainSchema.url = canonicalUrl;
+        }
+      } else {
+        // WebSite schema enhancements
+        mainSchema.potentialAction = {
+          '@type': 'SearchAction',
+          target: 'https://chrono-narrative-engine.lovable.app/calendar?q={search_term_string}',
+          'query-input': 'required name=search_term_string'
+        };
       }
 
       schemas.push(mainSchema);
