@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -17,8 +18,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, User } from "lucide-react";
+import { Plus, Pencil, Trash2, User, LayoutGrid, IdCard } from "lucide-react";
 import { adminAction } from "@/lib/api";
+import { CharacterCard } from "./CharacterCard";
 
 interface Character {
   id: string;
@@ -28,6 +30,9 @@ interface Character {
   style: string;
   description: string | null;
   is_active: boolean;
+  dialogue_count: number;
+  total_likes: number;
+  last_dialogue_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -40,6 +45,7 @@ export default function CharactersPanel({ password }: CharactersPanelProps) {
   const queryClient = useQueryClient();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "cards">("grid");
   const [formData, setFormData] = useState({
     character_id: "",
     name: "",
@@ -164,10 +170,27 @@ export default function CharactersPanel({ password }: CharactersPanelProps) {
           <User className="h-5 w-5" />
           Персонажі ({characters?.length || 0})
         </h3>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
-              <Plus className="h-4 w-4 mr-2" />
+        <div className="flex items-center gap-2">
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant={viewMode === "grid" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("grid")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "cards" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+            >
+              <IdCard className="h-4 w-4" />
+            </Button>
+          </div>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
               Додати персонажа
             </Button>
           </DialogTrigger>
@@ -256,6 +279,7 @@ export default function CharactersPanel({ password }: CharactersPanelProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Edit Dialog */}
@@ -346,58 +370,83 @@ export default function CharactersPanel({ password }: CharactersPanelProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Characters Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {characters?.map((character) => (
-          <Card key={character.id} className={!character.is_active ? "opacity-60" : ""}>
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">{character.avatar}</span>
-                  <div>
-                    <CardTitle className="text-base">{character.name}</CardTitle>
-                    <code className="text-xs text-muted-foreground">{character.character_id}</code>
+      {/* View Mode Toggle Content */}
+      {viewMode === "grid" ? (
+        <>
+          {/* Characters Grid */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {characters?.map((character) => (
+              <Card key={character.id} className={!character.is_active ? "opacity-60" : ""}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{character.avatar}</span>
+                      <div>
+                        <CardTitle className="text-base">{character.name}</CardTitle>
+                        <code className="text-xs text-muted-foreground">{character.character_id}</code>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(character)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(character.id, character.name)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEditDialog(character)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(character.id, character.name)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {character.description && (
-                <p className="text-sm text-muted-foreground">{character.description}</p>
-              )}
-              <div className="text-sm bg-muted/50 p-2 rounded-md">
-                <span className="font-medium">Стиль:</span> {character.style}
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={character.is_active ? "default" : "secondary"}>
-                  {character.is_active ? "Активний" : "Неактивний"}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {character.description && (
+                    <p className="text-sm text-muted-foreground">{character.description}</p>
+                  )}
+                  <div className="text-sm bg-muted/50 p-2 rounded-md">
+                    <span className="font-medium">Стиль:</span> {character.style}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={character.is_active ? "default" : "secondary"}>
+                      {character.is_active ? "Активний" : "Неактивний"}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-      {characters?.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground">
-          Персонажі відсутні. Додайте першого персонажа.
-        </div>
+          {characters?.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              Персонажі відсутні. Додайте першого персонажа.
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Character Cards with Stats and Relationships */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {characters?.map((character) => (
+              <CharacterCard
+                key={character.id}
+                character={character}
+                password={password}
+                allCharacters={characters}
+              />
+            ))}
+          </div>
+
+          {characters?.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              Персонажі відсутні. Додайте першого персонажа.
+            </div>
+          )}
+        </>
       )}
     </div>
   );
