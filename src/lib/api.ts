@@ -143,6 +143,7 @@ export async function generateDialogue(params: {
   narrativeStructure?: string;
   useOpenAI?: boolean;
   messageCount?: number;
+  characters?: string;
 }) {
   return callEdgeFunction<{
     success: boolean;

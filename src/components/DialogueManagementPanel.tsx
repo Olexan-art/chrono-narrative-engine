@@ -8,12 +8,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { MessageSquare, RefreshCw, Loader2, Calendar, Check, X, Users } from "lucide-react";
+import { MessageSquare, RefreshCw, Loader2, Calendar, Check, X, Users, UserPlus } from "lucide-react";
 import { generateDialogue } from "@/lib/api";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
 import { LLM_MODELS, type LLMProvider } from "@/types/database";
+
+interface Character {
+  id: string;
+  character_id: string;
+  name: string;
+  avatar: string;
+  style: string;
+  is_active: boolean;
+}
 
 interface DialogueManagementPanelProps {
   password: string;
@@ -49,11 +59,26 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
   const [selectedProvider, setSelectedProvider] = useState<LLMProvider>("lovable");
   const [selectedModel, setSelectedModel] = useState("google/gemini-3-flash-preview");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedCharacters, setSelectedCharacters] = useState<string[]>([]);
 
   // Get text models for provider
   const getTextModels = (provider: LLMProvider) => {
     return LLM_MODELS[provider]?.text || [];
   };
+
+  // Fetch all active characters
+  const { data: characters } = useQuery({
+    queryKey: ["dialogue-characters"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("characters")
+        .select("id, character_id, name, avatar, style, is_active")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as Character[];
+    },
+  });
 
   // Fetch parts with dialogues
   const { data: parts, isLoading: partsLoading } = useQuery({
@@ -70,12 +95,38 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
     },
   });
 
+  // Toggle character selection
+  const toggleCharacter = (characterId: string) => {
+    setSelectedCharacters(prev => 
+      prev.includes(characterId) 
+        ? prev.filter(id => id !== characterId)
+        : [...prev, characterId]
+    );
+  };
+
+  // Select all characters
+  const selectAllCharacters = () => {
+    if (characters) {
+      setSelectedCharacters(characters.map(c => c.character_id));
+    }
+  };
+
+  // Clear character selection
+  const clearCharacterSelection = () => {
+    setSelectedCharacters([]);
+  };
+
   // Regenerate dialogue mutation
   const regenerateMutation = useMutation({
     mutationFn: async (partId: string) => {
       setIsGenerating(true);
       const part = parts?.find((p) => p.id === partId);
       if (!part) throw new Error("Part not found");
+
+      // Get selected character details for prompt
+      const selectedCharacterDetails = characters?.filter(c => 
+        selectedCharacters.includes(c.character_id)
+      ) || [];
 
       // Get news context
       const { data: newsItems } = await supabase
@@ -86,11 +137,17 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
 
       const newsContext = newsItems?.map((n) => `${n.title} - ${n.source_name}`).join("\n") || "Світові події";
 
+      // Build character context for the prompt
+      const characterContext = selectedCharacterDetails.length > 0
+        ? selectedCharacterDetails.map(c => `${c.name} (${c.avatar}) - стиль: ${c.style}`).join(", ")
+        : undefined;
+
       const result = await generateDialogue({
         storyContext: part.content.substring(0, 1500),
         newsContext,
         useOpenAI: selectedProvider === "openai",
         messageCount,
+        characters: characterContext,
       });
 
       if (!result.success) throw new Error("Failed to generate dialogue");
@@ -192,6 +249,49 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
                 onChange={(e) => setMessageCount(Number(e.target.value))}
               />
             </div>
+          </div>
+
+          {/* Character Selection */}
+          <div className="space-y-3 pt-2 border-t">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                Учасники діалогу ({selectedCharacters.length} обрано)
+              </Label>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={selectAllCharacters}>
+                  Всіх
+                </Button>
+                <Button variant="outline" size="sm" onClick={clearCharacterSelection}>
+                  Очистити
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+              {characters?.map((char) => (
+                <div
+                  key={char.id}
+                  onClick={() => toggleCharacter(char.character_id)}
+                  className={`flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-colors ${
+                    selectedCharacters.includes(char.character_id)
+                      ? "bg-primary/10 border-primary"
+                      : "bg-muted/30 border-transparent hover:bg-muted/50"
+                  }`}
+                >
+                  <Checkbox
+                    checked={selectedCharacters.includes(char.character_id)}
+                    onCheckedChange={() => toggleCharacter(char.character_id)}
+                  />
+                  <span className="text-lg">{char.avatar}</span>
+                  <span className="text-sm truncate">{char.name}</span>
+                </div>
+              ))}
+            </div>
+            {selectedCharacters.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Якщо персонажі не обрані — ШІ сам визначить учасників на основі контексту історії
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
