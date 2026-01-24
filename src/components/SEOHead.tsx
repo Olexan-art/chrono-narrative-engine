@@ -57,14 +57,38 @@ export function SEOHead({
       link.href = href;
     };
 
+    // Update/create hreflang links
+    const updateHreflang = (baseUrl: string) => {
+      const languages = [
+        { code: 'uk', hreflang: 'uk' },
+        { code: 'en', hreflang: 'en' },
+        { code: 'pl', hreflang: 'pl' },
+        { code: 'x-default', hreflang: 'x-default' }
+      ];
+
+      // Remove existing hreflang links
+      document.querySelectorAll('link[hreflang]').forEach(el => el.remove());
+
+      // Add new hreflang links
+      languages.forEach(lang => {
+        const link = document.createElement('link');
+        link.setAttribute('rel', 'alternate');
+        link.setAttribute('hreflang', lang.hreflang);
+        // All language versions share the same URL since language is handled client-side
+        link.setAttribute('href', baseUrl);
+        document.head.appendChild(link);
+      });
+    };
+
     updateMeta('description', description);
     updateMeta('keywords', keywords.join(', '));
     updateMeta('author', author);
     updateMeta('language', language);
 
-    // Canonical URL
+    // Canonical URL and hreflang
     if (canonicalUrl) {
       updateCanonical(canonicalUrl);
+      updateHreflang(canonicalUrl);
     }
 
     // OpenGraph
