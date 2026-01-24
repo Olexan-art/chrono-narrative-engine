@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { BookOpen, Calendar, Sparkles, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Header } from "@/components/Header";
 import { MiniCalendar } from "@/components/MiniCalendar";
 import { NarrativeSummary } from "@/components/NarrativeSummary";
@@ -395,7 +396,72 @@ export default function Index() {
 
             {/* Sidebar - shown first on mobile */}
             <div className="space-y-4 md:space-y-6 order-1 lg:order-2">
-              <div className="animate-fade-in">
+              {/* Latest Chapter Card */}
+              {allChapters[0] && (
+                <div className="animate-fade-in">
+                  <Card className="cosmic-card overflow-hidden">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-mono">{t('calendar.latest_chapter')}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      {(() => {
+                        const chapter = allChapters[0];
+                        const localizedTitle = language === 'en' 
+                          ? (chapter.title_en || chapter.title)
+                          : language === 'pl'
+                          ? (chapter.title_pl || chapter.title)
+                          : chapter.title;
+                        const localizedDesc = language === 'en'
+                          ? (chapter.description_en || chapter.description)
+                          : language === 'pl'
+                          ? (chapter.description_pl || chapter.description)
+                          : chapter.description;
+                        const localizedVolume = language === 'en'
+                          ? (chapter.volume?.title_en || chapter.volume?.title)
+                          : language === 'pl'
+                          ? (chapter.volume?.title_pl || chapter.volume?.title)
+                          : chapter.volume?.title;
+                          
+                        return (
+                          <Link to={`/chapter/${chapter.id}`} className="group block">
+                            {chapter.cover_image_url && (
+                              <div className="relative h-32 mb-3 rounded-sm overflow-hidden">
+                                <img 
+                                  src={chapter.cover_image_url} 
+                                  alt={localizedTitle}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+                                <Badge className="absolute top-2 left-2 font-mono text-xs">
+                                  {t('chapter')} {chapter.number}
+                                </Badge>
+                              </div>
+                            )}
+                            <div className="space-y-1">
+                              <span className="text-xs font-mono text-muted-foreground">
+                                {localizedVolume} • {t('week')} {chapter.week_of_month}
+                              </span>
+                              <h3 className="font-serif font-medium text-sm group-hover:text-primary transition-colors line-clamp-2">
+                                {localizedTitle}
+                              </h3>
+                              {localizedDesc && (
+                                <p className="text-xs text-muted-foreground line-clamp-2 font-serif">
+                                  {localizedDesc}
+                                </p>
+                              )}
+                            </div>
+                            <Button variant="outline" size="sm" className="w-full mt-3 text-xs">
+                              {t('calendar.read_chapter')}
+                            </Button>
+                          </Link>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+              
+              <div className="animate-fade-in" style={{ animationDelay: '50ms' }}>
                 <MiniCalendar parts={calendarParts} chapters={monthData?.monthChapters} />
               </div>
               <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>

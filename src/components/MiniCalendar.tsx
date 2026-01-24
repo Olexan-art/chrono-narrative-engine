@@ -21,7 +21,7 @@ interface MiniCalendarProps {
 }
 
 export function MiniCalendar({ parts, chapters = [] }: MiniCalendarProps) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
   const [currentDate, setCurrentDate] = useState(new Date());
   
@@ -131,7 +131,7 @@ export function MiniCalendar({ parts, chapters = [] }: MiniCalendarProps) {
         {chapters.length > 0 && (
           <div className="mt-3 pt-3 border-t border-border space-y-2">
             <span className="text-xs font-mono text-muted-foreground uppercase">
-              {language === 'en' ? 'Chapters' : language === 'pl' ? 'Rozdziały' : 'Глави'}
+              {t('chapters.title')}
             </span>
             {chapters.map((chapter, index) => (
               <Link 
@@ -143,7 +143,7 @@ export function MiniCalendar({ parts, chapters = [] }: MiniCalendarProps) {
                 <BookOpen className="w-3 h-3 text-primary shrink-0" />
                 <span className="text-xs truncate">{chapter.title}</span>
                 <span className="text-[10px] font-mono text-muted-foreground ml-auto shrink-0">
-                  {language === 'en' ? 'W' : language === 'pl' ? 'T' : 'Т'}{chapter.week_of_month}
+                  {t('week').charAt(0).toUpperCase()}{chapter.week_of_month}
                 </span>
               </Link>
             ))}
@@ -152,7 +152,7 @@ export function MiniCalendar({ parts, chapters = [] }: MiniCalendarProps) {
 
         <Link to="/calendar">
           <Button variant="outline" size="sm" className="w-full mt-4 text-xs transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
-            {language === 'en' ? 'Full Calendar' : language === 'pl' ? 'Pełny Kalendarz' : 'Повний календар'}
+            {t('calendar.view_full')}
           </Button>
         </Link>
       </CardContent>

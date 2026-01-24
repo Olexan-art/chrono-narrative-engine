@@ -9,6 +9,7 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { Part } from "@/types/database";
 import type { Tweet } from "@/types/database";
 
@@ -24,13 +25,22 @@ function formatNumber(num: number): string {
 }
 
 export function HeroTweets({ parts }: HeroTweetsProps) {
+  const { language } = useLanguage();
+  
   // Get first 5 tweets from most recent parts that have tweets
   const tweetsWithLinks: { tweet: Tweet; partDate: string; partTitle: string; partNumber: number }[] = [];
   
   for (const part of parts) {
     if (tweetsWithLinks.length >= 5) break;
     
-    const tweets = part.tweets as Tweet[] | null;
+    // Get localized tweets
+    const localizedTweets = language === 'en' 
+      ? ((part as any).tweets_en || part.tweets)
+      : language === 'pl'
+      ? ((part as any).tweets_pl || part.tweets)
+      : part.tweets;
+    
+    const tweets = localizedTweets as Tweet[] | null;
     if (tweets && tweets.length > 0) {
       // Take up to 2 tweets per part
       for (let i = 0; i < Math.min(2, tweets.length) && tweetsWithLinks.length < 5; i++) {
