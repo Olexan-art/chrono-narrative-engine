@@ -406,35 +406,86 @@ export default function EditPartPage() {
             <Card className="cosmic-card">
               <CardHeader>
                 <CardTitle>Джерела новин</CardTitle>
+                <CardDescription>Оберіть зображення для показу в оповіданні</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* News Image Preview */}
+                {/* News Images Selection */}
                 {(() => {
-                  const firstNewsWithImage = (currentData.news_sources as any[]).find((s: any) => s.image_url);
-                  if (firstNewsWithImage) {
+                  const newsWithImages = (currentData.news_sources as any[]).filter((s: any) => s.image_url);
+                  const selectedImage = (currentData.news_sources as any[]).find((s: any) => s.is_selected && s.image_url);
+                  const displayImage = selectedImage || newsWithImages[0];
+                  
+                  if (newsWithImages.length === 0) {
                     return (
-                      <div className="space-y-2">
-                        <Label>Зображення з новини</Label>
-                        <img 
-                          src={firstNewsWithImage.image_url} 
-                          alt={firstNewsWithImage.title}
-                          className="w-full max-h-48 object-cover border border-border rounded"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Джерело: {firstNewsWithImage.title}
-                        </p>
-                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Немає зображень у джерелах новин
+                      </p>
                     );
                   }
+                  
                   return (
-                    <p className="text-sm text-muted-foreground">
-                      Немає зображень у джерелах новин
-                    </p>
+                    <div className="space-y-4">
+                      {/* Current selected image */}
+                      {displayImage && (
+                        <div className="space-y-2">
+                          <Label>Обране зображення</Label>
+                          <img 
+                            src={displayImage.image_url} 
+                            alt={displayImage.title}
+                            className="w-full max-h-48 object-cover border border-border rounded"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Джерело: {displayImage.title}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Image selection grid */}
+                      {newsWithImages.length > 1 && (
+                        <div className="space-y-2">
+                          <Label>Доступні зображення ({newsWithImages.length})</Label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {newsWithImages.map((source: any, i: number) => {
+                              const isSelected = source.is_selected || (!selectedImage && i === 0);
+                              return (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => {
+                                    const updatedSources = (currentData.news_sources as any[]).map((s: any) => ({
+                                      ...s,
+                                      is_selected: s.url === source.url && s.image_url ? true : false
+                                    }));
+                                    setFormData(prev => ({ ...prev, news_sources: updatedSources }));
+                                  }}
+                                  className={`relative aspect-video overflow-hidden rounded border-2 transition-all ${
+                                    isSelected 
+                                      ? 'border-primary ring-2 ring-primary/20' 
+                                      : 'border-border hover:border-primary/50'
+                                  }`}
+                                >
+                                  <img 
+                                    src={source.image_url} 
+                                    alt={source.title}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  {isSelected && (
+                                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                      <Badge className="bg-primary text-primary-foreground">✓</Badge>
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   );
                 })()}
                 
                 <ul className="space-y-2">
-                  {(currentData.news_sources as Array<{ url: string; title: string; image_url?: string }>).map((source, i) => (
+                  {(currentData.news_sources as Array<{ url: string; title: string; image_url?: string; is_selected?: boolean }>).map((source, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
                       <ExternalLink className="w-4 h-4 mt-0.5 text-primary shrink-0" />
                       <a 
@@ -446,7 +497,12 @@ export default function EditPartPage() {
                         {source.title}
                       </a>
                       {source.image_url && (
-                        <Badge variant="outline" className="text-xs shrink-0">📷</Badge>
+                        <Badge 
+                          variant={source.is_selected ? "default" : "outline"} 
+                          className="text-xs shrink-0"
+                        >
+                          📷{source.is_selected && ' ✓'}
+                        </Badge>
                       )}
                     </li>
                   ))}
