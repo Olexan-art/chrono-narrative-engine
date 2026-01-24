@@ -166,7 +166,7 @@ export default function EditPartPage() {
           title: storyResult.story.title,
           content: storyResult.story.content,
           cover_image_prompt: storyResult.story.imagePrompt,
-          news_sources: newsResult.articles.slice(0, 10).map(a => ({ url: a.url, title: a.title }))
+          news_sources: newsResult.articles.slice(0, 10).map(a => ({ url: a.url, title: a.title, image_url: a.image_url || null }))
         }));
         toast({ title: "Перегенеровано" });
       }
@@ -407,19 +407,47 @@ export default function EditPartPage() {
               <CardHeader>
                 <CardTitle>Джерела новин</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {/* News Image Preview */}
+                {(() => {
+                  const firstNewsWithImage = (currentData.news_sources as any[]).find((s: any) => s.image_url);
+                  if (firstNewsWithImage) {
+                    return (
+                      <div className="space-y-2">
+                        <Label>Зображення з новини</Label>
+                        <img 
+                          src={firstNewsWithImage.image_url} 
+                          alt={firstNewsWithImage.title}
+                          className="w-full max-h-48 object-cover border border-border rounded"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Джерело: {firstNewsWithImage.title}
+                        </p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <p className="text-sm text-muted-foreground">
+                      Немає зображень у джерелах новин
+                    </p>
+                  );
+                })()}
+                
                 <ul className="space-y-2">
-                  {(currentData.news_sources as Array<{ url: string; title: string }>).map((source, i) => (
+                  {(currentData.news_sources as Array<{ url: string; title: string; image_url?: string }>).map((source, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
                       <ExternalLink className="w-4 h-4 mt-0.5 text-primary shrink-0" />
                       <a 
                         href={source.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-primary transition-colors"
+                        className="text-muted-foreground hover:text-primary transition-colors flex-1"
                       >
                         {source.title}
                       </a>
+                      {source.image_url && (
+                        <Badge variant="outline" className="text-xs shrink-0">📷</Badge>
+                      )}
                     </li>
                   ))}
                 </ul>

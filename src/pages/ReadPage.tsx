@@ -273,6 +273,24 @@ export default function ReadPage() {
             ))}
           </div>
 
+          {/* News Image */}
+          {part.news_sources && (part.news_sources as any[]).length > 0 && (() => {
+            const firstNewsWithImage = (part.news_sources as any[]).find((s: any) => s.image_url);
+            if (!firstNewsWithImage) return null;
+            return (
+              <div className="mt-8 md:mt-12 -mx-3 md:mx-0">
+                <img 
+                  src={firstNewsWithImage.image_url} 
+                  alt={firstNewsWithImage.title}
+                  className="w-full max-h-60 md:max-h-80 object-cover border-y md:border border-border"
+                />
+                <p className="text-xs text-muted-foreground mt-2 px-3 md:px-0 font-mono">
+                  {language === 'en' ? 'Source' : language === 'pl' ? 'Źródło' : 'Джерело'}: {firstNewsWithImage.title}
+                </p>
+              </div>
+            );
+          })()}
+
           {/* News Sources */}
           {part.news_sources && (part.news_sources as any[]).length > 0 && (
             <div className="mt-8 md:mt-12 pt-4 md:pt-8 border-t border-border">
