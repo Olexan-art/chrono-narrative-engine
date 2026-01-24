@@ -223,7 +223,10 @@ serve(async (req) => {
       messageCount = 8,
       characters: selectedCharactersParam,
       enableThreading = false,
-      threadProbability = 30
+      threadProbability = 30,
+      chapterId,
+      generateTweets = false,
+      tweetCount = 4
     } = await req.json();
 
     const supabase = createClient(
@@ -302,7 +305,9 @@ serve(async (req) => {
       useOpenAI,
       selectedCharactersParam: selectedCharactersParam || 'auto',
       enableThreading,
-      threadProbability
+      threadProbability,
+      chapterId: chapterId || 'none',
+      generateTweets
     });
 
     const charactersList = thirdCharacter 
@@ -463,12 +468,106 @@ ${newsContext}
 
     console.log('Generated multilingual dialogue with', dialogueWithLikes.length, 'messages per language');
 
+    // Generate tweets if requested (for chapters)
+    let tweets = null;
+    let tweets_en = null;
+    let tweets_pl = null;
+    
+    if (generateTweets && tweetCount > 0) {
+      console.log('Generating tweets for chapter...');
+      
+      const tweetSystemPrompt = `Ти генеруєш твіти для сатиричного науково-фантастичного проекту "Точка Синхронізації".
+
+ПРАВИЛА:
+1. Згенеруй ${tweetCount} твітів ТРЬОМА МОВАМИ (українська, англійська, польська)
+2. Твіти мають бути дотепними, сатиричними коментарями про події
+3. Кожен твіт має унікального автора з креативним ніком
+4. Формат handle: @творчий_нік
+
+ФОРМАТ ВІДПОВІДІ (JSON):
+{
+  "tweets": [
+    {"author": "Ім'я Автора", "handle": "@нік", "content": "Твіт українською", "likes": 1234, "retweets": 567}
+  ],
+  "tweets_en": [
+    {"author": "Author Name", "handle": "@handle", "content": "Tweet in English", "likes": 1234, "retweets": 567}
+  ],
+  "tweets_pl": [
+    {"author": "Imię Autora", "handle": "@nick", "content": "Tweet po polsku", "likes": 1234, "retweets": 567}
+  ]
+}`;
+
+      const tweetUserPrompt = `КОНТЕКСТ:
+${storyContext}
+
+НОВИНИ:
+${newsContext}
+
+Згенеруй ${tweetCount} унікальних твітів ТРЬОМА МОВАМИ з дотепними коментарями про події тижня.`;
+
+      try {
+        const tweetContent = await callLLM(llmSettings, tweetSystemPrompt, tweetUserPrompt, useOpenAI);
+        const tweetResult = JSON.parse(tweetContent);
+        
+        tweets = (tweetResult.tweets || []).map((t: any) => ({
+          ...t,
+          likes: t.likes || Math.floor(Math.random() * 2000) + 100,
+          retweets: t.retweets || Math.floor(Math.random() * 500) + 50
+        }));
+        tweets_en = (tweetResult.tweets_en || []).map((t: any) => ({
+          ...t,
+          likes: t.likes || Math.floor(Math.random() * 2000) + 100,
+          retweets: t.retweets || Math.floor(Math.random() * 500) + 50
+        }));
+        tweets_pl = (tweetResult.tweets_pl || []).map((t: any) => ({
+          ...t,
+          likes: t.likes || Math.floor(Math.random() * 2000) + 100,
+          retweets: t.retweets || Math.floor(Math.random() * 500) + 50
+        }));
+        
+        console.log('Generated', tweets.length, 'tweets');
+      } catch (tweetError) {
+        console.error('Tweet generation failed:', tweetError);
+      }
+    }
+
+    // Save to chapter if chapterId provided
+    if (chapterId) {
+      console.log('Saving dialogue to chapter:', chapterId);
+      
+      const updateData: Record<string, any> = {
+        chat_dialogue: dialogueWithLikes,
+        chat_dialogue_en: dialogueEnWithLikes,
+        chat_dialogue_pl: dialoguePlWithLikes
+      };
+      
+      if (tweets) {
+        updateData.tweets = tweets;
+        updateData.tweets_en = tweets_en;
+        updateData.tweets_pl = tweets_pl;
+      }
+      
+      const { error: updateError } = await supabase
+        .from('chapters')
+        .update(updateData)
+        .eq('id', chapterId);
+      
+      if (updateError) {
+        console.error('Failed to save dialogue to chapter:', updateError);
+      } else {
+        console.log('Dialogue saved to chapter successfully');
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         dialogue: dialogueWithLikes,
         dialogue_en: dialogueEnWithLikes,
         dialogue_pl: dialoguePlWithLikes,
+        tweets,
+        tweets_en,
+        tweets_pl,
         thirdCharacterIncluded: !!thirdCharacter
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
