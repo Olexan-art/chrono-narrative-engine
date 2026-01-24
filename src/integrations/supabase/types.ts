@@ -130,6 +130,42 @@ export type Database = {
           },
         ]
       }
+      characters: {
+        Row: {
+          avatar: string
+          character_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          style: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar?: string
+          character_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          style: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar?: string
+          character_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          style?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       daily_views: {
         Row: {
           created_at: string
