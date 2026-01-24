@@ -56,6 +56,15 @@ const translations: Record<Language, Record<string, string>> = {
     // Chapters
     'chapters.count': 'глав',
     
+    // Narrative Chart
+    'narrative.title': 'НАРАТИВНА СТРУКТУРА',
+    'narrative.elements': 'елементів',
+    'narrative.source': 'Джерело',
+    'narrative.structure': 'Структура',
+    'narrative.purpose': 'Мета',
+    'narrative.plot': 'Сюжет',
+    'narrative.special': 'Особливість',
+
     // Install Page
     'install.badge': 'ВСТАНОВИТИ ЗАСТОСУНОК',
     'install.title': 'Встановити Точку Синхронізації',
@@ -140,6 +149,15 @@ const translations: Record<Language, Record<string, string>> = {
     // Chapters
     'chapters.count': 'chapters',
     
+    // Narrative Chart
+    'narrative.title': 'NARRATIVE STRUCTURE',
+    'narrative.elements': 'elements',
+    'narrative.source': 'Source',
+    'narrative.structure': 'Structure',
+    'narrative.purpose': 'Purpose',
+    'narrative.plot': 'Plot',
+    'narrative.special': 'Special',
+
     // Install Page
     'install.badge': 'INSTALL APP',
     'install.title': 'Install Synchronization Point',
@@ -224,6 +242,15 @@ const translations: Record<Language, Record<string, string>> = {
     // Chapters
     'chapters.count': 'rozdziałów',
     
+    // Narrative Chart
+    'narrative.title': 'STRUKTURA NARRACYJNA',
+    'narrative.elements': 'elementów',
+    'narrative.source': 'Źródło',
+    'narrative.structure': 'Struktura',
+    'narrative.purpose': 'Cel',
+    'narrative.plot': 'Fabuła',
+    'narrative.special': 'Specjalność',
+
     // Install Page
     'install.badge': 'ZAINSTALUJ APLIKACJĘ',
     'install.title': 'Zainstaluj Punkt Synchronizacji',
