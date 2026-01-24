@@ -52,3 +52,24 @@ verify_jwt = false
 
 [functions.translate]
 verify_jwt = false
+
+[functions.sitemap]
+verify_jwt = false
+
+[functions.generate-dialogue]
+verify_jwt = false
+
+[functions.migrate-images]
+verify_jwt = false
+
+[functions.scrape-news]
+verify_jwt = false
+
+[functions.translate-flash-news]
+verify_jwt = false
+
+[functions.ssr-render]
+verify_jwt = false
+
+[functions.llms-txt]
+verify_jwt = false

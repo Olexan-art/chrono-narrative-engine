@@ -82,6 +82,9 @@ Disallow: /edit/
 # Resources
 Sitemap: https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap
 
-# LLM-optimized documentation
-# See /llms.txt for AI-friendly site overview
-# See /llms-full.txt for complete documentation
+# LLM-optimized documentation (dynamic)
+# See https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/llms-txt for AI-friendly site overview with latest content
+# Static fallback at /llms.txt and /llms-full.txt
+
+# SSR for crawlers
+# Use https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render?path=/read/2026-01-24/1&lang=en for pre-rendered content
