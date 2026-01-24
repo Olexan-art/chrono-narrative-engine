@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/Header";
+import { SEOHead } from "@/components/SEOHead";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction, generateImage, fetchNews, generateStory } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -198,6 +199,7 @@ export default function EditPartPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead title="Редагування частини" noIndex={true} />
       <Header />
       
       <main className="container mx-auto px-4 py-8 max-w-4xl">

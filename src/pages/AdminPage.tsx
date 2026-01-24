@@ -15,6 +15,7 @@ import { GenerationPanel } from "@/components/GenerationPanel";
 import { WeekGenerationPanel } from "@/components/WeekGenerationPanel";
 import { ChaptersPanel } from "@/components/ChaptersPanel";
 import { AnalyticsPanel } from "@/components/AnalyticsPanel";
+import { SEOHead } from "@/components/SEOHead";
 import CharactersPanel from "@/components/CharactersPanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
@@ -580,6 +581,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead title="Панель керування" noIndex={true} />
       <Header />
       
       <main className="container mx-auto px-4 py-8">
