@@ -384,6 +384,7 @@ export type Database = {
           created_at: string | null
           date: string
           id: string
+          is_flash_news: boolean
           narrative_plot: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose:
             | Database["public"]["Enums"]["narrative_purpose"]
@@ -430,6 +431,7 @@ export type Database = {
           created_at?: string | null
           date: string
           id?: string
+          is_flash_news?: boolean
           narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose?:
             | Database["public"]["Enums"]["narrative_purpose"]
@@ -476,6 +478,7 @@ export type Database = {
           created_at?: string | null
           date?: string
           id?: string
+          is_flash_news?: boolean
           narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose?:
             | Database["public"]["Enums"]["narrative_purpose"]
