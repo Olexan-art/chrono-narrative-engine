@@ -177,7 +177,37 @@ export default function ReadPage() {
 
   // Build canonical URL
   const storyNum = storyNumber || '1';
-  const canonicalUrl = `https://chrono-narrative-engine.lovable.app/read/${date}/${storyNum}`;
+  const baseUrl = 'https://chrono-narrative-engine.lovable.app';
+  const canonicalUrl = `${baseUrl}/read/${date}/${storyNum}`;
+
+  // Build breadcrumbs for SEO
+  const breadcrumbs = [
+    { name: language === 'en' ? 'Home' : language === 'pl' ? 'Strona główna' : 'Головна', url: baseUrl },
+  ];
+  
+  if (part.chapter?.volume) {
+    breadcrumbs.push({
+      name: language === 'en' && part.chapter.volume.title_en ? part.chapter.volume.title_en : 
+            language === 'pl' && part.chapter.volume.title_pl ? part.chapter.volume.title_pl : 
+            part.chapter.volume.title,
+      url: `${baseUrl}/volumes`
+    });
+  }
+  
+  if (part.chapter) {
+    const chapterTitle = language === 'en' && part.chapter.title_en ? part.chapter.title_en :
+                         language === 'pl' && part.chapter.title_pl ? part.chapter.title_pl :
+                         part.chapter.title;
+    breadcrumbs.push({
+      name: chapterTitle,
+      url: `${baseUrl}/chapter/${part.chapter.id}`
+    });
+  }
+  
+  breadcrumbs.push({
+    name: localizedTitle,
+    url: canonicalUrl
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -189,29 +219,45 @@ export default function ReadPage() {
         canonicalUrl={canonicalUrl}
         publishedAt={part.published_at || part.created_at || undefined}
         noIndex={part.status !== 'published'}
+        breadcrumbs={breadcrumbs}
       />
       <Header />
       
       <main className="container mx-auto px-3 md:px-4 py-4 md:py-8">
         <article className="max-w-3xl mx-auto">
           {/* Breadcrumbs */}
-          <div className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm text-muted-foreground mb-4 md:mb-8 font-mono overflow-x-auto">
+          <nav className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm text-muted-foreground mb-4 md:mb-8 font-mono overflow-x-auto" aria-label="Breadcrumb">
+            <Link to="/" className="shrink-0 hover:text-primary transition-colors">
+              {language === 'en' ? 'Home' : language === 'pl' ? 'Strona główna' : 'Головна'}
+            </Link>
             {part.chapter?.volume && (
               <>
-                <span className="shrink-0">{part.chapter.volume.title}</span>
                 <span className="shrink-0">/</span>
+                <Link to="/volumes" className="shrink-0 hover:text-primary transition-colors">
+                  {language === 'en' && part.chapter.volume.title_en ? part.chapter.volume.title_en : 
+                   language === 'pl' && part.chapter.volume.title_pl ? part.chapter.volume.title_pl : 
+                   part.chapter.volume.title}
+                </Link>
               </>
             )}
             {part.chapter && (
               <>
-                <span className="shrink-0 truncate max-w-[120px] md:max-w-none">{part.chapter.title}</span>
                 <span className="shrink-0">/</span>
+                <Link 
+                  to={`/chapter/${part.chapter.id}`} 
+                  className="shrink-0 truncate max-w-[120px] md:max-w-none hover:text-primary transition-colors"
+                >
+                  {language === 'en' && part.chapter.title_en ? part.chapter.title_en :
+                   language === 'pl' && part.chapter.title_pl ? part.chapter.title_pl :
+                   part.chapter.title}
+                </Link>
               </>
             )}
-            <span className="text-foreground shrink-0">
+            <span className="shrink-0">/</span>
+            <span className="text-foreground shrink-0" aria-current="page">
               {format(new Date(part.date), 'd MMM yyyy', { locale: dateLocale })}
             </span>
-          </div>
+          </nav>
 
           {/* Multiple stories selector */}
           {parts.length > 1 && (

@@ -3,6 +3,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 type RobotsDirective = 'index' | 'noindex' | 'follow' | 'nofollow' | 'noarchive' | 'nosnippet' | 'noimageindex';
 
+export interface BreadcrumbItem {
+  name: string;
+  url: string;
+}
+
 interface SEOHeadProps {
   title?: string;
   description?: string;
@@ -15,6 +20,7 @@ interface SEOHeadProps {
   author?: string;
   robots?: RobotsDirective[];
   noIndex?: boolean;
+  breadcrumbs?: BreadcrumbItem[];
 }
 
 export function SEOHead({
@@ -28,7 +34,8 @@ export function SEOHead({
   publishedAt,
   author = 'Synchronization Point AI',
   robots,
-  noIndex = false
+  noIndex = false,
+  breadcrumbs
 }: SEOHeadProps) {
   const { language } = useLanguage();
 
@@ -134,15 +141,11 @@ export function SEOHead({
       updateMeta('robots', robotsContent);
       updateMeta('googlebot', robotsContent);
       
-      // Schema.org for LLM crawlers
-      let ldJson = document.querySelector('script[type="application/ld+json"]');
-      if (!ldJson) {
-        ldJson = document.createElement('script');
-        ldJson.setAttribute('type', 'application/ld+json');
-        document.head.appendChild(ldJson);
-      }
+      // Schema.org JSON-LD - use array for multiple schemas
+      const schemas: Record<string, unknown>[] = [];
 
-      const schema: Record<string, unknown> = {
+      // Main content schema
+      const mainSchema: Record<string, unknown> = {
         '@context': 'https://schema.org',
         '@type': type === 'article' ? 'Article' : 'WebSite',
         name: fullTitle,
@@ -161,18 +164,44 @@ export function SEOHead({
       };
 
       if (type === 'article') {
-        schema['@type'] = 'Article';
-        schema.articleSection = 'Science Fiction';
-        schema.genre = ['Science Fiction', 'AI Generated Content', 'News-based Narrative'];
-        if (publishedAt) schema.datePublished = publishedAt;
-        if (image) schema.image = image;
+        mainSchema['@type'] = 'Article';
+        mainSchema.articleSection = 'Science Fiction';
+        mainSchema.genre = ['Science Fiction', 'AI Generated Content', 'News-based Narrative'];
+        if (publishedAt) mainSchema.datePublished = publishedAt;
+        if (image) mainSchema.image = image;
+        if (canonicalUrl) mainSchema.mainEntityOfPage = canonicalUrl;
       }
 
-      ldJson.textContent = JSON.stringify(schema);
+      schemas.push(mainSchema);
+
+      // BreadcrumbList schema
+      if (breadcrumbs && breadcrumbs.length > 0) {
+        const breadcrumbSchema: Record<string, unknown> = {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: breadcrumbs.map((item, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            name: item.name,
+            item: item.url
+          }))
+        };
+        schemas.push(breadcrumbSchema);
+      }
+
+      // Remove existing and add new JSON-LD
+      document.querySelectorAll('script[type="application/ld+json"]').forEach(el => el.remove());
+      
+      schemas.forEach(schema => {
+        const ldJson = document.createElement('script');
+        ldJson.setAttribute('type', 'application/ld+json');
+        ldJson.textContent = JSON.stringify(schema);
+        document.head.appendChild(ldJson);
+      });
     };
 
     ensureLLMTags();
-  }, [fullTitle, description, keywords, type, image, url, canonicalUrl, publishedAt, author, language, robots, noIndex]);
+  }, [fullTitle, description, keywords, type, image, url, canonicalUrl, publishedAt, author, language, robots, noIndex, breadcrumbs]);
 
   return null;
 }
