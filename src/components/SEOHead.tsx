@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+type RobotsDirective = 'index' | 'noindex' | 'follow' | 'nofollow' | 'noarchive' | 'nosnippet' | 'noimageindex';
+
 interface SEOHeadProps {
   title?: string;
   description?: string;
@@ -11,6 +13,8 @@ interface SEOHeadProps {
   canonicalUrl?: string;
   publishedAt?: string;
   author?: string;
+  robots?: RobotsDirective[];
+  noIndex?: boolean;
 }
 
 export function SEOHead({
@@ -22,7 +26,9 @@ export function SEOHead({
   url,
   canonicalUrl,
   publishedAt,
-  author = 'Synchronization Point AI'
+  author = 'Synchronization Point AI',
+  robots,
+  noIndex = false
 }: SEOHeadProps) {
   const { language } = useLanguage();
 
@@ -115,7 +121,18 @@ export function SEOHead({
       // AI/LLM friendly meta tags
       updateMeta('ai:summary', description);
       updateMeta('ai:content_type', type === 'article' ? 'narrative_story' : 'website');
-      updateMeta('robots', 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1');
+      
+      // Robots directive
+      let robotsContent: string;
+      if (noIndex) {
+        robotsContent = 'noindex, nofollow';
+      } else if (robots && robots.length > 0) {
+        robotsContent = robots.join(', ');
+      } else {
+        robotsContent = 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1';
+      }
+      updateMeta('robots', robotsContent);
+      updateMeta('googlebot', robotsContent);
       
       // Schema.org for LLM crawlers
       let ldJson = document.querySelector('script[type="application/ld+json"]');
@@ -155,7 +172,7 @@ export function SEOHead({
     };
 
     ensureLLMTags();
-  }, [fullTitle, description, keywords, type, image, url, canonicalUrl, publishedAt, author, language]);
+  }, [fullTitle, description, keywords, type, image, url, canonicalUrl, publishedAt, author, language, robots, noIndex]);
 
   return null;
 }

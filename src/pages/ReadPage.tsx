@@ -188,6 +188,7 @@ export default function ReadPage() {
         image={part.cover_image_url || undefined}
         canonicalUrl={canonicalUrl}
         publishedAt={part.published_at || part.created_at || undefined}
+        noIndex={part.status !== 'published'}
       />
       <Header />
       
