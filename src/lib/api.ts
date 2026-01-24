@@ -109,3 +109,29 @@ export async function translateContent(params: {
     translated: Record<string, string>;
   }>('translate', params);
 }
+
+export async function generateDialogue(params: {
+  storyContext: string;
+  newsContext: string;
+  narrativeSource?: string;
+  narrativeStructure?: string;
+  useOpenAI?: boolean;
+  messageCount?: number;
+}) {
+  return callEdgeFunction<{
+    success: boolean;
+    dialogue: Array<{
+      character: string;
+      name: string;
+      avatar: string;
+      message: string;
+      likes: number;
+      characterLikes: Array<{
+        characterId: string;
+        name: string;
+        avatar: string;
+      }>;
+    }>;
+    thirdCharacterIncluded: boolean;
+  }>('generate-dialogue', params);
+}
