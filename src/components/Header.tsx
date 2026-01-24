@@ -18,52 +18,47 @@ export function Header() {
           </div>
           <div>
             <h1 className="font-sans font-bold text-base md:text-lg tracking-tight text-foreground">
-              {t('hero.title')}
+              {t("hero.title")}
             </h1>
             <p className="text-[10px] md:text-xs text-muted-foreground font-mono hidden sm:block">
-              {t('header.subtitle')}
+              {t("header.subtitle")}
             </p>
           </div>
         </Link>
-        
+
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-2">
           <Link to="/">
             <Button variant="ghost" size="sm" className="gap-2">
               <BookOpen className="w-4 h-4" />
-              <span>{t('nav.read')}</span>
+              <span>{t("nav.read")}</span>
             </Button>
           </Link>
           <Link to="/volumes">
             <Button variant="ghost" size="sm" className="gap-2">
               <Library className="w-4 h-4" />
-              <span>{t('nav.volumes')}</span>
+              <span>{t("nav.volumes")}</span>
             </Button>
           </Link>
           <Link to="/calendar">
             <Button variant="ghost" size="sm" className="gap-2">
               <Calendar className="w-4 h-4" />
-              <span>{t('nav.calendar')}</span>
+              <span>{t("nav.calendar")}</span>
             </Button>
           </Link>
           <LanguageSwitcher />
-          <Link to="/admin">
+          {/*    <Link to="/admin">
             <Button variant="outline" size="sm" className="gap-2">
               <Clock className="w-4 h-4" />
               <span>{t('nav.admin')}</span>
             </Button>
-          </Link>
+          </Link>*/}
         </nav>
 
         {/* Mobile Navigation */}
         <div className="flex md:hidden items-center gap-2">
           <LanguageSwitcher />
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-9 w-9"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
         </div>
@@ -76,25 +71,25 @@ export function Header() {
             <Link to="/" onClick={() => setMobileMenuOpen(false)}>
               <Button variant="ghost" className="w-full justify-start gap-3">
                 <BookOpen className="w-4 h-4" />
-                {t('nav.read')}
+                {t("nav.read")}
               </Button>
             </Link>
             <Link to="/volumes" onClick={() => setMobileMenuOpen(false)}>
               <Button variant="ghost" className="w-full justify-start gap-3">
                 <Library className="w-4 h-4" />
-                {t('nav.volumes')}
+                {t("nav.volumes")}
               </Button>
             </Link>
             <Link to="/calendar" onClick={() => setMobileMenuOpen(false)}>
               <Button variant="ghost" className="w-full justify-start gap-3">
                 <Calendar className="w-4 h-4" />
-                {t('nav.calendar')}
+                {t("nav.calendar")}
               </Button>
             </Link>
             <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
               <Button variant="outline" className="w-full justify-start gap-3 mt-2">
                 <Clock className="w-4 h-4" />
-                {t('nav.admin')}
+                {t("nav.admin")}
               </Button>
             </Link>
           </nav>
