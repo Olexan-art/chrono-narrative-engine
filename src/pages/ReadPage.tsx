@@ -5,7 +5,7 @@ import { uk, enUS, pl } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar, BookOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
-import { CharacterChat } from "@/components/CharacterChat";
+import { ThreadedCharacterChat } from "@/components/ThreadedCharacterChat";
 import { TweetCard } from "@/components/TweetCard";
 import { NarrativeChart } from "@/components/NarrativeChart";
 import { supabase } from "@/integrations/supabase/client";
@@ -404,7 +404,7 @@ export default function ReadPage() {
           />
 
           {/* Character Chat Dialogue */}
-          <CharacterChat messages={chatDialogue} />
+          <ThreadedCharacterChat messages={chatDialogue} />
 
           {/* Tweets */}
           <TweetCard tweets={tweets} />

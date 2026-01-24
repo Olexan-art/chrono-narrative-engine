@@ -131,12 +131,15 @@ export interface CharacterLike {
 }
 
 export interface ChatMessage {
+  id?: string;
   character: string;
   name: string;
   avatar: string;
   message: string;
   likes?: number;
   characterLikes?: CharacterLike[];
+  replyTo?: string; // ID of the message being replied to
+  threadId?: string; // ID of the thread root message
 }
 
 export interface Tweet {
