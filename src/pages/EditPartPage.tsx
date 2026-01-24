@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Save, Sparkles, Trash2, Eye, Image, Loader2, Calendar, ExternalLink, Languages } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, Trash2, Eye, Image, Loader2, Calendar, ExternalLink, Languages, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -258,21 +259,39 @@ export default function EditPartPage() {
                   className="font-serif"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Статус</Label>
-                <Select
-                  value={currentData.status}
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, status: v as any }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Чернетка</SelectItem>
-                    <SelectItem value="scheduled">Заплановано</SelectItem>
-                    <SelectItem value="published">Опубліковано</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Статус</Label>
+                  <Select
+                    value={currentData.status}
+                    onValueChange={(v) => setFormData(prev => ({ ...prev, status: v as any }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Чернетка</SelectItem>
+                      <SelectItem value="scheduled">Заплановано</SelectItem>
+                      <SelectItem value="published">Опубліковано</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    Flash News
+                  </Label>
+                  <div className="flex items-center gap-3 h-10 px-3 border border-input rounded-md bg-background">
+                    <Switch
+                      checked={currentData.is_flash_news || false}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_flash_news: checked }))}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {currentData.is_flash_news ? 'Так, це Flash News' : 'Звичайне оповідання'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
