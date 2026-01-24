@@ -284,16 +284,30 @@ export default function ReadPage() {
             </div>
           )}
 
-          {/* Cover Image 1 */}
-          {part.cover_image_url && (
-            <div className="mb-4 md:mb-8 -mx-3 md:mx-0">
-              <img 
-                src={part.cover_image_url} 
-                alt={localizedTitle}
-                className="w-full max-h-64 md:max-h-96 object-cover border-y md:border border-border"
-              />
-            </div>
-          )}
+          {/* Cover Image 1 - based on cover_image_type setting */}
+          {(() => {
+            const coverType = part.cover_image_type || 'generated';
+            const newsSources = part.news_sources as any[] || [];
+            const selectedNewsImage = newsSources.find((s: any) => s.is_selected && s.image_url);
+            const firstNewsImage = newsSources.find((s: any) => s.image_url);
+            const newsImage = selectedNewsImage || firstNewsImage;
+            
+            const imageUrl = coverType === 'news' && newsImage 
+              ? newsImage.image_url 
+              : part.cover_image_url;
+            
+            if (!imageUrl) return null;
+            
+            return (
+              <div className="mb-4 md:mb-8 -mx-3 md:mx-0">
+                <img 
+                  src={imageUrl} 
+                  alt={localizedTitle}
+                  className="w-full max-h-64 md:max-h-96 object-cover border-y md:border border-border"
+                />
+              </div>
+            );
+          })()}
 
           {/* Title */}
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold mb-2 md:mb-4 text-glow">

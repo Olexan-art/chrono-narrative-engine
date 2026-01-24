@@ -321,6 +321,7 @@ export type Database = {
           content_pl: string | null
           cover_image_prompt: string | null
           cover_image_prompt_2: string | null
+          cover_image_type: string | null
           cover_image_url: string | null
           cover_image_url_2: string | null
           created_at: string | null
@@ -366,6 +367,7 @@ export type Database = {
           content_pl?: string | null
           cover_image_prompt?: string | null
           cover_image_prompt_2?: string | null
+          cover_image_type?: string | null
           cover_image_url?: string | null
           cover_image_url_2?: string | null
           created_at?: string | null
@@ -411,6 +413,7 @@ export type Database = {
           content_pl?: string | null
           cover_image_prompt?: string | null
           cover_image_prompt_2?: string | null
+          cover_image_type?: string | null
           cover_image_url?: string | null
           cover_image_url_2?: string | null
           created_at?: string | null

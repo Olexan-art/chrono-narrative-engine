@@ -164,7 +164,8 @@ export interface Part {
   cover_image_prompt: string | null;
   cover_image_url_2: string | null;
   cover_image_prompt_2: string | null;
-  news_sources: Array<{ url: string; title: string }> | unknown;
+  cover_image_type: string | null;
+  news_sources: Array<{ url: string; title: string; image_url?: string; is_selected?: boolean }> | unknown;
   chat_dialogue: ChatMessage[] | unknown;
   tweets: Tweet[] | unknown;
   narrative_source: NarrativeSource | null;
