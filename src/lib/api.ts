@@ -71,7 +71,33 @@ export async function generateStory(params: {
         avatar: string;
         message: string;
       }>;
+      chatDialogue_en?: Array<{
+        character: string;
+        name: string;
+        avatar: string;
+        message: string;
+      }>;
+      chatDialogue_pl?: Array<{
+        character: string;
+        name: string;
+        avatar: string;
+        message: string;
+      }>;
       tweets?: Array<{
+        author: string;
+        handle: string;
+        content: string;
+        likes: number;
+        retweets: number;
+      }>;
+      tweets_en?: Array<{
+        author: string;
+        handle: string;
+        content: string;
+        likes: number;
+        retweets: number;
+      }>;
+      tweets_pl?: Array<{
         author: string;
         handle: string;
         content: string;
@@ -121,6 +147,30 @@ export async function generateDialogue(params: {
   return callEdgeFunction<{
     success: boolean;
     dialogue: Array<{
+      character: string;
+      name: string;
+      avatar: string;
+      message: string;
+      likes: number;
+      characterLikes: Array<{
+        characterId: string;
+        name: string;
+        avatar: string;
+      }>;
+    }>;
+    dialogue_en?: Array<{
+      character: string;
+      name: string;
+      avatar: string;
+      message: string;
+      likes: number;
+      characterLikes: Array<{
+        characterId: string;
+        name: string;
+        avatar: string;
+      }>;
+    }>;
+    dialogue_pl?: Array<{
       character: string;
       name: string;
       avatar: string;

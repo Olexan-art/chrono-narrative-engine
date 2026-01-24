@@ -157,7 +157,11 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
           cover_image_prompt: storyResult.story.imagePrompt,
           cover_image_prompt_2: storyResult.story.imagePrompt2 || null,
           chat_dialogue: storyResult.story.chatDialogue || [],
+          chat_dialogue_en: storyResult.story.chatDialogue_en || null,
+          chat_dialogue_pl: storyResult.story.chatDialogue_pl || null,
           tweets: storyResult.story.tweets || [],
+          tweets_en: storyResult.story.tweets_en || null,
+          tweets_pl: storyResult.story.tweets_pl || null,
           news_sources: newsResult.articles.slice(0, 10).map(a => ({ url: a.url, title: a.title, image_url: a.image_url || null }))
         }
       );

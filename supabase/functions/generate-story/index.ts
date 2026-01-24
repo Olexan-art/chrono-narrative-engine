@@ -262,7 +262,7 @@ serve(async (req) => {
 
 Кожен переклад має бути природним, не дослівним, адаптованим для носіїв мови.
 
-ПЕРСОНАЖІ ДЛЯ ДІАЛОГУ (8 РЕПЛІК):
+ПЕРСОНАЖІ ДЛЯ ДІАЛОГУ (8 РЕПЛІК на КОЖНІЙ МОВІ):
 1. ${selectedCharacters[0].name}: ${selectedCharacters[0].style}
 2. ${selectedCharacters[1].name}: ${selectedCharacters[1].style}
 ${thirdCharacter ? `3. ${thirdCharacter.name}: ${thirdCharacter.style} (ВТРУЧАЄТЬСЯ НЕСПОДІВАНО в середині діалогу!)` : ''}
@@ -278,21 +278,30 @@ ${thirdCharacter ? `3. ${thirdCharacter.name}: ${thirdCharacter.style} (ВТРУ
   "imagePrompt": "Detailed prompt for first illustration in English, sci-fi style, cosmic atmosphere",
   "imagePrompt2": "Detailed prompt for second illustration - different scene, in English, sci-fi style",
   "chatDialogue": [
-    {"character": "${selectedCharacters[0].id}", "name": "${selectedCharacters[0].name}", "avatar": "${selectedCharacters[0].avatar}", "message": "Перша репліка персонажа"},
-    {"character": "${selectedCharacters[1].id}", "name": "${selectedCharacters[1].name}", "avatar": "${selectedCharacters[1].avatar}", "message": "Відповідь другого персонажа"},
-    {"character": "${selectedCharacters[0].id}", "name": "${selectedCharacters[0].name}", "avatar": "${selectedCharacters[0].avatar}", "message": "Третя репліка"},
-    {"character": "${selectedCharacters[1].id}", "name": "${selectedCharacters[1].name}", "avatar": "${selectedCharacters[1].avatar}", "message": "Четверта репліка"},
-    ${thirdCharacter ? `{"character": "${thirdCharacter.id}", "name": "${thirdCharacter.name}", "avatar": "${thirdCharacter.avatar}", "message": "НЕСПОДІВАНЕ ВТРУЧАННЯ третього персонажа!"},` : ''}
-    {"character": "${selectedCharacters[0].id}", "name": "${selectedCharacters[0].name}", "avatar": "${selectedCharacters[0].avatar}", "message": "П'ята репліка"},
-    {"character": "${selectedCharacters[1].id}", "name": "${selectedCharacters[1].name}", "avatar": "${selectedCharacters[1].avatar}", "message": "Шоста репліка"},
-    {"character": "${selectedCharacters[0].id}", "name": "${selectedCharacters[0].name}", "avatar": "${selectedCharacters[0].avatar}", "message": "Сьома репліка"},
-    {"character": "${selectedCharacters[1].id}", "name": "${selectedCharacters[1].name}", "avatar": "${selectedCharacters[1].avatar}", "message": "Завершальна репліка"}
+    {"character": "${selectedCharacters[0].id}", "name": "${selectedCharacters[0].name}", "avatar": "${selectedCharacters[0].avatar}", "message": "Репліка українською"},
+    ...всього 8 реплік українською
+  ],
+  "chatDialogue_en": [
+    {"character": "${selectedCharacters[0].id}", "name": "${selectedCharacters[0].name}", "avatar": "${selectedCharacters[0].avatar}", "message": "Message in English"},
+    ...всього 8 реплік англійською
+  ],
+  "chatDialogue_pl": [
+    {"character": "${selectedCharacters[0].id}", "name": "${selectedCharacters[0].name}", "avatar": "${selectedCharacters[0].avatar}", "message": "Wiadomość po polsku"},
+    ...всього 8 реплік польською
   ],
   "tweets": [
     {"author": "Cosmic Observer 🌌", "handle": "@sync_point_ai", "content": "Іронічний твіт українською", "likes": 1234, "retweets": 567},
     {"author": "Future Historian 📚", "handle": "@narrator_2077", "content": "Другий саркастичний твіт", "likes": 890, "retweets": 234},
     {"author": "Digital Prophet ⚡", "handle": "@future_now", "content": "Третій твіт з філософським поглядом", "likes": 456, "retweets": 123},
     {"author": "Reality Check 🔍", "handle": "@truth_seeker", "content": "Четвертий скептичний твіт", "likes": 321, "retweets": 89}
+  ],
+  "tweets_en": [
+    {"author": "Cosmic Observer 🌌", "handle": "@sync_point_ai", "content": "Ironic tweet in English", "likes": 1234, "retweets": 567},
+    ...4 твіти англійською
+  ],
+  "tweets_pl": [
+    {"author": "Cosmic Observer 🌌", "handle": "@sync_point_ai", "content": "Ironiczny tweet po polsku", "likes": 1234, "retweets": 567},
+    ...4 твіти польською
   ]
 }`;
 
@@ -310,8 +319,9 @@ ${newsContext}
 
 Також створи:
 1. Два різних промти для ілюстрацій (різні сцени)
-2. Діалог на 8 реплік між персонажами ${selectedCharacters[0].name} та ${selectedCharacters[1].name}${thirdCharacter ? ` з несподіваною появою ${thirdCharacter.name}` : ''}
-3. ЧОТИРИ іронічних твіти про головну подію`;
+2. Діалог на 8 реплік ТРЬОМА МОВАМИ (chatDialogue - укр, chatDialogue_en - англ, chatDialogue_pl - польська)
+3. ЧОТИРИ іронічних твіти ТРЬОМА МОВАМИ (tweets - укр, tweets_en - англ, tweets_pl - польська)
+Персонажі: ${selectedCharacters[0].name} та ${selectedCharacters[1].name}${thirdCharacter ? ` з несподіваною появою ${thirdCharacter.name}` : ''}`;
 
     console.log('Generating multilingual story for:', date, 'with provider:', llmSettings.llm_provider);
 
@@ -331,28 +341,58 @@ ${newsContext}
         imagePrompt: "Cosmic archive, digital streams of data representing human history, sci-fi atmosphere",
         imagePrompt2: "Futuristic city skyline with holographic news displays, neon lights, cyberpunk atmosphere",
         chatDialogue: [
-          { character: selectedCharacters[0].id, name: selectedCharacters[0].name, avatar: selectedCharacters[0].avatar, message: "Цікаві події сьогодні...", likes: generateRandomLikes(), characterLikes: getCharacterLikes(selectedCharacters[0].id) },
-          { character: selectedCharacters[1].id, name: selectedCharacters[1].name, avatar: selectedCharacters[1].avatar, message: "Так, людство знову здивувало.", likes: generateRandomLikes(), characterLikes: getCharacterLikes(selectedCharacters[1].id) }
+          { character: selectedCharacters[0].id, name: selectedCharacters[0].name, avatar: selectedCharacters[0].avatar, message: "Цікаві події сьогодні..." },
+          { character: selectedCharacters[1].id, name: selectedCharacters[1].name, avatar: selectedCharacters[1].avatar, message: "Так, людство знову здивувало." }
+        ],
+        chatDialogue_en: [
+          { character: selectedCharacters[0].id, name: selectedCharacters[0].name, avatar: selectedCharacters[0].avatar, message: "Interesting events today..." },
+          { character: selectedCharacters[1].id, name: selectedCharacters[1].name, avatar: selectedCharacters[1].avatar, message: "Yes, humanity surprised us again." }
+        ],
+        chatDialogue_pl: [
+          { character: selectedCharacters[0].id, name: selectedCharacters[0].name, avatar: selectedCharacters[0].avatar, message: "Ciekawe wydarzenia dzisiaj..." },
+          { character: selectedCharacters[1].id, name: selectedCharacters[1].name, avatar: selectedCharacters[1].avatar, message: "Tak, ludzkość znów nas zaskoczyła." }
         ],
         tweets: [
           { author: "Cosmic Observer 🌌", handle: "@sync_point_ai", content: "Коли думав що бачив все... 🌍", likes: 1234, retweets: 567 },
           { author: "Future Historian 📚", handle: "@narrator_2077", content: "Записую для нащадків 📝", likes: 890, retweets: 234 },
           { author: "Digital Prophet ⚡", handle: "@future_now", content: "Майбутнє вже тут ⚡", likes: 456, retweets: 123 },
           { author: "Reality Check 🔍", handle: "@truth_seeker", content: "А чи правда це? 🤔", likes: 321, retweets: 89 }
+        ],
+        tweets_en: [
+          { author: "Cosmic Observer 🌌", handle: "@sync_point_ai", content: "When I thought I'd seen it all... 🌍", likes: 1234, retweets: 567 },
+          { author: "Future Historian 📚", handle: "@narrator_2077", content: "Recording for posterity 📝", likes: 890, retweets: 234 },
+          { author: "Digital Prophet ⚡", handle: "@future_now", content: "The future is already here ⚡", likes: 456, retweets: 123 },
+          { author: "Reality Check 🔍", handle: "@truth_seeker", content: "But is it true? 🤔", likes: 321, retweets: 89 }
+        ],
+        tweets_pl: [
+          { author: "Cosmic Observer 🌌", handle: "@sync_point_ai", content: "Kiedy myślałem, że widziałem wszystko... 🌍", likes: 1234, retweets: 567 },
+          { author: "Future Historian 📚", handle: "@narrator_2077", content: "Zapisuję dla potomnych 📝", likes: 890, retweets: 234 },
+          { author: "Digital Prophet ⚡", handle: "@future_now", content: "Przyszłość jest już tutaj ⚡", likes: 456, retweets: 123 },
+          { author: "Reality Check 🔍", handle: "@truth_seeker", content: "Ale czy to prawda? 🤔", likes: 321, retweets: 89 }
         ]
       };
     }
 
-    // Add likes and character likes to dialogue if not present
-    if (result.chatDialogue && Array.isArray(result.chatDialogue)) {
-      result.chatDialogue = result.chatDialogue.map((msg: any) => ({
+    // Add likes and character likes to all dialogues if not present
+    const addLikesToDialogue = (dialogue: any[]) => {
+      return dialogue.map((msg: any) => ({
         ...msg,
         likes: msg.likes ?? generateRandomLikes(),
         characterLikes: msg.characterLikes ?? getCharacterLikes(msg.character)
       }));
+    };
+
+    if (result.chatDialogue && Array.isArray(result.chatDialogue)) {
+      result.chatDialogue = addLikesToDialogue(result.chatDialogue);
+    }
+    if (result.chatDialogue_en && Array.isArray(result.chatDialogue_en)) {
+      result.chatDialogue_en = addLikesToDialogue(result.chatDialogue_en);
+    }
+    if (result.chatDialogue_pl && Array.isArray(result.chatDialogue_pl)) {
+      result.chatDialogue_pl = addLikesToDialogue(result.chatDialogue_pl);
     }
 
-    console.log('Generated multilingual story for:', date, '- has EN:', !!result.content_en, '- has PL:', !!result.content_pl, '- dialogue count:', result.chatDialogue?.length);
+    console.log('Generated multilingual story for:', date, '- has EN:', !!result.content_en, '- has PL:', !!result.content_pl, '- dialogue count:', result.chatDialogue?.length, '- has dialogue_en:', !!result.chatDialogue_en);
 
     return new Response(
       JSON.stringify({ success: true, story: result }),
