@@ -122,11 +122,19 @@ export interface Chapter {
   updated_at: string;
 }
 
+export interface CharacterLike {
+  characterId: string;
+  name: string;
+  avatar: string;
+}
+
 export interface ChatMessage {
   character: string;
   name: string;
   avatar: string;
   message: string;
+  likes?: number;
+  characterLikes?: CharacterLike[];
 }
 
 export interface Tweet {

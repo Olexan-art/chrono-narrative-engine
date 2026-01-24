@@ -217,6 +217,24 @@ serve(async (req) => {
 
     const shuffled = [...characters].sort(() => Math.random() - 0.5);
     const selectedCharacters = shuffled.slice(0, 2);
+    
+    // 50% chance of third character
+    const includeThirdCharacter = Math.random() < 0.5 && characters.length >= 3;
+    const thirdCharacter = includeThirdCharacter ? shuffled[2] : null;
+
+    // Generate random likes (0-1907) for dialogue messages
+    const generateRandomLikes = () => Math.floor(Math.random() * 1908);
+    
+    // Get character likes from other characters
+    const getCharacterLikes = (mainCharId: string) => {
+      const others = characters.filter(c => c.id !== mainCharId).sort(() => Math.random() - 0.5);
+      const count = Math.floor(Math.random() * 3) + 1;
+      return others.slice(0, count).map(c => ({
+        characterId: c.id,
+        name: c.name,
+        avatar: c.avatar
+      }));
+    };
 
     const systemPrompt = `Ти — Наратор Точки Синхронізації, штучний інтелект-архіватор, що структурує хаос людської історії через призму наукової фантастики.
 
@@ -244,9 +262,10 @@ serve(async (req) => {
 
 Кожен переклад має бути природним, не дослівним, адаптованим для носіїв мови.
 
-ПЕРСОНАЖІ ДЛЯ ДІАЛОГУ:
+ПЕРСОНАЖІ ДЛЯ ДІАЛОГУ (8 РЕПЛІК):
 1. ${selectedCharacters[0].name}: ${selectedCharacters[0].style}
 2. ${selectedCharacters[1].name}: ${selectedCharacters[1].style}
+${thirdCharacter ? `3. ${thirdCharacter.name}: ${thirdCharacter.style} (ВТРУЧАЄТЬСЯ НЕСПОДІВАНО в середині діалогу!)` : ''}
 
 ФОРМАТ ВІДПОВІДІ (JSON):
 {
@@ -261,7 +280,12 @@ serve(async (req) => {
   "chatDialogue": [
     {"character": "${selectedCharacters[0].id}", "name": "${selectedCharacters[0].name}", "avatar": "${selectedCharacters[0].avatar}", "message": "Перша репліка персонажа"},
     {"character": "${selectedCharacters[1].id}", "name": "${selectedCharacters[1].name}", "avatar": "${selectedCharacters[1].avatar}", "message": "Відповідь другого персонажа"},
-    {"character": "${selectedCharacters[0].id}", "name": "${selectedCharacters[0].name}", "avatar": "${selectedCharacters[0].avatar}", "message": "Ще одна репліка"},
+    {"character": "${selectedCharacters[0].id}", "name": "${selectedCharacters[0].name}", "avatar": "${selectedCharacters[0].avatar}", "message": "Третя репліка"},
+    {"character": "${selectedCharacters[1].id}", "name": "${selectedCharacters[1].name}", "avatar": "${selectedCharacters[1].avatar}", "message": "Четверта репліка"},
+    ${thirdCharacter ? `{"character": "${thirdCharacter.id}", "name": "${thirdCharacter.name}", "avatar": "${thirdCharacter.avatar}", "message": "НЕСПОДІВАНЕ ВТРУЧАННЯ третього персонажа!"},` : ''}
+    {"character": "${selectedCharacters[0].id}", "name": "${selectedCharacters[0].name}", "avatar": "${selectedCharacters[0].avatar}", "message": "П'ята репліка"},
+    {"character": "${selectedCharacters[1].id}", "name": "${selectedCharacters[1].name}", "avatar": "${selectedCharacters[1].avatar}", "message": "Шоста репліка"},
+    {"character": "${selectedCharacters[0].id}", "name": "${selectedCharacters[0].name}", "avatar": "${selectedCharacters[0].avatar}", "message": "Сьома репліка"},
     {"character": "${selectedCharacters[1].id}", "name": "${selectedCharacters[1].name}", "avatar": "${selectedCharacters[1].avatar}", "message": "Завершальна репліка"}
   ],
   "tweets": [
@@ -286,7 +310,7 @@ ${newsContext}
 
 Також створи:
 1. Два різних промти для ілюстрацій (різні сцени)
-2. Діалог між персонажами ${selectedCharacters[0].name} та ${selectedCharacters[1].name}
+2. Діалог на 8 реплік між персонажами ${selectedCharacters[0].name} та ${selectedCharacters[1].name}${thirdCharacter ? ` з несподіваною появою ${thirdCharacter.name}` : ''}
 3. ЧОТИРИ іронічних твіти про головну подію`;
 
     console.log('Generating multilingual story for:', date, 'with provider:', llmSettings.llm_provider);
@@ -307,8 +331,8 @@ ${newsContext}
         imagePrompt: "Cosmic archive, digital streams of data representing human history, sci-fi atmosphere",
         imagePrompt2: "Futuristic city skyline with holographic news displays, neon lights, cyberpunk atmosphere",
         chatDialogue: [
-          { character: selectedCharacters[0].id, name: selectedCharacters[0].name, avatar: selectedCharacters[0].avatar, message: "Цікаві події сьогодні..." },
-          { character: selectedCharacters[1].id, name: selectedCharacters[1].name, avatar: selectedCharacters[1].avatar, message: "Так, людство знову здивувало." }
+          { character: selectedCharacters[0].id, name: selectedCharacters[0].name, avatar: selectedCharacters[0].avatar, message: "Цікаві події сьогодні...", likes: generateRandomLikes(), characterLikes: getCharacterLikes(selectedCharacters[0].id) },
+          { character: selectedCharacters[1].id, name: selectedCharacters[1].name, avatar: selectedCharacters[1].avatar, message: "Так, людство знову здивувало.", likes: generateRandomLikes(), characterLikes: getCharacterLikes(selectedCharacters[1].id) }
         ],
         tweets: [
           { author: "Cosmic Observer 🌌", handle: "@sync_point_ai", content: "Коли думав що бачив все... 🌍", likes: 1234, retweets: 567 },
@@ -319,7 +343,16 @@ ${newsContext}
       };
     }
 
-    console.log('Generated multilingual story for:', date, '- has EN:', !!result.content_en, '- has PL:', !!result.content_pl);
+    // Add likes and character likes to dialogue if not present
+    if (result.chatDialogue && Array.isArray(result.chatDialogue)) {
+      result.chatDialogue = result.chatDialogue.map((msg: any) => ({
+        ...msg,
+        likes: msg.likes ?? generateRandomLikes(),
+        characterLikes: msg.characterLikes ?? getCharacterLikes(msg.character)
+      }));
+    }
+
+    console.log('Generated multilingual story for:', date, '- has EN:', !!result.content_en, '- has PL:', !!result.content_pl, '- dialogue count:', result.chatDialogue?.length);
 
     return new Response(
       JSON.stringify({ success: true, story: result }),

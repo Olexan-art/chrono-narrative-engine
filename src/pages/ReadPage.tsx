@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { CharacterChat } from "@/components/CharacterChat";
 import { TweetCard } from "@/components/TweetCard";
+import { NarrativeChart } from "@/components/NarrativeChart";
 import { supabase } from "@/integrations/supabase/client";
 import { useTrackView } from "@/hooks/useTrackView";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SEOHead } from "@/components/SEOHead";
-
 function parseContentWithLinks(content: string): React.ReactNode {
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   const parts: React.ReactNode[] = [];
@@ -327,6 +327,15 @@ export default function ReadPage() {
               </ul>
             </div>
           )}
+
+          {/* Narrative Chart */}
+          <NarrativeChart
+            narrativeSource={part.narrative_source}
+            narrativeStructure={part.narrative_structure}
+            narrativePurpose={part.narrative_purpose}
+            narrativePlot={part.narrative_plot}
+            narrativeSpecial={part.narrative_special}
+          />
 
           {/* Character Chat Dialogue */}
           <CharacterChat messages={chatDialogue} />
