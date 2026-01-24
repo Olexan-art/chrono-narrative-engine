@@ -1,4 +1,4 @@
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
@@ -46,9 +46,7 @@ function parseContentWithLinks(content: string): React.ReactNode {
 }
 
 export default function ReadPage() {
-  const { date } = useParams<{ date: string }>();
-  const [searchParams] = useSearchParams();
-  const partId = searchParams.get('id');
+  const { date, storyNumber } = useParams<{ date: string; storyNumber?: string }>();
   const { language, t } = useLanguage();
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
 
@@ -74,10 +72,9 @@ export default function ReadPage() {
     enabled: !!date
   });
 
-  // Select which part to display
-  const part = partId 
-    ? parts.find((p: any) => p.id === partId) || parts[0]
-    : parts[0];
+  // Select which part to display based on storyNumber (1-indexed) or default to first
+  const partIndex = storyNumber ? parseInt(storyNumber, 10) - 1 : 0;
+  const part = parts[partIndex] || parts[0];
 
   // Track view
   useTrackView('part', part?.id);
@@ -216,19 +213,22 @@ export default function ReadPage() {
               <span className="text-[10px] md:text-xs font-mono text-muted-foreground mr-1 md:mr-2 self-center">
                 {language === 'en' ? 'STORIES:' : language === 'pl' ? 'OPOWIADANIA:' : 'ОПОВІДАННЯ:'}
               </span>
-              {parts.map((p: any, idx: number) => (
-                <Link
-                  key={p.id}
-                  to={`/read/${date}?id=${p.id}`}
-                  className={`px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm border rounded-md transition-colors ${
-                    p.id === part.id
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  #{idx + 1}
-                </Link>
-              ))}
+              {parts.map((p: any, idx: number) => {
+                const isActive = parts.indexOf(part) === idx;
+                return (
+                  <Link
+                    key={p.id}
+                    to={`/read/${date}/${idx + 1}`}
+                    className={`px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm border rounded-md transition-colors ${
+                      isActive
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    #{idx + 1}
+                  </Link>
+                );
+              })}
             </div>
           )}
 
