@@ -275,17 +275,20 @@ export default function ReadPage() {
 
           {/* News Image */}
           {part.news_sources && (part.news_sources as any[]).length > 0 && (() => {
-            const firstNewsWithImage = (part.news_sources as any[]).find((s: any) => s.image_url);
-            if (!firstNewsWithImage) return null;
+            const newsSources = part.news_sources as any[];
+            const selectedImage = newsSources.find((s: any) => s.is_selected && s.image_url);
+            const firstNewsWithImage = newsSources.find((s: any) => s.image_url);
+            const displayImage = selectedImage || firstNewsWithImage;
+            if (!displayImage) return null;
             return (
               <div className="mt-8 md:mt-12 -mx-3 md:mx-0">
                 <img 
-                  src={firstNewsWithImage.image_url} 
-                  alt={firstNewsWithImage.title}
+                  src={displayImage.image_url} 
+                  alt={displayImage.title}
                   className="w-full max-h-60 md:max-h-80 object-cover border-y md:border border-border"
                 />
                 <p className="text-xs text-muted-foreground mt-2 px-3 md:px-0 font-mono">
-                  {language === 'en' ? 'Source' : language === 'pl' ? 'Źródło' : 'Джерело'}: {firstNewsWithImage.title}
+                  {language === 'en' ? 'Source' : language === 'pl' ? 'Źródło' : 'Джерело'}: {displayImage.title}
                 </p>
               </div>
             );
