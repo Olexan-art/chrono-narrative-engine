@@ -175,6 +175,10 @@ export default function ReadPage() {
   // SEO description - first 500 characters of content
   const seoDescription = localizedContent.replace(/\n/g, ' ').substring(0, 500);
 
+  // Build canonical URL
+  const storyNum = storyNumber || '1';
+  const canonicalUrl = `https://chrono-narrative-engine.lovable.app/read/${date}/${storyNum}`;
+
   return (
     <div className="min-h-screen bg-background">
       <SEOHead 
@@ -182,6 +186,7 @@ export default function ReadPage() {
         description={seoDescription}
         type="article"
         image={part.cover_image_url || undefined}
+        canonicalUrl={canonicalUrl}
         publishedAt={part.published_at || part.created_at || undefined}
       />
       <Header />

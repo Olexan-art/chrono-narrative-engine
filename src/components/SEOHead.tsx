@@ -8,6 +8,7 @@ interface SEOHeadProps {
   type?: 'website' | 'article';
   image?: string;
   url?: string;
+  canonicalUrl?: string;
   publishedAt?: string;
   author?: string;
 }
@@ -19,6 +20,7 @@ export function SEOHead({
   type = 'website',
   image,
   url,
+  canonicalUrl,
   publishedAt,
   author = 'Synchronization Point AI'
 }: SEOHeadProps) {
@@ -44,17 +46,33 @@ export function SEOHead({
       element.content = content;
     };
 
+    // Update/create canonical link
+    const updateCanonical = (href: string) => {
+      let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.setAttribute('rel', 'canonical');
+        document.head.appendChild(link);
+      }
+      link.href = href;
+    };
+
     updateMeta('description', description);
     updateMeta('keywords', keywords.join(', '));
     updateMeta('author', author);
     updateMeta('language', language);
+
+    // Canonical URL
+    if (canonicalUrl) {
+      updateCanonical(canonicalUrl);
+    }
 
     // OpenGraph
     updateMeta('og:title', fullTitle, true);
     updateMeta('og:description', description, true);
     updateMeta('og:type', type, true);
     if (image) updateMeta('og:image', image, true);
-    if (url) updateMeta('og:url', url, true);
+    if (url || canonicalUrl) updateMeta('og:url', canonicalUrl || url || '', true);
     updateMeta('og:locale', language === 'uk' ? 'uk_UA' : language === 'pl' ? 'pl_PL' : 'en_US', true);
 
     // Twitter
@@ -113,7 +131,7 @@ export function SEOHead({
     };
 
     ensureLLMTags();
-  }, [fullTitle, description, keywords, type, image, url, publishedAt, author, language]);
+  }, [fullTitle, description, keywords, type, image, url, canonicalUrl, publishedAt, author, language]);
 
   return null;
 }
