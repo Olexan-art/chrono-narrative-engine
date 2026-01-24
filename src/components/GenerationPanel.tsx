@@ -51,6 +51,13 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
     try {
       const date = new Date(dateStr);
       
+      // Step 0: Get settings for narrative options
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('narrative_source, narrative_structure, narrative_purpose, narrative_plot, narrative_special, bradbury_weight, clarke_weight, gaiman_weight')
+        .limit(1)
+        .single();
+      
       // Step 1: Fetch news
       addLog(`[${format(date, 'd MMM', { locale: uk })} #${storyNumber}] Завантаження новин...`);
       const newsResult = await fetchNews(dateStr);
@@ -62,11 +69,19 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
       }
       updateLastLog('success');
 
-      // Step 2: Generate story
+      // Step 2: Generate story with narrative settings
       addLog(`[${format(date, 'd MMM', { locale: uk })} #${storyNumber}] Генерація тексту...`);
       const storyResult = await generateStory({
         news: newsResult.articles.slice(0, 10),
-        date: dateStr
+        date: dateStr,
+        narrativeSource: settings?.narrative_source || undefined,
+        narrativeStructure: settings?.narrative_structure || undefined,
+        narrativePurpose: settings?.narrative_purpose || undefined,
+        narrativePlot: settings?.narrative_plot || undefined,
+        narrativeSpecial: settings?.narrative_special || undefined,
+        bradburyWeight: settings?.bradbury_weight || 33,
+        clarkeWeight: settings?.clarke_weight || 33,
+        gaimanWeight: settings?.gaiman_weight || 34
       });
       if (!storyResult.success) {
         updateLastLog('error');
@@ -138,7 +153,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
       
       const partNumber = (count || 0) + 1;
 
-      // Step 6: Create part with multilingual content
+      // Step 6: Create part with multilingual content and narrative settings
       addLog(`[${format(date, 'd MMM', { locale: uk })} #${storyNumber}] Збереження...`);
       const partResult = await adminAction<{ part: Part }>(
         'createPart',
@@ -162,7 +177,13 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
           tweets: storyResult.story.tweets || [],
           tweets_en: storyResult.story.tweets_en || null,
           tweets_pl: storyResult.story.tweets_pl || null,
-          news_sources: newsResult.articles.slice(0, 10).map(a => ({ url: a.url, title: a.title, image_url: a.image_url || null }))
+          news_sources: newsResult.articles.slice(0, 10).map(a => ({ url: a.url, title: a.title, image_url: a.image_url || null })),
+          // Save narrative settings used for this story
+          narrative_source: settings?.narrative_source || null,
+          narrative_structure: settings?.narrative_structure || null,
+          narrative_purpose: settings?.narrative_purpose || null,
+          narrative_plot: settings?.narrative_plot || null,
+          narrative_special: settings?.narrative_special || null
         }
       );
       updateLastLog('success');
