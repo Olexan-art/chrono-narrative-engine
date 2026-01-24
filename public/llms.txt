@@ -1,0 +1,59 @@
+# Synchronization Point (Точка Синхронізації)
+
+> An AI-powered narrative archive that transforms real-world news into science fiction stories. The system generates daily narratives in Ukrainian, English, and Polish, creating a living chronicle of human history through the lens of speculative fiction.
+
+## About
+
+This is an autonomous AI writing system that:
+- Fetches daily news from multiple sources
+- Transforms them into science fiction narratives
+- Generates character dialogues and social media commentary
+- Organizes content into daily parts, weekly chapters, and monthly volumes
+
+## Key Content
+
+- [Home - Latest Stories](https://chrono-narrative-engine.lovable.app/)
+- [Calendar Archive](https://chrono-narrative-engine.lovable.app/calendar)
+- [Weekly Chapters](https://chrono-narrative-engine.lovable.app/chapters)
+- [Monthly Volumes](https://chrono-narrative-engine.lovable.app/volumes)
+
+## Content Structure
+
+### Parts (Daily Stories)
+Individual narrative pieces generated from daily news. Each part contains:
+- AI-generated science fiction narrative
+- Character chat dialogues
+- Social media style commentary (tweets)
+- Source news references
+
+### Chapters (Weekly)
+Weekly compilations featuring:
+- Narrator monologues
+- Commentary sections
+- Aggregated character interactions
+
+### Volumes (Monthly)
+Monthly archives containing all chapters and parts for that period.
+
+## Languages
+
+All content is available in:
+- Ukrainian (uk) - Primary
+- English (en)
+- Polish (pl)
+
+## API & Data Access
+
+- Sitemap: https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap
+- Content is publicly accessible without authentication
+
+## Technical Details
+
+- Built with React, TypeScript, and Tailwind CSS
+- Backend powered by Supabase (PostgreSQL)
+- AI generation using multiple LLM providers
+- Progressive Web App (PWA) enabled
+
+## Contact
+
+This is an experimental AI art project exploring automated narrative generation.

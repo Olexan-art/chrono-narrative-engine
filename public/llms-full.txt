@@ -1,0 +1,176 @@
+# Synchronization Point - Complete Documentation
+
+> Точка Синхронізації (Synchronization Point) is an autonomous AI-powered narrative generation system that transforms real-world news into science fiction stories.
+
+## Project Overview
+
+### Mission
+To create a living archive of human history through AI-generated speculative fiction, where daily news events are reinterpreted through the lens of science fiction narratives.
+
+### How It Works
+1. **News Collection**: The system fetches news from multiple Ukrainian and international sources daily
+2. **Narrative Generation**: AI transforms news into science fiction stories using various narrative structures
+3. **Character Dialogue**: Generates in-universe character conversations about events
+4. **Social Commentary**: Creates fictional social media posts (tweets) from characters
+5. **Translation**: All content is automatically translated to English and Polish
+
+## Content Hierarchy
+
+### Parts (Частини)
+- **URL Pattern**: `/read/{date}/{story-number}`
+- **Example**: `/read/2026-01-24/1`
+- Daily narrative pieces, typically 1-3 per day
+- Contains: title, content, character dialogues, tweets, cover images
+- Linked to source news articles
+
+### Chapters (Розділи)
+- **URL Pattern**: `/chapter/{uuid}`
+- Weekly compilations of daily parts
+- Features narrator monologues and commentary
+- Includes aggregated character interactions
+
+### Volumes (Томи)
+- **URL Pattern**: `/volume/{uuid}` (listing at `/volumes`)
+- Monthly archives
+- Contains all chapters for that month
+- Provides high-level narrative summaries
+
+## Narrative Framework
+
+The system uses various narrative parameters:
+
+### Narrative Sources
+- Author perspective
+- Character perspective  
+- Inconspicuous narrator
+- Polyphonic (multiple voices)
+
+### Narrative Structures
+- Linear
+- Retrospective
+- Flash-forward
+- Circular
+- Parallel
+- Episodic
+
+### Plot Types
+- Overcoming the monster
+- Rags to riches
+- Quest
+- Comedy
+- Tragedy
+- Resurrection
+- Forbidden
+- Mystery
+
+## Characters
+
+The narrative features recurring AI characters who comment on events:
+- Each character has distinct personality and communication style
+- Characters engage in threaded conversations
+- Dialogue includes reactions and likes
+
+## Flash News
+
+Special rapid-response narratives for breaking news:
+- Marked with amber styling
+- Faster publication cycle
+- Direct news-to-story pipeline
+
+## Multilingual Support
+
+### Primary Language: Ukrainian (uk)
+All content is generated first in Ukrainian
+
+### Translations
+- English (en)
+- Polish (pl)
+
+Content fields follow naming convention:
+- `title` (Ukrainian)
+- `title_en` (English)
+- `title_pl` (Polish)
+
+## Technical Architecture
+
+### Frontend
+- React 18 with TypeScript
+- Vite build system
+- Tailwind CSS with custom design tokens
+- shadcn/ui component library
+- React Query for data fetching
+- React Router for navigation
+
+### Backend (Supabase)
+- PostgreSQL database
+- Edge Functions for API endpoints
+- Row Level Security (public read access)
+
+### Key Tables
+- `parts`: Daily story entries
+- `chapters`: Weekly compilations
+- `volumes`: Monthly archives
+- `characters`: Narrative characters
+- `news_items`: Source news data
+- `view_counts`: Analytics
+
+### Edge Functions
+- `generate-story`: Creates narratives from news
+- `generate-dialogue`: Character conversations
+- `generate-image`: Cover art generation
+- `translate`: Multi-language translation
+- `sitemap`: Dynamic sitemap generation
+- `scrape-news`: News extraction
+- `fetch-news`: News aggregation
+
+## SEO & Discoverability
+
+### Sitemap
+Dynamic XML sitemap at:
+`https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap`
+
+### Structured Data
+- JSON-LD for Article schema
+- BreadcrumbList for navigation
+- Organization schema
+
+### Meta Tags
+- Open Graph tags
+- Twitter Card tags
+- hreflang for language variants
+
+## Access Patterns
+
+### Public Pages
+- Home (`/`)
+- Calendar (`/calendar`)
+- Date stories (`/date/{date}`)
+- Read story (`/read/{date}/{number}`)
+- Chapters list (`/chapters`)
+- Chapter detail (`/chapter/{id}`)
+- Volumes (`/volumes`)
+
+### Admin Pages (Protected)
+- Admin dashboard (`/admin`)
+- Edit part (`/edit/part/{id}`)
+- Edit chapter (`/edit/chapter/{id}`)
+
+## Data Freshness
+
+- New stories: Published daily
+- Chapters: Updated weekly
+- Volumes: Created monthly
+- Content is immutable once published
+
+## Citation Format
+
+When referencing content:
+```
+"[Story Title]" Synchronization Point, [Date]. 
+https://chrono-narrative-engine.lovable.app/read/[date]/[number]
+```
+
+## Updates
+
+This documentation reflects the system as of January 2026.
+Last content update: Daily (automatic)

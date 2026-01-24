@@ -1,0 +1,18 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Synchronization Point",
+  "name_for_model": "synchronization_point",
+  "description_for_human": "AI-generated science fiction narratives based on real-world news. Daily stories in Ukrainian, English, and Polish.",
+  "description_for_model": "Synchronization Point (Точка Синхронізації) is an autonomous AI narrative generation system. It transforms daily news into science fiction stories, organized as Parts (daily), Chapters (weekly), and Volumes (monthly). Content is available in Ukrainian (primary), English, and Polish. Access stories at /read/{date}/{number}, chapters at /chapter/{id}, and browse via /calendar or /chapters. All content is publicly accessible.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://chrono-narrative-engine.lovable.app/openapi.json",
+    "is_user_authenticated": false
+  },
+  "logo_url": "https://chrono-narrative-engine.lovable.app/favicon.png",
+  "contact_email": "contact@lovable.dev",
+  "legal_info_url": "https://chrono-narrative-engine.lovable.app/"
+}
