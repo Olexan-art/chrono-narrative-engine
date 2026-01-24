@@ -136,6 +136,30 @@ export async function translateContent(params: {
   }>('translate', params);
 }
 
+interface DialogueResult {
+  id: string;
+  character: string;
+  name: string;
+  avatar: string;
+  message: string;
+  likes: number;
+  characterLikes: Array<{
+    characterId: string;
+    name: string;
+    avatar: string;
+  }>;
+  replyTo?: string;
+  threadId?: string;
+}
+
+interface TweetResult {
+  author: string;
+  handle: string;
+  content: string;
+  likes: number;
+  retweets: number;
+}
+
 export async function generateDialogue(params: {
   storyContext: string;
   newsContext: string;
@@ -146,54 +170,18 @@ export async function generateDialogue(params: {
   characters?: string;
   enableThreading?: boolean;
   threadProbability?: number;
+  chapterId?: string;
+  generateTweets?: boolean;
+  tweetCount?: number;
 }) {
   return callEdgeFunction<{
     success: boolean;
-    dialogue: Array<{
-      id: string;
-      character: string;
-      name: string;
-      avatar: string;
-      message: string;
-      likes: number;
-      characterLikes: Array<{
-        characterId: string;
-        name: string;
-        avatar: string;
-      }>;
-      replyTo?: string;
-      threadId?: string;
-    }>;
-    dialogue_en?: Array<{
-      id: string;
-      character: string;
-      name: string;
-      avatar: string;
-      message: string;
-      likes: number;
-      characterLikes: Array<{
-        characterId: string;
-        name: string;
-        avatar: string;
-      }>;
-      replyTo?: string;
-      threadId?: string;
-    }>;
-    dialogue_pl?: Array<{
-      id: string;
-      character: string;
-      name: string;
-      avatar: string;
-      message: string;
-      likes: number;
-      characterLikes: Array<{
-        characterId: string;
-        name: string;
-        avatar: string;
-      }>;
-      replyTo?: string;
-      threadId?: string;
-    }>;
+    dialogue: DialogueResult[];
+    dialogue_en?: DialogueResult[];
+    dialogue_pl?: DialogueResult[];
+    tweets?: TweetResult[];
+    tweets_en?: TweetResult[];
+    tweets_pl?: TweetResult[];
     thirdCharacterIncluded: boolean;
   }>('generate-dialogue', params);
 }

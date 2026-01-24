@@ -11,8 +11,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { MessageSquare, RefreshCw, Loader2, Calendar, Check, X, Users, UserPlus, GitBranch, Reply, CornerDownRight } from "lucide-react";
+import { MessageSquare, RefreshCw, Loader2, Calendar, Check, X, Users, UserPlus, GitBranch, Reply, CornerDownRight, BookOpen, Twitter } from "lucide-react";
 import { generateDialogue } from "@/lib/api";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
@@ -57,10 +58,34 @@ interface Part {
   };
 }
 
+interface Chapter {
+  id: string;
+  title: string;
+  description: string | null;
+  week_of_month: number;
+  narrator_monologue: string | null;
+  chat_dialogue: DialogueMessage[] | unknown;
+  chat_dialogue_en: DialogueMessage[] | unknown;
+  chat_dialogue_pl: DialogueMessage[] | unknown;
+  tweets: unknown[] | unknown;
+  tweets_en: unknown[] | unknown;
+  tweets_pl: unknown[] | unknown;
+  volume: {
+    id: string;
+    title: string;
+    month: number;
+    year: number;
+  };
+}
+
 export default function DialogueManagementPanel({ password }: DialogueManagementPanelProps) {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<"parts" | "chapters">("parts");
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
+  const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(8);
+  const [tweetCount, setTweetCount] = useState(4);
+  const [generateTweets, setGenerateTweets] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState<LLMProvider>("lovable");
   const [selectedModel, setSelectedModel] = useState("google/gemini-3-flash-preview");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -101,6 +126,25 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
         .limit(50);
       if (error) throw error;
       return data as Part[];
+    },
+  });
+
+  // Fetch chapters with dialogues
+  const { data: chapters, isLoading: chaptersLoading } = useQuery({
+    queryKey: ["dialogue-chapters"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chapters")
+        .select(`
+          id, title, description, week_of_month, narrator_monologue,
+          chat_dialogue, chat_dialogue_en, chat_dialogue_pl,
+          tweets, tweets_en, tweets_pl,
+          volume:volumes!inner(id, title, month, year)
+        `)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return data as Chapter[];
     },
   });
 
@@ -167,9 +211,9 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
       const { error } = await supabase
         .from("parts")
         .update({
-          chat_dialogue: result.dialogue,
-          chat_dialogue_en: result.dialogue_en,
-          chat_dialogue_pl: result.dialogue_pl,
+          chat_dialogue: result.dialogue as unknown as any,
+          chat_dialogue_en: result.dialogue_en as unknown as any,
+          chat_dialogue_pl: result.dialogue_pl as unknown as any,
         })
         .eq("id", partId);
 
@@ -189,8 +233,64 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
     },
   });
 
+  // Regenerate chapter dialogue mutation
+  const regenerateChapterMutation = useMutation({
+    mutationFn: async (chapterId: string) => {
+      setIsGenerating(true);
+      const chapter = chapters?.find((c) => c.id === chapterId);
+      if (!chapter) throw new Error("Chapter not found");
+
+      // Get selected character details for prompt
+      const selectedCharacterDetails = characters?.filter(c => 
+        selectedCharacters.includes(c.character_id)
+      ) || [];
+
+      // Build context from chapter
+      const storyContext = [
+        chapter.title,
+        chapter.description,
+        chapter.narrator_monologue?.substring(0, 1000)
+      ].filter(Boolean).join("\n");
+
+      // Build character context for the prompt
+      const characterContext = selectedCharacterDetails.length > 0
+        ? selectedCharacterDetails.map(c => `${c.name} (${c.avatar}) - стиль: ${c.style}`).join(", ")
+        : undefined;
+
+      const result = await generateDialogue({
+        storyContext,
+        newsContext: `Тиждень ${chapter.week_of_month} - ${chapter.volume.title}`,
+        useOpenAI: selectedProvider === "openai",
+        messageCount,
+        characters: characterContext,
+        enableThreading,
+        threadProbability,
+        chapterId,
+        generateTweets,
+        tweetCount,
+      });
+
+      if (!result.success) throw new Error("Failed to generate dialogue");
+
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dialogue-chapters"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-chapters"] });
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+      toast.success("Діалог та твіти для глави згенеровано успішно");
+      setIsGenerating(false);
+    },
+    onError: (error) => {
+      toast.error(`Помилка: ${error.message}`);
+      setIsGenerating(false);
+    },
+  });
+
   const selectedPart = parts?.find((p) => p.id === selectedPartId);
+  const selectedChapter = chapters?.find((c) => c.id === selectedChapterId);
   const dialogueCount = (arr: unknown) => Array.isArray(arr) ? arr.length : 0;
+  const tweetCountFn = (arr: unknown) => Array.isArray(arr) ? arr.length : 0;
   
   // Get unique character count from dialogue
   const getCharacterCount = (dialogue: unknown) => {
@@ -305,6 +405,37 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
             )}
           </div>
 
+          {/* Tweet options for chapters */}
+          {activeTab === "chapters" && (
+            <div className="space-y-3 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Twitter className="h-4 w-4 text-primary" />
+                  <Label htmlFor="tweets-switch">Генерувати твіти</Label>
+                </div>
+                <Switch
+                  id="tweets-switch"
+                  checked={generateTweets}
+                  onCheckedChange={setGenerateTweets}
+                />
+              </div>
+              
+              {generateTweets && (
+                <div className="space-y-2 pl-6">
+                  <Label>Кількість твітів</Label>
+                  <Input
+                    type="number"
+                    min={2}
+                    max={10}
+                    value={tweetCount}
+                    onChange={(e) => setTweetCount(Number(e.target.value))}
+                    className="w-24"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Character Selection */}
           <div className="space-y-3 pt-2 border-t">
             <div className="flex items-center justify-between">
@@ -350,153 +481,324 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
         </CardContent>
       </Card>
 
-      {/* Parts List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Оповіді з діалогами</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[400px]">
-              {partsLoading ? (
-                <div className="flex items-center justify-center p-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {parts?.map((part) => (
-                    <div
-                      key={part.id}
-                      onClick={() => setSelectedPartId(part.id)}
-                      className={`p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
-                        selectedPartId === part.id ? "bg-muted" : ""
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate text-sm">{part.title}</p>
-                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(part.date), "d MMM yyyy", { locale: uk })}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 flex-wrap">
-                          {getThreadCount(part.chat_dialogue) > 0 && (
-                            <Badge variant="outline" className="text-xs bg-primary/5">
-                              <GitBranch className="h-3 w-3 mr-1" />
-                              {getThreadCount(part.chat_dialogue)}
-                            </Badge>
-                          )}
-                          {getCharacterCount(part.chat_dialogue) > 0 && (
-                            <Badge variant="outline" className="text-xs">
-                              <Users className="h-3 w-3 mr-1" />
-                              {getCharacterCount(part.chat_dialogue)}
-                            </Badge>
-                          )}
-                          {dialogueCount(part.chat_dialogue) > 0 ? (
-                            <Badge variant="secondary" className="text-xs">
-                              <Check className="h-3 w-3 mr-1" />
-                              {dialogueCount(part.chat_dialogue)}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs">
-                              <X className="h-3 w-3 mr-1" />
-                              Немає
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
+      {/* Content Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "parts" | "chapters")} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="parts" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Оповіді (щоденні)
+          </TabsTrigger>
+          <TabsTrigger value="chapters" className="gap-2">
+            <BookOpen className="h-4 w-4" />
+            Глави (тижневі)
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="parts">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Оповіді з діалогами</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[400px]">
+                  {partsLoading ? (
+                    <div className="flex items-center justify-center p-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
                     </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        {/* Selected Part Preview */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">
-              {selectedPart ? selectedPart.title : "Виберіть оповідь"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {selectedPart ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-muted/50 p-2 rounded">
-                    <p className="text-lg font-bold">{dialogueCount(selectedPart.chat_dialogue)}</p>
-                    <p className="text-xs text-muted-foreground">🇺🇦 UA</p>
-                  </div>
-                  <div className="bg-muted/50 p-2 rounded">
-                    <p className="text-lg font-bold">{dialogueCount(selectedPart.chat_dialogue_en)}</p>
-                    <p className="text-xs text-muted-foreground">🇬🇧 EN</p>
-                  </div>
-                  <div className="bg-muted/50 p-2 rounded">
-                    <p className="text-lg font-bold">{dialogueCount(selectedPart.chat_dialogue_pl)}</p>
-                    <p className="text-xs text-muted-foreground">🇵🇱 PL</p>
-                  </div>
-                </div>
-
-                {/* Thread stats */}
-                {getThreadCount(selectedPart.chat_dialogue) > 0 && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-primary/5 p-2 rounded">
-                    <GitBranch className="h-4 w-4" />
-                    <span>{getThreadCount(selectedPart.chat_dialogue)} відповідей на повідомлення</span>
-                  </div>
-                )}
-
-                {Array.isArray(selectedPart.chat_dialogue) && selectedPart.chat_dialogue.length > 0 && (
-                  <ScrollArea className="h-[200px] border rounded-md p-2">
-                    <div className="space-y-2">
-                      {(selectedPart.chat_dialogue as Array<DialogueMessage>).map((msg, idx) => (
-                        <div 
-                          key={idx} 
-                          className={`flex items-start gap-2 text-sm ${msg.replyTo ? 'ml-4 pl-2 border-l-2 border-primary/30' : ''}`}
+                  ) : (
+                    <div className="divide-y">
+                      {parts?.map((part) => (
+                        <div
+                          key={part.id}
+                          onClick={() => setSelectedPartId(part.id)}
+                          className={`p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                            selectedPartId === part.id ? "bg-muted" : ""
+                          }`}
                         >
-                          <span className="text-lg shrink-0">{msg.avatar}</span>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">{msg.name}:</span>
-                              {msg.replyTo && (
-                                <Reply className="h-3 w-3 text-muted-foreground" />
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium truncate text-sm">{part.title}</p>
+                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                {format(new Date(part.date), "d MMM yyyy", { locale: uk })}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {getThreadCount(part.chat_dialogue) > 0 && (
+                                <Badge variant="outline" className="text-xs bg-primary/5">
+                                  <GitBranch className="h-3 w-3 mr-1" />
+                                  {getThreadCount(part.chat_dialogue)}
+                                </Badge>
+                              )}
+                              {getCharacterCount(part.chat_dialogue) > 0 && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Users className="h-3 w-3 mr-1" />
+                                  {getCharacterCount(part.chat_dialogue)}
+                                </Badge>
+                              )}
+                              {dialogueCount(part.chat_dialogue) > 0 ? (
+                                <Badge variant="secondary" className="text-xs">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  {dialogueCount(part.chat_dialogue)}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">
+                                  <X className="h-3 w-3 mr-1" />
+                                  Немає
+                                </Badge>
                               )}
                             </div>
-                            <span className="text-muted-foreground">{msg.message}</span>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
-                )}
-
-                <Button
-                  onClick={() => regenerateMutation.mutate(selectedPart.id)}
-                  disabled={isGenerating}
-                  className="w-full"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Генерація...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Перегенерувати діалог
-                    </>
                   )}
-                </Button>
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
-                Виберіть оповідь зі списку для перегляду та перегенерації діалогу
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Selected Part Preview */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">
+                  {selectedPart ? selectedPart.title : "Виберіть оповідь"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {selectedPart ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="bg-muted/50 p-2 rounded">
+                        <p className="text-lg font-bold">{dialogueCount(selectedPart.chat_dialogue)}</p>
+                        <p className="text-xs text-muted-foreground">🇺🇦 UA</p>
+                      </div>
+                      <div className="bg-muted/50 p-2 rounded">
+                        <p className="text-lg font-bold">{dialogueCount(selectedPart.chat_dialogue_en)}</p>
+                        <p className="text-xs text-muted-foreground">🇬🇧 EN</p>
+                      </div>
+                      <div className="bg-muted/50 p-2 rounded">
+                        <p className="text-lg font-bold">{dialogueCount(selectedPart.chat_dialogue_pl)}</p>
+                        <p className="text-xs text-muted-foreground">🇵🇱 PL</p>
+                      </div>
+                    </div>
+
+                    {/* Thread stats */}
+                    {getThreadCount(selectedPart.chat_dialogue) > 0 && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-primary/5 p-2 rounded">
+                        <GitBranch className="h-4 w-4" />
+                        <span>{getThreadCount(selectedPart.chat_dialogue)} відповідей на повідомлення</span>
+                      </div>
+                    )}
+
+                    {Array.isArray(selectedPart.chat_dialogue) && selectedPart.chat_dialogue.length > 0 && (
+                      <ScrollArea className="h-[200px] border rounded-md p-2">
+                        <div className="space-y-2">
+                          {(selectedPart.chat_dialogue as Array<DialogueMessage>).map((msg, idx) => (
+                            <div 
+                              key={idx} 
+                              className={`flex items-start gap-2 text-sm ${msg.replyTo ? 'ml-4 pl-2 border-l-2 border-primary/30' : ''}`}
+                            >
+                              <span className="text-lg shrink-0">{msg.avatar}</span>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1">
+                                  <span className="font-medium">{msg.name}:</span>
+                                  {msg.replyTo && (
+                                    <Reply className="h-3 w-3 text-muted-foreground" />
+                                  )}
+                                </div>
+                                <span className="text-muted-foreground">{msg.message}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+
+                    <Button
+                      onClick={() => regenerateMutation.mutate(selectedPart.id)}
+                      disabled={isGenerating}
+                      className="w-full"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Генерація...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Перегенерувати діалог
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    Виберіть оповідь зі списку для перегляду та перегенерації діалогу
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Chapters Tab */}
+        <TabsContent value="chapters">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Глави тижнів</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[400px]">
+                  {chaptersLoading ? (
+                    <div className="flex items-center justify-center p-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {chapters?.map((chapter) => (
+                        <div
+                          key={chapter.id}
+                          onClick={() => setSelectedChapterId(chapter.id)}
+                          className={`p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                            selectedChapterId === chapter.id ? "bg-muted" : ""
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium truncate text-sm">{chapter.title}</p>
+                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                <BookOpen className="h-3 w-3" />
+                                Тиждень {chapter.week_of_month} • {chapter.volume.title}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {tweetCountFn(chapter.tweets) > 0 && (
+                                <Badge variant="outline" className="text-xs bg-blue-500/10">
+                                  <Twitter className="h-3 w-3 mr-1" />
+                                  {tweetCountFn(chapter.tweets)}
+                                </Badge>
+                              )}
+                              {getCharacterCount(chapter.chat_dialogue) > 0 && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Users className="h-3 w-3 mr-1" />
+                                  {getCharacterCount(chapter.chat_dialogue)}
+                                </Badge>
+                              )}
+                              {dialogueCount(chapter.chat_dialogue) > 0 ? (
+                                <Badge variant="secondary" className="text-xs">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  {dialogueCount(chapter.chat_dialogue)}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">
+                                  <X className="h-3 w-3 mr-1" />
+                                  Немає
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Selected Chapter Preview */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">
+                  {selectedChapter ? selectedChapter.title : "Виберіть главу"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {selectedChapter ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-2 text-center">
+                      <div className="bg-muted/50 p-2 rounded">
+                        <p className="text-lg font-bold">{dialogueCount(selectedChapter.chat_dialogue)}</p>
+                        <p className="text-xs text-muted-foreground">💬 Діалоги</p>
+                      </div>
+                      <div className="bg-muted/50 p-2 rounded">
+                        <p className="text-lg font-bold">{tweetCountFn(selectedChapter.tweets)}</p>
+                        <p className="text-xs text-muted-foreground">🐦 Твіти</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="bg-muted/30 p-1.5 rounded text-xs">
+                        <p className="font-bold">{dialogueCount(selectedChapter.chat_dialogue)}</p>
+                        <p className="text-muted-foreground">🇺🇦</p>
+                      </div>
+                      <div className="bg-muted/30 p-1.5 rounded text-xs">
+                        <p className="font-bold">{dialogueCount(selectedChapter.chat_dialogue_en)}</p>
+                        <p className="text-muted-foreground">🇬🇧</p>
+                      </div>
+                      <div className="bg-muted/30 p-1.5 rounded text-xs">
+                        <p className="font-bold">{dialogueCount(selectedChapter.chat_dialogue_pl)}</p>
+                        <p className="text-muted-foreground">🇵🇱</p>
+                      </div>
+                    </div>
+
+                    {/* Thread stats */}
+                    {getThreadCount(selectedChapter.chat_dialogue) > 0 && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-primary/5 p-2 rounded">
+                        <GitBranch className="h-4 w-4" />
+                        <span>{getThreadCount(selectedChapter.chat_dialogue)} відповідей на повідомлення</span>
+                      </div>
+                    )}
+
+                    {Array.isArray(selectedChapter.chat_dialogue) && selectedChapter.chat_dialogue.length > 0 && (
+                      <ScrollArea className="h-[150px] border rounded-md p-2">
+                        <div className="space-y-2">
+                          {(selectedChapter.chat_dialogue as Array<DialogueMessage>).map((msg, idx) => (
+                            <div 
+                              key={idx} 
+                              className={`flex items-start gap-2 text-sm ${msg.replyTo ? 'ml-4 pl-2 border-l-2 border-primary/30' : ''}`}
+                            >
+                              <span className="text-lg shrink-0">{msg.avatar}</span>
+                              <div className="min-w-0">
+                                <span className="font-medium">{msg.name}:</span>{" "}
+                                <span className="text-muted-foreground">{msg.message}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+
+                    <Button
+                      onClick={() => regenerateChapterMutation.mutate(selectedChapter.id)}
+                      disabled={isGenerating}
+                      className="w-full"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Генерація...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Згенерувати діалог та твіти
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    Виберіть главу зі списку для перегляду та генерації діалогу/твітів
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
