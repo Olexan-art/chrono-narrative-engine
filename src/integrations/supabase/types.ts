@@ -130,16 +130,67 @@ export type Database = {
           },
         ]
       }
+      character_relationships: {
+        Row: {
+          character_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          related_character_id: string
+          relationship_type: string
+          strength: number
+          updated_at: string | null
+        }
+        Insert: {
+          character_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          related_character_id: string
+          relationship_type: string
+          strength?: number
+          updated_at?: string | null
+        }
+        Update: {
+          character_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          related_character_id?: string
+          relationship_type?: string
+          strength?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_relationships_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_relationships_related_character_id_fkey"
+            columns: ["related_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       characters: {
         Row: {
           avatar: string
           character_id: string
           created_at: string | null
           description: string | null
+          dialogue_count: number
           id: string
           is_active: boolean | null
+          last_dialogue_at: string | null
           name: string
           style: string
+          total_likes: number
           updated_at: string | null
         }
         Insert: {
@@ -147,10 +198,13 @@ export type Database = {
           character_id: string
           created_at?: string | null
           description?: string | null
+          dialogue_count?: number
           id?: string
           is_active?: boolean | null
+          last_dialogue_at?: string | null
           name: string
           style: string
+          total_likes?: number
           updated_at?: string | null
         }
         Update: {
@@ -158,10 +212,13 @@ export type Database = {
           character_id?: string
           created_at?: string | null
           description?: string | null
+          dialogue_count?: number
           id?: string
           is_active?: boolean | null
+          last_dialogue_at?: string | null
           name?: string
           style?: string
+          total_likes?: number
           updated_at?: string | null
         }
         Relationships: []

@@ -230,6 +230,46 @@ serve(async (req) => {
         );
       }
 
+      case 'createRelationship': {
+        const { data: relationship, error } = await supabase
+          .from('character_relationships')
+          .insert(data)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true, relationship }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'updateRelationship': {
+        const { error } = await supabase
+          .from('character_relationships')
+          .update(data)
+          .eq('id', data.id);
+        
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'deleteRelationship': {
+        const { error } = await supabase
+          .from('character_relationships')
+          .delete()
+          .eq('id', data.id);
+        
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       case 'getStats': {
         const [volumes, chapters, parts, generations] = await Promise.all([
           supabase.from('volumes').select('id', { count: 'exact' }),
