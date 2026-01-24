@@ -43,6 +43,8 @@ const translations: Record<Language, Record<string, string>> = {
     'week': 'Тиждень',
     'day': 'ДЕНЬ',
     'month': 'МІСЯЦЬ',
+    'flash_news': 'FLASH NEWS',
+    'hot_meat': 'Гаряче м\'ясо',
     'monologue': 'Монолог',
     'commentary': 'Коментар',
     
@@ -136,6 +138,8 @@ const translations: Record<Language, Record<string, string>> = {
     'week': 'Week',
     'day': 'DAY',
     'month': 'MONTH',
+    'flash_news': 'FLASH NEWS',
+    'hot_meat': 'Hot meat',
     'monologue': 'Monologue',
     'commentary': 'Commentary',
     
@@ -229,6 +233,8 @@ const translations: Record<Language, Record<string, string>> = {
     'week': 'Tydzień',
     'day': 'DZIEŃ',
     'month': 'MIESIĄC',
+    'flash_news': 'FLASH NEWS',
+    'hot_meat': 'Gorące mięso',
     'monologue': 'Monolog',
     'commentary': 'Komentarz',
     

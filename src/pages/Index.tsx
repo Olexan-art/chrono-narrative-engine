@@ -17,7 +17,12 @@ import type { Part } from "@/types/database";
 
 const ITEMS_PER_PAGE = 10;
 
-function getPartLabel(part: any, t: (key: string) => string): { type: 'day' | 'week' | 'month'; label: string } {
+function getPartLabel(part: any, t: (key: string) => string): { type: 'day' | 'week' | 'month' | 'flash'; label: string } {
+  // Check for flash news first
+  if (part.is_flash_news) {
+    return { type: 'flash', label: t('flash_news') };
+  }
+  
   const date = new Date(part.date);
   const dayOfWeek = date.getDay();
   const dayOfMonth = date.getDate();
@@ -53,7 +58,7 @@ export default function Index() {
       
       const { data, count } = await supabase
         .from('parts')
-        .select('id, title, title_en, title_pl, content, content_en, content_pl, date, status, tweets, tweets_en, tweets_pl, cover_image_url, cover_image_type, news_sources, number', { count: 'exact' })
+        .select('id, title, title_en, title_pl, content, content_en, content_pl, date, status, tweets, tweets_en, tweets_pl, cover_image_url, cover_image_type, news_sources, number, is_flash_news', { count: 'exact' })
         .eq('status', 'published')
         .order('date', { ascending: false })
         .range(from, to);
@@ -275,7 +280,11 @@ export default function Index() {
                       className="group block animate-fade-in"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
-                      <article className="cosmic-card p-3 md:p-4 border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]">
+                      <article className={`cosmic-card p-3 md:p-4 border transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] ${
+                        partLabel.type === 'flash' 
+                          ? 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/70' 
+                          : 'border-border hover:border-primary/50'
+                      }`}>
                         <div className="flex items-start gap-3 md:gap-4">
                           {(() => {
                             const coverType = (part as any).cover_image_type || 'generated';
@@ -289,7 +298,9 @@ export default function Index() {
                               <img 
                                 src={imageUrl} 
                                 alt=""
-                                className="w-16 h-16 md:w-24 md:h-24 object-cover border border-border shrink-0 transition-transform duration-300 group-hover:scale-105"
+                                className={`w-16 h-16 md:w-24 md:h-24 object-cover shrink-0 transition-transform duration-300 group-hover:scale-105 ${
+                                  partLabel.type === 'flash' ? 'border border-amber-500/30' : 'border border-border'
+                                }`}
                               />
                             ) : null;
                           })()}
@@ -297,7 +308,9 @@ export default function Index() {
                             <div className="flex items-center gap-1.5 md:gap-2 mb-1">
                               <Badge 
                                 variant={partLabel.type === 'day' ? 'secondary' : 'default'}
-                                className="text-[10px] md:text-xs font-mono px-1.5 md:px-2"
+                                className={`text-[10px] md:text-xs font-mono px-1.5 md:px-2 ${
+                                  partLabel.type === 'flash' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : ''
+                                }`}
                               >
                                 {partLabel.label}
                               </Badge>
@@ -305,14 +318,18 @@ export default function Index() {
                                 {format(new Date(part.date), 'd MMM yyyy', { locale: dateLocale })}
                               </span>
                             </div>
-                            <h3 className="font-serif font-medium text-sm md:text-lg group-hover:text-primary transition-colors duration-200 line-clamp-2">
+                            <h3 className={`font-serif font-medium text-sm md:text-lg transition-colors duration-200 line-clamp-2 ${
+                              partLabel.type === 'flash' ? 'group-hover:text-amber-500' : 'group-hover:text-primary'
+                            }`}>
                               {localizedTitle}
                             </h3>
                             <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 mt-1 font-serif hidden sm:block">
                               {localizedContent?.slice(0, 120)}...
                             </p>
                           </div>
-                          <ArrowRight className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200 shrink-0 hidden sm:block" />
+                          <ArrowRight className={`w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:translate-x-1 transition-all duration-200 shrink-0 hidden sm:block ${
+                            partLabel.type === 'flash' ? 'group-hover:text-amber-500' : 'group-hover:text-primary'
+                          }`} />
                         </div>
                       </article>
                     </Link>

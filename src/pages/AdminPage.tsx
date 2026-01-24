@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare } from "lucide-react";
+import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { AnalyticsPanel } from "@/components/AnalyticsPanel";
 import { SEOHead } from "@/components/SEOHead";
 import CharactersPanel from "@/components/CharactersPanel";
 import DialogueManagementPanel from "@/components/DialogueManagementPanel";
+import { FlashNewsPanel } from "@/components/FlashNewsPanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -559,11 +560,17 @@ function PartsPanel({ password }: { password: string }) {
   return (
     <div className="space-y-4">
       {parts.map((part: any) => (
-        <Card key={part.id} className="cosmic-card">
+        <Card key={part.id} className={`cosmic-card ${part.is_flash_news ? 'border-amber-500/20' : ''}`}>
           <CardContent className="pt-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  {part.is_flash_news && (
+                    <span className="px-2 py-0.5 text-xs font-mono border border-amber-500/30 text-amber-500 bg-amber-500/10 flex items-center gap-1">
+                      <Zap className="w-3 h-3" />
+                      FLASH
+                    </span>
+                  )}
                   <span className={`
                     px-2 py-0.5 text-xs font-mono border
                     ${part.status === 'published' ? 'border-primary text-primary' : 'border-muted-foreground text-muted-foreground'}
@@ -581,7 +588,7 @@ function PartsPanel({ password }: { password: string }) {
                 <img 
                   src={part.cover_image_url} 
                   alt="" 
-                  className="w-20 h-20 object-cover border border-border"
+                  className={`w-20 h-20 object-cover border ${part.is_flash_news ? 'border-amber-500/30' : 'border-border'}`}
                 />
               )}
             </div>
@@ -652,7 +659,7 @@ export default function AdminPage() {
         {stats && <StatsCard stats={stats} />}
 
         <Tabs defaultValue="generate" className="mt-8">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="generate" className="gap-2">
               <Sparkles className="w-4 h-4" />
               День
@@ -660,6 +667,10 @@ export default function AdminPage() {
             <TabsTrigger value="week" className="gap-2">
               <Calendar className="w-4 h-4" />
               Тиждень
+            </TabsTrigger>
+            <TabsTrigger value="flash" className="gap-2">
+              <Zap className="w-4 h-4 text-amber-500" />
+              Flash
             </TabsTrigger>
             <TabsTrigger value="chapters" className="gap-2">
               <BookOpen className="w-4 h-4" />
@@ -693,6 +704,10 @@ export default function AdminPage() {
 
           <TabsContent value="week" className="mt-6">
             <WeekGenerationPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="flash" className="mt-6">
+            <FlashNewsPanel password={password} />
           </TabsContent>
 
           <TabsContent value="chapters" className="mt-6">
