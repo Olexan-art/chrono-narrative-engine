@@ -261,8 +261,12 @@ export default function Index() {
                     ? ((part as any).content_pl || part.content)
                     : part.content;
                   
-                  // Determine story number for URL (need to count parts per date)
-                  const storyNumber = (part as any).number || 1;
+                  // Calculate story number based on count of parts with same date in current view
+                  // Since parts are sorted by date desc, we need to find position within same date
+                  const partsOnSameDate = latestParts.filter((p, i) => 
+                    p.date === part.date && i <= index
+                  );
+                  const storyNumber = partsOnSameDate.length;
                   
                   return (
                     <Link 
