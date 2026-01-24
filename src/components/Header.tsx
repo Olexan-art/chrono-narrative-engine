@@ -13,8 +13,8 @@ export function Header() {
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 md:gap-3 group">
-          <div className="p-1.5 md:p-2 bg-primary/10 border border-primary/30 group-hover:border-glow transition-all">
-            <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded overflow-hidden border border-primary/30 group-hover:border-primary transition-all">
+            <img src="/favicon.png" alt="SP" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="font-sans font-bold text-base md:text-lg tracking-tight text-foreground">
