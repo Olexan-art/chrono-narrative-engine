@@ -278,7 +278,7 @@ ${charactersList.map((c, i) => `${i + 1}. ${c.name} (${c.avatar}): ${c.style}`).
 ${thirdCharacter ? `ВАЖЛИВО: Третій персонаж ${thirdCharacter.name} має втрутитись у розмову несподівано, коли двоє інших вже розмовляють. Це має бути комічний момент.` : ''}
 
 ПРАВИЛА:
-1. Згенеруй ${messageCount} повідомлень діалогу
+1. Згенеруй ${messageCount} повідомлень діалогу ТРЬОМА МОВАМИ (українська, англійська, польська)
 2. Кожен персонаж говорить у своєму унікальному стилі
 3. Діалог має коментувати події з новин сатирично та філософськи
 4. ${thirdCharacter ? `Третій персонаж з'являється приблизно в середині діалогу` : 'Діалог між двома персонажами'}
@@ -288,6 +288,12 @@ ${thirdCharacter ? `ВАЖЛИВО: Третій персонаж ${thirdCharact
 {
   "dialogue": [
     {"character": "character_id", "name": "Ім'я", "avatar": "емодзі", "message": "Репліка українською"}
+  ],
+  "dialogue_en": [
+    {"character": "character_id", "name": "Ім'я", "avatar": "емодзі", "message": "Message in English"}
+  ],
+  "dialogue_pl": [
+    {"character": "character_id", "name": "Ім'я", "avatar": "емодзі", "message": "Wiadomość po polsku"}
   ]
 }`;
 
@@ -297,7 +303,8 @@ ${storyContext}
 НОВИНИ:
 ${newsContext}
 
-Згенеруй ${messageCount} реплік діалогу між персонажами${thirdCharacter ? `, включаючи несподівану появу ${thirdCharacter.name}` : ''}.`;
+Згенеруй ${messageCount} реплік діалогу ТРЬОМА МОВАМИ між персонажами${thirdCharacter ? `, включаючи несподівану появу ${thirdCharacter.name}` : ''}.
+Українською у "dialogue", англійською у "dialogue_en", польською у "dialogue_pl".`;
 
     const content = await callLLM(llmSettings, systemPrompt, userPrompt, useOpenAI);
 
@@ -306,44 +313,60 @@ ${newsContext}
       result = JSON.parse(content);
     } catch {
       // Fallback dialogue
+      const fallbackDialogue = mainCharacters.flatMap((char, idx) => [
+        { character: char.character_id, name: char.name, avatar: char.avatar, message: "Цікаві події сьогодні..." },
+        { character: mainCharacters[(idx + 1) % 2].character_id, name: mainCharacters[(idx + 1) % 2].name, avatar: mainCharacters[(idx + 1) % 2].avatar, message: "Так, людство знову здивувало." }
+      ]).slice(0, messageCount);
+      
       result = {
-        dialogue: mainCharacters.flatMap((char, idx) => [
-          { character: char.character_id, name: char.name, avatar: char.avatar, message: "Цікаві події сьогодні..." },
-          { character: mainCharacters[(idx + 1) % 2].character_id, name: mainCharacters[(idx + 1) % 2].name, avatar: mainCharacters[(idx + 1) % 2].avatar, message: "Так, людство знову здивувало." }
+        dialogue: fallbackDialogue,
+        dialogue_en: mainCharacters.flatMap((char, idx) => [
+          { character: char.character_id, name: char.name, avatar: char.avatar, message: "Interesting events today..." },
+          { character: mainCharacters[(idx + 1) % 2].character_id, name: mainCharacters[(idx + 1) % 2].name, avatar: mainCharacters[(idx + 1) % 2].avatar, message: "Yes, humanity surprised us again." }
+        ]).slice(0, messageCount),
+        dialogue_pl: mainCharacters.flatMap((char, idx) => [
+          { character: char.character_id, name: char.name, avatar: char.avatar, message: "Ciekawe wydarzenia dzisiaj..." },
+          { character: mainCharacters[(idx + 1) % 2].character_id, name: mainCharacters[(idx + 1) % 2].name, avatar: mainCharacters[(idx + 1) % 2].avatar, message: "Tak, ludzkość znów nas zaskoczyła." }
         ]).slice(0, messageCount)
       };
     }
 
     // Add likes and character likes to each message
-    const dialogueWithLikes: DialogueMessage[] = result.dialogue.map((msg: any) => {
-      const baseLikes = generateRandomLikes();
-      
-      // Select 1-3 related characters for character likes
-      const likeGiversCount = Math.floor(Math.random() * 3) + 1;
-      const likeGivers = selectRelatedCharacters(allCharacters, [mainCharacters.find(c => c.character_id === msg.character)!].filter(Boolean), likeGiversCount);
-      
-      const characterLikes: CharacterLike[] = likeGivers.map(c => ({
-        characterId: c.character_id,
-        name: c.name,
-        avatar: c.avatar
-      }));
+    const addLikesToDialogue = (dialogue: any[]) => {
+      return dialogue.map((msg: any) => {
+        const baseLikes = generateRandomLikes();
+        const likeGiversCount = Math.floor(Math.random() * 3) + 1;
+        const likeGivers = selectRelatedCharacters(allCharacters, [mainCharacters.find(c => c.character_id === msg.character)!].filter(Boolean), likeGiversCount);
+        
+        const characterLikes: CharacterLike[] = likeGivers.map(c => ({
+          characterId: c.character_id,
+          name: c.name,
+          avatar: c.avatar
+        }));
 
-      return {
-        character: msg.character,
-        name: msg.name,
-        avatar: msg.avatar,
-        message: msg.message,
-        likes: baseLikes,
-        characterLikes
-      };
-    });
+        return {
+          character: msg.character,
+          name: msg.name,
+          avatar: msg.avatar,
+          message: msg.message,
+          likes: baseLikes,
+          characterLikes
+        };
+      });
+    };
 
-    console.log('Generated dialogue with', dialogueWithLikes.length, 'messages');
+    const dialogueWithLikes = addLikesToDialogue(result.dialogue || []);
+    const dialogueEnWithLikes = addLikesToDialogue(result.dialogue_en || []);
+    const dialoguePlWithLikes = addLikesToDialogue(result.dialogue_pl || []);
+
+    console.log('Generated multilingual dialogue with', dialogueWithLikes.length, 'messages per language');
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         dialogue: dialogueWithLikes,
+        dialogue_en: dialogueEnWithLikes,
+        dialogue_pl: dialoguePlWithLikes,
         thirdCharacterIncluded: !!thirdCharacter
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
