@@ -178,6 +178,7 @@ export interface Part {
   narrative_purpose: NarrativePurpose | null;
   narrative_plot: NarrativePlot | null;
   narrative_special: NarrativeSpecial | null;
+  is_flash_news: boolean;
   created_at: string;
   updated_at: string;
 }
