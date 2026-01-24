@@ -158,7 +158,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
           cover_image_prompt_2: storyResult.story.imagePrompt2 || null,
           chat_dialogue: storyResult.story.chatDialogue || [],
           tweets: storyResult.story.tweets || [],
-          news_sources: newsResult.articles.slice(0, 10).map(a => ({ url: a.url, title: a.title }))
+          news_sources: newsResult.articles.slice(0, 10).map(a => ({ url: a.url, title: a.title, image_url: a.image_url || null }))
         }
       );
       updateLastLog('success');
