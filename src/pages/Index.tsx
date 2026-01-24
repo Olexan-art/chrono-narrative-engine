@@ -46,14 +46,14 @@ export default function Index() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const { data: partsData } = useQuery({
-    queryKey: ['latest-parts', currentPage],
+    queryKey: ['latest-parts', currentPage, language],
     queryFn: async () => {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
       
       const { data, count } = await supabase
         .from('parts')
-        .select('id, title, title_en, title_pl, content, content_en, content_pl, date, status, tweets, tweets_en, tweets_pl, cover_image_url', { count: 'exact' })
+        .select('id, title, title_en, title_pl, content, content_en, content_pl, date, status, tweets, tweets_en, tweets_pl, cover_image_url, number', { count: 'exact' })
         .eq('status', 'published')
         .order('date', { ascending: false })
         .range(from, to);
@@ -261,10 +261,13 @@ export default function Index() {
                     ? ((part as any).content_pl || part.content)
                     : part.content;
                   
+                  // Determine story number for URL (need to count parts per date)
+                  const storyNumber = (part as any).number || 1;
+                  
                   return (
                     <Link 
                       key={part.id} 
-                      to={`/read/${part.date}`} 
+                      to={`/read/${part.date}/${storyNumber}`} 
                       className="group block animate-fade-in"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >

@@ -25,7 +25,7 @@ function formatNumber(num: number): string {
 
 export function HeroTweets({ parts }: HeroTweetsProps) {
   // Get first 5 tweets from most recent parts that have tweets
-  const tweetsWithLinks: { tweet: Tweet; partDate: string; partTitle: string }[] = [];
+  const tweetsWithLinks: { tweet: Tweet; partDate: string; partTitle: string; partNumber: number }[] = [];
   
   for (const part of parts) {
     if (tweetsWithLinks.length >= 5) break;
@@ -37,7 +37,8 @@ export function HeroTweets({ parts }: HeroTweetsProps) {
         tweetsWithLinks.push({
           tweet: tweets[i],
           partDate: part.date,
-          partTitle: part.title
+          partTitle: part.title,
+          partNumber: (part as any).number || 1
         });
       }
     }
@@ -72,10 +73,10 @@ export function HeroTweets({ parts }: HeroTweetsProps) {
       className="w-full"
     >
       <CarouselContent className="-ml-2 md:-ml-3">
-        {tweetsWithLinks.map(({ tweet, partDate, partTitle }, i) => (
+        {tweetsWithLinks.map(({ tweet, partDate, partNumber }, i) => (
           <CarouselItem key={i} className="pl-2 md:pl-3 basis-full sm:basis-1/2 lg:basis-1/3">
             <Link 
-              to={`/read/${partDate}`}
+              to={`/read/${partDate}/${partNumber}`}
               className="group block h-full"
             >
               <div className="border border-border bg-card/50 rounded-lg p-3 hover:bg-card/70 hover:border-primary/30 transition-all h-full flex flex-col">

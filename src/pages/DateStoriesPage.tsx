@@ -118,7 +118,7 @@ export default function DateStoriesPage() {
             {parts.map((part, index) => (
               <Link 
                 key={part.id} 
-                to={`/read/${part.date}?id=${part.id}`}
+                to={`/read/${part.date}/${index + 1}`}
                 className="block group"
               >
                 <Card 
