@@ -1,15 +1,27 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, getYear, getMonth } from "date-fns";
+import { format, addMonths, subMonths, getYear, getMonth } from "date-fns";
 import { uk } from "date-fns/locale";
-import { BookOpen, Edit, RefreshCw, ChevronLeft, ChevronRight, Image, MessageSquare, Twitter, Loader2, ExternalLink } from "lucide-react";
+import { BookOpen, Edit, RefreshCw, ChevronLeft, ChevronRight, Image, MessageSquare, Twitter, Loader2, ExternalLink, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Chapter, Volume } from "@/types/database";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { adminAction } from "@/lib/api";
 
 interface ChaptersPanelProps {
   password: string;
@@ -22,8 +34,27 @@ interface ChapterWithVolume extends Chapter {
 export function ChaptersPanel({ password }: ChaptersPanelProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const handleDeleteChapter = async (chapterId: string) => {
+    setDeletingId(chapterId);
+    try {
+      await adminAction('deleteChapter', password, { id: chapterId });
+      queryClient.invalidateQueries({ queryKey: ['admin-chapters'] });
+      queryClient.invalidateQueries({ queryKey: ['chapters'] });
+      toast({ title: "Главу видалено" });
+    } catch (error) {
+      toast({
+        title: "Помилка",
+        description: error instanceof Error ? error.message : "Не вдалося видалити",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const year = getYear(currentMonth);
   const month = getMonth(currentMonth) + 1;
@@ -257,6 +288,40 @@ export function ChaptersPanel({ password }: ChaptersPanelProps) {
                         Переглянути
                       </Button>
                     </Link>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="gap-1 text-destructive hover:text-destructive"
+                          disabled={deletingId === chapter.id}
+                        >
+                          {deletingId === chapter.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3 h-3" />
+                          )}
+                          Видалити
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Видалити главу?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Ви впевнені, що хочете видалити главу "{chapter.title}"? Цю дію неможливо скасувати.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteChapter(chapter.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Видалити
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </CardContent>
               </div>

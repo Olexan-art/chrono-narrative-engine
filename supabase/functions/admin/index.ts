@@ -118,6 +118,19 @@ serve(async (req) => {
         );
       }
 
+      case 'deleteChapter': {
+        const { error } = await supabase
+          .from('chapters')
+          .delete()
+          .eq('id', data.id);
+        
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       case 'createPart': {
         const { data: part, error } = await supabase
           .from('parts')
