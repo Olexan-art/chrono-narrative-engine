@@ -290,7 +290,7 @@ export default function Index() {
                         partLabel.type === 'flash' 
                           ? 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/70' 
                           : partLabel.type === 'business'
-                          ? 'border-emerald-500/40 bg-emerald-500/5 hover:border-emerald-500/70'
+                          ? 'border-cyan-500/40 bg-cyan-500/10 hover:border-cyan-500/70'
                           : 'border-border hover:border-primary/50'
                       }`}>
                         <div className="flex items-start gap-3 md:gap-4">
@@ -316,7 +316,7 @@ export default function Index() {
                                 alt=""
                               className={`w-16 h-16 md:w-24 md:h-24 object-cover shrink-0 transition-transform duration-300 group-hover:scale-105 ${
                                   partLabel.type === 'flash' ? 'border border-amber-500/30' 
-                                  : partLabel.type === 'business' ? 'border border-emerald-500/30'
+                                  : partLabel.type === 'business' ? 'border border-cyan-500/30'
                                   : 'border border-border'
                                 }`}
                               />
@@ -328,7 +328,7 @@ export default function Index() {
                                 variant={partLabel.type === 'day' ? 'secondary' : 'default'}
                                 className={`text-[10px] md:text-xs font-mono px-1.5 md:px-2 ${
                                   partLabel.type === 'flash' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' 
-                                  : partLabel.type === 'business' ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30'
+                                  : partLabel.type === 'business' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'
                                   : ''
                                 }`}
                               >
@@ -340,7 +340,7 @@ export default function Index() {
                             </div>
                             <h3 className={`font-serif font-medium text-sm md:text-lg transition-colors duration-200 line-clamp-2 ${
                               partLabel.type === 'flash' ? 'group-hover:text-amber-500' 
-                              : partLabel.type === 'business' ? 'group-hover:text-emerald-500'
+                              : partLabel.type === 'business' ? 'group-hover:text-cyan-400'
                               : 'group-hover:text-primary'
                             }`}>
                               {localizedTitle}
@@ -351,7 +351,7 @@ export default function Index() {
                           </div>
                           <ArrowRight className={`w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:translate-x-1 transition-all duration-200 shrink-0 hidden sm:block ${
                             partLabel.type === 'flash' ? 'group-hover:text-amber-500' 
-                            : partLabel.type === 'business' ? 'group-hover:text-emerald-500'
+                            : partLabel.type === 'business' ? 'group-hover:text-cyan-400'
                             : 'group-hover:text-primary'
                           }`} />
                         </div>
