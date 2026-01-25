@@ -4,6 +4,7 @@ export type NarrativePurpose = 'informational' | 'evaluative' | 'artistic' | 'in
 export type NarrativePlot = 'overcoming_monster' | 'rags_to_riches' | 'quest' | 'comedy' | 'tragedy' | 'resurrection' | 'forbidden' | 'mystery';
 export type NarrativeSpecial = 'conspiratorial' | 'transmedia' | 'personal' | 'corporate' | 'escapist' | 'propaganda';
 export type StoryStatus = 'draft' | 'scheduled' | 'published';
+export type PartCategory = 'story' | 'just_business';
 
 export type LLMProvider = 'lovable' | 'openai' | 'gemini' | 'anthropic';
 
@@ -179,6 +180,8 @@ export interface Part {
   narrative_plot: NarrativePlot | null;
   narrative_special: NarrativeSpecial | null;
   is_flash_news: boolean;
+  category?: string | null;
+  manual_images?: unknown;
   created_at: string;
   updated_at: string;
 }

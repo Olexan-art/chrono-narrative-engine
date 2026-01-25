@@ -368,6 +368,7 @@ export type Database = {
       }
       parts: {
         Row: {
+          category: string | null
           chapter_id: string
           chat_dialogue: Json | null
           chat_dialogue_en: Json | null
@@ -385,6 +386,7 @@ export type Database = {
           date: string
           id: string
           is_flash_news: boolean
+          manual_images: Json | null
           narrative_plot: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose:
             | Database["public"]["Enums"]["narrative_purpose"]
@@ -415,6 +417,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          category?: string | null
           chapter_id: string
           chat_dialogue?: Json | null
           chat_dialogue_en?: Json | null
@@ -432,6 +435,7 @@ export type Database = {
           date: string
           id?: string
           is_flash_news?: boolean
+          manual_images?: Json | null
           narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose?:
             | Database["public"]["Enums"]["narrative_purpose"]
@@ -462,6 +466,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          category?: string | null
           chapter_id?: string
           chat_dialogue?: Json | null
           chat_dialogue_en?: Json | null
@@ -479,6 +484,7 @@ export type Database = {
           date?: string
           id?: string
           is_flash_news?: boolean
+          manual_images?: Json | null
           narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose?:
             | Database["public"]["Enums"]["narrative_purpose"]

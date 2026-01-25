@@ -284,8 +284,37 @@ export default function ReadPage() {
             </div>
           )}
 
-          {/* Cover Image 1 - based on cover_image_type setting */}
+          {/* Cover Image - handle Just Business manual images or regular cover */}
           {(() => {
+            const isJustBusiness = part.category === 'just_business';
+            const manualImages = Array.isArray(part.manual_images) ? (part.manual_images as string[]) : [];
+            
+            if (isJustBusiness && manualImages.length > 0) {
+              // Just Business: show image gallery
+              return (
+                <div className="mb-4 md:mb-8 -mx-3 md:mx-0">
+                  <img 
+                    src={manualImages[0] as string} 
+                    alt={localizedTitle}
+                    className="w-full max-h-64 md:max-h-96 object-cover border-y md:border border-blue-500/30"
+                  />
+                  {manualImages.length > 1 && (
+                    <div className="grid grid-cols-3 gap-1 mt-1 md:gap-2 md:mt-2">
+                      {manualImages.slice(1).map((img, idx: number) => (
+                        <img 
+                          key={idx}
+                          src={img} 
+                          alt={`${localizedTitle} - ${idx + 2}`}
+                          className="w-full h-24 md:h-32 object-cover border border-blue-500/30"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            
+            // Regular story: use cover_image_type logic
             const coverType = part.cover_image_type || 'generated';
             const newsSources = part.news_sources as any[] || [];
             const selectedNewsImage = newsSources.find((s: any) => s.is_selected && s.image_url);
@@ -308,6 +337,24 @@ export default function ReadPage() {
               </div>
             );
           })()}
+
+          {/* Category badge for Just Business */}
+          {part.category === 'just_business' && (
+            <div className="mb-2 md:mb-3">
+              <span className="text-xs font-mono bg-blue-500/20 text-blue-500 border border-blue-500/30 px-2 py-1 rounded">
+                JUST BUSINESS
+              </span>
+            </div>
+          )}
+
+          {/* Flash News badge */}
+          {part.is_flash_news && !part.category && (
+            <div className="mb-2 md:mb-3">
+              <span className="text-xs font-mono bg-amber-500/20 text-amber-500 border border-amber-500/30 px-2 py-1 rounded">
+                FLASH NEWS
+              </span>
+            </div>
+          )}
 
           {/* Title */}
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold mb-2 md:mb-4 text-glow">

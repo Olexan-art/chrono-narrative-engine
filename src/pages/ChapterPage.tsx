@@ -67,7 +67,7 @@ export default function ChapterPage() {
     enabled: !!id
   });
 
-  // Fetch parts for this chapter
+  // Fetch parts for this chapter (excluding just_business category)
   const { data: parts = [] } = useQuery({
     queryKey: ['chapter-parts', id],
     queryFn: async () => {
@@ -75,6 +75,7 @@ export default function ChapterPage() {
         .from('parts')
         .select('*')
         .eq('chapter_id', id)
+        .or('category.is.null,category.neq.just_business')
         .order('date', { ascending: true });
       
       if (error) throw error;
