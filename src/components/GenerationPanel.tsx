@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { format, getMonth, getYear, eachDayOfInterval, parseISO } from "date-fns";
 import { uk } from "date-fns/locale";
 import { Sparkles, Loader2, CheckCircle, Clock, AlertCircle, Calendar } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +52,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
   const [storiesPerDay, setStoriesPerDay] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -233,6 +235,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
   const handleGenerate = async () => {
     setIsGenerating(true);
     setLogs([]);
+    setProgress({ current: 0, total: 0 });
     
     try {
       const start = parseISO(startDate);
@@ -240,10 +243,12 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
       const days = eachDayOfInterval({ start, end });
       
       const totalGenerations = days.length * storiesPerDay;
+      setProgress({ current: 0, total: totalGenerations });
       addLog(`=== ПАКЕТНА ГЕНЕРАЦІЯ: ${days.length} днів × ${storiesPerDay} оповідань = ${totalGenerations} всього ===`, 'info');
       
       let successCount = 0;
       let failCount = 0;
+      let completedCount = 0;
 
       for (const day of days) {
         const dateStr = format(day, 'yyyy-MM-dd');
@@ -251,6 +256,8 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
         
         for (let i = 1; i <= storiesPerDay; i++) {
           const success = await generateForDate(dateStr, i);
+          completedCount++;
+          setProgress({ current: completedCount, total: totalGenerations });
           if (success) {
             successCount++;
           } else {
@@ -358,6 +365,18 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
             </Button>
           </div>
         </div>
+
+        {isGenerating && progress.total > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Прогрес генерації</span>
+              <span className="font-mono text-primary">
+                {progress.current}/{progress.total} ({Math.round((progress.current / progress.total) * 100)}%)
+              </span>
+            </div>
+            <Progress value={(progress.current / progress.total) * 100} className="h-2" />
+          </div>
+        )}
 
         {logs.length > 0 && (
           <div className="mt-4">
