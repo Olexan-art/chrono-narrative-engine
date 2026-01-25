@@ -19,6 +19,7 @@ import { SEOHead } from "@/components/SEOHead";
 import CharactersPanel from "@/components/CharactersPanel";
 import DialogueManagementPanel from "@/components/DialogueManagementPanel";
 import { FlashNewsPanel } from "@/components/FlashNewsPanel";
+import { JustBusinessPanel } from "@/components/JustBusinessPanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -672,6 +673,10 @@ export default function AdminPage() {
               <Zap className="w-4 h-4 text-amber-500" />
               Flash
             </TabsTrigger>
+            <TabsTrigger value="justbusiness" className="gap-2">
+              <BarChart3 className="w-4 h-4 text-blue-500" />
+              Business
+            </TabsTrigger>
             <TabsTrigger value="chapters" className="gap-2">
               <BookOpen className="w-4 h-4" />
               Глави
@@ -708,6 +713,10 @@ export default function AdminPage() {
 
           <TabsContent value="flash" className="mt-6">
             <FlashNewsPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="justbusiness" className="mt-6">
+            <JustBusinessPanel password={password} />
           </TabsContent>
 
           <TabsContent value="chapters" className="mt-6">

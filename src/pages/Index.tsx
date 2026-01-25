@@ -18,8 +18,13 @@ import type { Part } from "@/types/database";
 
 const ITEMS_PER_PAGE = 10;
 
-function getPartLabel(part: any, t: (key: string) => string): { type: 'day' | 'week' | 'month' | 'flash'; label: string } {
-  // Check for flash news first
+function getPartLabel(part: any, t: (key: string) => string): { type: 'day' | 'week' | 'month' | 'flash' | 'business'; label: string } {
+  // Check for just_business category first
+  if (part.category === 'just_business') {
+    return { type: 'business', label: 'JUST BUSINESS' };
+  }
+  
+  // Check for flash news
   if (part.is_flash_news) {
     return { type: 'flash', label: t('flash_news') };
   }
@@ -59,7 +64,7 @@ export default function Index() {
       
       const { data, count } = await supabase
         .from('parts')
-        .select('id, title, title_en, title_pl, content, content_en, content_pl, date, status, tweets, tweets_en, tweets_pl, cover_image_url, cover_image_type, news_sources, number, is_flash_news', { count: 'exact' })
+        .select('id, title, title_en, title_pl, content, content_en, content_pl, date, status, tweets, tweets_en, tweets_pl, cover_image_url, cover_image_type, news_sources, number, is_flash_news, category, manual_images', { count: 'exact' })
         .eq('status', 'published')
         .order('date', { ascending: false })
         .range(from, to);
@@ -284,23 +289,35 @@ export default function Index() {
                       <article className={`cosmic-card p-3 md:p-4 border transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] ${
                         partLabel.type === 'flash' 
                           ? 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/70' 
+                          : partLabel.type === 'business'
+                          ? 'border-blue-500/40 bg-blue-500/5 hover:border-blue-500/70'
                           : 'border-border hover:border-primary/50'
                       }`}>
                         <div className="flex items-start gap-3 md:gap-4">
                           {(() => {
                             const coverType = (part as any).cover_image_type || 'generated';
                             const newsSources = ((part as any).news_sources as any[]) || [];
+                            const manualImages = Array.isArray((part as any).manual_images) ? (part as any).manual_images : [];
                             const selectedNewsImage = newsSources.find((s: any) => s.is_selected && s.image_url);
                             const firstNewsImage = newsSources.find((s: any) => s.image_url);
                             const newsImage = selectedNewsImage || firstNewsImage;
-                            const imageUrl = coverType === 'news' && newsImage ? newsImage.image_url : part.cover_image_url;
+                            
+                            // For just_business, prefer manual_images
+                            let imageUrl = part.cover_image_url;
+                            if ((part as any).category === 'just_business' && manualImages.length > 0) {
+                              imageUrl = manualImages[0];
+                            } else if (coverType === 'news' && newsImage) {
+                              imageUrl = newsImage.image_url;
+                            }
                             
                             return imageUrl ? (
                               <img 
                                 src={imageUrl} 
                                 alt=""
                                 className={`w-16 h-16 md:w-24 md:h-24 object-cover shrink-0 transition-transform duration-300 group-hover:scale-105 ${
-                                  partLabel.type === 'flash' ? 'border border-amber-500/30' : 'border border-border'
+                                  partLabel.type === 'flash' ? 'border border-amber-500/30' 
+                                  : partLabel.type === 'business' ? 'border border-blue-500/30'
+                                  : 'border border-border'
                                 }`}
                               />
                             ) : null;
@@ -310,7 +327,9 @@ export default function Index() {
                               <Badge 
                                 variant={partLabel.type === 'day' ? 'secondary' : 'default'}
                                 className={`text-[10px] md:text-xs font-mono px-1.5 md:px-2 ${
-                                  partLabel.type === 'flash' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : ''
+                                  partLabel.type === 'flash' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' 
+                                  : partLabel.type === 'business' ? 'bg-blue-500/20 text-blue-500 border-blue-500/30'
+                                  : ''
                                 }`}
                               >
                                 {partLabel.label}
@@ -320,7 +339,9 @@ export default function Index() {
                               </span>
                             </div>
                             <h3 className={`font-serif font-medium text-sm md:text-lg transition-colors duration-200 line-clamp-2 ${
-                              partLabel.type === 'flash' ? 'group-hover:text-amber-500' : 'group-hover:text-primary'
+                              partLabel.type === 'flash' ? 'group-hover:text-amber-500' 
+                              : partLabel.type === 'business' ? 'group-hover:text-blue-500'
+                              : 'group-hover:text-primary'
                             }`}>
                               {localizedTitle}
                             </h3>
@@ -329,7 +350,9 @@ export default function Index() {
                             </p>
                           </div>
                           <ArrowRight className={`w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:translate-x-1 transition-all duration-200 shrink-0 hidden sm:block ${
-                            partLabel.type === 'flash' ? 'group-hover:text-amber-500' : 'group-hover:text-primary'
+                            partLabel.type === 'flash' ? 'group-hover:text-amber-500' 
+                            : partLabel.type === 'business' ? 'group-hover:text-blue-500'
+                            : 'group-hover:text-primary'
                           }`} />
                         </div>
                       </article>
