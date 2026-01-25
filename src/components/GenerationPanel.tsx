@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, getMonth, getYear, eachDayOfInterval, parseISO } from "date-fns";
 import { uk } from "date-fns/locale";
 import { Sparkles, Loader2, CheckCircle, Clock, AlertCircle, Calendar } from "lucide-react";
@@ -17,10 +17,32 @@ interface LogEntry {
   time: string;
   message: string;
   status: 'pending' | 'success' | 'error' | 'info';
+  startTimestamp: number;
 }
 
 interface GenerationPanelProps {
   password: string;
+}
+
+// Timer component for pending logs
+function PendingTimer({ startTimestamp }: { startTimestamp: number }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTimestamp) / 1000));
+    }, 100);
+    return () => clearInterval(interval);
+  }, [startTimestamp]);
+
+  return (
+    <span className="text-primary/80 ml-1 font-mono tabular-nums">
+      <span className="inline-flex items-center gap-1">
+        <span className="animate-pulse">●</span>
+        <span>{elapsed}s</span>
+      </span>
+    </span>
+  );
 }
 
 export function GenerationPanel({ password }: GenerationPanelProps) {
@@ -34,7 +56,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
 
   const addLog = (message: string, status: LogEntry['status'] = 'pending') => {
     const time = format(new Date(), 'HH:mm:ss');
-    setLogs(prev => [...prev, { time, message, status }]);
+    setLogs(prev => [...prev, { time, message, status, startTimestamp: Date.now() }]);
   };
 
   const updateLastLog = (status: LogEntry['status']) => {
@@ -361,6 +383,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
                     )}
                     <span className={log.status === 'error' ? 'text-destructive' : log.status === 'info' ? 'text-primary font-medium' : ''}>
                       {log.message}
+                      {log.status === 'pending' && <PendingTimer startTimestamp={log.startTimestamp} />}
                     </span>
                   </div>
                 ))}
