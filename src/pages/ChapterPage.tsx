@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { ChapterTweets } from "@/components/ChapterTweets";
 import { ChapterChat } from "@/components/ChapterChat";
+import { SEOHead } from "@/components/SEOHead";
 import { supabase } from "@/integrations/supabase/client";
 import { useTrackView } from "@/hooks/useTrackView";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Tweet, ChatMessage } from "@/types/database";
-
 function parseContentWithLinks(content: string): React.ReactNode {
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   const parts: React.ReactNode[] = [];
@@ -187,8 +187,34 @@ export default function ChapterPage() {
 
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
 
+  // SEO: Meta title with localized chapter title
+  const metaTitle = `${localizedTitle} | ${language === 'en' ? 'Synchronization Point' : language === 'pl' ? 'Punkt Synchronizacji' : 'Точка Синхронізації'}`;
+  
+  // SEO: Meta description - first 600 characters of combined content
+  const metaDescription = combinedContent
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove markdown links, keep text
+    .replace(/\n+/g, ' ') // Replace newlines with spaces
+    .trim()
+    .substring(0, 600);
+
+  const canonicalUrl = `https://echoes2.com/chapter/${chapter.id}`;
+
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={metaTitle}
+        description={metaDescription}
+        type="article"
+        image={chapter.cover_image_url || undefined}
+        canonicalUrl={canonicalUrl}
+        publishedAt={chapter.created_at || undefined}
+        keywords={chapter.seo_keywords || ['AI', 'science fiction', 'chapter', 'narrative']}
+        breadcrumbs={[
+          { name: language === 'en' ? 'Home' : language === 'pl' ? 'Strona główna' : 'Головна', url: 'https://echoes2.com/' },
+          { name: chapter.volume ? (chapter.volume as any).title : '', url: `https://echoes2.com/volumes` },
+          { name: localizedTitle, url: canonicalUrl }
+        ]}
+      />
       <Header />
       
       <main className="container mx-auto px-4 py-8">
@@ -201,7 +227,7 @@ export default function ChapterPage() {
                 <span>/</span>
               </>
             )}
-            <span className="text-foreground">Тиждень {chapter.week_of_month}</span>
+            <span className="text-foreground">{language === 'en' ? 'Week' : language === 'pl' ? 'Tydzień' : 'Тиждень'} {chapter.week_of_month}</span>
           </div>
 
           {/* Cover Image */}
@@ -210,7 +236,7 @@ export default function ChapterPage() {
               <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10" />
               <img 
                 src={chapter.cover_image_url} 
-                alt={chapter.title}
+                alt={localizedTitle}
                 className="w-full max-h-[500px] object-cover border-y md:border md:rounded-lg border-border"
               />
             </div>
@@ -219,10 +245,10 @@ export default function ChapterPage() {
           {/* Chapter Badge */}
           <div className="flex items-center gap-2 mb-4">
             <span className="px-3 py-1 bg-primary/20 border border-primary/30 rounded-full text-xs font-mono text-primary">
-              ГЛАВА {chapter.number}
+              {language === 'en' ? 'CHAPTER' : language === 'pl' ? 'ROZDZIAŁ' : 'ГЛАВА'} {chapter.number}
             </span>
             <span className="px-3 py-1 bg-secondary/50 border border-border rounded-full text-xs font-mono text-muted-foreground">
-              ТИЖДЕНЬ {chapter.week_of_month}
+              {language === 'en' ? 'WEEK' : language === 'pl' ? 'TYDZIEŃ' : 'ТИЖДЕНЬ'} {chapter.week_of_month}
             </span>
           </div>
 
@@ -238,41 +264,9 @@ export default function ChapterPage() {
             </p>
           )}
 
-          {/* Parts Timeline */}
-          {parts.length > 0 && (
-            <div className="mb-12 p-4 bg-card/50 border border-border rounded-lg">
-              <h3 className="text-xs font-mono text-muted-foreground mb-3">ДЕННІ ЗАПИСИ ТИЖНЯ</h3>
-              <div className="flex flex-wrap gap-2">
-                {parts.map((p: any) => (
-                  <Link
-                    key={p.id}
-                    to={`/read/${p.date}`}
-                    className="px-3 py-1 text-sm border border-border rounded hover:border-primary/50 transition-colors"
-                  >
-                    {format(new Date(p.date), 'd MMM', { locale: uk })}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Main Content */}
-          <div className="prose font-serif text-lg leading-relaxed text-foreground mb-16">
-            {combinedContent.split('\n\n').map((paragraph: string, i: number) => {
-              if (paragraph === '---') {
-                return <hr key={i} className="my-8 border-border" />;
-              }
-              return (
-                <p key={i} className="mb-6">
-                  {parseContentWithLinks(paragraph)}
-                </p>
-              );
-            })}
-          </div>
-
-          {/* Stranger's Monologue */}
+          {/* Stranger's Monologue - MOVED TO TOP */}
           {localizedMonologue && (
-            <section className="relative my-16">
+            <section className="relative mb-12">
               {/* Decorative elements */}
               <div className="absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-primary/50 to-transparent" />
               
@@ -314,9 +308,9 @@ export default function ChapterPage() {
             </section>
           )}
 
-          {/* Narrator's Commentary */}
+          {/* Narrator's Commentary - MOVED TO TOP */}
           {localizedCommentary && (
-            <section className="relative my-16">
+            <section className="relative mb-12">
               {/* Decorative elements */}
               <div className="absolute -right-4 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-secondary/50 to-transparent" />
               
@@ -364,6 +358,46 @@ export default function ChapterPage() {
               </div>
             </section>
           )}
+
+          {/* Parts Timeline */}
+          {parts.length > 0 && (
+            <div className="mb-12 p-4 bg-card/50 border border-border rounded-lg">
+              <h3 className="text-xs font-mono text-muted-foreground mb-3">
+                {language === 'en' ? "DAILY ENTRIES OF THE WEEK" : language === 'pl' ? "CODZIENNE WPISY TYGODNIA" : "ДЕННІ ЗАПИСИ ТИЖНЯ"}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {parts.map((p: any) => (
+                  <Link
+                    key={p.id}
+                    to={`/read/${p.date}`}
+                    className="px-3 py-1 text-sm border border-border rounded hover:border-primary/50 transition-colors"
+                  >
+                    {format(new Date(p.date), 'd MMM', { locale: dateLocale })}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Main Content */}
+          <div className="prose font-serif text-lg leading-relaxed text-foreground mb-16">
+            {combinedContent.split('\n\n').map((paragraph: string, i: number) => {
+              if (paragraph === '---') {
+                return <hr key={i} className="my-8 border-border" />;
+              }
+              return (
+                <p key={i} className="mb-6">
+                  {parseContentWithLinks(paragraph)}
+                </p>
+              );
+            })}
+          </div>
+
+          {/* Tweets */}
+          <ChapterTweets tweets={chapterTweets} />
+
+          {/* Character Chat */}
+          <ChapterChat messages={chapterChat} />
 
           {/* Tweets */}
           <ChapterTweets tweets={chapterTweets} />
