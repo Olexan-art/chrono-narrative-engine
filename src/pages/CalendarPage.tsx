@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from "date-fns";
-import { uk } from "date-fns/locale";
+import { uk, enUS, pl } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { Part } from "@/types/database";
 import { useAdminStore } from "@/stores/adminStore";
 
 export default function CalendarPage() {
+  const { t, language } = useLanguage();
+  const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const { isAuthenticated } = useAdminStore();
@@ -20,7 +23,7 @@ export default function CalendarPage() {
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const { data: parts = [] } = useQuery({
-    queryKey: ['parts', format(currentDate, 'yyyy-MM')],
+    queryKey: ['parts', format(currentDate, 'yyyy-MM'), language],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('parts')
@@ -37,12 +40,34 @@ export default function CalendarPage() {
     return parts.filter(p => isSameDay(new Date(p.date), date));
   };
 
-  const getPartForDate = (date: Date) => {
-    return parts.find(p => isSameDay(new Date(p.date), date));
-  };
-
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+
+  const dayLabels = language === 'en' 
+    ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+    : language === 'pl' 
+    ? ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd']
+    : ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
+
+  const getLocalizedTitle = (part: Part) => {
+    if (language === 'en') return (part as any).title_en || part.title;
+    if (language === 'pl') return (part as any).title_pl || part.title;
+    return part.title;
+  };
+
+  const getLocalizedContent = (part: Part) => {
+    if (language === 'en') return (part as any).content_en || part.content;
+    if (language === 'pl') return (part as any).content_pl || part.content;
+    return part.content;
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'published': return t('calendar.published');
+      case 'scheduled': return t('calendar.scheduled');
+      default: return t('calendar.draft');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -56,7 +81,7 @@ export default function CalendarPage() {
             </Button>
             
             <h2 className="text-2xl font-bold chapter-title text-glow">
-              {format(currentDate, 'LLLL yyyy', { locale: uk })}
+              {format(currentDate, 'LLLL yyyy', { locale: dateLocale })}
             </h2>
             
             <Button variant="outline" size="icon" onClick={nextMonth}>
@@ -65,7 +90,7 @@ export default function CalendarPage() {
           </div>
 
           <div className="grid grid-cols-7 gap-2 mb-4">
-            {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'].map(day => (
+            {dayLabels.map(day => (
               <div key={day} className="text-center text-sm font-mono text-muted-foreground py-2">
                 {day}
               </div>
@@ -122,7 +147,7 @@ export default function CalendarPage() {
           {selectedDate && (
             <div className="mt-8 cosmic-card p-6 border">
               <h3 className="font-bold text-lg mb-4">
-                {format(selectedDate, 'd MMMM yyyy', { locale: uk })}
+                {format(selectedDate, 'd MMMM yyyy', { locale: dateLocale })}
               </h3>
               
               {(() => {
@@ -133,7 +158,7 @@ export default function CalendarPage() {
                     <div className="space-y-4">
                       {dayParts.length > 1 && (
                         <p className="text-sm text-muted-foreground font-mono">
-                          {dayParts.length} оповідань на цю дату
+                          {dayParts.length} {t('calendar.stories_on_date')}
                         </p>
                       )}
                       
@@ -147,24 +172,24 @@ export default function CalendarPage() {
                               px-2 py-0.5 text-xs font-mono border
                               ${part.status === 'published' ? 'border-primary text-primary' : 'border-muted-foreground text-muted-foreground'}
                             `}>
-                              {part.status === 'published' ? 'ОПУБЛІКОВАНО' : part.status === 'scheduled' ? 'ЗАПЛАНОВАНО' : 'ЧЕРНЕТКА'}
+                              {getStatusLabel(part.status || 'draft')}
                             </span>
                           </div>
-                          <h4 className="font-serif text-lg">{part.title}</h4>
+                          <h4 className="font-serif text-lg">{getLocalizedTitle(part)}</h4>
                           <p className="text-muted-foreground font-serif line-clamp-2 text-sm mt-1">
-                            {part.content.slice(0, 150)}...
+                            {getLocalizedContent(part).slice(0, 150)}...
                           </p>
                           <div className="flex gap-2 mt-3">
                             <Link to={`/date/${part.date}`}>
                               <Button size="sm" className="gap-2">
                                 <BookOpen className="w-4 h-4" />
-                                Переглянути
+                                {t('calendar.view')}
                               </Button>
                             </Link>
                             {isAuthenticated && (
                               <Link to={`/admin/part/${part.id}`}>
                                 <Button variant="outline" size="sm">
-                                  Редагувати
+                                  {t('calendar.edit')}
                                 </Button>
                               </Link>
                             )}
@@ -178,12 +203,12 @@ export default function CalendarPage() {
                 return (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4 font-serif">
-                      Частин для цього дня ще не створено
+                      {t('calendar.no_parts')}
                     </p>
                     {isAuthenticated && (
                       <Link to="/admin">
                         <Button className="gap-2">
-                          Перейти до генерації
+                          {t('calendar.go_to_generation')}
                         </Button>
                       </Link>
                     )}
