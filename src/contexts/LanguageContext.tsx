@@ -73,6 +73,42 @@ const translations: Record<Language, Record<string, string>> = {
     'narrative.plot': 'Сюжет',
     'narrative.special': 'Особливість',
 
+    // Volumes Page
+    'volumes.title': 'Томи',
+    'volumes.description': 'Архів усіх томів хроніки з статистикою переглядів',
+    'volumes.empty': 'Томів поки немає',
+    'volumes.volume': 'Том',
+    'volumes.views': 'Переглядів',
+    'volumes.unique': 'Унікальних',
+    'volumes.view_chapters': 'Переглянути глави →',
+    
+    // Calendar Page
+    'calendar.stories_on_date': 'оповідань на цю дату',
+    'calendar.published': 'ОПУБЛІКОВАНО',
+    'calendar.scheduled': 'ЗАПЛАНОВАНО',
+    'calendar.draft': 'ЧЕРНЕТКА',
+    'calendar.view': 'Переглянути',
+    'calendar.edit': 'Редагувати',
+    'calendar.no_parts': 'Частин для цього дня ще не створено',
+    'calendar.go_to_generation': 'Перейти до генерації',
+    
+    // Month names
+    'month.1': 'Січень',
+    'month.2': 'Лютий',
+    'month.3': 'Березень',
+    'month.4': 'Квітень',
+    'month.5': 'Травень',
+    'month.6': 'Червень',
+    'month.7': 'Липень',
+    'month.8': 'Серпень',
+    'month.9': 'Вересень',
+    'month.10': 'Жовтень',
+    'month.11': 'Листопад',
+    'month.12': 'Грудень',
+    
+    // Common
+    'common.stories': 'оповідань',
+
     // Install Page
     'install.badge': 'ВСТАНОВИТИ ЗАСТОСУНОК',
     'install.title': 'Встановити Точку Синхронізації',
@@ -174,6 +210,42 @@ const translations: Record<Language, Record<string, string>> = {
     'narrative.plot': 'Plot',
     'narrative.special': 'Special',
 
+    // Volumes Page
+    'volumes.title': 'Volumes',
+    'volumes.description': 'Archive of all chronicle volumes with view statistics',
+    'volumes.empty': 'No volumes yet',
+    'volumes.volume': 'Volume',
+    'volumes.views': 'Views',
+    'volumes.unique': 'Unique',
+    'volumes.view_chapters': 'View chapters →',
+    
+    // Calendar Page
+    'calendar.stories_on_date': 'stories on this date',
+    'calendar.published': 'PUBLISHED',
+    'calendar.scheduled': 'SCHEDULED',
+    'calendar.draft': 'DRAFT',
+    'calendar.view': 'View',
+    'calendar.edit': 'Edit',
+    'calendar.no_parts': 'No parts created for this day yet',
+    'calendar.go_to_generation': 'Go to generation',
+    
+    // Month names
+    'month.1': 'January',
+    'month.2': 'February',
+    'month.3': 'March',
+    'month.4': 'April',
+    'month.5': 'May',
+    'month.6': 'June',
+    'month.7': 'July',
+    'month.8': 'August',
+    'month.9': 'September',
+    'month.10': 'October',
+    'month.11': 'November',
+    'month.12': 'December',
+    
+    // Common
+    'common.stories': 'stories',
+
     // Install Page
     'install.badge': 'INSTALL APP',
     'install.title': 'Install Synchronization Point',
@@ -274,6 +346,42 @@ const translations: Record<Language, Record<string, string>> = {
     'narrative.purpose': 'Cel',
     'narrative.plot': 'Fabuła',
     'narrative.special': 'Specjalność',
+
+    // Volumes Page
+    'volumes.title': 'Tomy',
+    'volumes.description': 'Archiwum wszystkich tomów kroniki ze statystykami wyświetleń',
+    'volumes.empty': 'Brak tomów',
+    'volumes.volume': 'Tom',
+    'volumes.views': 'Wyświetleń',
+    'volumes.unique': 'Unikalnych',
+    'volumes.view_chapters': 'Zobacz rozdziały →',
+    
+    // Calendar Page
+    'calendar.stories_on_date': 'opowieści na ten dzień',
+    'calendar.published': 'OPUBLIKOWANO',
+    'calendar.scheduled': 'ZAPLANOWANO',
+    'calendar.draft': 'SZKIC',
+    'calendar.view': 'Zobacz',
+    'calendar.edit': 'Edytuj',
+    'calendar.no_parts': 'Nie utworzono jeszcze części na ten dzień',
+    'calendar.go_to_generation': 'Przejdź do generowania',
+    
+    // Month names
+    'month.1': 'Styczeń',
+    'month.2': 'Luty',
+    'month.3': 'Marzec',
+    'month.4': 'Kwiecień',
+    'month.5': 'Maj',
+    'month.6': 'Czerwiec',
+    'month.7': 'Lipiec',
+    'month.8': 'Sierpień',
+    'month.9': 'Wrzesień',
+    'month.10': 'Październik',
+    'month.11': 'Listopad',
+    'month.12': 'Grudzień',
+    
+    // Common
+    'common.stories': 'opowieści',
 
     // Install Page
     'install.badge': 'ZAINSTALUJ APLIKACJĘ',

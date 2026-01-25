@@ -246,7 +246,7 @@ export default function Index() {
                   {t('latest.title')}
                 </h2>
                 <Badge variant="outline" className="font-mono text-xs">
-                  {totalCount} {language === 'en' ? 'stories' : language === 'pl' ? 'opowieści' : 'оповідань'}
+                  {totalCount} {t('common.stories')}
                 </Badge>
               </div>
 
