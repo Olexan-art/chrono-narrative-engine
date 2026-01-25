@@ -6,7 +6,7 @@ const corsHeaders = {
   "Content-Type": "application/xml; charset=utf-8",
 };
 
-const BASE_URL = "https://chrono-narrative-engine.lovable.app";
+const BASE_URL = "https://echoes2.com";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
