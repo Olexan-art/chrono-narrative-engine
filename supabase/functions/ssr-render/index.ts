@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const BASE_URL = "https://chrono-narrative-engine.lovable.app";
+const BASE_URL = "https://echoes2.com";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -143,7 +143,7 @@ function generateFullDocument(opts: {
   path: string;
 }) {
   const { title, description, image, canonicalUrl, lang, content, path } = opts;
-  const BASE_URL = "https://chrono-narrative-engine.lovable.app";
+  const BASE_URL = "https://echoes2.com";
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -341,7 +341,7 @@ function generateHomeHTML(parts: any[], lang: string, canonicalUrl: string) {
       ${parts.map((part, index) => `
         <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
           <meta itemprop="position" content="${index + 1}">
-          <a href="https://chrono-narrative-engine.lovable.app/read/${part.date}/${part.number}" itemprop="url">
+          <a href="https://echoes2.com/read/${part.date}/${part.number}" itemprop="url">
             <span itemprop="name">${escapeHtml(part[titleField] || part.title)}</span>
           </a>
           <span class="meta">${part.date}</span>
@@ -351,9 +351,9 @@ function generateHomeHTML(parts: any[], lang: string, canonicalUrl: string) {
     </ul>
     
     <nav>
-      <a href="https://chrono-narrative-engine.lovable.app/calendar">📅 Calendar Archive</a> |
-      <a href="https://chrono-narrative-engine.lovable.app/chapters">📚 Chapters</a> |
-      <a href="https://chrono-narrative-engine.lovable.app/volumes">📖 Volumes</a>
+      <a href="https://echoes2.com/calendar">📅 Calendar Archive</a> |
+      <a href="https://echoes2.com/chapters">📚 Chapters</a> |
+      <a href="https://echoes2.com/volumes">📖 Volumes</a>
     </nav>
   `;
 }
