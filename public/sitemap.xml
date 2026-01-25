@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Dynamic sitemap: https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap -->
+<!-- This static file redirects crawlers to the dynamic Edge Function -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://echoes2.com/</loc>
+  </url>
+</urlset>

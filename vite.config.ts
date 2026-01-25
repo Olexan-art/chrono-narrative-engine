@@ -48,7 +48,7 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         // Don't treat technical text files as SPA navigations.
         // Without this, the service worker may serve index.html for /robots.txt when opened in the browser.
-        navigateFallbackDenylist: [/^\/robots\.txt$/],
+        navigateFallbackDenylist: [/^\/robots\.txt$/, /^\/sitemap\.xml$/, /^\/llms\.txt$/, /^\/llms-full\.txt$/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/bgdwxnoildvvepsoaxrf\.supabase\.co\/.*/i,
