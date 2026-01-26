@@ -135,6 +135,11 @@ const translations: Record<Language, Record<string, string>> = {
     'news.feed': 'Канал',
     'news.category': 'Категорія',
     'news.fetched': 'Завантажено',
+    'news.retell': 'Переказати новину',
+    'news.retell_desc': 'ШІ розширить та переформулює новину',
+    'news.retelling': 'Переказую...',
+    'news.retold': 'Новину переказано',
+    'news.select_model': 'Обрати модель',
 
     // Install Page
     'install.badge': 'ВСТАНОВИТИ ЗАСТОСУНОК',
@@ -299,6 +304,11 @@ const translations: Record<Language, Record<string, string>> = {
     'news.feed': 'Feed',
     'news.category': 'Category',
     'news.fetched': 'Fetched',
+    'news.retell': 'Retell news',
+    'news.retell_desc': 'AI will expand and rephrase the news',
+    'news.retelling': 'Retelling...',
+    'news.retold': 'News retold',
+    'news.select_model': 'Select model',
 
     // Install Page
     'install.badge': 'INSTALL APP',
@@ -463,6 +473,11 @@ const translations: Record<Language, Record<string, string>> = {
     'news.feed': 'Kanał',
     'news.category': 'Kategoria',
     'news.fetched': 'Pobrano',
+    'news.retell': 'Opowiedz ponownie',
+    'news.retell_desc': 'AI rozszerzy i przeformułuje wiadomość',
+    'news.retelling': 'Opowiadanie...',
+    'news.retold': 'Wiadomość opowiedziana',
+    'news.select_model': 'Wybierz model',
 
     // Install Page
     'install.badge': 'ZAINSTALUJ APLIKACJĘ',

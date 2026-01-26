@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
-import { ArrowLeft, ExternalLink, MessageCircle, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, MessageCircle, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
 import { ThreadedCharacterChat } from "@/components/ThreadedCharacterChat";
@@ -14,12 +16,22 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { callEdgeFunction } from "@/lib/api";
 import { toast } from "sonner";
 import { useAdminStore } from "@/stores/adminStore";
+
+const AI_MODELS = [
+  { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (швидкий)' },
+  { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (точний)' },
+  { value: 'google/gemini-3-pro-preview', label: 'Gemini 3 Pro' },
+  { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini' },
+  { value: 'openai/gpt-5', label: 'GPT-5 (потужний)' },
+];
 export default function NewsArticlePage() {
   const { country, slug } = useParams<{ country: string; slug: string }>();
   const { t, language } = useLanguage();
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
   const queryClient = useQueryClient();
   const { isAuthenticated: isAdminAuthenticated } = useAdminStore();
+  const [selectedModel, setSelectedModel] = useState(AI_MODELS[0].value);
 
   // Fetch news article by country code and slug
   const { data: article, isLoading } = useQuery({
@@ -103,6 +115,31 @@ export default function NewsArticlePage() {
       
       // Navigate to admin with pre-filled news
       window.open(`/admin?generateFromNews=${article.id}`, '_blank');
+    }
+  });
+
+  // Retell news using AI
+  const retellNewsMutation = useMutation({
+    mutationFn: async () => {
+      if (!article) throw new Error('No article');
+      
+      const result = await callEdgeFunction<{ success: boolean; content: string; error?: string }>(
+        'retell-news',
+        { newsId: article.id, model: selectedModel }
+      );
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to retell news');
+      }
+      
+      return result.content;
+    },
+    onSuccess: () => {
+      toast.success(t('news.retold'));
+      queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Error retelling news');
     }
   });
 
@@ -275,26 +312,69 @@ export default function NewsArticlePage() {
           <aside className="space-y-6">
             {/* Generate Story Card - Admin only */}
             {isAdminAuthenticated && (
-              <Card className="border-primary/30 bg-primary/5">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    {t('news.create_story')}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {t('news.create_story_desc')}
-                  </p>
-                  <Button 
-                    className="w-full gap-2"
-                    onClick={() => generateStoryMutation.mutate()}
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    {t('news.generate_story')}
-                  </Button>
-                </CardContent>
-              </Card>
+              <>
+                {/* Retell News Card */}
+                <Card className="border-accent/30 bg-accent/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 text-accent-foreground" />
+                      {t('news.retell')}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      {t('news.retell_desc')}
+                    </p>
+                    <Select value={selectedModel} onValueChange={setSelectedModel}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={t('news.select_model')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AI_MODELS.map(model => (
+                          <SelectItem key={model.value} value={model.value}>
+                            {model.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      className="w-full gap-2"
+                      variant="secondary"
+                      onClick={() => retellNewsMutation.mutate()}
+                      disabled={retellNewsMutation.isPending}
+                    >
+                      {retellNewsMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                      {retellNewsMutation.isPending ? t('news.retelling') : t('news.retell')}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Generate Story Card */}
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      {t('news.create_story')}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {t('news.create_story_desc')}
+                    </p>
+                    <Button 
+                      className="w-full gap-2"
+                      onClick={() => generateStoryMutation.mutate()}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      {t('news.generate_story')}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </>
             )}
 
             {/* Source Info */}
