@@ -106,8 +106,11 @@ async function validateRSSFeed(url: string): Promise<{ valid: boolean; error?: s
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SyncPointBot/1.0)',
-        'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
       }
     });
     
@@ -184,8 +187,11 @@ serve(async (req) => {
       try {
         const response = await fetch(feed.url, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; SyncPointBot/1.0)',
-            'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           }
         });
         
@@ -297,6 +303,101 @@ serve(async (req) => {
       
       return new Response(
         JSON.stringify({ success: true, results }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch ALL active feeds (for cron job)
+    if (action === 'fetch_all') {
+      const { data: feeds, error: feedsError } = await supabase
+        .from('news_rss_feeds')
+        .select('id, name, country_id')
+        .eq('is_active', true);
+      
+      if (feedsError) {
+        return new Response(
+          JSON.stringify({ success: false, error: feedsError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`Fetching all ${feeds?.length || 0} active RSS feeds...`);
+      
+      const results = [];
+      for (const feed of feeds || []) {
+        try {
+          const { data: feedData } = await supabase
+            .from('news_rss_feeds')
+            .select('*, news_countries!inner(id, code)')
+            .eq('id', feed.id)
+            .single();
+          
+          if (!feedData) continue;
+          
+          const response = await fetch(feedData.url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Cache-Control': 'no-cache'
+            }
+          });
+          
+          if (!response.ok) {
+            await supabase
+              .from('news_rss_feeds')
+              .update({ fetch_error: `HTTP ${response.status}`, last_fetched_at: new Date().toISOString() })
+              .eq('id', feed.id);
+            results.push({ feedId: feed.id, feedName: feed.name, success: false, error: `HTTP ${response.status}` });
+            continue;
+          }
+          
+          const xml = await response.text();
+          const items = parseXML(xml);
+          
+          let insertedCount = 0;
+          for (const item of items.slice(0, 50)) {
+            const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
+            
+            const { error: insertError } = await supabase
+              .from('news_rss_items')
+              .upsert({
+                feed_id: feed.id,
+                country_id: feedData.country_id,
+                external_id: item.link,
+                title: item.title.slice(0, 500),
+                description: item.description?.slice(0, 1000) || null,
+                content: item.content?.slice(0, 5000) || null,
+                url: item.link,
+                image_url: item.enclosure?.url || null,
+                category: feedData.category,
+                published_at: pubDate?.toISOString() || null,
+                fetched_at: new Date().toISOString()
+              }, { onConflict: 'feed_id,url' });
+            
+            if (!insertError) insertedCount++;
+          }
+          
+          await supabase
+            .from('news_rss_feeds')
+            .update({ last_fetched_at: new Date().toISOString(), fetch_error: null })
+            .eq('id', feed.id);
+          
+          results.push({ feedId: feed.id, feedName: feed.name, success: true, itemsInserted: insertedCount });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          await supabase
+            .from('news_rss_feeds')
+            .update({ fetch_error: errorMessage, last_fetched_at: new Date().toISOString() })
+            .eq('id', feed.id);
+          results.push({ feedId: feed.id, feedName: feed.name, success: false, error: errorMessage });
+        }
+      }
+      
+      console.log(`Completed fetching ${results.length} feeds`);
+      
+      return new Response(
+        JSON.stringify({ success: true, feedsProcessed: results.length, results }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
