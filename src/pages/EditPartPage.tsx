@@ -102,9 +102,17 @@ export default function EditPartPage() {
     mutationFn: async () => {
       await adminAction('publishPart', password, { id });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['part', id] });
       toast({ title: "Опубліковано" });
+      
+      // Ping search engines for faster indexing
+      try {
+        await supabase.functions.invoke('ping-sitemap');
+        console.log('Sitemap ping sent to search engines');
+      } catch (err) {
+        console.error('Failed to ping sitemap:', err);
+      }
     }
   });
 
