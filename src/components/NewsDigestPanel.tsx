@@ -43,6 +43,7 @@ interface FeedCheckResult {
   feedName: string;
   rssItemCount: number;
   dbItemCount: number;
+  newItemCount: number;
   canFetch: boolean;
   error?: string;
 }
@@ -320,6 +321,7 @@ export function NewsDigestPanel({ password }: Props) {
         feedName: string;
         rssItemCount: number; 
         dbItemCount: number; 
+        newItemCount?: number;
         canFetch: boolean;
         error?: string;
       }>(
@@ -334,6 +336,7 @@ export function NewsDigestPanel({ password }: Props) {
           feedName: result.feedName,
           rssItemCount: result.rssItemCount,
           dbItemCount: result.dbItemCount,
+          newItemCount: result.newItemCount ?? Math.max(0, result.rssItemCount - result.dbItemCount),
           canFetch: result.canFetch,
           error: result.error
         });
@@ -413,12 +416,16 @@ export function NewsDigestPanel({ password }: Props) {
             feedName: string;
             rssItemCount: number;
             dbItemCount: number;
+            newItemCount?: number;
           }>('fetch-rss', { action: 'check_feed', feedId: feed.id });
+          
+          // Use newItemCount if provided, otherwise fallback to diff
+          const newCount = result.newItemCount ?? Math.max(0, result.rssItemCount - result.dbItemCount);
           
           return {
             feedId: feed.id,
             feedName: result.feedName || feed.name,
-            newCount: Math.max(0, result.rssItemCount - result.dbItemCount),
+            newCount,
             rssCount: result.rssItemCount,
             dbCount: result.dbItemCount
           };
@@ -834,14 +841,20 @@ export function NewsDigestPanel({ password }: Props) {
           
           {feedCheckResult && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div className="p-4 rounded-lg bg-muted">
-                  <p className="text-2xl font-bold text-primary">{feedCheckResult.rssItemCount}</p>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="p-3 rounded-lg bg-muted">
+                  <p className="text-xl font-bold text-primary">{feedCheckResult.rssItemCount}</p>
                   <p className="text-xs text-muted-foreground">Новин у RSS</p>
                 </div>
-                <div className="p-4 rounded-lg bg-muted">
-                  <p className="text-2xl font-bold">{feedCheckResult.dbItemCount}</p>
-                  <p className="text-xs text-muted-foreground">Вже завантажено</p>
+                <div className="p-3 rounded-lg bg-muted">
+                  <p className="text-xl font-bold">{feedCheckResult.dbItemCount}</p>
+                  <p className="text-xs text-muted-foreground">Вже в базі</p>
+                </div>
+                <div className={`p-3 rounded-lg ${feedCheckResult.newItemCount > 0 ? 'bg-green-500/10' : 'bg-muted'}`}>
+                  <p className={`text-xl font-bold ${feedCheckResult.newItemCount > 0 ? 'text-green-500' : 'text-muted-foreground'}`}>
+                    {feedCheckResult.newItemCount}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Нових</p>
                 </div>
               </div>
               
