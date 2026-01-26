@@ -67,18 +67,19 @@ export default function NewsArticlePage() {
   const detectNewsLanguage = (): string => {
     if (!article) return 'en';
     
-    // Check if content exists in different languages
-    if (article.content_hi || article.title_hi) return 'hi';
-    if (article.content_ta || article.title_ta) return 'ta';
-    if (article.content_te || article.title_te) return 'te';
-    if (article.content_bn || article.title_bn) return 'bn';
-    if (article.content_en || article.title_en) return 'en';
-    
-    // Default based on country code
+    // Default based on country code FIRST (most reliable)
     const countryCode = article.country?.code?.toLowerCase();
-    if (countryCode === 'in') return 'hi'; // Default to Hindi for India
     if (countryCode === 'ua') return 'uk';
     if (countryCode === 'pl') return 'pl';
+    
+    // For India - check specific language content
+    if (countryCode === 'in') {
+      if (article.content_hi || article.title_hi) return 'hi';
+      if (article.content_ta || article.title_ta) return 'ta';
+      if (article.content_te || article.title_te) return 'te';
+      if (article.content_bn || article.title_bn) return 'bn';
+      return 'hi'; // Default to Hindi for India
+    }
     
     return 'en';
   };

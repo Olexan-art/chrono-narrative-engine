@@ -6,6 +6,32 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Track inserted items per country+category for auto-retell
+const insertedItemsTracker: Map<string, string[]> = new Map();
+
+// Helper to call retell-news for an item
+async function autoRetellNews(newsId: string, supabaseUrl: string): Promise<void> {
+  try {
+    console.log(`Auto-retelling news item: ${newsId}`);
+    const response = await fetch(`${supabaseUrl}/functions/v1/retell-news`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+      },
+      body: JSON.stringify({ newsId, model: 'google/gemini-3-flash-preview' })
+    });
+    
+    if (!response.ok) {
+      console.error(`Failed to auto-retell news ${newsId}:`, response.status);
+    } else {
+      console.log(`Successfully auto-retold news ${newsId}`);
+    }
+  } catch (error) {
+    console.error(`Error auto-retelling news ${newsId}:`, error);
+  }
+}
+
 interface RSSItem {
   title: string;
   link: string;
@@ -522,6 +548,10 @@ serve(async (req) => {
       
       console.log(`Fetching all ${feeds?.length || 0} active RSS feeds...`);
       
+      // Track inserted items per country+category for auto-retell (every 5th item)
+      const insertTracker: Map<string, { count: number; toRetell: string[] }> = new Map();
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      
       const results = [];
       for (const feed of feeds || []) {
         try {
@@ -555,11 +585,21 @@ serve(async (req) => {
           const items = parseXML(xml);
           
           let insertedCount = 0;
+          const countryCode = feedData.news_countries?.code || 'unknown';
+          const category = feedData.category || 'general';
+          const trackerKey = `${countryCode}_${category}`;
+          
+          // Initialize tracker for this country+category if not exists
+          if (!insertTracker.has(trackerKey)) {
+            insertTracker.set(trackerKey, { count: 0, toRetell: [] });
+          }
+          
           for (const item of items.slice(0, 200)) {
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
             const slug = generateSlug(item.title);
             
-            const { error: insertError } = await supabase
+            // Try to insert - use returning to get the ID
+            const { data: insertedData, error: insertError } = await supabase
               .from('news_rss_items')
               .upsert({
                 feed_id: feed.id,
@@ -577,9 +617,22 @@ serve(async (req) => {
                 category: feedData.category,
                 published_at: pubDate?.toISOString() || null,
                 fetched_at: new Date().toISOString()
-              }, { onConflict: 'feed_id,url' });
+              }, { onConflict: 'feed_id,url', ignoreDuplicates: false })
+              .select('id')
+              .single();
             
-            if (!insertError) insertedCount++;
+            if (!insertError && insertedData) {
+              insertedCount++;
+              
+              // Track for auto-retell every 5th item per country+category
+              const tracker = insertTracker.get(trackerKey)!;
+              tracker.count++;
+              
+              // Every 5th item gets auto-retell
+              if (tracker.count % 5 === 0) {
+                tracker.toRetell.push(insertedData.id);
+              }
+            }
           }
           
           await supabase
@@ -598,10 +651,29 @@ serve(async (req) => {
         }
       }
       
-      console.log(`Completed fetching ${results.length} feeds`);
+      // Auto-retell every 5th news item per country+category
+      let totalRetelled = 0;
+      for (const [key, tracker] of insertTracker.entries()) {
+        if (tracker.toRetell.length > 0) {
+          console.log(`Auto-retelling ${tracker.toRetell.length} items for ${key}`);
+          for (const newsId of tracker.toRetell) {
+            await autoRetellNews(newsId, supabaseUrl);
+            totalRetelled++;
+            // Small delay to avoid rate limiting
+            await new Promise(r => setTimeout(r, 500));
+          }
+        }
+      }
+      
+      console.log(`Completed fetching ${results.length} feeds, auto-retelled ${totalRetelled} items`);
       
       return new Response(
-        JSON.stringify({ success: true, feedsProcessed: results.length, results }),
+        JSON.stringify({ 
+          success: true, 
+          feedsProcessed: results.length, 
+          autoRetelled: totalRetelled,
+          results 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
