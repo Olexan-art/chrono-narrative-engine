@@ -6,6 +6,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { HeroSection } from "@/components/home/HeroSection";
 import { StructureSection } from "@/components/home/StructureSection";
 import { LatestStoriesSection } from "@/components/home/LatestStoriesSection";
+import { LatestUsaNews } from "@/components/home/LatestUsaNews";
 import { CountryNewsSection } from "@/components/home/CountryNewsSection";
 import { ChaptersSection } from "@/components/home/ChaptersSection";
 import { InfiniteNewsFeed } from "@/components/home/InfiniteNewsFeed";
@@ -82,11 +83,14 @@ export default function Index() {
       {/* Hero Section */}
       <HeroSection latestParts={latestParts} />
       
-      {/* Structure Explainer */}
-      <StructureSection />
+      {/* Latest USA Retold News */}
+      <LatestUsaNews />
       
       {/* Latest Stories - Grid layout */}
       <LatestStoriesSection parts={latestParts} />
+      
+      {/* Structure Explainer */}
+      <StructureSection />
       
       {/* News by Country - 6 per country */}
       <CountryNewsSection />
