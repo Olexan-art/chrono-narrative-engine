@@ -236,7 +236,7 @@ serve(async (req) => {
       );
     }
 
-    // Check feed status - compare items in RSS vs our database
+    // Check feed status - compare items in RSS vs our database by URL
     if (action === 'check_feed') {
       if (!feedId) {
         return new Response(
@@ -258,26 +258,73 @@ serve(async (req) => {
         );
       }
       
-      // Get count from our database
-      const { count: dbCount } = await supabase
+      // Get existing URLs from our database
+      const { data: existingItems } = await supabase
         .from('news_rss_items')
-        .select('*', { count: 'exact', head: true })
+        .select('url')
         .eq('feed_id', feedId);
       
-      // Fetch and count items from RSS
-      const validation = await validateRSSFeed(feed.url);
+      const existingUrls = new Set((existingItems || []).map(item => item.url));
+      const dbCount = existingUrls.size;
       
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          feedName: feed.name,
-          rssItemCount: validation.itemCount || 0,
-          dbItemCount: dbCount || 0,
-          canFetch: validation.valid,
-          error: validation.error
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // Fetch items from RSS and check which are new
+      try {
+        const response = await fetch(feed.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (!response.ok) {
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              feedName: feed.name,
+              rssItemCount: 0,
+              dbItemCount: dbCount,
+              newItemCount: 0,
+              canFetch: false,
+              error: `HTTP ${response.status}`
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        const xml = await response.text();
+        const items = parseXML(xml);
+        
+        // Count actually new items (not in database)
+        const newItems = items.filter(item => !existingUrls.has(item.link));
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            feedName: feed.name,
+            rssItemCount: items.length,
+            dbItemCount: dbCount,
+            newItemCount: newItems.length,
+            canFetch: true
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            feedName: feed.name,
+            rssItemCount: 0,
+            dbItemCount: dbCount,
+            newItemCount: 0,
+            canFetch: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Fetch specific number of items from a feed
@@ -320,14 +367,25 @@ serve(async (req) => {
         const xml = await response.text();
         const items = parseXML(xml);
         
+        // Get existing URLs to check for actual new items
+        const { data: existingItems } = await supabase
+          .from('news_rss_items')
+          .select('url')
+          .eq('feed_id', feed.id);
+        
+        const existingUrls = new Set((existingItems || []).map(item => item.url));
+        
         let insertedCount = 0;
         for (const item of items.slice(0, limit)) {
+          // Skip if already exists
+          if (existingUrls.has(item.link)) continue;
+          
           const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
           const slug = generateSlug(item.title);
           
           const { error: insertError } = await supabase
             .from('news_rss_items')
-            .upsert({
+            .insert({
               feed_id: feed.id,
               country_id: feed.country_id,
               external_id: item.link,
@@ -343,10 +401,11 @@ serve(async (req) => {
               category: feed.category,
               published_at: pubDate?.toISOString() || null,
               fetched_at: new Date().toISOString()
-            }, { onConflict: 'feed_id,url' });
+            });
           
           if (!insertError) {
             insertedCount++;
+            existingUrls.add(item.link); // Track newly added
           }
         }
         
@@ -422,9 +481,20 @@ serve(async (req) => {
         
         console.log(`Parsed ${items.length} items from ${feed.name}`);
         
-        // Insert items into database
+        // Get existing URLs to avoid duplicates
+        const { data: existingItems } = await supabase
+          .from('news_rss_items')
+          .select('url')
+          .eq('feed_id', feed.id);
+        
+        const existingUrls = new Set((existingItems || []).map(item => item.url));
+        
+        // Insert only new items into database
         let insertedCount = 0;
         for (const item of items.slice(0, 200)) { // Limit to 200 items per feed
+          // Skip if already exists
+          if (existingUrls.has(item.link)) continue;
+          
           const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
           
           // Generate slug from title
@@ -432,7 +502,7 @@ serve(async (req) => {
           
           const { error: insertError } = await supabase
             .from('news_rss_items')
-            .upsert({
+            .insert({
               feed_id: feed.id,
               country_id: feed.country_id,
               external_id: item.link,
@@ -448,10 +518,11 @@ serve(async (req) => {
               published_at: pubDate?.toISOString() || null,
               fetched_at: new Date().toISOString(),
               slug: slug
-            }, { onConflict: 'feed_id,url' });
+            });
           
           if (!insertError) {
             insertedCount++;
+            existingUrls.add(item.link);
           }
         }
         
