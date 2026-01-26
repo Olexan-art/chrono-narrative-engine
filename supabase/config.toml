@@ -79,3 +79,6 @@ verify_jwt = false
 
 [functions.translate-indian-news]
 verify_jwt = false
+
+[functions.manage-cron]
+verify_jwt = false
