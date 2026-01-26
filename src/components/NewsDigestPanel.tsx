@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/api";
 import { FeedNewsViewer } from "./FeedNewsViewer";
+import { BatchRetellPanel } from "./BatchRetellPanel";
 import { formatDistanceToNow } from "date-fns";
 import { uk } from "date-fns/locale";
 
@@ -916,6 +917,9 @@ export function NewsDigestPanel({ password }: Props) {
         isOpen={!!viewingFeed}
         onClose={() => setViewingFeed(null)}
       />
+
+      {/* Batch Retell Panel */}
+      <BatchRetellPanel />
     </div>
   );
 }
