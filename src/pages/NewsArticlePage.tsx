@@ -291,6 +291,61 @@ export default function NewsArticlePage() {
                 </a>
               </div>
             </article>
+
+            {/* Character Dialogue Section - MOBILE ONLY (below article) */}
+            <section className="mt-8 lg:hidden">
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4" />
+                      {t('chat.observers')}
+                    </CardTitle>
+                    
+                    {isAdminAuthenticated && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => generateDialogueMutation.mutate()}
+                        disabled={generateDialogueMutation.isPending}
+                      >
+                        {generateDialogueMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {chatDialogue.length > 0 ? (
+                    <ThreadedCharacterChat messages={chatDialogue as any} />
+                  ) : (
+                    <div className="py-6 text-center text-muted-foreground">
+                      <MessageCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                      <p className="text-sm">{t('news.no_dialogue')}</p>
+                      {isAdminAuthenticated && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-3"
+                          onClick={() => generateDialogueMutation.mutate()}
+                          disabled={generateDialogueMutation.isPending}
+                        >
+                          {generateDialogueMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <MessageCircle className="w-4 h-4 mr-2" />
+                          )}
+                          {t('news.generate_dialogue')}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </section>
           </div>
 
           {/* Sidebar */}
@@ -389,8 +444,8 @@ export default function NewsArticlePage() {
               </CardContent>
             </Card>
 
-            {/* Character Dialogue Section - moved to sidebar */}
-            <Card>
+            {/* Character Dialogue Section - DESKTOP ONLY (in sidebar) */}
+            <Card className="hidden lg:block">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2">
