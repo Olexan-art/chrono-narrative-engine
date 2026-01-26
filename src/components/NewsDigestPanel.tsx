@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Globe, Plus, Trash2, RefreshCw, Loader2, CheckCircle2, XCircle, ExternalLink, Rss, AlertCircle, Download, Search } from "lucide-react";
+import { Globe, Plus, Trash2, RefreshCw, Loader2, CheckCircle2, XCircle, ExternalLink, Rss, AlertCircle, Download, Search, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/api";
+import { FeedNewsViewer } from "./FeedNewsViewer";
 
 interface NewsCountry {
   id: string;
@@ -69,6 +70,7 @@ export function NewsDigestPanel({ password }: Props) {
   const [feedCheckResult, setFeedCheckResult] = useState<FeedCheckResult | null>(null);
   const [fetchLimit, setFetchLimit] = useState(10);
   const [showFetchDialog, setShowFetchDialog] = useState(false);
+  const [viewingFeed, setViewingFeed] = useState<{ id: string; name: string } | null>(null);
 
   // Fetch countries
   const { data: countries, isLoading: countriesLoading } = useQuery({
@@ -517,6 +519,15 @@ export function NewsDigestPanel({ password }: Props) {
                               <Button
                                 variant="outline"
                                 size="icon"
+                                onClick={() => setViewingFeed({ id: feed.id, name: feed.name })}
+                                disabled={!feed.items_count}
+                                title="Переглянути новини"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
                                 onClick={() => {
                                   setCheckingFeedId(feed.id);
                                   checkFeedMutation.mutate(feed.id);
@@ -663,6 +674,14 @@ export function NewsDigestPanel({ password }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Feed News Viewer */}
+      <FeedNewsViewer
+        feedId={viewingFeed?.id || ''}
+        feedName={viewingFeed?.name || ''}
+        isOpen={!!viewingFeed}
+        onClose={() => setViewingFeed(null)}
+      />
     </div>
   );
 }
