@@ -349,7 +349,7 @@ serve(async (req) => {
         
         // Insert items into database
         let insertedCount = 0;
-        for (const item of items.slice(0, 50)) { // Limit to 50 items per feed
+        for (const item of items.slice(0, 200)) { // Limit to 200 items per feed
           const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
           
           const { error: insertError } = await supabase
@@ -499,7 +499,7 @@ serve(async (req) => {
           const items = parseXML(xml);
           
           let insertedCount = 0;
-          for (const item of items.slice(0, 50)) {
+          for (const item of items.slice(0, 200)) {
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
             
             const { error: insertError } = await supabase
