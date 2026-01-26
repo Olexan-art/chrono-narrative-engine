@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Globe, Plus, Trash2, RefreshCw, Loader2, CheckCircle2, XCircle, ExternalLink, Rss, AlertCircle } from "lucide-react";
+import { Globe, Plus, Trash2, RefreshCw, Loader2, CheckCircle2, XCircle, ExternalLink, Rss, AlertCircle, Download, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/api";
@@ -30,6 +31,16 @@ interface RSSFeed {
   is_active: boolean;
   last_fetched_at: string | null;
   fetch_error: string | null;
+  items_count?: number;
+}
+
+interface FeedCheckResult {
+  feedId: string;
+  feedName: string;
+  rssItemCount: number;
+  dbItemCount: number;
+  canFetch: boolean;
+  error?: string;
 }
 
 const CATEGORIES = [
@@ -54,6 +65,10 @@ export function NewsDigestPanel({ password }: Props) {
   const [newFeed, setNewFeed] = useState({ name: '', url: '', category: 'general' });
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; error?: string; itemCount?: number } | null>(null);
+  const [checkingFeedId, setCheckingFeedId] = useState<string | null>(null);
+  const [feedCheckResult, setFeedCheckResult] = useState<FeedCheckResult | null>(null);
+  const [fetchLimit, setFetchLimit] = useState(10);
+  const [showFetchDialog, setShowFetchDialog] = useState(false);
 
   // Fetch countries
   const { data: countries, isLoading: countriesLoading } = useQuery({
@@ -68,18 +83,28 @@ export function NewsDigestPanel({ password }: Props) {
     }
   });
 
-  // Fetch feeds for selected country
+  // Fetch feeds for selected country with item counts
   const { data: feeds, isLoading: feedsLoading } = useQuery({
     queryKey: ['news-rss-feeds', selectedCountry],
     queryFn: async () => {
       if (!selectedCountry) return [];
-      const { data, error } = await supabase
+      const { data: feedsData, error } = await supabase
         .from('news_rss_feeds')
         .select('*')
         .eq('country_id', selectedCountry)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as RSSFeed[];
+      
+      // Get item counts for each feed
+      const feedsWithCounts = await Promise.all((feedsData as RSSFeed[]).map(async (feed) => {
+        const { count } = await supabase
+          .from('news_rss_items')
+          .select('*', { count: 'exact', head: true })
+          .eq('feed_id', feed.id);
+        return { ...feed, items_count: count || 0 };
+      }));
+      
+      return feedsWithCounts;
     },
     enabled: !!selectedCountry
   });
@@ -234,6 +259,63 @@ export function NewsDigestPanel({ password }: Props) {
         description: error instanceof Error ? error.message : 'Не вдалося оновити канали',
         variant: 'destructive'
       });
+    }
+  });
+
+  // Check feed status mutation
+  const checkFeedMutation = useMutation({
+    mutationFn: async (feedId: string) => {
+      return callEdgeFunction<{ 
+        success: boolean; 
+        feedName: string;
+        rssItemCount: number; 
+        dbItemCount: number; 
+        canFetch: boolean;
+        error?: string;
+      }>(
+        'fetch-rss',
+        { action: 'check_feed', feedId }
+      );
+    },
+    onSuccess: (result, feedId) => {
+      if (result.success) {
+        setFeedCheckResult({
+          feedId,
+          feedName: result.feedName,
+          rssItemCount: result.rssItemCount,
+          dbItemCount: result.dbItemCount,
+          canFetch: result.canFetch,
+          error: result.error
+        });
+        setShowFetchDialog(true);
+      } else {
+        toast({
+          title: 'Помилка перевірки',
+          description: result.error,
+          variant: 'destructive'
+        });
+      }
+    }
+  });
+
+  // Fetch limited items mutation
+  const fetchLimitedMutation = useMutation({
+    mutationFn: async ({ feedId, limit }: { feedId: string; limit: number }) => {
+      return callEdgeFunction<{ success: boolean; itemsInserted?: number; error?: string }>(
+        'fetch-rss',
+        { action: 'fetch_feed_limited', feedId, limit }
+      );
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['news-rss-feeds'] });
+      queryClient.invalidateQueries({ queryKey: ['news-rss-items-count'] });
+      setShowFetchDialog(false);
+      setFeedCheckResult(null);
+      if (result.success) {
+        toast({ title: `Завантажено ${result.itemsInserted || 0} новин` });
+      } else {
+        toast({ title: 'Помилка', description: result.error, variant: 'destructive' });
+      }
     }
   });
 
@@ -395,10 +477,14 @@ export function NewsDigestPanel({ password }: Props) {
                         <CardContent className="py-4">
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <h4 className="font-medium truncate">{feed.name}</h4>
                                 <Badge variant="outline" className="text-xs">
                                   {CATEGORIES.find(c => c.value === feed.category)?.label || feed.category}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  <Download className="w-3 h-3 mr-1" />
+                                  {feed.items_count || 0} новин
                                 </Badge>
                                 {feed.fetch_error && (
                                   <Badge variant="destructive" className="text-xs">
@@ -431,8 +517,25 @@ export function NewsDigestPanel({ password }: Props) {
                               <Button
                                 variant="outline"
                                 size="icon"
+                                onClick={() => {
+                                  setCheckingFeedId(feed.id);
+                                  checkFeedMutation.mutate(feed.id);
+                                }}
+                                disabled={checkFeedMutation.isPending && checkingFeedId === feed.id}
+                                title="Перевірити та вигрузити"
+                              >
+                                {checkFeedMutation.isPending && checkingFeedId === feed.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Search className="w-4 h-4" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
                                 onClick={() => fetchFeedMutation.mutate(feed.id)}
                                 disabled={fetchFeedMutation.isPending}
+                                title="Оновити канал"
                               >
                                 <RefreshCw className={`w-4 h-4 ${fetchFeedMutation.isPending ? 'animate-spin' : ''}`} />
                               </Button>
@@ -472,6 +575,94 @@ export function NewsDigestPanel({ password }: Props) {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Fetch Dialog */}
+      <Dialog open={showFetchDialog} onOpenChange={setShowFetchDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Вигрузка новин</DialogTitle>
+            <DialogDescription>
+              {feedCheckResult?.feedName && `Канал: ${feedCheckResult.feedName}`}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {feedCheckResult && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="p-4 rounded-lg bg-muted">
+                  <p className="text-2xl font-bold text-primary">{feedCheckResult.rssItemCount}</p>
+                  <p className="text-xs text-muted-foreground">Новин у RSS</p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted">
+                  <p className="text-2xl font-bold">{feedCheckResult.dbItemCount}</p>
+                  <p className="text-xs text-muted-foreground">Вже завантажено</p>
+                </div>
+              </div>
+              
+              {feedCheckResult.canFetch ? (
+                <div className="space-y-2">
+                  <Label>Скільки новин завантажити?</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={fetchLimit}
+                      onChange={(e) => setFetchLimit(Math.min(50, Math.max(1, parseInt(e.target.value) || 10)))}
+                      className="w-24"
+                    />
+                    <Select
+                      value={fetchLimit.toString()}
+                      onValueChange={(v) => setFetchLimit(parseInt(v))}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5 новин</SelectItem>
+                        <SelectItem value="10">10 новин</SelectItem>
+                        <SelectItem value="20">20 новин</SelectItem>
+                        <SelectItem value="30">30 новин</SelectItem>
+                        <SelectItem value="50">50 новин (макс)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-lg bg-destructive/10 text-destructive text-sm">
+                  {feedCheckResult.error || 'Не вдалося підключитися до RSS'}
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFetchDialog(false)}>
+              Скасувати
+            </Button>
+            {feedCheckResult?.canFetch && (
+              <Button 
+                onClick={() => {
+                  if (feedCheckResult) {
+                    fetchLimitedMutation.mutate({ 
+                      feedId: feedCheckResult.feedId, 
+                      limit: fetchLimit 
+                    });
+                  }
+                }}
+                disabled={fetchLimitedMutation.isPending}
+              >
+                {fetchLimitedMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Завантажити {fetchLimit} новин
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -160,6 +160,145 @@ serve(async (req) => {
       );
     }
 
+    // Check feed status - compare items in RSS vs our database
+    if (action === 'check_feed') {
+      if (!feedId) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Feed ID is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const { data: feed, error: feedError } = await supabase
+        .from('news_rss_feeds')
+        .select('id, name, url')
+        .eq('id', feedId)
+        .single();
+      
+      if (feedError || !feed) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Feed not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Get count from our database
+      const { count: dbCount } = await supabase
+        .from('news_rss_items')
+        .select('*', { count: 'exact', head: true })
+        .eq('feed_id', feedId);
+      
+      // Fetch and count items from RSS
+      const validation = await validateRSSFeed(feed.url);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          feedName: feed.name,
+          rssItemCount: validation.itemCount || 0,
+          dbItemCount: dbCount || 0,
+          canFetch: validation.valid,
+          error: validation.error
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch specific number of items from a feed
+    if (action === 'fetch_feed_limited') {
+      if (!feedId) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Feed ID is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const { limit = 10 } = await req.json().catch(() => ({}));
+      
+      const { data: feed, error: feedError } = await supabase
+        .from('news_rss_feeds')
+        .select('*, news_countries!inner(id, code)')
+        .eq('id', feedId)
+        .single();
+      
+      if (feedError || !feed) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Feed not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      try {
+        const response = await fetch(feed.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const xml = await response.text();
+        const items = parseXML(xml);
+        
+        let insertedCount = 0;
+        for (const item of items.slice(0, limit)) {
+          const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
+          
+          const { error: insertError } = await supabase
+            .from('news_rss_items')
+            .upsert({
+              feed_id: feed.id,
+              country_id: feed.country_id,
+              external_id: item.link,
+              title: item.title.slice(0, 500),
+              description: item.description?.slice(0, 1000) || null,
+              content: item.content?.slice(0, 5000) || null,
+              url: item.link,
+              image_url: item.enclosure?.url || null,
+              category: feed.category,
+              published_at: pubDate?.toISOString() || null,
+              fetched_at: new Date().toISOString()
+            }, { onConflict: 'feed_id,url' });
+          
+          if (!insertError) {
+            insertedCount++;
+          }
+        }
+        
+        await supabase
+          .from('news_rss_feeds')
+          .update({ 
+            last_fetched_at: new Date().toISOString(),
+            fetch_error: null
+          })
+          .eq('id', feed.id);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            feedName: feed.name,
+            itemsFound: items.length,
+            itemsInserted: insertedCount,
+            limit
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+        
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Fetch items from a single feed
     if (action === 'fetch_feed') {
       if (!feedId) {
