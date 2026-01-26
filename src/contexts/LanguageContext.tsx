@@ -117,6 +117,25 @@ const translations: Record<Language, Record<string, string>> = {
     'newsdigest.empty_desc': 'RSS канали ще не налаштовані або новини не завантажені',
     'nav.newsdigest': 'Кротивина',
 
+    // RSS News
+    'rss_news.latest': 'ОСТАННІ НОВИНИ',
+    'rss_news.view_all': 'Всі новини',
+    'news.not_found': 'Новину не знайдено',
+    'news.back_to_digest': 'Повернутись до новин',
+    'news.read_original': 'Читати оригінал',
+    'news.generate_dialogue': 'Генерувати діалог',
+    'news.regenerate_dialogue': 'Перегенерувати діалог',
+    'news.dialogue_generated': 'Діалог згенеровано',
+    'news.no_dialogue': 'Коментарів персонажів ще немає',
+    'news.generate_dialogue_hint': 'Натисніть кнопку вище, щоб згенерувати реакцію персонажів',
+    'news.create_story': 'Створити історію',
+    'news.create_story_desc': 'Згенерувати художню історію на основі цієї новини',
+    'news.generate_story': 'Генерувати історію',
+    'news.source_info': 'Джерело',
+    'news.feed': 'Канал',
+    'news.category': 'Категорія',
+    'news.fetched': 'Завантажено',
+
     // Install Page
     'install.badge': 'ВСТАНОВИТИ ЗАСТОСУНОК',
     'install.title': 'Встановити Точку Синхронізації',
@@ -262,6 +281,25 @@ const translations: Record<Language, Record<string, string>> = {
     'newsdigest.empty_desc': 'RSS feeds are not configured or news has not been loaded',
     'nav.newsdigest': 'News Digest',
 
+    // RSS News
+    'rss_news.latest': 'LATEST NEWS',
+    'rss_news.view_all': 'View all news',
+    'news.not_found': 'News not found',
+    'news.back_to_digest': 'Back to news',
+    'news.read_original': 'Read original',
+    'news.generate_dialogue': 'Generate dialogue',
+    'news.regenerate_dialogue': 'Regenerate dialogue',
+    'news.dialogue_generated': 'Dialogue generated',
+    'news.no_dialogue': 'No character comments yet',
+    'news.generate_dialogue_hint': 'Click the button above to generate character reactions',
+    'news.create_story': 'Create story',
+    'news.create_story_desc': 'Generate a fictional story based on this news',
+    'news.generate_story': 'Generate story',
+    'news.source_info': 'Source',
+    'news.feed': 'Feed',
+    'news.category': 'Category',
+    'news.fetched': 'Fetched',
+
     // Install Page
     'install.badge': 'INSTALL APP',
     'install.title': 'Install Synchronization Point',
@@ -406,6 +444,25 @@ const translations: Record<Language, Record<string, string>> = {
     'newsdigest.empty': 'Brak wiadomości',
     'newsdigest.empty_desc': 'Kanały RSS nie są skonfigurowane lub wiadomości nie zostały załadowane',
     'nav.newsdigest': 'Wiadomości',
+
+    // RSS News
+    'rss_news.latest': 'NAJNOWSZE WIADOMOŚCI',
+    'rss_news.view_all': 'Wszystkie wiadomości',
+    'news.not_found': 'Wiadomość nie znaleziona',
+    'news.back_to_digest': 'Powrót do wiadomości',
+    'news.read_original': 'Czytaj oryginał',
+    'news.generate_dialogue': 'Generuj dialog',
+    'news.regenerate_dialogue': 'Regeneruj dialog',
+    'news.dialogue_generated': 'Dialog wygenerowany',
+    'news.no_dialogue': 'Brak komentarzy postaci',
+    'news.generate_dialogue_hint': 'Kliknij przycisk powyżej, aby wygenerować reakcje postaci',
+    'news.create_story': 'Utwórz opowieść',
+    'news.create_story_desc': 'Wygeneruj fikcyjną opowieść na podstawie tej wiadomości',
+    'news.generate_story': 'Generuj opowieść',
+    'news.source_info': 'Źródło',
+    'news.feed': 'Kanał',
+    'news.category': 'Kategoria',
+    'news.fetched': 'Pobrano',
 
     // Install Page
     'install.badge': 'ZAINSTALUJ APLIKACJĘ',
