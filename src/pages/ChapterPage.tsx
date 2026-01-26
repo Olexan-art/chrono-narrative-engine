@@ -1,4 +1,5 @@
-import { useParams, Link } from "react-router-dom";
+import { useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
@@ -45,10 +46,39 @@ function parseContentWithLinks(content: string): React.ReactNode {
   return parts.length > 0 ? parts : content;
 }
 
+// UUID regex pattern for detecting old URLs
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default function ChapterPage() {
   const { number } = useParams<{ number: string }>();
-  const chapterNumber = Number(number);
+  const navigate = useNavigate();
   const { language } = useLanguage();
+
+  const isUUID = number && UUID_REGEX.test(number);
+  const chapterNumber = isUUID ? 0 : Number(number);
+
+  // If UUID is detected, fetch the chapter to get its number for redirect
+  const { data: legacyChapter } = useQuery({
+    queryKey: ['chapter-legacy-redirect', number],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('chapters')
+        .select('number')
+        .eq('id', number)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!isUUID
+  });
+
+  // Redirect from UUID to friendly URL
+  useEffect(() => {
+    if (legacyChapter?.number) {
+      navigate(`/chapter/${legacyChapter.number}`, { replace: true });
+    }
+  }, [legacyChapter, navigate]);
 
   const { data: chapter, isLoading } = useQuery({
     queryKey: ['chapter-by-number', chapterNumber],
@@ -65,7 +95,7 @@ export default function ChapterPage() {
       if (error) throw error;
       return data;
     },
-    enabled: !!chapterNumber
+    enabled: !!chapterNumber && !isUUID
   });
 
   // Fetch parts for this chapter (excluding just_business category)
