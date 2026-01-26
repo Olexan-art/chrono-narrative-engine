@@ -28,8 +28,11 @@ interface NewsItem {
   feed_id: string;
   country_id: string;
   title: string;
+  title_en: string | null;
   description: string | null;
+  description_en: string | null;
   url: string;
+  slug: string | null;
   image_url: string | null;
   category: string | null;
   published_at: string | null;
@@ -85,8 +88,13 @@ export default function NewsDigestPage() {
       
       let query = supabase
         .from('news_rss_items')
-        .select('*, news_rss_feeds!inner(name)')
+        .select(`
+          *,
+          news_rss_feeds!inner(name),
+          country:news_countries!inner(code)
+        `)
         .eq('country_id', selectedCountry)
+        .not('slug', 'is', null)
         .order('published_at', { ascending: false })
         .limit(50);
       
@@ -96,7 +104,7 @@ export default function NewsDigestPage() {
       
       const { data, error } = await query;
       if (error) throw error;
-      return data as NewsItem[];
+      return data as (NewsItem & { country: { code: string } })[];
     },
     enabled: !!selectedCountry
   });
@@ -199,66 +207,70 @@ export default function NewsDigestPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {newsItems?.map(item => (
-                    <Card key={item.id} className="cosmic-card overflow-hidden group hover:border-primary/50 transition-colors">
-                      {item.image_url && (
-                        <div className="aspect-video overflow-hidden">
-                          <img
-                            src={item.image_url}
-                            alt={item.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                        </div>
-                      )}
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <Badge variant="outline" className="text-xs">
-                            {getCategoryLabel(item.category || 'general')}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {item.news_rss_feeds?.name}
-                          </span>
-                        </div>
-                        <CardTitle className="text-base line-clamp-2 leading-snug">
-                          <a 
-                            href={item.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="hover:text-primary transition-colors"
-                          >
-                            {item.title}
-                          </a>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {item.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
-                            {item.description}
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between">
-                          {item.published_at && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Calendar className="w-3 h-3" />
-                              {formatDate(item.published_at)}
+                  {newsItems?.map(item => {
+                    const countryCode = item.country?.code?.toLowerCase() || 'ua';
+                    const localizedTitle = language === 'en' 
+                      ? (item.title_en || item.title)
+                      : item.title;
+                    const localizedDescription = language === 'en'
+                      ? (item.description_en || item.description)
+                      : item.description;
+                    
+                    return (
+                      <Link 
+                        key={item.id} 
+                        to={`/news/${countryCode}/${item.slug}`}
+                        className="block"
+                      >
+                        <Card className="cosmic-card overflow-hidden group hover:border-primary/50 transition-colors h-full">
+                          {item.image_url && (
+                            <div className="aspect-video overflow-hidden">
+                              <img
+                                src={item.image_url}
+                                alt={localizedTitle}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
                             </div>
                           )}
-                          <a
-                            href={item.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs text-primary hover:underline"
-                          >
-                            {t('news.read')}
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                          <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <Badge variant="outline" className="text-xs">
+                                {getCategoryLabel(item.category || 'general')}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {item.news_rss_feeds?.name}
+                              </span>
+                            </div>
+                            <CardTitle className="text-base line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                              {localizedTitle}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            {localizedDescription && (
+                              <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
+                                {localizedDescription}
+                              </p>
+                            )}
+                            <div className="flex items-center justify-between">
+                              {item.published_at && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Calendar className="w-3 h-3" />
+                                  {formatDate(item.published_at)}
+                                </div>
+                              )}
+                              <span className="flex items-center gap-1 text-xs text-primary">
+                                {t('news.read')}
+                                <ExternalLink className="w-3 h-3" />
+                              </span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
