@@ -80,7 +80,7 @@ function BatchRetellPanelComponent() {
   const [maxCount, setMaxCount] = useState<number>(0); // 0 means unlimited
   const [generateDialogues, setGenerateDialogues] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
-  const [logs, setLogs] = useState<LogEntry[]>();
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<BatchStats>({ total: 0, processed: 0, success: 0, failed: 0, skipped: 0 });
   const abortControllerRef = useRef<AbortController | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
