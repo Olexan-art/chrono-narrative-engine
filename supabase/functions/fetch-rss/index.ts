@@ -178,6 +178,38 @@ serve(async (req) => {
       );
     }
 
+    // Generate slugs for existing items that don't have one
+    if (action === 'generate_slugs') {
+      const { data: items } = await supabase
+        .from('news_rss_items')
+        .select('id, title')
+        .is('slug', null)
+        .limit(500);
+      
+      if (!items || items.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, message: 'No items need slugs', updated: 0 }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      let updatedCount = 0;
+      for (const item of items) {
+        const slug = generateSlug(item.title);
+        const { error } = await supabase
+          .from('news_rss_items')
+          .update({ slug })
+          .eq('id', item.id);
+        
+        if (!error) updatedCount++;
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, total: items.length, updated: updatedCount }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Check feed status - compare items in RSS vs our database
     if (action === 'check_feed') {
       if (!feedId) {
@@ -265,6 +297,7 @@ serve(async (req) => {
         let insertedCount = 0;
         for (const item of items.slice(0, limit)) {
           const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
+          const slug = generateSlug(item.title);
           
           const { error: insertError } = await supabase
             .from('news_rss_items')
@@ -273,9 +306,13 @@ serve(async (req) => {
               country_id: feed.country_id,
               external_id: item.link,
               title: item.title.slice(0, 500),
+              title_en: item.title.slice(0, 500),
               description: item.description?.slice(0, 1000) || null,
+              description_en: item.description?.slice(0, 1000) || null,
               content: item.content?.slice(0, 5000) || null,
+              content_en: item.content?.slice(0, 5000) || null,
               url: item.link,
+              slug: slug,
               image_url: item.enclosure?.url || null,
               category: feed.category,
               published_at: pubDate?.toISOString() || null,
@@ -520,6 +557,7 @@ serve(async (req) => {
           let insertedCount = 0;
           for (const item of items.slice(0, 200)) {
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
+            const slug = generateSlug(item.title);
             
             const { error: insertError } = await supabase
               .from('news_rss_items')
@@ -528,9 +566,13 @@ serve(async (req) => {
                 country_id: feedData.country_id,
                 external_id: item.link,
                 title: item.title.slice(0, 500),
+                title_en: item.title.slice(0, 500),
                 description: item.description?.slice(0, 1000) || null,
+                description_en: item.description?.slice(0, 1000) || null,
                 content: item.content?.slice(0, 5000) || null,
+                content_en: item.content?.slice(0, 5000) || null,
                 url: item.link,
+                slug: slug,
                 image_url: item.enclosure?.url || null,
                 category: feedData.category,
                 published_at: pubDate?.toISOString() || null,
