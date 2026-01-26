@@ -124,10 +124,21 @@ export function NewsDigestPanel({ password }: Props) {
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
+      // Fetch items with all content fields needed for retold detection
       const { data: allItems, error } = await supabase
         .from('news_rss_items')
-        .select('country_id, fetched_at, content_en');
+        .select('country_id, fetched_at, content, content_en, content_hi, content_ta, content_te, content_bn');
       if (error) throw error;
+      
+      // Get country codes for proper retold detection
+      const { data: countriesData } = await supabase
+        .from('news_countries')
+        .select('id, code');
+      
+      const countryCodeMap: Record<string, string> = {};
+      for (const c of countriesData || []) {
+        countryCodeMap[c.id] = c.code;
+      }
       
       interface CountryStats {
         total: number;
@@ -159,8 +170,29 @@ export function NewsDigestPanel({ password }: Props) {
         if (fetchedAt >= sixHoursAgo) stats[item.country_id].last6h++;
         if (fetchedAt >= twentyFourHoursAgo) stats[item.country_id].last24h++;
         
-        // Check if retold (content_en exists and has content)
-        const isRetold = item.content_en && typeof item.content_en === 'string' && item.content_en.trim().length > 0;
+        // Check if retold based on country code
+        // US → content_en, PL/UA → content (long), IN → content_hi/ta/te/bn
+        const countryCode = countryCodeMap[item.country_id];
+        let isRetold = false;
+        
+        if (countryCode === 'US') {
+          isRetold = !!(item.content_en && typeof item.content_en === 'string' && item.content_en.trim().length > 300);
+        } else if (countryCode === 'PL' || countryCode === 'UA') {
+          // For PL/UA, retold content is stored in content field and is longer than original description
+          isRetold = !!(item.content && typeof item.content === 'string' && item.content.trim().length > 500);
+        } else if (countryCode === 'IN') {
+          // For India, check Hindi translations (primary) or other Indian languages
+          isRetold = !!(
+            (item.content_hi && typeof item.content_hi === 'string' && item.content_hi.trim().length > 300) ||
+            (item.content_ta && typeof item.content_ta === 'string' && item.content_ta.trim().length > 300) ||
+            (item.content_te && typeof item.content_te === 'string' && item.content_te.trim().length > 300) ||
+            (item.content_bn && typeof item.content_bn === 'string' && item.content_bn.trim().length > 300)
+          );
+        } else {
+          // Default: check content_en
+          isRetold = !!(item.content_en && typeof item.content_en === 'string' && item.content_en.trim().length > 300);
+        }
+        
         if (isRetold) {
           stats[item.country_id].retold.total++;
           if (fetchedAt >= sixHoursAgo) stats[item.country_id].retold.last6h++;
