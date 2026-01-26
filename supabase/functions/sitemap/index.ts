@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     // Fetch all chapters
     const { data: chapters, error: chaptersError } = await supabase
       .from("chapters")
-      .select("id, updated_at, title")
+      .select("id, number, updated_at, title")
       .order("created_at", { ascending: false });
 
     if (chaptersError) throw chaptersError;
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     // Fetch all volumes
     const { data: volumes, error: volumesError } = await supabase
       .from("volumes")
-      .select("id, updated_at, title")
+      .select("id, year, month, updated_at, title")
       .order("created_at", { ascending: false });
 
     if (volumesError) throw volumesError;
@@ -129,9 +129,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Add chapter pages
+    // Add chapter pages (friendly URLs using chapter number)
     for (const chapter of chapters || []) {
-      const url = `${BASE_URL}/chapter/${chapter.id}`;
+      const url = `${BASE_URL}/chapter/${chapter.number}`;
       xml += `
   <url>
     <loc>${url}</loc>
@@ -141,9 +141,10 @@ Deno.serve(async (req) => {
   </url>`;
     }
 
-    // Add volume pages
+    // Add volume pages (friendly URLs using year-month)
     for (const volume of volumes || []) {
-      const url = `${BASE_URL}/volume/${volume.id}`;
+      const yearMonth = `${volume.year}-${String(volume.month).padStart(2, '0')}`;
+      const url = `${BASE_URL}/volume/${yearMonth}`;
       xml += `
   <url>
     <loc>${url}</loc>

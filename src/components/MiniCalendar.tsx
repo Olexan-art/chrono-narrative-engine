@@ -11,6 +11,7 @@ import type { Part } from "@/types/database";
 interface Chapter {
   id: string;
   title: string;
+  number: number;
   week_of_month: number;
   volume_id: string;
 }
@@ -136,7 +137,7 @@ export function MiniCalendar({ parts, chapters = [] }: MiniCalendarProps) {
             {chapters.map((chapter, index) => (
               <Link 
                 key={chapter.id}
-                to={`/chapter/${chapter.id}`}
+                to={`/chapter/${chapter.number}`}
                 className="flex items-center gap-2 p-2 rounded-sm bg-secondary/30 hover:bg-secondary/50 transition-all duration-200 hover:translate-x-1 active:scale-[0.98] animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >

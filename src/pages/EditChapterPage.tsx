@@ -206,7 +206,7 @@ export default function EditChapterPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Link to={`/chapter/${id}`}>
+            <Link to={`/chapter/${chapter?.number}`}>
               <Button variant="outline" size="sm" className="gap-1">
                 <ExternalLink className="w-3 h-3" />
                 Переглянути

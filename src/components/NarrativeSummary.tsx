@@ -19,6 +19,7 @@ interface PartialVolume {
 interface PartialChapter {
   id: string;
   title: string;
+  number: number;
   week_of_month: number;
   volume_id: string;
   narrator_monologue?: string | null;
@@ -122,7 +123,7 @@ export function NarrativeSummary({ weekParts, monthVolume, monthChapter }: Narra
                 <p className="text-xs text-muted-foreground font-mono mb-1">ПОТОЧНА ГЛАВА</p>
                 <p className="text-sm mb-2">{monthChapter.title}</p>
                 {monthChapter.narrator_monologue && (
-                  <Link to={`/chapter/${monthChapter.id}`}>
+                  <Link to={`/chapter/${monthChapter.number}`}>
                     <Button variant="outline" size="sm" className="w-full gap-2">
                       <BookOpen className="w-4 h-4" />
                       Читати главу

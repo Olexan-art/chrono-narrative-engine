@@ -244,7 +244,7 @@ export default function ReadPage() {
               <>
                 <span className="shrink-0">/</span>
                 <Link 
-                  to={`/chapter/${part.chapter.id}`} 
+                  to={`/chapter/${part.chapter.number}`} 
                   className="shrink-0 truncate max-w-[120px] md:max-w-none hover:text-primary transition-colors"
                 >
                   {language === 'en' && part.chapter.title_en ? part.chapter.title_en :

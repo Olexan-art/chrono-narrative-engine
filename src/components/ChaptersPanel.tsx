@@ -282,7 +282,7 @@ export function ChaptersPanel({ password }: ChaptersPanelProps) {
                       )}
                       Перегенерувати
                     </Button>
-                    <Link to={`/chapter/${chapter.id}`}>
+                    <Link to={`/chapter/${chapter.number}`}>
                       <Button size="sm" variant="ghost" className="gap-1">
                         <ExternalLink className="w-3 h-3" />
                         Переглянути

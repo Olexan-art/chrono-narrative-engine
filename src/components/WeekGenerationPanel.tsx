@@ -493,7 +493,7 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
                     </Badge>
                     {week.hasChapter && week.chapter && (
                       <Link 
-                        to={`/chapter/${week.chapter.id}`}
+                        to={`/chapter/${week.chapter.number}`}
                         onClick={(e) => e.stopPropagation()}
                         className="inline-flex"
                       >

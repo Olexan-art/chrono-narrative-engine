@@ -149,7 +149,7 @@ export default function ChaptersPage() {
             {chapters.map((chapter: any) => (
               <Link 
                 key={chapter.id} 
-                to={`/chapter/${chapter.id}`}
+                to={`/chapter/${chapter.number}`}
                 className="group block"
               >
                 <article className="cosmic-card border border-border hover:border-primary/50 transition-all overflow-hidden h-full flex flex-col">
