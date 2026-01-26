@@ -607,7 +607,7 @@ serve(async (req) => {
     if (action === 'fetch_all') {
       const { data: feeds, error: feedsError } = await supabase
         .from('news_rss_feeds')
-        .select('id, name, country_id')
+        .select('id, name, country_id, url, category')
         .eq('is_active', true);
       
       if (feedsError) {
@@ -626,15 +626,16 @@ serve(async (req) => {
       const results = [];
       for (const feed of feeds || []) {
         try {
-          const { data: feedData } = await supabase
-            .from('news_rss_feeds')
-            .select('*, news_countries!inner(id, code)')
-            .eq('id', feed.id)
+          // Get country code for this feed
+          const { data: countryData } = await supabase
+            .from('news_countries')
+            .select('code')
+            .eq('id', feed.country_id)
             .single();
           
-          if (!feedData) continue;
+          const countryCode = countryData?.code || 'unknown';
           
-          const response = await fetch(feedData.url, {
+          const response = await fetch(feed.url, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
               'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
@@ -655,9 +656,16 @@ serve(async (req) => {
           const xml = await response.text();
           const items = parseXML(xml);
           
+          // Get existing URLs to prevent duplicates
+          const { data: existingItems } = await supabase
+            .from('news_rss_items')
+            .select('url')
+            .eq('feed_id', feed.id);
+          
+          const existingUrls = new Set((existingItems || []).map(item => item.url));
+          
           let insertedCount = 0;
-          const countryCode = feedData.news_countries?.code || 'unknown';
-          const category = feedData.category || 'general';
+          const category = feed.category || 'general';
           const trackerKey = `${countryCode}_${category}`;
           
           // Initialize tracker for this country+category if not exists
@@ -666,15 +674,18 @@ serve(async (req) => {
           }
           
           for (const item of items.slice(0, 200)) {
+            // Skip if already exists
+            if (existingUrls.has(item.link)) continue;
+            
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
             const slug = generateSlug(item.title);
             
-            // Try to insert - use returning to get the ID
+            // Insert new item
             const { data: insertedData, error: insertError } = await supabase
               .from('news_rss_items')
-              .upsert({
+              .insert({
                 feed_id: feed.id,
-                country_id: feedData.country_id,
+                country_id: feed.country_id,
                 external_id: item.link,
                 title: item.title.slice(0, 500),
                 title_en: item.title.slice(0, 500),
@@ -685,15 +696,16 @@ serve(async (req) => {
                 url: item.link,
                 slug: slug,
                 image_url: item.enclosure?.url || null,
-                category: feedData.category,
+                category: feed.category,
                 published_at: pubDate?.toISOString() || null,
                 fetched_at: new Date().toISOString()
-              }, { onConflict: 'feed_id,url', ignoreDuplicates: false })
+              })
               .select('id')
               .single();
             
             if (!insertError && insertedData) {
               insertedCount++;
+              existingUrls.add(item.link); // Track newly added
               
               // Track for auto-retell every 5th item per country+category
               const tracker = insertTracker.get(trackerKey)!;
@@ -743,6 +755,154 @@ serve(async (req) => {
           success: true, 
           feedsProcessed: results.length, 
           autoRetelled: totalRetelled,
+          results 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch all feeds for a specific country with progress reporting (for bulk download)
+    if (action === 'fetch_country_bulk') {
+      if (!countryId) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Country ID is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const { data: feeds, error: feedsError } = await supabase
+        .from('news_rss_feeds')
+        .select('id, name, url, category')
+        .eq('country_id', countryId)
+        .eq('is_active', true);
+      
+      if (feedsError) {
+        return new Response(
+          JSON.stringify({ success: false, error: feedsError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const { data: countryData } = await supabase
+        .from('news_countries')
+        .select('code')
+        .eq('id', countryId)
+        .single();
+      
+      const countryCode = countryData?.code || 'unknown';
+      
+      console.log(`Bulk fetching ${feeds?.length || 0} feeds for country ${countryCode}...`);
+      
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const results = [];
+      let totalInserted = 0;
+      let totalRetelled = 0;
+      let retellCounter = 0;
+      
+      for (const feed of feeds || []) {
+        try {
+          const response = await fetch(feed.url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Cache-Control': 'no-cache'
+            }
+          });
+          
+          if (!response.ok) {
+            results.push({ feedName: feed.name, success: false, error: `HTTP ${response.status}`, inserted: 0 });
+            continue;
+          }
+          
+          const xml = await response.text();
+          const items = parseXML(xml);
+          
+          // Get existing URLs to prevent duplicates
+          const { data: existingItems } = await supabase
+            .from('news_rss_items')
+            .select('url')
+            .eq('feed_id', feed.id);
+          
+          const existingUrls = new Set((existingItems || []).map(item => item.url));
+          
+          let insertedCount = 0;
+          const itemsToRetell: string[] = [];
+          
+          for (const item of items.slice(0, 200)) {
+            // Skip if already exists
+            if (existingUrls.has(item.link)) continue;
+            
+            const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
+            const slug = generateSlug(item.title);
+            
+            const { data: insertedData, error: insertError } = await supabase
+              .from('news_rss_items')
+              .insert({
+                feed_id: feed.id,
+                country_id: countryId,
+                external_id: item.link,
+                title: item.title.slice(0, 500),
+                title_en: item.title.slice(0, 500),
+                description: item.description?.slice(0, 1000) || null,
+                description_en: item.description?.slice(0, 1000) || null,
+                content: item.content?.slice(0, 5000) || null,
+                content_en: item.content?.slice(0, 5000) || null,
+                url: item.link,
+                slug: slug,
+                image_url: item.enclosure?.url || null,
+                category: feed.category,
+                published_at: pubDate?.toISOString() || null,
+                fetched_at: new Date().toISOString()
+              })
+              .select('id')
+              .single();
+            
+            if (!insertError && insertedData) {
+              insertedCount++;
+              totalInserted++;
+              retellCounter++;
+              existingUrls.add(item.link);
+              
+              // Every 5th item gets auto-retell
+              if (retellCounter % 5 === 0) {
+                itemsToRetell.push(insertedData.id);
+              }
+            }
+          }
+          
+          await supabase
+            .from('news_rss_feeds')
+            .update({ last_fetched_at: new Date().toISOString(), fetch_error: null })
+            .eq('id', feed.id);
+          
+          // Auto-retell items
+          for (const newsId of itemsToRetell) {
+            await autoRetellNews(newsId, supabaseUrl);
+            totalRetelled++;
+            await new Promise(r => setTimeout(r, 300));
+          }
+          
+          results.push({ feedName: feed.name, success: true, inserted: insertedCount, retelled: itemsToRetell.length });
+        } catch (error) {
+          results.push({ 
+            feedName: feed.name, 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Unknown error',
+            inserted: 0
+          });
+        }
+      }
+      
+      console.log(`Bulk fetch complete: ${totalInserted} inserted, ${totalRetelled} retelled`);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          countryCode,
+          feedsProcessed: feeds?.length || 0,
+          totalInserted,
+          totalRetelled,
           results 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
