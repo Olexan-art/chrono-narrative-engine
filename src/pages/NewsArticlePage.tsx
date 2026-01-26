@@ -273,27 +273,29 @@ export default function NewsArticlePage() {
 
           {/* Sidebar */}
           <aside className="space-y-6">
-            {/* Generate Story Card */}
-            <Card className="border-primary/30 bg-primary/5">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-primary" />
-                  {t('news.create_story')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {t('news.create_story_desc')}
-                </p>
-                <Button 
-                  className="w-full gap-2"
-                  onClick={() => generateStoryMutation.mutate()}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  {t('news.generate_story')}
-                </Button>
-              </CardContent>
-            </Card>
+            {/* Generate Story Card - Admin only */}
+            {isAdminAuthenticated && (
+              <Card className="border-primary/30 bg-primary/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    {t('news.create_story')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {t('news.create_story_desc')}
+                  </p>
+                  <Button 
+                    className="w-full gap-2"
+                    onClick={() => generateStoryMutation.mutate()}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {t('news.generate_story')}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Source Info */}
             <Card>
@@ -301,6 +303,12 @@ export default function NewsArticlePage() {
                 <CardTitle className="text-base">{t('news.source_info')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">ID</span>
+                  <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono select-all">
+                    {article.id.slice(0, 8)}
+                  </code>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('news.feed')}</span>
                   <span>{article.feed?.name}</span>
