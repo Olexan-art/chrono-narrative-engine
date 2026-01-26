@@ -18,7 +18,12 @@ interface RSSItem {
 
 function parseRSSDate(dateStr: string): Date | null {
   try {
-    return new Date(dateStr);
+    const date = new Date(dateStr);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return null;
+    }
+    return date;
   } catch {
     return null;
   }
@@ -137,7 +142,8 @@ serve(async (req) => {
   }
 
   try {
-    const { action, feedId, feedUrl, countryId } = await req.json();
+    const body = await req.json();
+    const { action, feedId, feedUrl, countryId, limit = 10 } = body;
     
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -212,8 +218,6 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
-      const { limit = 10 } = await req.json().catch(() => ({}));
       
       const { data: feed, error: feedError } = await supabase
         .from('news_rss_feeds')
