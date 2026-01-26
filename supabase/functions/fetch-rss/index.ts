@@ -29,6 +29,18 @@ function parseRSSDate(dateStr: string): Date | null {
   }
 }
 
+// Generate URL-friendly slug from title
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .trim()
+    .slice(0, 100) // Limit length
+    + '-' + Date.now().toString(36); // Add unique suffix
+}
+
 function extractImageFromContent(content: string): string | null {
   const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["']/i);
   return imgMatch ? imgMatch[1] : null;
@@ -352,6 +364,9 @@ serve(async (req) => {
         for (const item of items.slice(0, 200)) { // Limit to 200 items per feed
           const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
           
+          // Generate slug from title
+          const slug = generateSlug(item.title);
+          
           const { error: insertError } = await supabase
             .from('news_rss_items')
             .upsert({
@@ -359,13 +374,17 @@ serve(async (req) => {
               country_id: feed.country_id,
               external_id: item.link,
               title: item.title.slice(0, 500),
+              title_en: item.title.slice(0, 500), // English is the default
               description: item.description?.slice(0, 1000) || null,
+              description_en: item.description?.slice(0, 1000) || null,
               content: item.content?.slice(0, 5000) || null,
+              content_en: item.content?.slice(0, 5000) || null,
               url: item.link,
               image_url: item.enclosure?.url || null,
               category: feed.category,
               published_at: pubDate?.toISOString() || null,
-              fetched_at: new Date().toISOString()
+              fetched_at: new Date().toISOString(),
+              slug: slug
             }, { onConflict: 'feed_id,url' });
           
           if (!insertError) {

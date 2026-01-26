@@ -12,6 +12,7 @@ import { MiniCalendar } from "@/components/MiniCalendar";
 import { NarrativeSummary } from "@/components/NarrativeSummary";
 import { HeroTweets } from "@/components/HeroTweets";
 import { SEOHead } from "@/components/SEOHead";
+import { LatestRssNews } from "@/components/LatestRssNews";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Part } from "@/types/database";
@@ -493,6 +494,11 @@ export default function Index() {
                   monthVolume={monthData?.volume}
                   monthChapter={monthData?.chapter}
                 />
+              </div>
+              
+              {/* Latest RSS News */}
+              <div className="animate-fade-in" style={{ animationDelay: '150ms' }}>
+                <LatestRssNews />
               </div>
             </div>
           </div>

@@ -15,6 +15,7 @@ import VolumePage from "./pages/VolumePage";
 import VolumeRedirect from "./pages/VolumeRedirect";
 import ChapterRedirect from "./pages/ChapterRedirect";
 import NewsDigestPage from "./pages/NewsDigestPage";
+import NewsArticlePage from "./pages/NewsArticlePage";
 import AdminPage from "./pages/AdminPage";
 import EditPartPage from "./pages/EditPartPage";
 import EditChapterPage from "./pages/EditChapterPage";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/volume/:yearMonth" element={<VolumePage />} />
             <Route path="/volume-legacy/:id" element={<VolumeRedirect />} />
             <Route path="/news-digest" element={<NewsDigestPage />} />
+            <Route path="/news/:country/:slug" element={<NewsArticlePage />} />
             <Route path="/read/:date" element={<ReadPage />} />
             <Route path="/read/:date/:storyNumber" element={<ReadPage />} />
             <Route path="/chapter/:number" element={<ChapterPage />} />

@@ -455,47 +455,101 @@ export type Database = {
       news_rss_items: {
         Row: {
           category: string | null
+          chat_dialogue: Json | null
           content: string | null
+          content_bn: string | null
+          content_en: string | null
+          content_hi: string | null
+          content_ta: string | null
+          content_te: string | null
           country_id: string
           created_at: string
           description: string | null
+          description_bn: string | null
+          description_en: string | null
+          description_hi: string | null
+          description_ta: string | null
+          description_te: string | null
           external_id: string | null
           feed_id: string
           fetched_at: string
+          generated_story_id: string | null
           id: string
           image_url: string | null
           published_at: string | null
+          slug: string | null
           title: string
+          title_bn: string | null
+          title_en: string | null
+          title_hi: string | null
+          title_ta: string | null
+          title_te: string | null
           url: string
         }
         Insert: {
           category?: string | null
+          chat_dialogue?: Json | null
           content?: string | null
+          content_bn?: string | null
+          content_en?: string | null
+          content_hi?: string | null
+          content_ta?: string | null
+          content_te?: string | null
           country_id: string
           created_at?: string
           description?: string | null
+          description_bn?: string | null
+          description_en?: string | null
+          description_hi?: string | null
+          description_ta?: string | null
+          description_te?: string | null
           external_id?: string | null
           feed_id: string
           fetched_at?: string
+          generated_story_id?: string | null
           id?: string
           image_url?: string | null
           published_at?: string | null
+          slug?: string | null
           title: string
+          title_bn?: string | null
+          title_en?: string | null
+          title_hi?: string | null
+          title_ta?: string | null
+          title_te?: string | null
           url: string
         }
         Update: {
           category?: string | null
+          chat_dialogue?: Json | null
           content?: string | null
+          content_bn?: string | null
+          content_en?: string | null
+          content_hi?: string | null
+          content_ta?: string | null
+          content_te?: string | null
           country_id?: string
           created_at?: string
           description?: string | null
+          description_bn?: string | null
+          description_en?: string | null
+          description_hi?: string | null
+          description_ta?: string | null
+          description_te?: string | null
           external_id?: string | null
           feed_id?: string
           fetched_at?: string
+          generated_story_id?: string | null
           id?: string
           image_url?: string | null
           published_at?: string | null
+          slug?: string | null
           title?: string
+          title_bn?: string | null
+          title_en?: string | null
+          title_hi?: string | null
+          title_ta?: string | null
+          title_te?: string | null
           url?: string
         }
         Relationships: [
