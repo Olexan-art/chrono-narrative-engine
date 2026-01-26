@@ -210,24 +210,67 @@ export default function NewsArticlePage() {
 
   const chatDialogue = Array.isArray(article.chat_dialogue) ? article.chat_dialogue : [];
 
+  // Generate SEO keywords from content
+  const generateKeywords = (): string[] => {
+    const baseKeywords = ['news', 'новини', article.category || 'general'];
+    const countryKeywords = [countryName, article.country.code];
+    const titleWords = getLocalizedField('title')
+      ?.split(/\s+/)
+      .filter((w: string) => w.length > 4)
+      .slice(0, 5) || [];
+    return [...baseKeywords, ...countryKeywords, ...titleWords];
+  };
+
+  // Generate clean description for SEO
+  const generateSeoDescription = (): string => {
+    const desc = getLocalizedField('description') || getLocalizedField('content') || '';
+    const cleanDesc = desc.replace(/\s+/g, ' ').trim();
+    return cleanDesc.slice(0, 155) + (cleanDesc.length > 155 ? '...' : '');
+  };
+
+  // Canonical URL
+  const canonicalUrl = `https://echoes2.com/news/${article.country.code.toLowerCase()}/${slug}`;
+
+  // Breadcrumbs for SEO
+  const breadcrumbs = [
+    { name: t('newsdigest.title'), url: 'https://echoes2.com/news-digest' },
+    { name: countryName, url: `https://echoes2.com/news-digest?country=${article.country.code}` },
+    { name: getLocalizedField('title')?.slice(0, 50) || 'Article', url: canonicalUrl }
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <SEOHead 
         title={getLocalizedField('title')}
-        description={getLocalizedField('description')?.slice(0, 160)}
+        description={generateSeoDescription()}
+        keywords={generateKeywords()}
+        type="article"
+        image={article.image_url || undefined}
+        canonicalUrl={canonicalUrl}
+        publishedAt={article.published_at || undefined}
+        author={article.feed?.name || 'RSS Feed'}
+        breadcrumbs={breadcrumbs}
       />
       <Header />
       
       <main className="container mx-auto px-4 py-6 md:py-10">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+        {/* Breadcrumb - Clickable */}
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
           <Link to="/news-digest" className="hover:text-primary transition-colors">
             {t('newsdigest.title')}
           </Link>
           <span>/</span>
-          <span>{article.country.flag} {countryName}</span>
+          <Link 
+            to={`/news-digest?country=${article.country.id}`} 
+            className="hover:text-primary transition-colors flex items-center gap-1"
+          >
+            <span>{article.country.flag}</span>
+            <span>{countryName}</span>
+          </Link>
           <span>/</span>
-          <span className="text-foreground truncate max-w-[200px]">{getLocalizedField('title')}</span>
+          <span className="text-foreground truncate max-w-[200px]" title={getLocalizedField('title')}>
+            {getLocalizedField('title')}
+          </span>
         </nav>
 
         <div className="grid lg:grid-cols-3 gap-8">
