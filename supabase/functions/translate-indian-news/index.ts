@@ -44,7 +44,7 @@ Provide ONLY the translations in this exact JSON format, no explanation:
 ${targetLanguages.map(l => `  "${l}": "translated text in ${languageNames[l]}"`).join(',\n')}
 }`;
 
-  const response = await fetch('https://api.lovable.dev/v1/chat/completions', {
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${LOVABLE_API_KEY}`,
@@ -165,10 +165,11 @@ Deno.serve(async (req) => {
     // Action: translate all news for a country (India)
     if (action === 'translate_country') {
       // Find India country
+      const code = (countryCode || 'in').toUpperCase();
       const { data: indiaCountry } = await supabase
         .from('news_countries')
         .select('id')
-        .eq('code', countryCode || 'in')
+        .eq('code', code)
         .single();
 
       if (!indiaCountry) {
