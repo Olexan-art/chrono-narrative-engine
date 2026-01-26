@@ -63,6 +63,7 @@ function BatchRetellPanelComponent() {
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedModel, setSelectedModel] = useState<string>(AI_MODELS[0].value);
   const [retellMode, setRetellMode] = useState<'all' | 'every2nd'>('all');
+  const [maxCount, setMaxCount] = useState<number>(0); // 0 means unlimited
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<BatchStats>({ total: 0, processed: 0, success: 0, failed: 0, skipped: 0 });
@@ -141,6 +142,11 @@ function BatchRetellPanelComponent() {
       newsToProcess = newsToProcess.filter((_, idx) => idx % 2 === 0);
     }
 
+    // Apply max count limit
+    if (maxCount > 0 && newsToProcess.length > maxCount) {
+      newsToProcess = newsToProcess.slice(0, maxCount);
+    }
+
     const initialStats: BatchStats = {
       total: newsToProcess.length,
       processed: 0,
@@ -211,6 +217,16 @@ function BatchRetellPanelComponent() {
 
   const notRetoldCount = newsForDate.filter(n => !n.content_en || n.content_en.trim().length === 0).length;
   const retoldCount = newsForDate.length - notRetoldCount;
+  
+  // Calculate actual count to process
+  const getProcessCount = () => {
+    let count = retellMode === 'every2nd' ? Math.ceil(notRetoldCount / 2) : notRetoldCount;
+    if (maxCount > 0 && count > maxCount) {
+      count = maxCount;
+    }
+    return count;
+  };
+  const processCount = getProcessCount();
 
   return (
     <Card className="cosmic-card">
@@ -225,7 +241,7 @@ function BatchRetellPanelComponent() {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Controls */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Globe className="w-4 h-4" />
@@ -267,6 +283,23 @@ function BatchRetellPanelComponent() {
               <SelectContent>
                 <SelectItem value="all">Всі новини</SelectItem>
                 <SelectItem value="every2nd">Кожна 2-га новина</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Кількість</Label>
+            <Select value={maxCount.toString()} onValueChange={(v) => setMaxCount(parseInt(v, 10))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Без ліміту</SelectItem>
+                <SelectItem value="5">5 новин</SelectItem>
+                <SelectItem value="10">10 новин</SelectItem>
+                <SelectItem value="20">20 новин</SelectItem>
+                <SelectItem value="50">50 новин</SelectItem>
+                <SelectItem value="100">100 новин</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -320,7 +353,7 @@ function BatchRetellPanelComponent() {
                       className="gap-2"
                     >
                       <Play className="w-4 h-4" />
-                      Почати переказ ({retellMode === 'every2nd' ? Math.ceil(notRetoldCount / 2) : notRetoldCount})
+                      Почати переказ ({processCount})
                     </Button>
                   ) : (
                     <Button variant="destructive" onClick={stopBatchRetell} className="gap-2">
