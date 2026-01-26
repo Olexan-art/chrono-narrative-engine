@@ -3,14 +3,14 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
-import { ArrowLeft, ExternalLink, MessageCircle, Sparkles, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
-import { ThreadedCharacterChat } from "@/components/ThreadedCharacterChat";
+import { NewsDialogueSection } from "@/components/NewsDialogueSection";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { callEdgeFunction } from "@/lib/api";
@@ -293,59 +293,13 @@ export default function NewsArticlePage() {
             </article>
 
             {/* Character Dialogue Section - MOBILE ONLY (below article) */}
-            <section className="mt-8 lg:hidden">
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <MessageCircle className="w-4 h-4" />
-                      {t('chat.observers')}
-                    </CardTitle>
-                    
-                    {isAdminAuthenticated && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => generateDialogueMutation.mutate()}
-                        disabled={generateDialogueMutation.isPending}
-                      >
-                        {generateDialogueMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="w-4 h-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {chatDialogue.length > 0 ? (
-                    <ThreadedCharacterChat messages={chatDialogue as any} />
-                  ) : (
-                    <div className="py-6 text-center text-muted-foreground">
-                      <MessageCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                      <p className="text-sm">{t('news.no_dialogue')}</p>
-                      {isAdminAuthenticated && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-3"
-                          onClick={() => generateDialogueMutation.mutate()}
-                          disabled={generateDialogueMutation.isPending}
-                        >
-                          {generateDialogueMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <MessageCircle className="w-4 h-4 mr-2" />
-                          )}
-                          {t('news.generate_dialogue')}
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </section>
+            <NewsDialogueSection
+              chatDialogue={chatDialogue as any}
+              isAdminAuthenticated={isAdminAuthenticated}
+              isGenerating={generateDialogueMutation.isPending}
+              onGenerateDialogue={() => generateDialogueMutation.mutate()}
+              className="mt-8 lg:hidden"
+            />
           </div>
 
           {/* Sidebar */}
@@ -445,57 +399,13 @@ export default function NewsArticlePage() {
             </Card>
 
             {/* Character Dialogue Section - DESKTOP ONLY (in sidebar) */}
-            <Card className="hidden lg:block">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4" />
-                    {t('chat.observers')}
-                  </CardTitle>
-                  
-                  {isAdminAuthenticated && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => generateDialogueMutation.mutate()}
-                      disabled={generateDialogueMutation.isPending}
-                    >
-                      {generateDialogueMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4" />
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {chatDialogue.length > 0 ? (
-                  <ThreadedCharacterChat messages={chatDialogue as any} />
-                ) : (
-                  <div className="py-6 text-center text-muted-foreground">
-                    <MessageCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">{t('news.no_dialogue')}</p>
-                    {isAdminAuthenticated && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-3"
-                        onClick={() => generateDialogueMutation.mutate()}
-                        disabled={generateDialogueMutation.isPending}
-                      >
-                        {generateDialogueMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <MessageCircle className="w-4 h-4 mr-2" />
-                        )}
-                        {t('news.generate_dialogue')}
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <NewsDialogueSection
+              chatDialogue={chatDialogue as any}
+              isAdminAuthenticated={isAdminAuthenticated}
+              isGenerating={generateDialogueMutation.isPending}
+              onGenerateDialogue={() => generateDialogueMutation.mutate()}
+              className="hidden lg:block"
+            />
           </aside>
         </div>
       </main>
