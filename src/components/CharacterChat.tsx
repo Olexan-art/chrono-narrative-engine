@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Heart, ThumbsUp } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef, memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CharacterLike {
@@ -31,7 +31,7 @@ interface ConfettiParticle {
   scale: number;
 }
 
-const characterColors: Record<string, string> = {
+const CHARACTER_COLORS: Readonly<Record<string, string>> = {
   darth_vader: "border-red-500/30 bg-red-950/20",
   kratos: "border-orange-500/30 bg-orange-950/20",
   deadpool: "border-red-400/30 bg-red-900/20",
@@ -42,20 +42,30 @@ const characterColors: Record<string, string> = {
   narrator: "border-purple-500/30 bg-purple-950/20",
   observer: "border-blue-500/30 bg-blue-950/20",
   stranger: "border-green-500/30 bg-green-950/20",
-};
+} as const;
 
-const confettiEmojis = ['❤️', '💖', '💕', '✨', '🌟', '💫', '⭐', '🎉'];
+const CONFETTI_EMOJIS = ['❤️', '💖', '💕', '✨', '🌟', '💫', '⭐', '🎉'] as const;
+const ANIMATION_DURATION = 600;
+const CONFETTI_DURATION = 1000;
+const MAX_CONFETTI_PARTICLES = 8;
 
 function formatNumber(num: number): string {
+  if (!Number.isFinite(num) || num < 0) return '0';
   if (num >= 1000) {
     return `${(num / 1000).toFixed(1)}K`;
   }
-  return num.toString();
+  return Math.floor(num).toString();
 }
 
-function ConfettiEffect({ particles }: { particles: ConfettiParticle[] }) {
+function getRandomEmoji(): string {
+  return CONFETTI_EMOJIS[Math.floor(Math.random() * CONFETTI_EMOJIS.length)];
+}
+
+const ConfettiEffect = memo(function ConfettiEffect({ particles }: { particles: ConfettiParticle[] }) {
+  if (particles.length === 0) return null;
+  
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-visible">
+    <div className="absolute inset-0 pointer-events-none overflow-visible" aria-hidden="true">
       {particles.map((particle) => (
         <span
           key={particle.id}
@@ -73,44 +83,64 @@ function ConfettiEffect({ particles }: { particles: ConfettiParticle[] }) {
       ))}
     </div>
   );
-}
+});
 
 export function CharacterChat({ messages }: CharacterChatProps) {
   const { t } = useLanguage();
-  const [likedMessages, setLikedMessages] = useState<Set<number>>(new Set());
+  const [likedMessages, setLikedMessages] = useState<Set<number>>(() => new Set());
   const [localLikes, setLocalLikes] = useState<Record<number, number>>({});
-  const [animatingLikes, setAnimatingLikes] = useState<Set<number>>(new Set());
+  const [animatingLikes, setAnimatingLikes] = useState<Set<number>>(() => new Set());
   const [confettiMap, setConfettiMap] = useState<Record<number, ConfettiParticle[]>>({});
+  
+  // Track timeouts for cleanup
+  const timeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    const timeouts = timeoutsRef.current;
+    return () => {
+      timeouts.forEach((timeout) => clearTimeout(timeout));
+      timeouts.clear();
+    };
+  }, []);
 
   const generateConfetti = useCallback((index: number) => {
-    const particles: ConfettiParticle[] = Array.from({ length: 8 }, (_, i) => ({
+    const particles: ConfettiParticle[] = Array.from({ length: MAX_CONFETTI_PARTICLES }, (_, i) => ({
       id: Date.now() + i,
       x: 10 + Math.random() * 30,
       y: 70 + Math.random() * 20,
-      emoji: confettiEmojis[Math.floor(Math.random() * confettiEmojis.length)],
+      emoji: getRandomEmoji(),
       rotation: Math.random() * 360,
       scale: 0.6 + Math.random() * 0.6,
     }));
 
     setConfettiMap(prev => ({ ...prev, [index]: particles }));
 
-    // Clear confetti after animation
-    setTimeout(() => {
+    // Clear existing timeout if any
+    const existingTimeout = timeoutsRef.current.get(`confetti-${index}`);
+    if (existingTimeout) clearTimeout(existingTimeout);
+
+    const timeout = setTimeout(() => {
       setConfettiMap(prev => {
         const next = { ...prev };
         delete next[index];
         return next;
       });
-    }, 1000);
+      timeoutsRef.current.delete(`confetti-${index}`);
+    }, CONFETTI_DURATION);
+
+    timeoutsRef.current.set(`confetti-${index}`, timeout);
   }, []);
 
-  if (!messages || messages.length === 0) return null;
+  // Early return with validation
+  if (!Array.isArray(messages) || messages.length === 0) return null;
 
   const handleLike = (index: number) => {
+    if (!Number.isFinite(index) || index < 0) return;
+    
     const wasLiked = likedMessages.has(index);
     
     if (wasLiked) {
-      // Unlike
       setLikedMessages(prev => {
         const next = new Set(prev);
         next.delete(index);
@@ -118,27 +148,31 @@ export function CharacterChat({ messages }: CharacterChatProps) {
       });
       setLocalLikes(prev => ({
         ...prev,
-        [index]: (prev[index] || 0) - 1
+        [index]: Math.max((prev[index] || 0) - 1, -1)
       }));
     } else {
-      // Like with animation
       setLikedMessages(prev => new Set(prev).add(index));
       setLocalLikes(prev => ({
         ...prev,
         [index]: (prev[index] || 0) + 1
       }));
       
-      // Trigger heart animation
       setAnimatingLikes(prev => new Set(prev).add(index));
-      setTimeout(() => {
+      
+      // Clear existing animation timeout
+      const existingTimeout = timeoutsRef.current.get(`anim-${index}`);
+      if (existingTimeout) clearTimeout(existingTimeout);
+
+      const timeout = setTimeout(() => {
         setAnimatingLikes(prev => {
           const next = new Set(prev);
           next.delete(index);
           return next;
         });
-      }, 600);
+        timeoutsRef.current.delete(`anim-${index}`);
+      }, ANIMATION_DURATION);
 
-      // Generate confetti
+      timeoutsRef.current.set(`anim-${index}`, timeout);
       generateConfetti(index);
     }
   };
@@ -146,18 +180,29 @@ export function CharacterChat({ messages }: CharacterChatProps) {
   return (
     <div className="mt-8 md:mt-12 pt-4 md:pt-8 border-t border-border">
       <h3 className="text-xs md:text-sm font-mono text-muted-foreground mb-4 md:mb-6 flex items-center gap-2">
-        <span className="text-lg md:text-xl">💬</span>
+        <span className="text-lg md:text-xl" aria-hidden="true">💬</span>
         {t('chat.title')}
       </h3>
       
-      <div className="space-y-3 md:space-y-4 max-w-2xl">
+      <div className="space-y-3 md:space-y-4 max-w-2xl" role="feed" aria-label="Character chat">
         {messages.map((msg, i) => {
-          const baseLikes = msg.likes ?? Math.floor(Math.random() * 1908);
-          const totalLikes = baseLikes + (localLikes[i] || 0);
+          // Skip invalid messages
+          if (!msg || typeof msg !== 'object') return null;
+          
+          const baseLikes = typeof msg.likes === 'number' && Number.isFinite(msg.likes) 
+            ? msg.likes 
+            : Math.floor(Math.random() * 1908);
+          const totalLikes = Math.max(0, baseLikes + (localLikes[i] || 0));
           const isLiked = likedMessages.has(i);
           const isAnimating = animatingLikes.has(i);
-          const characterLikes = msg.characterLikes || [];
-          const confettiParticles = confettiMap[i] || [];
+          const characterLikes = msg.characterLikes ?? [];
+          const confettiParticles = confettiMap[i] ?? [];
+          
+          // Sanitize values
+          const sanitizedMessage = typeof msg.message === 'string' ? msg.message : '';
+          const sanitizedName = typeof msg.name === 'string' ? msg.name : 'Unknown';
+          const sanitizedAvatar = typeof msg.avatar === 'string' ? msg.avatar : '👤';
+          const characterColor = CHARACTER_COLORS[msg.character] ?? "border-border bg-card/50";
 
           return (
             <div
@@ -165,20 +210,22 @@ export function CharacterChat({ messages }: CharacterChatProps) {
               className={cn(
                 "relative flex gap-2 md:gap-3 p-3 md:p-4 rounded-lg border transition-all duration-300",
                 "hover:scale-[1.01] hover:shadow-lg hover:shadow-primary/5",
-                characterColors[msg.character] || "border-border bg-card/50",
+                characterColor,
                 "animate-fade-in"
               )}
-              style={{ animationDelay: `${i * 100}ms` }}
+              style={{ animationDelay: `${Math.min(i * 100, 1000)}ms` }}
+              role="article"
+              aria-label={`Message from ${sanitizedName}`}
             >
               <ConfettiEffect particles={confettiParticles} />
               
-              <div className="text-2xl md:text-3xl shrink-0">{msg.avatar}</div>
+              <div className="text-2xl md:text-3xl shrink-0" aria-hidden="true">{sanitizedAvatar}</div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-xs md:text-sm">{msg.name}</span>
+                  <span className="font-semibold text-xs md:text-sm">{sanitizedName}</span>
                 </div>
                 <p className="text-sm md:text-base text-foreground/90 font-serif leading-relaxed mb-2">
-                  {msg.message}
+                  {sanitizedMessage}
                 </p>
                 
                 {/* Likes section */}
@@ -191,6 +238,8 @@ export function CharacterChat({ messages }: CharacterChatProps) {
                         ? "text-red-500" 
                         : "text-muted-foreground hover:text-red-400"
                     )}
+                    aria-label={isLiked ? 'Unlike' : 'Like'}
+                    aria-pressed={isLiked}
                   >
                     <div className="relative">
                       <Heart 
@@ -199,10 +248,10 @@ export function CharacterChat({ messages }: CharacterChatProps) {
                           isLiked && "fill-current",
                           isAnimating && "animate-like-bounce"
                         )} 
+                        aria-hidden="true"
                       />
-                      {/* Pulse ring effect on like */}
                       {isAnimating && (
-                        <span className="absolute inset-0 rounded-full animate-like-ring border-2 border-red-500/50" />
+                        <span className="absolute inset-0 rounded-full animate-like-ring border-2 border-red-500/50" aria-hidden="true" />
                       )}
                     </div>
                     <span className={cn(
@@ -216,11 +265,11 @@ export function CharacterChat({ messages }: CharacterChatProps) {
                   {/* Character likes */}
                   {characterLikes.length > 0 && (
                     <div className="flex items-center gap-1 animate-fade-in" style={{ animationDelay: '200ms' }}>
-                      <ThumbsUp className="w-3 h-3 text-muted-foreground" />
+                      <ThumbsUp className="w-3 h-3 text-muted-foreground" aria-hidden="true" />
                       <div className="flex -space-x-1">
-                        {characterLikes.map((cl, j) => (
+                        {characterLikes.slice(0, 5).map((cl, j) => (
                           <span 
-                            key={j} 
+                            key={cl.characterId || j} 
                             className="text-sm cursor-default transition-transform hover:scale-125 hover:z-10"
                             title={cl.name}
                           >

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Heart, ThumbsUp, Reply, CornerDownRight } from "lucide-react";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef, memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CharacterLike {
@@ -34,7 +34,7 @@ interface ConfettiParticle {
   scale: number;
 }
 
-const characterColors: Record<string, string> = {
+const CHARACTER_COLORS: Readonly<Record<string, string>> = {
   darth_vader: "border-red-500/30 bg-red-950/20",
   kratos: "border-orange-500/30 bg-orange-950/20",
   deadpool: "border-red-400/30 bg-red-900/20",
@@ -45,20 +45,30 @@ const characterColors: Record<string, string> = {
   narrator: "border-purple-500/30 bg-purple-950/20",
   observer: "border-blue-500/30 bg-blue-950/20",
   stranger: "border-green-500/30 bg-green-950/20",
-};
+} as const;
 
-const confettiEmojis = ['❤️', '💖', '💕', '✨', '🌟', '💫', '⭐', '🎉'];
+const CONFETTI_EMOJIS = ['❤️', '💖', '💕', '✨', '🌟', '💫', '⭐', '🎉'] as const;
+const ANIMATION_DURATION = 600;
+const CONFETTI_DURATION = 1000;
+const MAX_CONFETTI_PARTICLES = 8;
 
 function formatNumber(num: number): string {
+  if (!Number.isFinite(num) || num < 0) return '0';
   if (num >= 1000) {
     return `${(num / 1000).toFixed(1)}K`;
   }
-  return num.toString();
+  return Math.floor(num).toString();
 }
 
-function ConfettiEffect({ particles }: { particles: ConfettiParticle[] }) {
+function getRandomEmoji(): string {
+  return CONFETTI_EMOJIS[Math.floor(Math.random() * CONFETTI_EMOJIS.length)];
+}
+
+const ConfettiEffect = memo(function ConfettiEffect({ particles }: { particles: ConfettiParticle[] }) {
+  if (particles.length === 0) return null;
+  
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-visible">
+    <div className="absolute inset-0 pointer-events-none overflow-visible" aria-hidden="true">
       {particles.map((particle) => (
         <span
           key={particle.id}
@@ -76,59 +86,66 @@ function ConfettiEffect({ particles }: { particles: ConfettiParticle[] }) {
       ))}
     </div>
   );
-}
+});
 
 interface MessageCardProps {
   msg: ChatMessage;
   index: number;
   isReply?: boolean;
   replyToMessage?: ChatMessage | null;
-  likedMessages: Set<number>;
-  localLikes: Record<number, number>;
-  animatingLikes: Set<number>;
-  confettiMap: Record<number, ConfettiParticle[]>;
+  isLiked: boolean;
+  totalLikes: number;
+  isAnimating: boolean;
+  confettiParticles: ConfettiParticle[];
   onLike: (index: number) => void;
 }
 
-function MessageCard({
+const MessageCard = memo(function MessageCard({
   msg,
   index,
   isReply = false,
   replyToMessage,
-  likedMessages,
-  localLikes,
-  animatingLikes,
-  confettiMap,
+  isLiked,
+  totalLikes,
+  isAnimating,
+  confettiParticles,
   onLike,
 }: MessageCardProps) {
-  const baseLikes = msg.likes ?? Math.floor(Math.random() * 1908);
-  const totalLikes = baseLikes + (localLikes[index] || 0);
-  const isLiked = likedMessages.has(index);
-  const isAnimating = animatingLikes.has(index);
-  const characterLikes = msg.characterLikes || [];
-  const confettiParticles = confettiMap[index] || [];
+  const characterLikes = msg.characterLikes ?? [];
+  const characterColor = CHARACTER_COLORS[msg.character] ?? "border-border bg-card/50";
+
+  const handleLikeClick = useCallback(() => {
+    onLike(index);
+  }, [onLike, index]);
+
+  // Sanitize message content
+  const sanitizedMessage = typeof msg.message === 'string' ? msg.message : '';
+  const sanitizedName = typeof msg.name === 'string' ? msg.name : 'Unknown';
+  const sanitizedAvatar = typeof msg.avatar === 'string' ? msg.avatar : '👤';
 
   return (
     <div
       className={cn(
         "relative flex gap-2 md:gap-3 p-3 md:p-4 rounded-lg border transition-all duration-300",
         "hover:scale-[1.01] hover:shadow-lg hover:shadow-primary/5",
-        characterColors[msg.character] || "border-border bg-card/50",
+        characterColor,
         "animate-fade-in",
         isReply && "ml-6 md:ml-10 border-l-2 border-l-primary/30"
       )}
-      style={{ animationDelay: `${index * 100}ms` }}
+      style={{ animationDelay: `${Math.min(index * 100, 1000)}ms` }}
+      role="article"
+      aria-label={`Message from ${sanitizedName}`}
     >
       <ConfettiEffect particles={confettiParticles} />
       
-      <div className="text-2xl md:text-3xl shrink-0">{msg.avatar}</div>
+      <div className="text-2xl md:text-3xl shrink-0" aria-hidden="true">{sanitizedAvatar}</div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="font-semibold text-xs md:text-sm">{msg.name}</span>
+          <span className="font-semibold text-xs md:text-sm">{sanitizedName}</span>
           {isReply && (
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <Reply className="h-3 w-3" />
-              відповідь
+              <Reply className="h-3 w-3" aria-hidden="true" />
+              <span>відповідь</span>
             </span>
           )}
         </div>
@@ -142,19 +159,21 @@ function MessageCard({
         )}
         
         <p className="text-sm md:text-base text-foreground/90 font-serif leading-relaxed mb-2">
-          {msg.message}
+          {sanitizedMessage}
         </p>
         
         {/* Likes section */}
         <div className="flex items-center gap-3 mt-2">
           <button
-            onClick={() => onLike(index)}
+            onClick={handleLikeClick}
             className={cn(
               "relative flex items-center gap-1.5 text-xs transition-all group",
               isLiked 
                 ? "text-red-500" 
                 : "text-muted-foreground hover:text-red-400"
             )}
+            aria-label={isLiked ? 'Unlike' : 'Like'}
+            aria-pressed={isLiked}
           >
             <div className="relative">
               <Heart 
@@ -163,9 +182,10 @@ function MessageCard({
                   isLiked && "fill-current",
                   isAnimating && "animate-like-bounce"
                 )} 
+                aria-hidden="true"
               />
               {isAnimating && (
-                <span className="absolute inset-0 rounded-full animate-like-ring border-2 border-red-500/50" />
+                <span className="absolute inset-0 rounded-full animate-like-ring border-2 border-red-500/50" aria-hidden="true" />
               )}
             </div>
             <span className={cn(
@@ -179,11 +199,11 @@ function MessageCard({
           {/* Character likes */}
           {characterLikes.length > 0 && (
             <div className="flex items-center gap-1 animate-fade-in" style={{ animationDelay: '200ms' }}>
-              <ThumbsUp className="w-3 h-3 text-muted-foreground" />
+              <ThumbsUp className="w-3 h-3 text-muted-foreground" aria-hidden="true" />
               <div className="flex -space-x-1">
-                {characterLikes.map((cl, j) => (
+                {characterLikes.slice(0, 5).map((cl, j) => (
                   <span 
-                    key={j} 
+                    key={cl.characterId || j} 
                     className="text-sm cursor-default transition-transform hover:scale-125 hover:z-10"
                     title={cl.name}
                   >
@@ -197,54 +217,84 @@ function MessageCard({
       </div>
     </div>
   );
-}
+});
 
 export function ThreadedCharacterChat({ messages }: ThreadedCharacterChatProps) {
   const { t } = useLanguage();
-  const [likedMessages, setLikedMessages] = useState<Set<number>>(new Set());
+  const [likedMessages, setLikedMessages] = useState<Set<number>>(() => new Set());
   const [localLikes, setLocalLikes] = useState<Record<number, number>>({});
-  const [animatingLikes, setAnimatingLikes] = useState<Set<number>>(new Set());
+  const [animatingLikes, setAnimatingLikes] = useState<Set<number>>(() => new Set());
   const [confettiMap, setConfettiMap] = useState<Record<number, ConfettiParticle[]>>({});
+  
+  // Track timeouts for cleanup
+  const timeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    const timeouts = timeoutsRef.current;
+    return () => {
+      timeouts.forEach((timeout) => clearTimeout(timeout));
+      timeouts.clear();
+    };
+  }, []);
 
   const generateConfetti = useCallback((index: number) => {
-    const particles: ConfettiParticle[] = Array.from({ length: 8 }, (_, i) => ({
+    const particles: ConfettiParticle[] = Array.from({ length: MAX_CONFETTI_PARTICLES }, (_, i) => ({
       id: Date.now() + i,
       x: 10 + Math.random() * 30,
       y: 70 + Math.random() * 20,
-      emoji: confettiEmojis[Math.floor(Math.random() * confettiEmojis.length)],
+      emoji: getRandomEmoji(),
       rotation: Math.random() * 360,
       scale: 0.6 + Math.random() * 0.6,
     }));
 
     setConfettiMap(prev => ({ ...prev, [index]: particles }));
 
-    setTimeout(() => {
+    // Clear existing timeout if any
+    const existingTimeout = timeoutsRef.current.get(`confetti-${index}`);
+    if (existingTimeout) clearTimeout(existingTimeout);
+
+    const timeout = setTimeout(() => {
       setConfettiMap(prev => {
         const next = { ...prev };
         delete next[index];
         return next;
       });
-    }, 1000);
+      timeoutsRef.current.delete(`confetti-${index}`);
+    }, CONFETTI_DURATION);
+
+    timeoutsRef.current.set(`confetti-${index}`, timeout);
   }, []);
 
-  // Organize messages into threads
-  const { rootMessages, replyMap, messageById } = useMemo(() => {
+  // Organize messages into threads with validation
+  const { rootMessages, replyMap, messageById, globalIndexMap } = useMemo(() => {
     const messageById = new Map<string, ChatMessage>();
     const replyMap = new Map<string, ChatMessage[]>();
     const rootMessages: ChatMessage[] = [];
+    const globalIndexMap = new Map<string, number>();
+
+    // Validate messages array
+    if (!Array.isArray(messages)) {
+      return { rootMessages, replyMap, messageById, globalIndexMap };
+    }
 
     // First pass: index all messages by ID
     messages.forEach((msg, idx) => {
+      if (!msg || typeof msg !== 'object') return;
       const msgId = msg.id || `msg-${idx}`;
-      messageById.set(msgId, { ...msg, id: msgId });
+      const enrichedMsg = { ...msg, id: msgId };
+      messageById.set(msgId, enrichedMsg);
+      globalIndexMap.set(msgId, idx);
     });
 
     // Second pass: organize into threads
     messages.forEach((msg, idx) => {
+      if (!msg || typeof msg !== 'object') return;
       const msgId = msg.id || `msg-${idx}`;
-      const enrichedMsg = messageById.get(msgId)!;
+      const enrichedMsg = messageById.get(msgId);
+      if (!enrichedMsg) return;
 
-      if (msg.replyTo) {
+      if (msg.replyTo && messageById.has(msg.replyTo)) {
         const replies = replyMap.get(msg.replyTo) || [];
         replies.push(enrichedMsg);
         replyMap.set(msg.replyTo, replies);
@@ -253,12 +303,15 @@ export function ThreadedCharacterChat({ messages }: ThreadedCharacterChatProps) 
       }
     });
 
-    return { rootMessages, replyMap, messageById };
+    return { rootMessages, replyMap, messageById, globalIndexMap };
   }, [messages]);
 
+  // Early return for empty messages
   if (!messages || messages.length === 0) return null;
 
   const handleLike = (index: number) => {
+    if (!Number.isFinite(index) || index < 0) return;
+    
     const wasLiked = likedMessages.has(index);
     
     if (wasLiked) {
@@ -269,7 +322,7 @@ export function ThreadedCharacterChat({ messages }: ThreadedCharacterChatProps) 
       });
       setLocalLikes(prev => ({
         ...prev,
-        [index]: (prev[index] || 0) - 1
+        [index]: Math.max((prev[index] || 0) - 1, -1)
       }));
     } else {
       setLikedMessages(prev => new Set(prev).add(index));
@@ -279,52 +332,69 @@ export function ThreadedCharacterChat({ messages }: ThreadedCharacterChatProps) 
       }));
       
       setAnimatingLikes(prev => new Set(prev).add(index));
-      setTimeout(() => {
+      
+      // Clear existing animation timeout
+      const existingTimeout = timeoutsRef.current.get(`anim-${index}`);
+      if (existingTimeout) clearTimeout(existingTimeout);
+
+      const timeout = setTimeout(() => {
         setAnimatingLikes(prev => {
           const next = new Set(prev);
           next.delete(index);
           return next;
         });
-      }, 600);
+        timeoutsRef.current.delete(`anim-${index}`);
+      }, ANIMATION_DURATION);
 
+      timeoutsRef.current.set(`anim-${index}`, timeout);
       generateConfetti(index);
     }
+  };
+
+  // Get likes data for a message
+  const getLikesData = (msg: ChatMessage, globalIndex: number) => {
+    const baseLikes = typeof msg.likes === 'number' && Number.isFinite(msg.likes) 
+      ? msg.likes 
+      : Math.floor(Math.random() * 1908);
+    const totalLikes = baseLikes + (localLikes[globalIndex] || 0);
+    return {
+      isLiked: likedMessages.has(globalIndex),
+      totalLikes: Math.max(0, totalLikes),
+      isAnimating: animatingLikes.has(globalIndex),
+      confettiParticles: confettiMap[globalIndex] || [],
+    };
   };
 
   // Render a message with its replies
   const renderMessageWithReplies = (msg: ChatMessage, globalIndex: number) => {
     const replies = msg.id ? replyMap.get(msg.id) || [] : [];
+    const likesData = getLikesData(msg, globalIndex);
     
     return (
       <div key={msg.id || globalIndex} className="space-y-2">
         <MessageCard
           msg={msg}
           index={globalIndex}
-          likedMessages={likedMessages}
-          localLikes={localLikes}
-          animatingLikes={animatingLikes}
-          confettiMap={confettiMap}
+          {...likesData}
           onLike={handleLike}
         />
         
         {/* Replies */}
         {replies.length > 0 && (
           <div className="space-y-2">
-            {replies.map((reply, replyIdx) => {
-              const replyGlobalIndex = messages.findIndex(m => 
-                (m.id || `msg-${messages.indexOf(m)}`) === reply.id
-              );
+            {replies.map((reply) => {
+              const replyGlobalIndex = globalIndexMap.get(reply.id!) ?? -1;
+              if (replyGlobalIndex < 0) return null;
+              
+              const replyLikesData = getLikesData(reply, replyGlobalIndex);
               return (
                 <MessageCard
-                  key={reply.id || replyIdx}
+                  key={reply.id}
                   msg={reply}
-                  index={replyGlobalIndex >= 0 ? replyGlobalIndex : globalIndex + replyIdx + 1}
+                  index={replyGlobalIndex}
                   isReply={true}
                   replyToMessage={msg}
-                  likedMessages={likedMessages}
-                  localLikes={localLikes}
-                  animatingLikes={animatingLikes}
-                  confettiMap={confettiMap}
+                  {...replyLikesData}
                   onLike={handleLike}
                 />
               );
@@ -336,44 +406,43 @@ export function ThreadedCharacterChat({ messages }: ThreadedCharacterChatProps) 
   };
 
   // Check if this is a threaded conversation
-  const hasThreads = messages.some(m => m.replyTo);
+  const hasThreads = messages.some(m => m?.replyTo);
 
   return (
     <div className="mt-8 md:mt-12 pt-4 md:pt-8 border-t border-border">
       <h3 className="text-xs md:text-sm font-mono text-muted-foreground mb-4 md:mb-6 flex items-center gap-2">
-        <span className="text-lg md:text-xl">💬</span>
+        <span className="text-lg md:text-xl" aria-hidden="true">💬</span>
         {t('chat.title')}
         {hasThreads && (
           <span className="ml-2 flex items-center gap-1 text-[10px] bg-primary/10 px-2 py-0.5 rounded-full">
-            <CornerDownRight className="h-3 w-3" />
-            з гілками
+            <CornerDownRight className="h-3 w-3" aria-hidden="true" />
+            <span>з гілками</span>
           </span>
         )}
       </h3>
       
-      <div className="space-y-3 md:space-y-4 max-w-2xl">
+      <div className="space-y-3 md:space-y-4 max-w-2xl" role="feed" aria-label="Character chat">
         {hasThreads ? (
           // Threaded view
-          rootMessages.map((msg, i) => {
-            const globalIndex = messages.findIndex(m => 
-              (m.id || `msg-${messages.indexOf(m)}`) === msg.id
-            );
-            return renderMessageWithReplies(msg, globalIndex >= 0 ? globalIndex : i);
+          rootMessages.map((msg) => {
+            const globalIndex = globalIndexMap.get(msg.id!) ?? 0;
+            return renderMessageWithReplies(msg, globalIndex);
           })
         ) : (
           // Linear view (fallback for non-threaded messages)
-          messages.map((msg, i) => (
-            <MessageCard
-              key={i}
-              msg={msg}
-              index={i}
-              likedMessages={likedMessages}
-              localLikes={localLikes}
-              animatingLikes={animatingLikes}
-              confettiMap={confettiMap}
-              onLike={handleLike}
-            />
-          ))
+          messages.map((msg, i) => {
+            if (!msg) return null;
+            const likesData = getLikesData(msg, i);
+            return (
+              <MessageCard
+                key={msg.id || i}
+                msg={msg}
+                index={i}
+                {...likesData}
+                onLike={handleLike}
+              />
+            );
+          })
         )}
       </div>
 
