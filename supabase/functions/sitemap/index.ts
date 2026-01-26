@@ -8,6 +8,15 @@ const corsHeaders = {
 
 const BASE_URL = "https://echoes2.com";
 
+// Helper to add hreflang links for multilingual pages
+function addHreflangLinks(url: string): string {
+  return `
+    <xhtml:link rel="alternate" hreflang="uk" href="${url}" />
+    <xhtml:link rel="alternate" hreflang="en" href="${url}" />
+    <xhtml:link rel="alternate" hreflang="pl" href="${url}" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="${url}" />`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -43,7 +52,7 @@ Deno.serve(async (req) => {
 
     if (volumesError) throw volumesError;
 
-    // Group parts by date to count stories per day
+    // Group parts by date to count stories per day and get latest update
     const partsByDate = new Map<string, { count: number; updated_at: string }>();
     for (const part of parts || []) {
       const existing = partsByDate.get(part.date);
@@ -69,36 +78,44 @@ Deno.serve(async (req) => {
     <loc>${BASE_URL}/</loc>
     <lastmod>${now}</lastmod>
     <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="uk" href="${BASE_URL}/" />
-    <xhtml:link rel="alternate" hreflang="en" href="${BASE_URL}/" />
-    <xhtml:link rel="alternate" hreflang="pl" href="${BASE_URL}/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="${BASE_URL}/" />
+    <priority>1.0</priority>${addHreflangLinks(`${BASE_URL}/`)}
   </url>
   
   <url>
     <loc>${BASE_URL}/calendar</loc>
     <lastmod>${now}</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.8</priority>${addHreflangLinks(`${BASE_URL}/calendar`)}
   </url>
   
   <url>
     <loc>${BASE_URL}/chapters</loc>
     <lastmod>${now}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.8</priority>${addHreflangLinks(`${BASE_URL}/chapters`)}
   </url>
   
   <url>
     <loc>${BASE_URL}/volumes</loc>
     <lastmod>${now}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.7</priority>${addHreflangLinks(`${BASE_URL}/volumes`)}
   </url>
 `;
 
-    // Add story pages (parts)
+    // Add date listing pages (/date/:date) for each unique date with stories
+    for (const [date, info] of partsByDate) {
+      const url = `${BASE_URL}/date/${date}`;
+      xml += `
+  <url>
+    <loc>${url}</loc>
+    <lastmod>${info.updated_at || now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>${addHreflangLinks(url)}
+  </url>`;
+    }
+
+    // Add individual story pages (/read/:date/:storyNumber)
     for (const [date, info] of partsByDate) {
       for (let i = 1; i <= info.count; i++) {
         const url = `${BASE_URL}/read/${date}/${i}`;
@@ -107,11 +124,7 @@ Deno.serve(async (req) => {
     <loc>${url}</loc>
     <lastmod>${info.updated_at || now}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-    <xhtml:link rel="alternate" hreflang="uk" href="${url}" />
-    <xhtml:link rel="alternate" hreflang="en" href="${url}" />
-    <xhtml:link rel="alternate" hreflang="pl" href="${url}" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="${url}" />
+    <priority>0.9</priority>${addHreflangLinks(url)}
   </url>`;
       }
     }
@@ -124,15 +137,11 @@ Deno.serve(async (req) => {
     <loc>${url}</loc>
     <lastmod>${chapter.updated_at || now}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="uk" href="${url}" />
-    <xhtml:link rel="alternate" hreflang="en" href="${url}" />
-    <xhtml:link rel="alternate" hreflang="pl" href="${url}" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="${url}" />
+    <priority>0.8</priority>${addHreflangLinks(url)}
   </url>`;
     }
 
-    // Add volume pages (if route exists)
+    // Add volume pages
     for (const volume of volumes || []) {
       const url = `${BASE_URL}/volume/${volume.id}`;
       xml += `
@@ -140,7 +149,7 @@ Deno.serve(async (req) => {
     <loc>${url}</loc>
     <lastmod>${volume.updated_at || now}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.7</priority>${addHreflangLinks(url)}
   </url>`;
     }
 
