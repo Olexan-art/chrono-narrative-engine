@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Globe, Plus, Trash2, RefreshCw, Loader2, CheckCircle2, XCircle, ExternalLink, Rss, AlertCircle, Download, Search, Eye, Languages, BarChart3, Clock, FileText, Calendar } from "lucide-react";
+import { Globe, Plus, Trash2, RefreshCw, Loader2, CheckCircle2, XCircle, ExternalLink, Rss, AlertCircle, Download, Search, Eye, Languages, BarChart3, Clock, FileText, Calendar, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import { FeedNewsViewer } from "./FeedNewsViewer";
 import { BatchRetellPanel } from "./BatchRetellPanel";
 import { formatDistanceToNow } from "date-fns";
 import { uk } from "date-fns/locale";
+import { isNewsRetold, hasNewsDialogue, getStatsLabels } from "@/lib/countryContentConfig";
 
 interface NewsCountry {
   id: string;
@@ -124,10 +125,10 @@ export function NewsDigestPanel({ password }: Props) {
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
-      // Fetch items with all content fields needed for retold detection
+      // Fetch items with all content fields needed for retold and dialogue detection
       const { data: allItems, error } = await supabase
         .from('news_rss_items')
-        .select('country_id, fetched_at, content, content_en, content_hi, content_ta, content_te, content_bn');
+        .select('country_id, fetched_at, content, content_en, content_hi, content_ta, content_te, content_bn, chat_dialogue');
       if (error) throw error;
       
       // Get country codes for proper retold detection
@@ -150,6 +151,12 @@ export function NewsDigestPanel({ password }: Props) {
           last24h: number;
           lastWeek: number;
         };
+        dialogues: {
+          total: number;
+          last6h: number;
+          last24h: number;
+          lastWeek: number;
+        };
       }
       
       const stats: Record<string, CountryStats> = {};
@@ -161,7 +168,8 @@ export function NewsDigestPanel({ password }: Props) {
             total: 0, 
             last6h: 0, 
             last24h: 0,
-            retold: { total: 0, last6h: 0, last24h: 0, lastWeek: 0 }
+            retold: { total: 0, last6h: 0, last24h: 0, lastWeek: 0 },
+            dialogues: { total: 0, last6h: 0, last24h: 0, lastWeek: 0 }
           };
         }
         stats[item.country_id].total++;
@@ -170,34 +178,25 @@ export function NewsDigestPanel({ password }: Props) {
         if (fetchedAt >= sixHoursAgo) stats[item.country_id].last6h++;
         if (fetchedAt >= twentyFourHoursAgo) stats[item.country_id].last24h++;
         
-        // Check if retold based on country code
-        // US → content_en, PL/UA → content (long), IN → content_hi/ta/te/bn
+        // Check if retold using centralized config
         const countryCode = countryCodeMap[item.country_id];
-        let isRetold = false;
+        const retold = isNewsRetold(item as Record<string, unknown>, countryCode);
         
-        if (countryCode === 'US') {
-          isRetold = !!(item.content_en && typeof item.content_en === 'string' && item.content_en.trim().length > 300);
-        } else if (countryCode === 'PL' || countryCode === 'UA') {
-          // For PL/UA, retold content is stored in content field and is longer than original description
-          isRetold = !!(item.content && typeof item.content === 'string' && item.content.trim().length > 500);
-        } else if (countryCode === 'IN') {
-          // For India, check Hindi translations (primary) or other Indian languages
-          isRetold = !!(
-            (item.content_hi && typeof item.content_hi === 'string' && item.content_hi.trim().length > 300) ||
-            (item.content_ta && typeof item.content_ta === 'string' && item.content_ta.trim().length > 300) ||
-            (item.content_te && typeof item.content_te === 'string' && item.content_te.trim().length > 300) ||
-            (item.content_bn && typeof item.content_bn === 'string' && item.content_bn.trim().length > 300)
-          );
-        } else {
-          // Default: check content_en
-          isRetold = !!(item.content_en && typeof item.content_en === 'string' && item.content_en.trim().length > 300);
-        }
-        
-        if (isRetold) {
+        if (retold) {
           stats[item.country_id].retold.total++;
           if (fetchedAt >= sixHoursAgo) stats[item.country_id].retold.last6h++;
           if (fetchedAt >= twentyFourHoursAgo) stats[item.country_id].retold.last24h++;
           if (fetchedAt >= oneWeekAgo) stats[item.country_id].retold.lastWeek++;
+        }
+        
+        // Check if has dialogue using centralized config
+        const hasDialogue = hasNewsDialogue(item as Record<string, unknown>);
+        
+        if (hasDialogue) {
+          stats[item.country_id].dialogues.total++;
+          if (fetchedAt >= sixHoursAgo) stats[item.country_id].dialogues.last6h++;
+          if (fetchedAt >= twentyFourHoursAgo) stats[item.country_id].dialogues.last24h++;
+          if (fetchedAt >= oneWeekAgo) stats[item.country_id].dialogues.lastWeek++;
         }
       }
       return stats;
@@ -677,6 +676,31 @@ export function NewsDigestPanel({ password }: Props) {
                             <Calendar className="w-3 h-3" />
                             <span className="text-muted-foreground">тижд:</span>
                             <span className="text-purple-500 font-medium">+{newsStats[country.id].retold?.lastWeek || 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Dialogues stats row */}
+                      <div className="flex items-center gap-6 pt-2 border-t border-border/50">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="w-4 h-4 text-primary" />
+                          <span className="text-sm text-muted-foreground">Діалоги:</span>
+                          <span className="font-bold">{newsStats[country.id].dialogues?.total || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span className="text-muted-foreground">6г:</span>
+                            <span className="text-green-500 font-medium">+{newsStats[country.id].dialogues?.last6h || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground">24г:</span>
+                            <span className="text-amber-500 font-medium">+{newsStats[country.id].dialogues?.last24h || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            <span className="text-muted-foreground">тижд:</span>
+                            <span className="text-purple-500 font-medium">+{newsStats[country.id].dialogues?.lastWeek || 0}</span>
                           </div>
                         </div>
                       </div>
