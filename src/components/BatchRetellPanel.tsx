@@ -197,8 +197,13 @@ function BatchRetellPanelComponent() {
 
     addLog('info', `🏁 Завершено! Успішно: ${stats.success + (newsToProcess.length > 0 ? 1 : 0)}, Помилок: ${stats.failed}`);
     setIsRunning(false);
+    // Invalidate all related queries to refresh stats everywhere
     queryClient.invalidateQueries({ queryKey: ['news-rss-items-stats'] });
-  }, [selectedCountry, newsForDate, retellMode, selectedModel, countries, selectedDate, addLog, queryClient, stats.success, stats.failed]);
+    queryClient.invalidateQueries({ queryKey: ['news-for-date'] });
+    queryClient.invalidateQueries({ queryKey: ['latest-usa-retold-news'] });
+    queryClient.invalidateQueries({ queryKey: ['country-news'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+  }, [selectedCountry, newsForDate, retellMode, selectedModel, countries, selectedDate, addLog, queryClient, maxCount]);
 
   const stopBatchRetell = useCallback(() => {
     abortControllerRef.current?.abort();
