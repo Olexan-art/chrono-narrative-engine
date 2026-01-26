@@ -208,6 +208,35 @@ export function NewsDigestPanel({ password }: Props) {
     }
   });
 
+  // Fetch ALL feeds globally
+  const fetchAllMutation = useMutation({
+    mutationFn: async () => {
+      return callEdgeFunction<{ success: boolean; feedsProcessed?: number; results?: Array<{ feedName: string; success: boolean; itemsInserted?: number }> }>(
+        'fetch-rss',
+        { action: 'fetch_all' }
+      );
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['news-rss-feeds'] });
+      queryClient.invalidateQueries({ queryKey: ['news-rss-items-count'] });
+      if (result.success && result.results) {
+        const successCount = result.results.filter(r => r.success).length;
+        const totalItems = result.results.reduce((sum, r) => sum + (r.itemsInserted || 0), 0);
+        toast({ 
+          title: `Оновлено ${successCount}/${result.feedsProcessed} каналів`,
+          description: `Завантажено ${totalItems} новин`
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Помилка оновлення',
+        description: error instanceof Error ? error.message : 'Не вдалося оновити канали',
+        variant: 'destructive'
+      });
+    }
+  });
+
   if (countriesLoading) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   }
@@ -216,11 +245,27 @@ export function NewsDigestPanel({ password }: Props) {
     <div className="space-y-6">
       <Card className="cosmic-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="w-5 h-5 text-primary" />
-            Кротивина Новин — RSS Канали
-          </CardTitle>
-          <CardDescription>Управління RSS каналами по країнам</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-primary" />
+                Кротивина Новин — RSS Канали
+              </CardTitle>
+              <CardDescription>Управління RSS каналами по країнам</CardDescription>
+            </div>
+            <Button
+              onClick={() => fetchAllMutation.mutate()}
+              disabled={fetchAllMutation.isPending}
+              className="gap-2"
+            >
+              {fetchAllMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              Оновити всі RSS
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs value={selectedCountry || undefined} onValueChange={setSelectedCountry}>
