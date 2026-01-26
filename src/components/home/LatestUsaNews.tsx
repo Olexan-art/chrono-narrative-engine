@@ -110,14 +110,14 @@ export const LatestUsaNews = memo(function LatestUsaNews() {
                   )}
                   <div className="p-3 flex-1 min-w-0 flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
-                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-primary/30 text-primary">
+                      <span className="inline-flex items-center text-[10px] px-1 py-0 h-4 border border-primary/30 text-primary rounded-sm">
                         <Sparkles className="w-2 h-2 mr-0.5" />
                         {language === 'en' ? 'Retold' : 'Переказ'}
-                      </Badge>
+                      </span>
                       {item.category && (
-                        <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
+                        <span className="inline-flex items-center text-[10px] px-1 py-0 h-4 bg-secondary text-secondary-foreground rounded-sm">
                           {item.category}
-                        </Badge>
+                        </span>
                       )}
                     </div>
                     <h4 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors mb-1">
