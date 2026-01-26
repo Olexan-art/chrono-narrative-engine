@@ -13,12 +13,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { callEdgeFunction } from "@/lib/api";
 import { toast } from "sonner";
-
+import { useAdminStore } from "@/stores/adminStore";
 export default function NewsArticlePage() {
   const { country, slug } = useParams<{ country: string; slug: string }>();
   const { t, language } = useLanguage();
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
   const queryClient = useQueryClient();
+  const { isAuthenticated: isAdminAuthenticated } = useAdminStore();
 
   // Fetch news article by country code and slug
   const { data: article, isLoading } = useQuery({
@@ -237,21 +238,23 @@ export default function NewsArticlePage() {
                   {t('chat.observers')}
                 </h2>
                 
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => generateDialogueMutation.mutate()}
-                    disabled={generateDialogueMutation.isPending}
-                  >
-                    {generateDialogueMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                    )}
-                    {chatDialogue.length > 0 ? t('news.regenerate_dialogue') : t('news.generate_dialogue')}
-                  </Button>
-                </div>
+                {isAdminAuthenticated && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => generateDialogueMutation.mutate()}
+                      disabled={generateDialogueMutation.isPending}
+                    >
+                      {generateDialogueMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                      )}
+                      {chatDialogue.length > 0 ? t('news.regenerate_dialogue') : t('news.generate_dialogue')}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {chatDialogue.length > 0 ? (

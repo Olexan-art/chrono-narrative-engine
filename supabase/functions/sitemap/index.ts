@@ -52,6 +52,23 @@ Deno.serve(async (req) => {
 
     if (volumesError) throw volumesError;
 
+    // Fetch news countries and items for sitemap
+    const { data: newsCountries, error: countriesError } = await supabase
+      .from("news_countries")
+      .select("id, code, name")
+      .eq("is_active", true);
+
+    if (countriesError) throw countriesError;
+
+    // Fetch news items with slugs
+    const { data: newsItems, error: newsError } = await supabase
+      .from("news_rss_items")
+      .select("id, slug, country_id, fetched_at")
+      .not("slug", "is", null)
+      .order("fetched_at", { ascending: false });
+
+    if (newsError) throw newsError;
+
     // Group parts by date to count stories per day and get latest update
     const partsByDate = new Map<string, { count: number; updated_at: string }>();
     for (const part of parts || []) {
@@ -64,6 +81,12 @@ Deno.serve(async (req) => {
       } else {
         partsByDate.set(part.date, { count: 1, updated_at: part.updated_at });
       }
+    }
+
+    // Map country IDs to codes
+    const countryCodeMap = new Map<string, string>();
+    for (const country of newsCountries || []) {
+      countryCodeMap.set(country.id, country.code.toLowerCase());
     }
 
     // Build sitemap XML
@@ -100,6 +123,13 @@ Deno.serve(async (req) => {
     <lastmod>${now}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>${addHreflangLinks(`${BASE_URL}/volumes`)}
+  </url>
+  
+  <url>
+    <loc>${BASE_URL}/news-digest</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>${addHreflangLinks(`${BASE_URL}/news-digest`)}
   </url>
 `;
 
@@ -151,6 +181,21 @@ Deno.serve(async (req) => {
     <lastmod>${volume.updated_at || now}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>${addHreflangLinks(url)}
+  </url>`;
+    }
+
+    // Add news article pages (/news/:country/:slug)
+    for (const item of newsItems || []) {
+      const countryCode = countryCodeMap.get(item.country_id);
+      if (!countryCode || !item.slug) continue;
+      
+      const url = `${BASE_URL}/news/${countryCode}/${item.slug}`;
+      xml += `
+  <url>
+    <loc>${url}</loc>
+    <lastmod>${item.fetched_at || now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>${addHreflangLinks(url)}
   </url>`;
     }
 

@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { MessageSquare, RefreshCw, Loader2, Calendar, Check, X, Users, UserPlus, GitBranch, Reply, CornerDownRight, BookOpen, Twitter } from "lucide-react";
+import { MessageSquare, RefreshCw, Loader2, Calendar, Check, X, Users, UserPlus, GitBranch, Reply, CornerDownRight, BookOpen, Twitter, Rss, Globe } from "lucide-react";
 import { generateDialogue } from "@/lib/api";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
@@ -80,7 +80,7 @@ interface Chapter {
 
 export default function DialogueManagementPanel({ password }: DialogueManagementPanelProps) {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"parts" | "chapters">("parts");
+  const [activeTab, setActiveTab] = useState<"parts" | "chapters" | "news">("parts");
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(8);
@@ -307,6 +307,76 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
     return dialogue.filter((msg: DialogueMessage) => msg.replyTo).length;
   };
 
+  // Fetch news for dialogue
+  const { data: newsItems, isLoading: newsLoading } = useQuery({
+    queryKey: ["dialogue-news"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("news_rss_items")
+        .select(`
+          id, title, description, content, published_at, slug,
+          country:news_countries(name, flag, code),
+          chat_dialogue
+        `)
+        .order("published_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
+
+  // Regenerate news dialogue mutation
+  const regenerateNewsMutation = useMutation({
+    mutationFn: async (newsId: string) => {
+      setIsGenerating(true);
+      const news = newsItems?.find((n) => n.id === newsId);
+      if (!news) throw new Error("News not found");
+
+      const selectedCharacterDetails = characters?.filter(c => 
+        selectedCharacters.includes(c.character_id)
+      ) || [];
+
+      const characterContext = selectedCharacterDetails.length > 0
+        ? selectedCharacterDetails.map(c => `${c.name} (${c.avatar}) - стиль: ${c.style}`).join(", ")
+        : undefined;
+
+      const result = await generateDialogue({
+        storyContext: `Новина: ${news.title}\n\n${news.description || ''}\n\n${news.content || ''}`.substring(0, 1500),
+        newsContext: `Країна: ${news.country?.name || 'Світ'}`,
+        useOpenAI: selectedProvider === "openai",
+        messageCount,
+        characters: characterContext,
+        enableThreading,
+        threadProbability,
+      });
+
+      if (!result.success) throw new Error("Failed to generate dialogue");
+
+      // Update news with new dialogue
+      const { error } = await supabase
+        .from("news_rss_items")
+        .update({ chat_dialogue: result.dialogue as unknown as any })
+        .eq("id", newsId);
+
+      if (error) throw error;
+
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dialogue-news"] });
+      toast.success("Діалог для новини згенеровано");
+      setIsGenerating(false);
+    },
+    onError: (error) => {
+      toast.error(`Помилка: ${error.message}`);
+      setIsGenerating(false);
+    },
+  });
+
+  const selectedNews = newsItems?.find((n) => n.id === selectedNewsId);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -482,15 +552,19 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
       </Card>
 
       {/* Content Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "parts" | "chapters")} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "parts" | "chapters" | "news")} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="parts" className="gap-2">
             <Calendar className="h-4 w-4" />
-            Оповіді (щоденні)
+            Оповіді
           </TabsTrigger>
           <TabsTrigger value="chapters" className="gap-2">
             <BookOpen className="h-4 w-4" />
-            Глави (тижневі)
+            Глави
+          </TabsTrigger>
+          <TabsTrigger value="news" className="gap-2">
+            <Rss className="h-4 w-4" />
+            Кротовиина
           </TabsTrigger>
         </TabsList>
 
@@ -792,6 +866,137 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
                 ) : (
                   <div className="text-center text-muted-foreground py-8">
                     Виберіть главу зі списку для перегляду та генерації діалогу/твітів
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* News Tab */}
+        <TabsContent value="news">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  Кротовиина Новин
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[400px]">
+                  {newsLoading ? (
+                    <div className="flex items-center justify-center p-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {newsItems?.map((news) => (
+                        <div
+                          key={news.id}
+                          onClick={() => setSelectedNewsId(news.id)}
+                          className={`p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                            selectedNewsId === news.id ? "bg-muted" : ""
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium truncate text-sm">{news.title}</p>
+                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                <span>{news.country?.flag}</span>
+                                <span>{news.country?.name}</span>
+                                {news.published_at && (
+                                  <>
+                                    <span>•</span>
+                                    <Calendar className="h-3 w-3" />
+                                    {format(new Date(news.published_at), "d MMM", { locale: uk })}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {dialogueCount(news.chat_dialogue) > 0 ? (
+                                <Badge variant="secondary" className="text-xs">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  {dialogueCount(news.chat_dialogue)}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">
+                                  <X className="h-3 w-3 mr-1" />
+                                  Немає
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Selected News Preview */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">
+                  {selectedNews ? selectedNews.title?.slice(0, 60) + '...' : "Виберіть новину"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {selectedNews ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{selectedNews.country?.flag}</span>
+                      <span className="text-sm text-muted-foreground">{selectedNews.country?.name}</span>
+                    </div>
+                    
+                    <div className="bg-muted/50 p-3 rounded">
+                      <p className="text-sm">{selectedNews.description?.slice(0, 200)}...</p>
+                    </div>
+
+                    <div className="bg-muted/30 p-2 rounded text-center">
+                      <p className="font-bold text-lg">{dialogueCount(selectedNews.chat_dialogue)}</p>
+                      <p className="text-xs text-muted-foreground">💬 Коментарі</p>
+                    </div>
+
+                    {Array.isArray(selectedNews.chat_dialogue) && selectedNews.chat_dialogue.length > 0 && (
+                      <ScrollArea className="h-[150px] border rounded-md p-2">
+                        <div className="space-y-2">
+                          {(selectedNews.chat_dialogue as Array<DialogueMessage>).map((msg, idx) => (
+                            <div key={idx} className="flex items-start gap-2 text-sm">
+                              <span className="text-lg shrink-0">{msg.avatar}</span>
+                              <div className="min-w-0">
+                                <span className="font-medium">{msg.name}:</span>{" "}
+                                <span className="text-muted-foreground">{msg.message}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+
+                    <Button
+                      onClick={() => regenerateNewsMutation.mutate(selectedNews.id)}
+                      disabled={isGenerating}
+                      className="w-full"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Генерація...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Згенерувати діалог
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    Виберіть новину зі списку для перегляду та генерації діалогу
                   </div>
                 )}
               </CardContent>
