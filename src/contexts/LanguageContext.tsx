@@ -109,6 +109,14 @@ const translations: Record<Language, Record<string, string>> = {
     // Common
     'common.stories': 'оповідань',
 
+    // News Digest
+    'newsdigest.title': 'Кротивина Новин',
+    'newsdigest.badge': 'RSS НОВИНИ',
+    'newsdigest.description': 'Актуальні новини з усього світу по країнам та категоріям',
+    'newsdigest.empty': 'Новин поки немає',
+    'newsdigest.empty_desc': 'RSS канали ще не налаштовані або новини не завантажені',
+    'nav.newsdigest': 'Кротивина',
+
     // Install Page
     'install.badge': 'ВСТАНОВИТИ ЗАСТОСУНОК',
     'install.title': 'Встановити Точку Синхронізації',
@@ -246,6 +254,14 @@ const translations: Record<Language, Record<string, string>> = {
     // Common
     'common.stories': 'stories',
 
+    // News Digest
+    'newsdigest.title': 'News Digest',
+    'newsdigest.badge': 'RSS NEWS',
+    'newsdigest.description': 'Current news from around the world by country and category',
+    'newsdigest.empty': 'No news yet',
+    'newsdigest.empty_desc': 'RSS feeds are not configured or news has not been loaded',
+    'nav.newsdigest': 'News Digest',
+
     // Install Page
     'install.badge': 'INSTALL APP',
     'install.title': 'Install Synchronization Point',
@@ -382,6 +398,14 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Common
     'common.stories': 'opowieści',
+
+    // News Digest
+    'newsdigest.title': 'Przegląd Wiadomości',
+    'newsdigest.badge': 'WIADOMOŚCI RSS',
+    'newsdigest.description': 'Aktualne wiadomości z całego świata według krajów i kategorii',
+    'newsdigest.empty': 'Brak wiadomości',
+    'newsdigest.empty_desc': 'Kanały RSS nie są skonfigurowane lub wiadomości nie zostały załadowane',
+    'nav.newsdigest': 'Wiadomości',
 
     // Install Page
     'install.badge': 'ZAINSTALUJ APLIKACJĘ',

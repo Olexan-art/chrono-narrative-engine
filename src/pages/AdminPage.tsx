@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap } from "lucide-react";
+import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import CharactersPanel from "@/components/CharactersPanel";
 import DialogueManagementPanel from "@/components/DialogueManagementPanel";
 import { FlashNewsPanel } from "@/components/FlashNewsPanel";
 import { JustBusinessPanel } from "@/components/JustBusinessPanel";
+import { NewsDigestPanel } from "@/components/NewsDigestPanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -693,6 +694,10 @@ export default function AdminPage() {
               <MessageSquare className="w-4 h-4" />
               Діалоги
             </TabsTrigger>
+            <TabsTrigger value="newsdigest" className="gap-2">
+              <Globe className="w-4 h-4 text-cyan-500" />
+              Кротивина
+            </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <TrendingUp className="w-4 h-4" />
               Аналітика
@@ -733,6 +738,10 @@ export default function AdminPage() {
 
           <TabsContent value="dialogues" className="mt-6">
             <DialogueManagementPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="newsdigest" className="mt-6">
+            <NewsDigestPanel password={password} />
           </TabsContent>
 
           <TabsContent value="analytics" className="mt-6">
