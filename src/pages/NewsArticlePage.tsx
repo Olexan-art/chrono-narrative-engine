@@ -25,12 +25,12 @@ export default function NewsArticlePage() {
   const { data: article, isLoading } = useQuery({
     queryKey: ['news-article', country, slug],
     queryFn: async () => {
-      // First get country by code
+      // First get country by code (case-insensitive)
       const { data: countryData } = await supabase
         .from('news_countries')
         .select('id, name, name_en, name_pl, flag, code')
-        .eq('code', country)
-        .single();
+        .ilike('code', country || '')
+        .maybeSingle();
       
       if (!countryData) throw new Error('Country not found');
 
@@ -42,7 +42,7 @@ export default function NewsArticlePage() {
         `)
         .eq('country_id', countryData.id)
         .eq('slug', slug)
-        .single();
+        .maybeSingle();
       
       if (!item) throw new Error('Article not found');
       
