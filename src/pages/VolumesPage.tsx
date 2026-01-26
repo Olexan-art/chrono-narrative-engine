@@ -151,7 +151,7 @@ export default function VolumesPage() {
                   </div>
 
                   <Link 
-                    to={`/chapters?volume=${volume.id}`}
+                    to={`/volume/${volume.year}-${String(volume.month).padStart(2, '0')}`}
                     className="block text-sm text-primary hover:underline"
                   >
                     {t('volumes.view_chapters')}

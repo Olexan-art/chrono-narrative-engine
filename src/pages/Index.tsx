@@ -124,13 +124,13 @@ export default function Index() {
         .maybeSingle();
       
       let chapter = null;
-      let monthChapters: { id: string; title: string; week_of_month: number; volume_id: string }[] = [];
+      let monthChapters: { id: string; title: string; number: number; week_of_month: number; volume_id: string }[] = [];
       
       if (volume) {
         const weekOfMonth = Math.ceil(now.getDate() / 7);
         const { data: chapterData } = await supabase
           .from('chapters')
-          .select('id, title, week_of_month, volume_id')
+          .select('id, title, number, week_of_month, volume_id')
           .eq('volume_id', volume.id)
           .eq('week_of_month', weekOfMonth)
           .maybeSingle();
@@ -139,7 +139,7 @@ export default function Index() {
         // Get all chapters for current month for calendar
         const { data: allMonthChapters } = await supabase
           .from('chapters')
-          .select('id, title, week_of_month, volume_id')
+          .select('id, title, number, week_of_month, volume_id')
           .eq('volume_id', volume.id)
           .order('week_of_month', { ascending: true });
         monthChapters = allMonthChapters || [];
@@ -446,7 +446,7 @@ export default function Index() {
                           : chapter.volume?.title;
                           
                         return (
-                          <Link to={`/chapter/${chapter.id}`} className="group block">
+                          <Link to={`/chapter/${chapter.number}`} className="group block">
                             {chapter.cover_image_url && (
                               <div className="relative h-32 mb-3 rounded-sm overflow-hidden">
                                 <img 
@@ -537,7 +537,7 @@ export default function Index() {
                 return (
                 <Link 
                   key={chapter.id} 
-                  to={`/chapter/${chapter.id}`}
+                  to={`/chapter/${chapter.number}`}
                   className="group block animate-fade-in"
                   style={{ animationDelay: `${index * 75}ms` }}
                 >

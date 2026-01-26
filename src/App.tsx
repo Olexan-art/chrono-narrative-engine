@@ -11,6 +11,7 @@ import ReadPage from "./pages/ReadPage";
 import ChapterPage from "./pages/ChapterPage";
 import ChaptersPage from "./pages/ChaptersPage";
 import VolumesPage from "./pages/VolumesPage";
+import VolumePage from "./pages/VolumePage";
 import AdminPage from "./pages/AdminPage";
 import EditPartPage from "./pages/EditPartPage";
 import EditChapterPage from "./pages/EditChapterPage";
@@ -32,9 +33,10 @@ const App = () => (
             <Route path="/date/:date" element={<DateStoriesPage />} />
             <Route path="/chapters" element={<ChaptersPage />} />
             <Route path="/volumes" element={<VolumesPage />} />
+            <Route path="/volume/:yearMonth" element={<VolumePage />} />
             <Route path="/read/:date" element={<ReadPage />} />
             <Route path="/read/:date/:storyNumber" element={<ReadPage />} />
-            <Route path="/chapter/:id" element={<ChapterPage />} />
+            <Route path="/chapter/:number" element={<ChapterPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/part/:id" element={<EditPartPage />} />
             <Route path="/admin/chapter/:id" element={<EditChapterPage />} />

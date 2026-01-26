@@ -46,11 +46,12 @@ function parseContentWithLinks(content: string): React.ReactNode {
 }
 
 export default function ChapterPage() {
-  const { id } = useParams<{ id: string }>();
+  const { number } = useParams<{ number: string }>();
+  const chapterNumber = Number(number);
   const { language } = useLanguage();
 
   const { data: chapter, isLoading } = useQuery({
-    queryKey: ['chapter', id],
+    queryKey: ['chapter-by-number', chapterNumber],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('chapters')
@@ -58,52 +59,48 @@ export default function ChapterPage() {
           *,
           volume:volumes(*)
         `)
-        .eq('id', id)
-        .single();
+        .eq('number', chapterNumber)
+        .maybeSingle();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!id
+    enabled: !!chapterNumber
   });
 
   // Fetch parts for this chapter (excluding just_business category)
   const { data: parts = [] } = useQuery({
-    queryKey: ['chapter-parts', id],
+    queryKey: ['chapter-parts', chapter?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('parts')
         .select('*')
-        .eq('chapter_id', id)
+        .eq('chapter_id', chapter!.id)
         .or('category.is.null,category.neq.just_business')
         .order('date', { ascending: true });
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!id
+    enabled: !!chapter?.id
   });
 
-  // Fetch adjacent chapters
+  // Fetch adjacent chapters (by global chapter number, not within volume)
   const { data: adjacentChapters } = useQuery({
-    queryKey: ['adjacent-chapters', chapter?.volume_id, chapter?.number],
+    queryKey: ['adjacent-chapters-global', chapterNumber],
     queryFn: async () => {
-      if (!chapter) return { prev: null, next: null };
-      
       const [prevResult, nextResult] = await Promise.all([
         supabase
           .from('chapters')
           .select('id, title, number')
-          .eq('volume_id', chapter.volume_id)
-          .lt('number', chapter.number)
+          .lt('number', chapterNumber)
           .order('number', { ascending: false })
           .limit(1)
           .maybeSingle(),
         supabase
           .from('chapters')
           .select('id, title, number')
-          .eq('volume_id', chapter.volume_id)
-          .gt('number', chapter.number)
+          .gt('number', chapterNumber)
           .order('number', { ascending: true })
           .limit(1)
           .maybeSingle()
@@ -114,7 +111,7 @@ export default function ChapterPage() {
         next: nextResult.data
       };
     },
-    enabled: !!chapter
+    enabled: !!chapterNumber
   });
 
   // Track view
@@ -198,7 +195,10 @@ export default function ChapterPage() {
     .trim()
     .substring(0, 600);
 
-  const canonicalUrl = `https://echoes2.com/chapter/${chapter.id}`;
+  const canonicalUrl = `https://echoes2.com/chapter/${chapter.number}`;
+  const volumeUrl = chapter.volume 
+    ? `https://echoes2.com/volume/${(chapter.volume as any).year}-${String((chapter.volume as any).month).padStart(2, '0')}`
+    : `https://echoes2.com/volumes`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -212,7 +212,7 @@ export default function ChapterPage() {
         keywords={chapter.seo_keywords || ['AI', 'science fiction', 'chapter', 'narrative']}
         breadcrumbs={[
           { name: language === 'en' ? 'Home' : language === 'pl' ? 'Strona główna' : 'Головна', url: 'https://echoes2.com/' },
-          { name: chapter.volume ? (chapter.volume as any).title : '', url: `https://echoes2.com/volumes` },
+          { name: chapter.volume ? (chapter.volume as any).title : '', url: volumeUrl },
           { name: localizedTitle, url: canonicalUrl }
         ]}
       />
@@ -432,10 +432,10 @@ export default function ChapterPage() {
           {/* Navigation */}
           <nav className="flex items-center justify-between mt-12 pt-8 border-t border-border">
             {adjacentChapters?.prev ? (
-              <Link to={`/chapter/${adjacentChapters.prev.id}`}>
+              <Link to={`/chapter/${adjacentChapters.prev.number}`}>
                 <Button variant="outline" className="gap-2">
                   <ChevronLeft className="w-4 h-4" />
-                  <span className="hidden sm:inline">Глава {adjacentChapters.prev.number}</span>
+                  <span className="hidden sm:inline">{language === 'en' ? 'Chapter' : language === 'pl' ? 'Rozdział' : 'Глава'} {adjacentChapters.prev.number}</span>
                 </Button>
               </Link>
             ) : (
@@ -449,9 +449,9 @@ export default function ChapterPage() {
             </Link>
             
             {adjacentChapters?.next ? (
-              <Link to={`/chapter/${adjacentChapters.next.id}`}>
+              <Link to={`/chapter/${adjacentChapters.next.number}`}>
                 <Button variant="outline" className="gap-2">
-                  <span className="hidden sm:inline">Глава {adjacentChapters.next.number}</span>
+                  <span className="hidden sm:inline">{language === 'en' ? 'Chapter' : language === 'pl' ? 'Rozdział' : 'Глава'} {adjacentChapters.next.number}</span>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </Link>
