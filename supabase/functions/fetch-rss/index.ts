@@ -909,6 +909,235 @@ serve(async (req) => {
       );
     }
 
+    // Full pipeline: fetch new items + retell + generate dialogues for ALL new items
+    if (action === 'fetch_country_full') {
+      if (!countryId) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Country ID is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const { data: feeds, error: feedsError } = await supabase
+        .from('news_rss_feeds')
+        .select('id, name, url, category')
+        .eq('country_id', countryId)
+        .eq('is_active', true);
+      
+      if (feedsError) {
+        return new Response(
+          JSON.stringify({ success: false, error: feedsError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const { data: countryData } = await supabase
+        .from('news_countries')
+        .select('code')
+        .eq('id', countryId)
+        .single();
+      
+      const countryCode = countryData?.code || 'unknown';
+      
+      console.log(`Full pipeline: fetching ${feeds?.length || 0} feeds for country ${countryCode}...`);
+      
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const results = [];
+      let totalInserted = 0;
+      let totalRetelled = 0;
+      let totalDialogues = 0;
+      const allNewItemIds: string[] = [];
+      
+      // Step 1: Fetch all new items from all feeds
+      for (const feed of feeds || []) {
+        try {
+          const response = await fetch(feed.url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Cache-Control': 'no-cache'
+            }
+          });
+          
+          if (!response.ok) {
+            results.push({ feedName: feed.name, success: false, error: `HTTP ${response.status}`, inserted: 0, retelled: 0, dialogues: 0 });
+            continue;
+          }
+          
+          const xml = await response.text();
+          const items = parseXML(xml);
+          
+          // Get existing URLs to prevent duplicates
+          const { data: existingItems } = await supabase
+            .from('news_rss_items')
+            .select('url')
+            .eq('feed_id', feed.id);
+          
+          const existingUrls = new Set((existingItems || []).map(item => item.url));
+          
+          let insertedCount = 0;
+          const feedNewIds: string[] = [];
+          
+          for (const item of items.slice(0, 200)) {
+            // Skip if already exists
+            if (existingUrls.has(item.link)) continue;
+            
+            const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
+            const slug = generateSlug(item.title);
+            
+            const { data: insertedData, error: insertError } = await supabase
+              .from('news_rss_items')
+              .insert({
+                feed_id: feed.id,
+                country_id: countryId,
+                external_id: item.link,
+                title: item.title.slice(0, 500),
+                title_en: item.title.slice(0, 500),
+                description: item.description?.slice(0, 1000) || null,
+                description_en: item.description?.slice(0, 1000) || null,
+                content: item.content?.slice(0, 5000) || null,
+                content_en: item.content?.slice(0, 5000) || null,
+                url: item.link,
+                slug: slug,
+                image_url: item.enclosure?.url || null,
+                category: feed.category,
+                published_at: pubDate?.toISOString() || null,
+                fetched_at: new Date().toISOString()
+              })
+              .select('id')
+              .single();
+            
+            if (!insertError && insertedData) {
+              insertedCount++;
+              totalInserted++;
+              feedNewIds.push(insertedData.id);
+              allNewItemIds.push(insertedData.id);
+              existingUrls.add(item.link);
+            }
+          }
+          
+          await supabase
+            .from('news_rss_feeds')
+            .update({ last_fetched_at: new Date().toISOString(), fetch_error: null })
+            .eq('id', feed.id);
+          
+          results.push({ feedName: feed.name, success: true, inserted: insertedCount, retelled: 0, dialogues: 0 });
+        } catch (error) {
+          results.push({ 
+            feedName: feed.name, 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Unknown error',
+            inserted: 0,
+            retelled: 0,
+            dialogues: 0
+          });
+        }
+      }
+      
+      console.log(`Fetch complete. Processing ${allNewItemIds.length} new items with retell + dialogues...`);
+      
+      // Step 2: Retell ALL new items
+      for (const newsId of allNewItemIds) {
+        try {
+          const response = await fetch(`${supabaseUrl}/functions/v1/retell-news`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+            },
+            body: JSON.stringify({ newsId, model: 'google/gemini-3-flash-preview' })
+          });
+          
+          if (response.ok) {
+            totalRetelled++;
+          } else {
+            console.error(`Failed to retell news ${newsId}:`, response.status);
+          }
+        } catch (error) {
+          console.error(`Error retelling news ${newsId}:`, error);
+        }
+        // Small delay to avoid rate limiting
+        await new Promise(r => setTimeout(r, 500));
+      }
+      
+      console.log(`Retell complete. Generating dialogues for ${allNewItemIds.length} items...`);
+      
+      // Step 3: Generate dialogues for ALL new items
+      for (const newsId of allNewItemIds) {
+        try {
+          // Get article data for dialogue generation
+          const { data: article } = await supabase
+            .from('news_rss_items')
+            .select('*, feed:news_rss_feeds(name), country:news_countries(code)')
+            .eq('id', newsId)
+            .single();
+          
+          if (!article) continue;
+          
+          // Detect language based on country
+          const detectLang = () => {
+            const code = article.country?.code?.toLowerCase();
+            if (code === 'ua') return 'uk';
+            if (code === 'pl') return 'pl';
+            if (code === 'in') return 'hi';
+            return 'en';
+          };
+          
+          const contentLanguage = detectLang();
+          
+          const response = await fetch(`${supabaseUrl}/functions/v1/generate-dialogue`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+            },
+            body: JSON.stringify({
+              storyContext: `News article: ${article.title_en || article.title}\n\n${article.description_en || article.description || ''}\n\n${article.content_en || article.content || ''}`,
+              newsContext: `Source: ${article.feed?.name || 'RSS'}, Category: ${article.category || 'general'}`,
+              messageCount: 5,
+              enableThreading: true,
+              threadProbability: 30,
+              contentLanguage
+            })
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.dialogue) {
+              // Save dialogue to article
+              await supabase
+                .from('news_rss_items')
+                .update({ chat_dialogue: result.dialogue })
+                .eq('id', newsId);
+              totalDialogues++;
+            }
+          } else {
+            console.error(`Failed to generate dialogue for ${newsId}:`, response.status);
+          }
+        } catch (error) {
+          console.error(`Error generating dialogue for ${newsId}:`, error);
+        }
+        // Small delay to avoid rate limiting
+        await new Promise(r => setTimeout(r, 500));
+      }
+      
+      console.log(`Full pipeline complete: ${totalInserted} inserted, ${totalRetelled} retelled, ${totalDialogues} dialogues`);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          countryCode,
+          feedsProcessed: feeds?.length || 0,
+          totalInserted,
+          totalRetelled,
+          totalDialogues,
+          results 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ success: false, error: 'Unknown action' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

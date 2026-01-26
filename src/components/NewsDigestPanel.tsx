@@ -305,7 +305,8 @@ export function NewsDigestPanel({ password }: Props) {
     processedFeeds: number;
     totalInserted: number;
     totalRetelled: number;
-    results: Array<{ feedName: string; success: boolean; inserted: number; retelled?: number }>;
+    totalDialogues: number;
+    results: Array<{ feedName: string; success: boolean; inserted: number; retelled?: number; dialogues?: number }>;
   }>({
     isRunning: false,
     countryId: null,
@@ -313,6 +314,7 @@ export function NewsDigestPanel({ password }: Props) {
     processedFeeds: 0,
     totalInserted: 0,
     totalRetelled: 0,
+    totalDialogues: 0,
     results: []
   });
 
@@ -383,8 +385,58 @@ export function NewsDigestPanel({ password }: Props) {
       });
     }
   });
+  
+  // Full pipeline: fetch + retell ALL + dialogues ALL
+  const fullPipelineMutation = useMutation({
+    mutationFn: async (countryId: string) => {
+      setBulkProgress(prev => ({ ...prev, isRunning: true, countryId, results: [], totalDialogues: 0 }));
+      
+      return callEdgeFunction<{ 
+        success: boolean; 
+        countryCode: string;
+        feedsProcessed: number;
+        totalInserted: number;
+        totalRetelled: number;
+        totalDialogues: number;
+        results: Array<{ feedName: string; success: boolean; inserted: number; retelled?: number; dialogues?: number; error?: string }> 
+      }>(
+        'fetch-rss',
+        { action: 'fetch_country_full', countryId }
+      );
+    },
+    onSuccess: (result) => {
+      setBulkProgress(prev => ({
+        ...prev,
+        isRunning: false,
+        totalFeeds: result.feedsProcessed,
+        processedFeeds: result.feedsProcessed,
+        totalInserted: result.totalInserted,
+        totalRetelled: result.totalRetelled,
+        totalDialogues: result.totalDialogues,
+        results: result.results || []
+      }));
+      
+      queryClient.invalidateQueries({ queryKey: ['news-rss-feeds'] });
+      queryClient.invalidateQueries({ queryKey: ['news-rss-items-count'] });
+      queryClient.invalidateQueries({ queryKey: ['news-rss-items-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['latest-usa-retold-news'] });
+      queryClient.invalidateQueries({ queryKey: ['country-news'] });
+      
+      toast({ 
+        title: `Повний пайплайн завершено`,
+        description: `+${result.totalInserted} новин, ${result.totalRetelled} переказано, ${result.totalDialogues} діалогів`
+      });
+    },
+    onError: (error) => {
+      setBulkProgress(prev => ({ ...prev, isRunning: false }));
+      toast({
+        title: 'Помилка',
+        description: error instanceof Error ? error.message : 'Не вдалося виконати',
+        variant: 'destructive'
+      });
+    }
+  });
 
-  // Fetch ALL feeds globally
   const fetchAllMutation = useMutation({
     mutationFn: async () => {
       return callEdgeFunction<{ success: boolean; feedsProcessed?: number; results?: Array<{ feedName: string; success: boolean; itemsInserted?: number }> }>(
@@ -719,11 +771,12 @@ export function NewsDigestPanel({ password }: Props) {
                             У каналах: {checkAllNewsMutation.data.feeds.map(f => f.feedName).join(', ')}
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <Button
                             variant="outline"
+                            size="sm"
                             onClick={() => fetchCountryMutation.mutate(country.id)}
-                            disabled={fetchCountryMutation.isPending || bulkFetchMutation.isPending}
+                            disabled={fetchCountryMutation.isPending || bulkFetchMutation.isPending || fullPipelineMutation.isPending}
                             className="gap-2"
                           >
                             {fetchCountryMutation.isPending ? (
@@ -731,11 +784,13 @@ export function NewsDigestPanel({ password }: Props) {
                             ) : (
                               <Download className="w-4 h-4" />
                             )}
-                            Тільки завантажити
+                            Завантажити
                           </Button>
                           <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => bulkFetchMutation.mutate(country.id)}
-                            disabled={fetchCountryMutation.isPending || bulkFetchMutation.isPending}
+                            disabled={fetchCountryMutation.isPending || bulkFetchMutation.isPending || fullPipelineMutation.isPending}
                             className="gap-2"
                           >
                             {bulkFetchMutation.isPending ? (
@@ -746,7 +801,23 @@ export function NewsDigestPanel({ password }: Props) {
                                 <RefreshCw className="w-3 h-3" />
                               </>
                             )}
-                            Завантажити + Переказати
+                            + Переказати
+                          </Button>
+                          <Button
+                            onClick={() => fullPipelineMutation.mutate(country.id)}
+                            disabled={fetchCountryMutation.isPending || bulkFetchMutation.isPending || fullPipelineMutation.isPending}
+                            className="gap-2"
+                          >
+                            {fullPipelineMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Download className="w-4 h-4" />
+                                <RefreshCw className="w-3 h-3" />
+                                <MessageSquare className="w-3 h-3" />
+                              </>
+                            )}
+                            + Переказ + Діалоги
                           </Button>
                         </div>
                       </div>
@@ -758,16 +829,19 @@ export function NewsDigestPanel({ password }: Props) {
                 {(bulkProgress.isRunning || bulkProgress.results.length > 0) && bulkProgress.countryId === country.id && (
                   <Card className="border-primary/30 bg-primary/5">
                     <CardContent className="py-4 space-y-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-2">
                           {bulkProgress.isRunning && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
                           <span className="font-medium">
-                            {bulkProgress.isRunning ? 'Масове завантаження...' : 'Завершено'}
+                            {bulkProgress.isRunning ? 'Обробка...' : 'Завершено'}
                           </span>
                         </div>
-                        <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-4 text-sm flex-wrap">
                           <span className="text-green-500">+{bulkProgress.totalInserted} новин</span>
                           <span className="text-purple-500">⟳{bulkProgress.totalRetelled} переказано</span>
+                          {bulkProgress.totalDialogues > 0 && (
+                            <span className="text-primary">💬{bulkProgress.totalDialogues} діалогів</span>
+                          )}
                         </div>
                       </div>
                       
@@ -779,7 +853,7 @@ export function NewsDigestPanel({ password }: Props) {
                                 {r.feedName}
                               </span>
                               <span className="text-muted-foreground">
-                                {r.success ? `+${r.inserted}${r.retelled ? ` (⟳${r.retelled})` : ''}` : 'помилка'}
+                                {r.success ? `+${r.inserted}${r.retelled ? ` (⟳${r.retelled})` : ''}${r.dialogues ? ` (💬${r.dialogues})` : ''}` : 'помилка'}
                               </span>
                             </div>
                           ))}
@@ -790,7 +864,7 @@ export function NewsDigestPanel({ password }: Props) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setBulkProgress(prev => ({ ...prev, results: [], countryId: null }))}
+                          onClick={() => setBulkProgress(prev => ({ ...prev, results: [], countryId: null, totalDialogues: 0 }))}
                         >
                           Приховати
                         </Button>
