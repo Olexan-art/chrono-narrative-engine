@@ -297,6 +297,45 @@ export type Database = {
           },
         ]
       }
+      news_countries: {
+        Row: {
+          code: string
+          created_at: string
+          flag: string
+          id: string
+          is_active: boolean
+          name: string
+          name_en: string | null
+          name_pl: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          flag?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          name_en?: string | null
+          name_pl?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          flag?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          name_en?: string | null
+          name_pl?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       news_items: {
         Row: {
           category: string | null
@@ -362,6 +401,116 @@ export type Database = {
             columns: ["used_for_part_id"]
             isOneToOne: false
             referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_rss_feeds: {
+        Row: {
+          category: string
+          country_id: string
+          created_at: string
+          fetch_error: string | null
+          id: string
+          is_active: boolean
+          last_fetched_at: string | null
+          name: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          category?: string
+          country_id: string
+          created_at?: string
+          fetch_error?: string | null
+          id?: string
+          is_active?: boolean
+          last_fetched_at?: string | null
+          name: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          category?: string
+          country_id?: string
+          created_at?: string
+          fetch_error?: string | null
+          id?: string
+          is_active?: boolean
+          last_fetched_at?: string | null
+          name?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_rss_feeds_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "news_countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_rss_items: {
+        Row: {
+          category: string | null
+          content: string | null
+          country_id: string
+          created_at: string
+          description: string | null
+          external_id: string | null
+          feed_id: string
+          fetched_at: string
+          id: string
+          image_url: string | null
+          published_at: string | null
+          title: string
+          url: string
+        }
+        Insert: {
+          category?: string | null
+          content?: string | null
+          country_id: string
+          created_at?: string
+          description?: string | null
+          external_id?: string | null
+          feed_id: string
+          fetched_at?: string
+          id?: string
+          image_url?: string | null
+          published_at?: string | null
+          title: string
+          url: string
+        }
+        Update: {
+          category?: string | null
+          content?: string | null
+          country_id?: string
+          created_at?: string
+          description?: string | null
+          external_id?: string | null
+          feed_id?: string
+          fetched_at?: string
+          id?: string
+          image_url?: string | null
+          published_at?: string | null
+          title?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_rss_items_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "news_countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_rss_items_feed_id_fkey"
+            columns: ["feed_id"]
+            isOneToOne: false
+            referencedRelation: "news_rss_feeds"
             referencedColumns: ["id"]
           },
         ]
