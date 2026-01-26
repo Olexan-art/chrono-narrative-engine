@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Globe, Plus, Trash2, RefreshCw, Loader2, CheckCircle2, XCircle, ExternalLink, Rss, AlertCircle, Download, Search, Eye } from "lucide-react";
+import { Globe, Plus, Trash2, RefreshCw, Loader2, CheckCircle2, XCircle, ExternalLink, Rss, AlertCircle, Download, Search, Eye, Languages, BarChart3, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/api";
 import { FeedNewsViewer } from "./FeedNewsViewer";
+import { formatDistanceToNow } from "date-fns";
+import { uk } from "date-fns/locale";
 
 interface NewsCountry {
   id: string;
@@ -111,22 +113,40 @@ export function NewsDigestPanel({ password }: Props) {
     enabled: !!selectedCountry
   });
 
-  // Fetch items count per country
-  const { data: itemCounts } = useQuery({
-    queryKey: ['news-rss-items-count'],
+  // Fetch items count per country with time-based stats
+  const { data: newsStats } = useQuery({
+    queryKey: ['news-rss-items-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const now = new Date();
+      const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      
+      const { data: allItems, error } = await supabase
         .from('news_rss_items')
-        .select('country_id');
+        .select('country_id, fetched_at');
       if (error) throw error;
       
-      const counts: Record<string, number> = {};
-      for (const item of data || []) {
-        counts[item.country_id] = (counts[item.country_id] || 0) + 1;
+      const stats: Record<string, { total: number; last6h: number; last12h: number; last24h: number }> = {};
+      for (const item of allItems || []) {
+        if (!stats[item.country_id]) {
+          stats[item.country_id] = { total: 0, last6h: 0, last12h: 0, last24h: 0 };
+        }
+        stats[item.country_id].total++;
+        
+        const fetchedAt = new Date(item.fetched_at);
+        if (fetchedAt >= sixHoursAgo) stats[item.country_id].last6h++;
+        if (fetchedAt >= twelveHoursAgo) stats[item.country_id].last12h++;
+        if (fetchedAt >= twentyFourHoursAgo) stats[item.country_id].last24h++;
       }
-      return counts;
+      return stats;
     }
   });
+  
+  // Keep backward compatible itemCounts
+  const itemCounts = newsStats ? Object.fromEntries(
+    Object.entries(newsStats).map(([k, v]) => [k, v.total])
+  ) : undefined;
 
   // Validate RSS feed
   const validateFeed = async () => {
@@ -321,6 +341,79 @@ export function NewsDigestPanel({ password }: Props) {
     }
   });
 
+  // Translate Indian news mutation
+  const translateIndianMutation = useMutation({
+    mutationFn: async (countryCode: string) => {
+      return callEdgeFunction<{ success: boolean; translated?: number; error?: string }>(
+        'translate-indian-news',
+        { action: 'translate_country', countryCode }
+      );
+    },
+    onSuccess: (result) => {
+      if (result.success) {
+        toast({ title: `Перекладено ${result.translated || 0} новин на індійські мови` });
+      } else {
+        toast({ title: 'Помилка перекладу', description: result.error, variant: 'destructive' });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Помилка',
+        description: error instanceof Error ? error.message : 'Не вдалося перекласти',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Check all feeds for new items mutation
+  const checkAllNewsMutation = useMutation({
+    mutationFn: async (countryId: string) => {
+      // Get all feeds for the country
+      const { data: feeds } = await supabase
+        .from('news_rss_feeds')
+        .select('id, name')
+        .eq('country_id', countryId)
+        .eq('is_active', true);
+      
+      if (!feeds || feeds.length === 0) return { total: 0, feeds: [] };
+      
+      // Check each feed
+      const results = await Promise.all(feeds.map(async (feed) => {
+        try {
+          const result = await callEdgeFunction<{
+            success: boolean;
+            feedName: string;
+            rssItemCount: number;
+            dbItemCount: number;
+          }>('fetch-rss', { action: 'check_feed', feedId: feed.id });
+          
+          return {
+            feedId: feed.id,
+            feedName: result.feedName || feed.name,
+            newCount: Math.max(0, result.rssItemCount - result.dbItemCount),
+            rssCount: result.rssItemCount,
+            dbCount: result.dbItemCount
+          };
+        } catch {
+          return { feedId: feed.id, feedName: feed.name, newCount: 0, rssCount: 0, dbCount: 0 };
+        }
+      }));
+      
+      const totalNew = results.reduce((sum, r) => sum + r.newCount, 0);
+      return { total: totalNew, feeds: results.filter(r => r.newCount > 0) };
+    },
+    onSuccess: (result) => {
+      if (result.total > 0) {
+        toast({ 
+          title: `Знайдено ${result.total} нових новин`,
+          description: `У ${result.feeds.length} каналах`
+        });
+      } else {
+        toast({ title: 'Нових новин не знайдено' });
+      }
+    }
+  });
+
   if (countriesLoading) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   }
@@ -329,33 +422,48 @@ export function NewsDigestPanel({ password }: Props) {
     <div className="space-y-6">
       <Card className="cosmic-card">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Globe className="w-5 h-5 text-primary" />
-                Кротивина Новин — RSS Канали
+                Кротовиина Новин — RSS Канали
               </CardTitle>
               <CardDescription>Управління RSS каналами по країнам</CardDescription>
             </div>
-            <Button
-              onClick={() => fetchAllMutation.mutate()}
-              disabled={fetchAllMutation.isPending}
-              className="gap-2"
-            >
-              {fetchAllMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
-              )}
-              Оновити всі RSS
-            </Button>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                onClick={() => selectedCountry && checkAllNewsMutation.mutate(selectedCountry)}
+                disabled={checkAllNewsMutation.isPending || !selectedCountry}
+                className="gap-2"
+              >
+                {checkAllNewsMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
+                Перевірити нові
+              </Button>
+              <Button
+                onClick={() => fetchAllMutation.mutate()}
+                disabled={fetchAllMutation.isPending}
+                className="gap-2"
+              >
+                {fetchAllMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                Оновити всі RSS
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           <Tabs value={selectedCountry || undefined} onValueChange={setSelectedCountry}>
             <TabsList className="grid grid-cols-4 mb-6">
               {countries?.map(country => (
-                <TabsTrigger key={country.id} value={country.id} className="gap-2">
+                <TabsTrigger key={country.id} value={country.id} className="gap-2 flex-col sm:flex-row">
                   <span>{country.flag}</span>
                   <span className="hidden sm:inline">{country.name}</span>
                   {itemCounts?.[country.id] && (
@@ -369,6 +477,83 @@ export function NewsDigestPanel({ password }: Props) {
 
             {countries?.map(country => (
               <TabsContent key={country.id} value={country.id} className="space-y-6">
+                {/* Stats Card */}
+                {newsStats?.[country.id] && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardContent className="py-4">
+                      <div className="flex items-center justify-between flex-wrap gap-4">
+                        <div className="flex items-center gap-6">
+                          <div className="flex items-center gap-2">
+                            <BarChart3 className="w-4 h-4 text-primary" />
+                            <span className="text-sm text-muted-foreground">Всього:</span>
+                            <span className="font-bold">{newsStats[country.id].total}</span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span className="text-muted-foreground">6г:</span>
+                              <span className="text-green-500 font-medium">+{newsStats[country.id].last6h}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground">12г:</span>
+                              <span className="text-blue-500 font-medium">+{newsStats[country.id].last12h}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground">24г:</span>
+                              <span className="text-amber-500 font-medium">+{newsStats[country.id].last24h}</span>
+                            </div>
+                          </div>
+                        </div>
+                        {/* India translation button */}
+                        {country.code === 'IN' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => translateIndianMutation.mutate('in')}
+                            disabled={translateIndianMutation.isPending}
+                            className="gap-2"
+                          >
+                            {translateIndianMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Languages className="w-4 h-4" />
+                            )}
+                            Перекласти на індійські мови
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {/* Check new news results */}
+                {checkAllNewsMutation.data && checkAllNewsMutation.data.total > 0 && selectedCountry === country.id && (
+                  <Card className="border-green-500/30 bg-green-500/5">
+                    <CardContent className="py-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-green-500">Знайдено {checkAllNewsMutation.data.total} нових новин!</p>
+                          <p className="text-sm text-muted-foreground">
+                            У каналах: {checkAllNewsMutation.data.feeds.map(f => f.feedName).join(', ')}
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => fetchCountryMutation.mutate(country.id)}
+                          disabled={fetchCountryMutation.isPending}
+                          className="gap-2"
+                        >
+                          {fetchCountryMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4" />
+                          )}
+                          Завантажити всі
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Add new feed form */}
                 <Card className="border-dashed">
                   <CardHeader className="pb-3">

@@ -18,6 +18,7 @@ import { AnalyticsPanel } from "@/components/AnalyticsPanel";
 import { SEOHead } from "@/components/SEOHead";
 import CharactersPanel from "@/components/CharactersPanel";
 import DialogueManagementPanel from "@/components/DialogueManagementPanel";
+import { DashboardPanel } from "@/components/DashboardPanel";
 import { FlashNewsPanel } from "@/components/FlashNewsPanel";
 import { JustBusinessPanel } from "@/components/JustBusinessPanel";
 import { NewsDigestPanel } from "@/components/NewsDigestPanel";
@@ -660,8 +661,12 @@ export default function AdminPage() {
 
         {stats && <StatsCard stats={stats} />}
 
-        <Tabs defaultValue="generate" className="mt-8">
-          <TabsList className="grid w-full grid-cols-9">
+        <Tabs defaultValue="dashboard" className="mt-8">
+          <TabsList className="flex flex-wrap gap-1 h-auto py-2">
+            <TabsTrigger value="dashboard" className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Статистика
+            </TabsTrigger>
             <TabsTrigger value="generate" className="gap-2">
               <Sparkles className="w-4 h-4" />
               День
@@ -696,7 +701,7 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="newsdigest" className="gap-2">
               <Globe className="w-4 h-4 text-cyan-500" />
-              Кротивина
+              Кротовиина
             </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <TrendingUp className="w-4 h-4" />
@@ -707,6 +712,10 @@ export default function AdminPage() {
               Налаштування
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="dashboard" className="mt-6">
+            <DashboardPanel password={password} />
+          </TabsContent>
 
           <TabsContent value="generate" className="mt-6">
             <GenerationPanel password={password} />
