@@ -1,4 +1,5 @@
-import { useParams, Link } from "react-router-dom";
+import { useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Library, Eye, BookOpen, Calendar, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Header } from "@/components/Header";
@@ -10,12 +11,42 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTrackView } from "@/hooks/useTrackView";
 
+// UUID regex pattern for detecting old URLs
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default function VolumePage() {
   const { yearMonth } = useParams<{ yearMonth: string }>();
+  const navigate = useNavigate();
   const { t, language } = useLanguage();
 
+  const isUUID = yearMonth && UUID_REGEX.test(yearMonth);
+
+  // If UUID is detected, fetch the volume to get year-month for redirect
+  const { data: legacyVolume } = useQuery({
+    queryKey: ['volume-legacy-redirect', yearMonth],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('volumes')
+        .select('year, month')
+        .eq('id', yearMonth)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!isUUID
+  });
+
+  // Redirect from UUID to friendly URL
+  useEffect(() => {
+    if (legacyVolume) {
+      const newYearMonth = `${legacyVolume.year}-${String(legacyVolume.month).padStart(2, '0')}`;
+      navigate(`/volume/${newYearMonth}`, { replace: true });
+    }
+  }, [legacyVolume, navigate]);
+
   // Parse year-month from URL (format: 2025-01)
-  const [year, month] = (yearMonth || '').split('-').map(Number);
+  const [year, month] = isUUID ? [0, 0] : (yearMonth || '').split('-').map(Number);
 
   const { data: volume, isLoading } = useQuery({
     queryKey: ['volume', year, month],
@@ -30,7 +61,7 @@ export default function VolumePage() {
       if (error) throw error;
       return data;
     },
-    enabled: !!year && !!month
+    enabled: !!year && !!month && !isUUID
   });
 
   // Fetch chapters for this volume
