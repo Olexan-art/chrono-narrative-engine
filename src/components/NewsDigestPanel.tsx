@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Globe, Plus, Trash2, RefreshCw, Loader2, CheckCircle2, XCircle, ExternalLink, Rss, AlertCircle, Download, Search, Eye, Languages, BarChart3, Clock } from "lucide-react";
+import { Globe, Plus, Trash2, RefreshCw, Loader2, CheckCircle2, XCircle, ExternalLink, Rss, AlertCircle, Download, Search, Eye, Languages, BarChart3, Clock, FileText, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -119,25 +119,52 @@ export function NewsDigestPanel({ password }: Props) {
     queryFn: async () => {
       const now = new Date();
       const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-      const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000);
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
       const { data: allItems, error } = await supabase
         .from('news_rss_items')
-        .select('country_id, fetched_at');
+        .select('country_id, fetched_at, content_en');
       if (error) throw error;
       
-      const stats: Record<string, { total: number; last6h: number; last12h: number; last24h: number }> = {};
+      interface CountryStats {
+        total: number;
+        last6h: number;
+        last24h: number;
+        retold: {
+          total: number;
+          last6h: number;
+          last24h: number;
+          lastWeek: number;
+        };
+      }
+      
+      const stats: Record<string, CountryStats> = {};
       for (const item of allItems || []) {
+        if (!item.country_id) continue;
+        
         if (!stats[item.country_id]) {
-          stats[item.country_id] = { total: 0, last6h: 0, last12h: 0, last24h: 0 };
+          stats[item.country_id] = { 
+            total: 0, 
+            last6h: 0, 
+            last24h: 0,
+            retold: { total: 0, last6h: 0, last24h: 0, lastWeek: 0 }
+          };
         }
         stats[item.country_id].total++;
         
         const fetchedAt = new Date(item.fetched_at);
         if (fetchedAt >= sixHoursAgo) stats[item.country_id].last6h++;
-        if (fetchedAt >= twelveHoursAgo) stats[item.country_id].last12h++;
         if (fetchedAt >= twentyFourHoursAgo) stats[item.country_id].last24h++;
+        
+        // Check if retold (content_en exists and has content)
+        const isRetold = item.content_en && typeof item.content_en === 'string' && item.content_en.trim().length > 0;
+        if (isRetold) {
+          stats[item.country_id].retold.total++;
+          if (fetchedAt >= sixHoursAgo) stats[item.country_id].retold.last6h++;
+          if (fetchedAt >= twentyFourHoursAgo) stats[item.country_id].retold.last24h++;
+          if (fetchedAt >= oneWeekAgo) stats[item.country_id].retold.lastWeek++;
+        }
       }
       return stats;
     }
@@ -480,12 +507,13 @@ export function NewsDigestPanel({ password }: Props) {
                 {/* Stats Card */}
                 {newsStats?.[country.id] && (
                   <Card className="border-primary/20 bg-primary/5">
-                    <CardContent className="py-4">
+                    <CardContent className="py-4 space-y-4">
+                      {/* News stats row */}
                       <div className="flex items-center justify-between flex-wrap gap-4">
                         <div className="flex items-center gap-6">
                           <div className="flex items-center gap-2">
                             <BarChart3 className="w-4 h-4 text-primary" />
-                            <span className="text-sm text-muted-foreground">Всього:</span>
+                            <span className="text-sm text-muted-foreground">Новин:</span>
                             <span className="font-bold">{newsStats[country.id].total}</span>
                           </div>
                           <div className="flex items-center gap-4 text-sm">
@@ -493,10 +521,6 @@ export function NewsDigestPanel({ password }: Props) {
                               <Clock className="w-3 h-3" />
                               <span className="text-muted-foreground">6г:</span>
                               <span className="text-green-500 font-medium">+{newsStats[country.id].last6h}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-muted-foreground">12г:</span>
-                              <span className="text-blue-500 font-medium">+{newsStats[country.id].last12h}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <span className="text-muted-foreground">24г:</span>
@@ -521,6 +545,31 @@ export function NewsDigestPanel({ password }: Props) {
                             Перекласти на індійські мови
                           </Button>
                         )}
+                      </div>
+                      
+                      {/* Retold stats row */}
+                      <div className="flex items-center gap-6 pt-2 border-t border-border/50">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-accent-foreground" />
+                          <span className="text-sm text-muted-foreground">Переказано:</span>
+                          <span className="font-bold">{newsStats[country.id].retold?.total || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span className="text-muted-foreground">6г:</span>
+                            <span className="text-green-500 font-medium">+{newsStats[country.id].retold?.last6h || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground">24г:</span>
+                            <span className="text-amber-500 font-medium">+{newsStats[country.id].retold?.last24h || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            <span className="text-muted-foreground">тижд:</span>
+                            <span className="text-purple-500 font-medium">+{newsStats[country.id].retold?.lastWeek || 0}</span>
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
