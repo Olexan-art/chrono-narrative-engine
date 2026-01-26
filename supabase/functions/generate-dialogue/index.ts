@@ -226,7 +226,8 @@ serve(async (req) => {
       threadProbability = 30,
       chapterId,
       generateTweets = false,
-      tweetCount = 4
+      tweetCount = 4,
+      contentLanguage = 'uk' // Language of the news content: 'uk', 'en', 'hi', 'ta', 'te', 'bn', etc.
     } = await req.json();
 
     const supabase = createClient(
@@ -307,48 +308,69 @@ serve(async (req) => {
       enableThreading,
       threadProbability,
       chapterId: chapterId || 'none',
-      generateTweets
+      generateTweets,
+      contentLanguage
     });
+
+    // Language names for prompts
+    const languageNames: Record<string, string> = {
+      'uk': 'українська',
+      'en': 'English',
+      'pl': 'polski',
+      'hi': 'हिन्दी (Hindi)',
+      'ta': 'தமிழ் (Tamil)',
+      'te': 'తెలుగు (Telugu)',
+      'bn': 'বাংলা (Bengali)'
+    };
+    
+    const primaryLanguageName = languageNames[contentLanguage] || 'українська';
 
     const charactersList = thirdCharacter 
       ? [...mainCharacters, thirdCharacter]
       : mainCharacters;
 
-    const systemPrompt = `Ти генеруєш діалоги персонажів для сатиричного науково-фантастичного проекту "Точка Синхронізації".
+    // Build language-aware system prompt
+    const isIndianLanguage = ['hi', 'ta', 'te', 'bn'].includes(contentLanguage);
+    const primaryFieldName = contentLanguage === 'uk' ? 'dialogue' : `dialogue_${contentLanguage}`;
+    
+    const systemPrompt = `You are generating character dialogues for the satirical sci-fi project "Synchronization Point".
 
-ПЕРСОНАЖІ:
+CHARACTERS:
 ${charactersList.map((c, i) => `${i + 1}. ${c.name} (${c.avatar}): ${c.style}`).join('\n')}
 
-${thirdCharacter ? `ВАЖЛИВО: Третій персонаж ${thirdCharacter.name} має втрутитись у розмову несподівано, коли двоє інших вже розмовляють. Це має бути комічний момент.` : ''}
+${thirdCharacter ? `IMPORTANT: The third character ${thirdCharacter.name} should intervene unexpectedly when the other two are already talking. This should be a comedic moment.` : ''}
 
-ПРАВИЛА:
-1. Згенеруй ${messageCount} повідомлень діалогу ТРЬОМА МОВАМИ (українська, англійська, польська)
-2. Кожен персонаж говорить у своєму унікальному стилі
-3. Діалог має коментувати події з новин сатирично та філософськи
-4. ${thirdCharacter ? `Третій персонаж з'являється приблизно в середині діалогу` : 'Діалог між двома персонажами'}
-5. Репліки мають бути влучними та гострими, від 1 до 3 речень
+RULES:
+1. Generate ${messageCount} dialogue messages
+2. CRITICAL: The PRIMARY language for "dialogue" field must be ${primaryLanguageName} - this is the language of the news article!
+3. Each character speaks in their unique style
+4. The dialogue should comment on news events satirically and philosophically
+5. ${thirdCharacter ? `The third character appears approximately in the middle of the dialogue` : 'Dialogue between two characters'}
+6. Lines should be sharp and witty, 1-3 sentences each
+${isIndianLanguage ? `7. For Indian languages, use native script (Devanagari for Hindi, Tamil script for Tamil, Telugu script for Telugu, Bengali script for Bengali)` : ''}
 
-ФОРМАТ ВІДПОВІДІ (JSON):
+RESPONSE FORMAT (JSON):
 {
   "dialogue": [
-    {"character": "character_id", "name": "Ім'я", "avatar": "емодзі", "message": "Репліка українською"}
+    {"character": "character_id", "name": "Name", "avatar": "emoji", "message": "Message in ${primaryLanguageName}"}
   ],
   "dialogue_en": [
-    {"character": "character_id", "name": "Ім'я", "avatar": "емодзі", "message": "Message in English"}
+    {"character": "character_id", "name": "Name", "avatar": "emoji", "message": "Message in English"}
   ],
   "dialogue_pl": [
-    {"character": "character_id", "name": "Ім'я", "avatar": "емодзі", "message": "Wiadomość po polsku"}
+    {"character": "character_id", "name": "Name", "avatar": "emoji", "message": "Wiadomość po polsku"}
   ]
 }`;
 
-    const userPrompt = `КОНТЕКСТ ОПОВІДАННЯ:
+    const userPrompt = `STORY CONTEXT:
 ${storyContext}
 
-НОВИНИ:
+NEWS (in ${primaryLanguageName}):
 ${newsContext}
 
-Згенеруй ${messageCount} реплік діалогу ТРЬОМА МОВАМИ між персонажами${thirdCharacter ? `, включаючи несподівану появу ${thirdCharacter.name}` : ''}.
-Українською у "dialogue", англійською у "dialogue_en", польською у "dialogue_pl".`;
+Generate ${messageCount} dialogue lines. The "dialogue" field MUST be in ${primaryLanguageName} (the language of the news).
+Also provide English translation in "dialogue_en" and Polish in "dialogue_pl".
+${thirdCharacter ? `Include the unexpected appearance of ${thirdCharacter.name}.` : ''}`;
 
     const content = await callLLM(llmSettings, systemPrompt, userPrompt, useOpenAI);
 

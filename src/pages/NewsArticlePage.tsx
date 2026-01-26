@@ -63,10 +63,33 @@ export default function NewsArticlePage() {
     enabled: !!country && !!slug
   });
 
+  // Detect the language of the news content
+  const detectNewsLanguage = (): string => {
+    if (!article) return 'en';
+    
+    // Check if content exists in different languages
+    if (article.content_hi || article.title_hi) return 'hi';
+    if (article.content_ta || article.title_ta) return 'ta';
+    if (article.content_te || article.title_te) return 'te';
+    if (article.content_bn || article.title_bn) return 'bn';
+    if (article.content_en || article.title_en) return 'en';
+    
+    // Default based on country code
+    const countryCode = article.country?.code?.toLowerCase();
+    if (countryCode === 'in') return 'hi'; // Default to Hindi for India
+    if (countryCode === 'ua') return 'uk';
+    if (countryCode === 'pl') return 'pl';
+    
+    return 'en';
+  };
+
   // Generate character dialogue for this news
   const generateDialogueMutation = useMutation({
     mutationFn: async () => {
       if (!article) throw new Error('No article');
+      
+      const contentLanguage = detectNewsLanguage();
+      console.log('Generating dialogue in language:', contentLanguage);
       
       const result = await callEdgeFunction<{
         success: boolean;
@@ -82,11 +105,12 @@ export default function NewsArticlePage() {
           threadId?: string;
         }>;
       }>('generate-dialogue', {
-        storyContext: `News article: ${article.title}\n\n${article.description || ''}\n\n${article.content || ''}`,
+        storyContext: `News article: ${getLocalizedField('title')}\n\n${getLocalizedField('description') || ''}\n\n${getLocalizedField('content') || ''}`,
         newsContext: `Source: ${article.feed?.name || 'RSS'}, Category: ${article.category || article.feed?.category || 'general'}`,
         messageCount: 5,
         enableThreading: true,
-        threadProbability: 30
+        threadProbability: 30,
+        contentLanguage // Pass the detected language
       });
       
       if (!result.success) throw new Error('Generation failed');
