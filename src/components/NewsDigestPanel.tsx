@@ -266,7 +266,26 @@ export function NewsDigestPanel({ password }: Props) {
     }
   });
 
-  // Fetch all feeds for country
+  // Bulk fetch for country with progress
+  const [bulkProgress, setBulkProgress] = useState<{
+    isRunning: boolean;
+    countryId: string | null;
+    totalFeeds: number;
+    processedFeeds: number;
+    totalInserted: number;
+    totalRetelled: number;
+    results: Array<{ feedName: string; success: boolean; inserted: number; retelled?: number }>;
+  }>({
+    isRunning: false,
+    countryId: null,
+    totalFeeds: 0,
+    processedFeeds: 0,
+    totalInserted: 0,
+    totalRetelled: 0,
+    results: []
+  });
+
+  // Fetch all feeds for country (original)
   const fetchCountryMutation = useMutation({
     mutationFn: async (countryId: string) => {
       return callEdgeFunction<{ success: boolean; results?: Array<{ feedName: string; itemsInserted?: number }> }>(
@@ -277,10 +296,60 @@ export function NewsDigestPanel({ password }: Props) {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['news-rss-feeds'] });
       queryClient.invalidateQueries({ queryKey: ['news-rss-items-count'] });
+      queryClient.invalidateQueries({ queryKey: ['news-rss-items-stats'] });
       if (result.success && result.results) {
         const total = result.results.reduce((sum, r) => sum + (r.itemsInserted || 0), 0);
         toast({ title: `Завантажено ${total} новин з ${result.results.length} каналів` });
       }
+    }
+  });
+  
+  // Bulk fetch with retelling - uses new fetch_country_bulk action
+  const bulkFetchMutation = useMutation({
+    mutationFn: async (countryId: string) => {
+      setBulkProgress(prev => ({ ...prev, isRunning: true, countryId, results: [] }));
+      
+      return callEdgeFunction<{ 
+        success: boolean; 
+        countryCode: string;
+        feedsProcessed: number;
+        totalInserted: number;
+        totalRetelled: number;
+        results: Array<{ feedName: string; success: boolean; inserted: number; retelled?: number; error?: string }> 
+      }>(
+        'fetch-rss',
+        { action: 'fetch_country_bulk', countryId }
+      );
+    },
+    onSuccess: (result) => {
+      setBulkProgress(prev => ({
+        ...prev,
+        isRunning: false,
+        totalFeeds: result.feedsProcessed,
+        processedFeeds: result.feedsProcessed,
+        totalInserted: result.totalInserted,
+        totalRetelled: result.totalRetelled,
+        results: result.results || []
+      }));
+      
+      queryClient.invalidateQueries({ queryKey: ['news-rss-feeds'] });
+      queryClient.invalidateQueries({ queryKey: ['news-rss-items-count'] });
+      queryClient.invalidateQueries({ queryKey: ['news-rss-items-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['latest-usa-retold-news'] });
+      queryClient.invalidateQueries({ queryKey: ['country-news'] });
+      
+      toast({ 
+        title: `Завантажено ${result.totalInserted} новин`,
+        description: `Переказано ${result.totalRetelled} з ${result.feedsProcessed} каналів`
+      });
+    },
+    onError: (error) => {
+      setBulkProgress(prev => ({ ...prev, isRunning: false }));
+      toast({
+        title: 'Помилка',
+        description: error instanceof Error ? error.message : 'Не вдалося завантажити',
+        variant: 'destructive'
+      });
     }
   });
 
@@ -587,26 +656,89 @@ export function NewsDigestPanel({ password }: Props) {
                 {checkAllNewsMutation.data && checkAllNewsMutation.data.total > 0 && selectedCountry === country.id && (
                   <Card className="border-green-500/30 bg-green-500/5">
                     <CardContent className="py-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between flex-wrap gap-4">
                         <div>
                           <p className="font-medium text-green-500">Знайдено {checkAllNewsMutation.data.total} нових новин!</p>
                           <p className="text-sm text-muted-foreground">
                             У каналах: {checkAllNewsMutation.data.feeds.map(f => f.feedName).join(', ')}
                           </p>
                         </div>
-                        <Button
-                          onClick={() => fetchCountryMutation.mutate(country.id)}
-                          disabled={fetchCountryMutation.isPending}
-                          className="gap-2"
-                        >
-                          {fetchCountryMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Download className="w-4 h-4" />
-                          )}
-                          Завантажити всі
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => fetchCountryMutation.mutate(country.id)}
+                            disabled={fetchCountryMutation.isPending || bulkFetchMutation.isPending}
+                            className="gap-2"
+                          >
+                            {fetchCountryMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                            Тільки завантажити
+                          </Button>
+                          <Button
+                            onClick={() => bulkFetchMutation.mutate(country.id)}
+                            disabled={fetchCountryMutation.isPending || bulkFetchMutation.isPending}
+                            className="gap-2"
+                          >
+                            {bulkFetchMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Download className="w-4 h-4" />
+                                <RefreshCw className="w-3 h-3" />
+                              </>
+                            )}
+                            Завантажити + Переказати
+                          </Button>
+                        </div>
                       </div>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {/* Bulk progress panel */}
+                {(bulkProgress.isRunning || bulkProgress.results.length > 0) && bulkProgress.countryId === country.id && (
+                  <Card className="border-primary/30 bg-primary/5">
+                    <CardContent className="py-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {bulkProgress.isRunning && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+                          <span className="font-medium">
+                            {bulkProgress.isRunning ? 'Масове завантаження...' : 'Завершено'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="text-green-500">+{bulkProgress.totalInserted} новин</span>
+                          <span className="text-purple-500">⟳{bulkProgress.totalRetelled} переказано</span>
+                        </div>
+                      </div>
+                      
+                      {bulkProgress.results.length > 0 && (
+                        <div className="space-y-1 max-h-40 overflow-y-auto text-xs">
+                          {bulkProgress.results.map((r, i) => (
+                            <div key={i} className="flex items-center justify-between py-1 border-b border-border/30">
+                              <span className={r.success ? 'text-foreground' : 'text-destructive'}>
+                                {r.feedName}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {r.success ? `+${r.inserted}${r.retelled ? ` (⟳${r.retelled})` : ''}` : 'помилка'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {!bulkProgress.isRunning && bulkProgress.results.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setBulkProgress(prev => ({ ...prev, results: [], countryId: null }))}
+                        >
+                          Приховати
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 )}
