@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      bot_visits: {
+        Row: {
+          bot_category: string
+          bot_type: string
+          created_at: string
+          id: string
+          ip_country: string | null
+          path: string
+          referer: string | null
+          response_time_ms: number | null
+          status_code: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          bot_category: string
+          bot_type: string
+          created_at?: string
+          id?: string
+          ip_country?: string | null
+          path: string
+          referer?: string | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          bot_category?: string
+          bot_type?: string
+          created_at?: string
+          id?: string
+          ip_country?: string | null
+          path?: string
+          referer?: string | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       chapters: {
         Row: {
           chat_dialogue: Json | null
