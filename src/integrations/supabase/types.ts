@@ -838,6 +838,42 @@ export type Database = {
         }
         Relationships: []
       }
+      sitemap_metadata: {
+        Row: {
+          country_code: string | null
+          created_at: string
+          file_size_bytes: number | null
+          generation_time_ms: number | null
+          id: string
+          last_generated_at: string | null
+          sitemap_type: string
+          updated_at: string
+          url_count: number
+        }
+        Insert: {
+          country_code?: string | null
+          created_at?: string
+          file_size_bytes?: number | null
+          generation_time_ms?: number | null
+          id?: string
+          last_generated_at?: string | null
+          sitemap_type: string
+          updated_at?: string
+          url_count?: number
+        }
+        Update: {
+          country_code?: string | null
+          created_at?: string
+          file_size_bytes?: number | null
+          generation_time_ms?: number | null
+          id?: string
+          last_generated_at?: string | null
+          sitemap_type?: string
+          updated_at?: string
+          url_count?: number
+        }
+        Relationships: []
+      }
       view_counts: {
         Row: {
           created_at: string

@@ -82,3 +82,9 @@ verify_jwt = false
 
 [functions.manage-cron]
 verify_jwt = false
+
+[functions.archive-news]
+verify_jwt = false
+
+[functions.news-sitemap]
+verify_jwt = false

@@ -81,6 +81,13 @@ Disallow: /edit/
 
 # Resources
 Sitemap: https://echoes2.com/sitemap.xml
+Sitemap: https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap
+
+# Country-specific news sitemaps
+Sitemap: https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap?country=us
+Sitemap: https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap?country=ua
+Sitemap: https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap?country=pl
+Sitemap: https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap?country=in
 
 # LLM-optimized documentation (dynamic)
 # See https://echoes2.com/llms.txt for AI-friendly site overview with latest content
