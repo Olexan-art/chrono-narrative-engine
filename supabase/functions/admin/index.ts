@@ -6,8 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const ADMIN_PASSWORD = '1907';
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -16,8 +14,20 @@ serve(async (req) => {
   try {
     const { action, password, data } = await req.json();
 
+    // Get admin password from environment variable (not hardcoded)
+    const ADMIN_PASSWORD = Deno.env.get('ADMIN_PASSWORD');
+    
+    if (!ADMIN_PASSWORD) {
+      console.error('ADMIN_PASSWORD environment variable not configured');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Verify password for all admin actions
     if (password !== ADMIN_PASSWORD) {
+      console.log('Admin auth failed: incorrect password');
       return new Response(
         JSON.stringify({ error: 'Невірний пароль' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -28,6 +38,8 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
+
+    console.log(`Admin action: ${action}`);
 
     switch (action) {
       case 'verify': {
