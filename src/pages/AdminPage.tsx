@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock } from "lucide-react";
+import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock, Archive } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import { FlashNewsPanel } from "@/components/FlashNewsPanel";
 import { JustBusinessPanel } from "@/components/JustBusinessPanel";
 import { NewsDigestPanel } from "@/components/NewsDigestPanel";
 import { CronJobsPanel } from "@/components/CronJobsPanel";
+import { NewsArchivePanel } from "@/components/NewsArchivePanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -712,6 +713,10 @@ export default function AdminPage() {
               <Clock className="w-4 h-4 text-green-500" />
               Cron Jobs
             </TabsTrigger>
+            <TabsTrigger value="archive" className="gap-2">
+              <Archive className="w-4 h-4 text-orange-500" />
+              Архів
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               Налаштування
@@ -764,6 +769,10 @@ export default function AdminPage() {
 
           <TabsContent value="cron" className="mt-6">
             <CronJobsPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="archive" className="mt-6">
+            <NewsArchivePanel password={password} />
           </TabsContent>
 
           <TabsContent value="settings" className="mt-6">
