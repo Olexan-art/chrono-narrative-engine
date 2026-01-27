@@ -6,6 +6,7 @@ const corsHeaders = {
 };
 
 const BASE_URL = "https://echoes2.com";
+const SUPABASE_FUNCTION_URL = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1";
 
 // Helper to add hreflang links for multilingual pages
 function addHreflangLinks(url: string): string {
@@ -15,6 +16,51 @@ function addHreflangLinks(url: string): string {
     <xhtml:link rel="alternate" hreflang="pl" href="${url}" />
     <xhtml:link rel="alternate" hreflang="x-default" href="${url}" />`;
 }
+
+// Ping search engines about sitemap updates
+async function pingSitemapToSearchEngines(sitemapUrl: string): Promise<{ google: boolean; bing: boolean }> {
+  const results = { google: false, bing: false };
+  
+  try {
+    // Ping Google
+    const googlePingUrl = `https://www.google.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`;
+    const googleResponse = await fetch(googlePingUrl, { method: 'GET' });
+    results.google = googleResponse.ok;
+    console.log(`Google ping for ${sitemapUrl}: ${googleResponse.status}`);
+  } catch (error) {
+    console.error('Google ping failed:', error);
+  }
+
+  try {
+    // Ping Bing (IndexNow style - more reliable)
+    const bingPingUrl = `https://www.bing.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`;
+    const bingResponse = await fetch(bingPingUrl, { method: 'GET' });
+    results.bing = bingResponse.ok;
+    console.log(`Bing ping for ${sitemapUrl}: ${bingResponse.status}`);
+  } catch (error) {
+    console.error('Bing ping failed:', error);
+  }
+
+  return results;
+}
+
+// Update ping status in metadata
+async function updatePingStatus(
+  supabase: any, 
+  sitemapType: string, 
+  pingResults: { google: boolean; bing: boolean }
+) {
+  await supabase
+    .from("sitemap_metadata")
+    .update({
+      last_ping_at: new Date().toISOString(),
+      google_ping_success: pingResults.google,
+      bing_ping_success: pingResults.bing,
+    })
+    .eq('sitemap_type', sitemapType);
+}
+
+declare const EdgeRuntime: { waitUntil: (promise: Promise<any>) => void };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,6 +77,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const countryCode = url.searchParams.get("country")?.toLowerCase();
     const action = url.searchParams.get("action"); // 'generate' to force regeneration
+    const pingEnabled = url.searchParams.get("ping") !== "false"; // Enable ping by default
 
     // If no country specified, return sitemap index
     if (!countryCode) {
@@ -53,7 +100,19 @@ Deno.serve(async (req) => {
     }
 
     // Generate sitemap for specific country
-    const xml = await generateCountrySitemap(supabase, country, startTime);
+    const { xml, urlCount } = await generateCountrySitemap(supabase, country, startTime);
+    
+    // Ping search engines in background if action=generate and ping not disabled
+    if (action === "generate" && pingEnabled && urlCount > 0) {
+      const sitemapUrl = `${SUPABASE_FUNCTION_URL}/news-sitemap?country=${countryCode}`;
+      const sitemapType = `news-${countryCode}`;
+      
+      EdgeRuntime.waitUntil(
+        pingSitemapToSearchEngines(sitemapUrl).then(results => 
+          updatePingStatus(supabase, sitemapType, results)
+        )
+      );
+    }
     
     return new Response(xml, { 
       headers: {
@@ -122,7 +181,7 @@ async function generateCountrySitemap(
   supabase: any, 
   country: { id: string; code: string; name: string },
   startTime: number
-): Promise<string> {
+): Promise<{ xml: string; urlCount: number }> {
   // Fetch all non-archived news items with slugs for this country
   const { data: newsItems, error } = await supabase
     .from("news_rss_items")
@@ -136,6 +195,7 @@ async function generateCountrySitemap(
 
   const now = new Date().toISOString();
   const countryCodeLower = country.code.toLowerCase();
+  const urlCount = newsItems?.length || 0;
   
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
@@ -144,7 +204,7 @@ async function generateCountrySitemap(
   
   <!-- News sitemap for ${country.name} (${country.code}) -->
   <!-- Generated: ${now} -->
-  <!-- Total URLs: ${newsItems?.length || 0} -->
+  <!-- Total URLs: ${urlCount} -->
 `;
 
   // Add news article pages
@@ -174,12 +234,12 @@ async function generateCountrySitemap(
     .upsert({
       sitemap_type: `news-${countryCodeLower}`,
       country_code: countryCodeLower,
-      url_count: newsItems?.length || 0,
+      url_count: urlCount,
       last_generated_at: now,
       generation_time_ms: generationTimeMs,
       file_size_bytes: fileSizeBytes,
       updated_at: now,
     }, { onConflict: 'sitemap_type' });
 
-  return xml;
+  return { xml, urlCount };
 }
