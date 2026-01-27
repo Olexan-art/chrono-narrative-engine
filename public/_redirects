@@ -1,3 +1,0 @@
-# Sitemap redirects to Edge Functions
-/api/sitemap https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap 200
-/api/news-sitemap https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap 200
