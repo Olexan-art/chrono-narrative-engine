@@ -93,7 +93,7 @@ export const LatestUsaNews = memo(function LatestUsaNews() {
             return (
               <Link
                 key={item.id}
-                to={`/news/${item.country.code.toLowerCase()}/${item.slug}`}
+                to={`/news/us/${item.slug}`}
                 className="group block animate-fade-in"
                 style={{ animationDelay: `${idx * 75}ms` }}
               >
