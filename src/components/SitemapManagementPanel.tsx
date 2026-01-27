@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { RefreshCw, Globe, Clock, FileText, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
+import { RefreshCw, Globe, Clock, FileText, ExternalLink, CheckCircle, AlertCircle, Bell, Send } from "lucide-react";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { uk } from "date-fns/locale";
@@ -18,6 +18,9 @@ interface SitemapMetadata {
   last_generated_at: string | null;
   generation_time_ms: number | null;
   file_size_bytes: number | null;
+  last_ping_at: string | null;
+  google_ping_success: boolean | null;
+  bing_ping_success: boolean | null;
   updated_at: string;
 }
 
@@ -26,6 +29,7 @@ interface CountryInfo {
   code: string;
   name: string;
   flag: string;
+  retell_ratio: number;
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -55,7 +59,7 @@ export function SitemapManagementPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('news_countries')
-        .select('id, code, name, flag')
+        .select('id, code, name, flag, retell_ratio')
         .eq('is_active', true)
         .order('sort_order');
       
@@ -125,10 +129,42 @@ export function SitemapManagementPanel() {
     },
   });
 
+  // Ping search engines mutation
+  const pingMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/ping-sitemap`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to ping search engines');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (result) => {
+      const google = result.results?.find((r: any) => r.service === 'Google');
+      const bing = result.results?.find((r: any) => r.service === 'Bing');
+      toast.success(`Пінг: Google ${google?.success ? '✓' : '✗'}, Bing ${bing?.success ? '✓' : '✗'}`);
+      queryClient.invalidateQueries({ queryKey: ['sitemap-metadata'] });
+    },
+    onError: (error) => {
+      toast.error(`Помилка пінгу: ${error.message}`);
+    },
+  });
+
   // Get metadata for a specific country
   const getCountryMeta = (countryCode: string): SitemapMetadata | undefined => {
     return sitemapData.find(m => m.sitemap_type === `news-${countryCode.toLowerCase()}`);
   };
+
+  // Get main sitemap metadata
+  const mainSitemapMeta = sitemapData.find(m => m.sitemap_type === 'main');
 
   // Format file size
   const formatFileSize = (bytes: number | null): string => {
@@ -148,7 +184,7 @@ export function SitemapManagementPanel() {
   return (
     <div className="space-y-6">
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
@@ -182,16 +218,53 @@ export function SitemapManagementPanel() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-primary" />
+              <span className="text-sm text-muted-foreground">Останній пінг</span>
+            </div>
+            {mainSitemapMeta?.last_ping_at ? (
+              <div>
+                <p className="text-sm font-medium">
+                  {formatDistanceToNow(new Date(mainSitemapMeta.last_ping_at), { addSuffix: true, locale: uk })}
+                </p>
+                <div className="flex gap-2 mt-1">
+                  <Badge variant={mainSitemapMeta.google_ping_success ? "default" : "destructive"} className="text-xs">
+                    G {mainSitemapMeta.google_ping_success ? '✓' : '✗'}
+                  </Badge>
+                  <Badge variant={mainSitemapMeta.bing_ping_success ? "default" : "destructive"} className="text-xs">
+                    B {mainSitemapMeta.bing_ping_success ? '✓' : '✗'}
+                  </Badge>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Ніколи</p>
+            )}
+          </CardContent>
+        </Card>
         
         <Card>
-          <CardContent className="pt-4 flex items-center justify-center h-full">
+          <CardContent className="pt-4 flex flex-col gap-2 h-full justify-center">
             <Button 
               onClick={() => regenerateAllMutation.mutate()}
               disabled={regenerateAllMutation.isPending}
+              size="sm"
               className="w-full"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${regenerateAllMutation.isPending ? 'animate-spin' : ''}`} />
               Оновити всі
+            </Button>
+            <Button 
+              onClick={() => pingMutation.mutate()}
+              disabled={pingMutation.isPending}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              <Send className={`w-4 h-4 mr-2 ${pingMutation.isPending ? 'animate-pulse' : ''}`} />
+              Пінг Google/Bing
             </Button>
           </CardContent>
         </Card>
@@ -210,10 +283,11 @@ export function SitemapManagementPanel() {
             <TableHeader>
               <TableRow>
                 <TableHead>Країна</TableHead>
+                <TableHead className="text-center">Retell %</TableHead>
                 <TableHead className="text-center">URL</TableHead>
                 <TableHead className="text-center">Розмір</TableHead>
-                <TableHead className="text-center">Час генерації</TableHead>
                 <TableHead>Оновлено</TableHead>
+                <TableHead className="text-center">Пінг</TableHead>
                 <TableHead className="text-center">Статус</TableHead>
                 <TableHead className="text-right">Дії</TableHead>
               </TableRow>
@@ -238,15 +312,20 @@ export function SitemapManagementPanel() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
+                      <Badge 
+                        variant={country.retell_ratio === 100 ? "default" : "secondary"} 
+                        className="text-xs"
+                      >
+                        {country.retell_ratio}%
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
                       <Badge variant="secondary">
                         {meta?.url_count?.toLocaleString() || 0}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center text-sm text-muted-foreground">
                       {formatFileSize(meta?.file_size_bytes || null)}
-                    </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {meta?.generation_time_ms ? `${meta.generation_time_ms}ms` : '—'}
                     </TableCell>
                     <TableCell>
                       {meta?.last_generated_at ? (
@@ -258,6 +337,26 @@ export function SitemapManagementPanel() {
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-sm">Не генерувався</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {meta?.last_ping_at ? (
+                        <div className="flex gap-1 justify-center">
+                          <Badge 
+                            variant={meta.google_ping_success ? "outline" : "destructive"} 
+                            className="text-xs px-1"
+                          >
+                            G
+                          </Badge>
+                          <Badge 
+                            variant={meta.bing_ping_success ? "outline" : "destructive"} 
+                            className="text-xs px-1"
+                          >
+                            B
+                          </Badge>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </TableCell>
                     <TableCell className="text-center">
