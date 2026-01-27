@@ -126,9 +126,11 @@ export function NewsDigestPanel({ password }: Props) {
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
       // Fetch items with all content fields needed for retold and dialogue detection
+      // Use published_at for time-based stats (when article was published), not fetched_at (when we downloaded it)
       const { data: allItems, error } = await supabase
         .from('news_rss_items')
-        .select('country_id, fetched_at, content, content_en, content_hi, content_ta, content_te, content_bn, chat_dialogue');
+        .select('country_id, published_at, fetched_at, content, content_en, content_hi, content_ta, content_te, content_bn, chat_dialogue')
+        .eq('is_archived', false);
       if (error) throw error;
       
       // Get country codes for proper retold detection
@@ -174,9 +176,10 @@ export function NewsDigestPanel({ password }: Props) {
         }
         stats[item.country_id].total++;
         
-        const fetchedAt = new Date(item.fetched_at);
-        if (fetchedAt >= sixHoursAgo) stats[item.country_id].last6h++;
-        if (fetchedAt >= twentyFourHoursAgo) stats[item.country_id].last24h++;
+        // Use published_at for time-based stats, fallback to fetched_at if not available
+        const itemDate = item.published_at ? new Date(item.published_at) : new Date(item.fetched_at);
+        if (itemDate >= sixHoursAgo) stats[item.country_id].last6h++;
+        if (itemDate >= twentyFourHoursAgo) stats[item.country_id].last24h++;
         
         // Check if retold using centralized config
         const countryCode = countryCodeMap[item.country_id];
@@ -184,9 +187,9 @@ export function NewsDigestPanel({ password }: Props) {
         
         if (retold) {
           stats[item.country_id].retold.total++;
-          if (fetchedAt >= sixHoursAgo) stats[item.country_id].retold.last6h++;
-          if (fetchedAt >= twentyFourHoursAgo) stats[item.country_id].retold.last24h++;
-          if (fetchedAt >= oneWeekAgo) stats[item.country_id].retold.lastWeek++;
+          if (itemDate >= sixHoursAgo) stats[item.country_id].retold.last6h++;
+          if (itemDate >= twentyFourHoursAgo) stats[item.country_id].retold.last24h++;
+          if (itemDate >= oneWeekAgo) stats[item.country_id].retold.lastWeek++;
         }
         
         // Check if has dialogue using centralized config
@@ -194,9 +197,9 @@ export function NewsDigestPanel({ password }: Props) {
         
         if (hasDialogue) {
           stats[item.country_id].dialogues.total++;
-          if (fetchedAt >= sixHoursAgo) stats[item.country_id].dialogues.last6h++;
-          if (fetchedAt >= twentyFourHoursAgo) stats[item.country_id].dialogues.last24h++;
-          if (fetchedAt >= oneWeekAgo) stats[item.country_id].dialogues.lastWeek++;
+          if (itemDate >= sixHoursAgo) stats[item.country_id].dialogues.last6h++;
+          if (itemDate >= twentyFourHoursAgo) stats[item.country_id].dialogues.last24h++;
+          if (itemDate >= oneWeekAgo) stats[item.country_id].dialogues.lastWeek++;
         }
       }
       return stats;
