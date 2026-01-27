@@ -23,6 +23,14 @@ interface AutoGenSettings {
   news_auto_dialogue_enabled: boolean;
   news_auto_tweets_enabled: boolean;
   news_retell_ratio: number;
+  news_dialogue_count: number;
+  news_tweet_count: number;
+}
+
+interface AutoGenStats {
+  retoldLast24h: number;
+  dialoguesLast24h: number;
+  tweetsLast24h: number;
 }
 
 interface Props {
@@ -40,6 +48,22 @@ const RATIO_OPTIONS = [
   { value: 2, label: 'Кожна 2-га (50%)' },
   { value: 5, label: 'Кожна 5-та (20%)' },
   { value: 10, label: 'Кожна 10-та (10%)' },
+];
+
+const DIALOGUE_COUNT_OPTIONS = [
+  { value: 5, label: '5 повідомлень' },
+  { value: 6, label: '6 повідомлень' },
+  { value: 7, label: '7 повідомлень' },
+  { value: 8, label: '8 повідомлень' },
+  { value: 9, label: '9 повідомлень' },
+  { value: 10, label: '10 повідомлень' },
+];
+
+const TWEET_COUNT_OPTIONS = [
+  { value: 3, label: '3 твіти' },
+  { value: 4, label: '4 твіти' },
+  { value: 5, label: '5 твітів' },
+  { value: 6, label: '6 твітів' },
 ];
 
 function formatSchedule(schedule: string): string {
@@ -62,6 +86,8 @@ export function CronJobsPanel({ password }: Props) {
     news_auto_dialogue_enabled: true,
     news_auto_tweets_enabled: true,
     news_retell_ratio: 1,
+    news_dialogue_count: 7,
+    news_tweet_count: 4,
   });
 
   // Fetch current RSS schedule
@@ -104,25 +130,33 @@ export function CronJobsPanel({ password }: Props) {
         news_auto_dialogue_enabled: settings.news_auto_dialogue_enabled ?? true,
         news_auto_tweets_enabled: settings.news_auto_tweets_enabled ?? true,
         news_retell_ratio: settings.news_retell_ratio ?? 1,
+        news_dialogue_count: settings.news_dialogue_count ?? 7,
+        news_tweet_count: settings.news_tweet_count ?? 4,
       });
     }
   }, [settings]);
 
-  // Fetch auto-generation statistics
-  const { data: stats } = useQuery({
+  // Fetch auto-generation statistics (last 24h)
+  const { data: stats } = useQuery<AutoGenStats>({
     queryKey: ['auto-gen-stats'],
     queryFn: async () => {
-      // Get stats from last 24h
       const yesterday = new Date();
       yesterday.setHours(yesterday.getHours() - 24);
+      const yesterdayISO = yesterday.toISOString();
       
-      // This will be a simple count query
+      // Query news_rss_items created in last 24h with retelling/dialogues/tweets
+      const result = await adminAction<{ 
+        success: boolean; 
+        stats: { retold: number; dialogues: number; tweets: number } 
+      }>('getAutoGenStats', password, { since: yesterdayISO });
+      
       return {
-        retoldLast24h: 0,
-        dialoguesLast24h: 0,
-        tweetsLast24h: 0,
+        retoldLast24h: result.stats?.retold ?? 0,
+        dialoguesLast24h: result.stats?.dialogues ?? 0,
+        tweetsLast24h: result.stats?.tweets ?? 0,
       };
-    }
+    },
+    refetchInterval: 60000, // Refetch every minute
   });
 
   // Fetch all cron jobs
@@ -254,6 +288,18 @@ export function CronJobsPanel({ password }: Props) {
     updateSettingsMutation.mutate({ news_retell_ratio: ratio });
   };
 
+  const handleDialogueCountChange = (value: string) => {
+    const count = parseInt(value, 10);
+    setAutoGenSettings(prev => ({ ...prev, news_dialogue_count: count }));
+    updateSettingsMutation.mutate({ news_dialogue_count: count });
+  };
+
+  const handleTweetCountChange = (value: string) => {
+    const count = parseInt(value, 10);
+    setAutoGenSettings(prev => ({ ...prev, news_tweet_count: count }));
+    updateSettingsMutation.mutate({ news_tweet_count: count });
+  };
+
   return (
     <div className="space-y-6">
       {/* Auto-generation Settings */}
@@ -343,6 +389,90 @@ export function CronJobsPanel({ password }: Props) {
               />
             </div>
           </div>
+
+          {/* Dialogue and Tweet count selectors */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Кількість діалогів</Label>
+              <Select
+                value={autoGenSettings.news_dialogue_count.toString()}
+                onValueChange={handleDialogueCountChange}
+                disabled={settingsLoading || updateSettingsMutation.isPending || !autoGenSettings.news_auto_dialogue_enabled}
+              >
+                <SelectTrigger className="w-full">
+                  {settingsLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <SelectValue />
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  {DIALOGUE_COUNT_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value.toString()}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Скільки повідомлень у діалозі (5-10)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Кількість твітів</Label>
+              <Select
+                value={autoGenSettings.news_tweet_count.toString()}
+                onValueChange={handleTweetCountChange}
+                disabled={settingsLoading || updateSettingsMutation.isPending || !autoGenSettings.news_auto_tweets_enabled}
+              >
+                <SelectTrigger className="w-full">
+                  {settingsLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <SelectValue />
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  {TWEET_COUNT_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value.toString()}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Скільки твітів генерувати (3-6)
+              </p>
+            </div>
+          </div>
+
+          {/* 24h Stats */}
+          {stats && (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <FileText className="w-5 h-5 text-blue-500" />
+                <div>
+                  <div className="font-bold text-lg">{stats.retoldLast24h}</div>
+                  <div className="text-xs text-muted-foreground">Переказів за 24г</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                <MessageSquare className="w-5 h-5 text-green-500" />
+                <div>
+                  <div className="font-bold text-lg">{stats.dialoguesLast24h}</div>
+                  <div className="text-xs text-muted-foreground">Діалогів за 24г</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg">
+                <Twitter className="w-5 h-5 text-sky-500" />
+                <div>
+                  <div className="font-bold text-lg">{stats.tweetsLast24h}</div>
+                  <div className="text-xs text-muted-foreground">Твітів за 24г</div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="p-3 bg-muted/30 rounded-lg text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">

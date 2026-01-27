@@ -323,6 +323,46 @@ serve(async (req) => {
         );
       }
 
+      case 'getAutoGenStats': {
+        const since = data?.since || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        
+        // Count retold items (content field has significant length)
+        const { count: retoldCount } = await supabase
+          .from('news_rss_items')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', since)
+          .not('content', 'is', null)
+          .gte('content', 'length.300');
+        
+        // Count items with dialogues
+        const { count: dialogueCount } = await supabase
+          .from('news_rss_items')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', since)
+          .not('chat_dialogue', 'is', null)
+          .neq('chat_dialogue', '[]');
+        
+        // Count items with tweets
+        const { count: tweetCount } = await supabase
+          .from('news_rss_items')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', since)
+          .not('tweets', 'is', null)
+          .neq('tweets', '[]');
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            stats: {
+              retold: retoldCount || 0,
+              dialogues: dialogueCount || 0,
+              tweets: tweetCount || 0
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: 'Unknown action' }),
