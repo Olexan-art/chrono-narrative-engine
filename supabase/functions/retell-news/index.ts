@@ -332,12 +332,17 @@ Category: ${news.category || 'general'}`;
 
     console.log('Retold content saved to field:', updateField);
 
-    // Auto-generate tweets for this news article
+    // Get settings for dialogue and tweet counts
+    const dialogueCount = settings.news_dialogue_count ?? 5;
+    const tweetCount = settings.news_tweet_count ?? 4;
+    
+    // Auto-generate dialogues AND tweets for this news article
     let generatedTweets = null;
+    let generatedDialogue = null;
     try {
-      console.log('Auto-generating tweets for news in language:', language.code);
+      console.log('Auto-generating dialogue and tweets for news in language:', language.code);
       
-      // Call generate-dialogue function with tweets only
+      // Call generate-dialogue function with both dialogue and tweets
       const dialogueResponse = await fetch(`${supabaseUrl}/functions/v1/generate-dialogue`, {
         method: 'POST',
         headers: {
@@ -348,35 +353,50 @@ Category: ${news.category || 'general'}`;
           storyContext: `News article: ${getTitle()}`,
           newsContext: `${getDescription() || ''}\n\n${retoldContent}`,
           generateTweets: true,
-          tweetCount: 4,
+          tweetCount: tweetCount,
           contentLanguage: language.code,
-          messageCount: 0, // Don't generate dialogue, only tweets
+          messageCount: dialogueCount, // Generate dialogue as well
+          enableThreading: true,
+          threadProbability: 30,
         }),
       });
 
       if (dialogueResponse.ok) {
         const dialogueResult = await dialogueResponse.json();
+        const updateData: Record<string, unknown> = {};
+        
+        // Save dialogue
+        if (dialogueResult.success && dialogueResult.dialogue && dialogueResult.dialogue.length > 0) {
+          generatedDialogue = dialogueResult.dialogue;
+          updateData.chat_dialogue = generatedDialogue;
+          console.log('Generated', generatedDialogue.length, 'dialogue messages');
+        }
+        
+        // Save tweets
         if (dialogueResult.tweets && dialogueResult.tweets.length > 0) {
           generatedTweets = dialogueResult.tweets;
-          
-          // Save tweets to the news article
-          const { error: tweetUpdateError } = await supabase
+          updateData.tweets = generatedTweets;
+          console.log('Generated', generatedTweets.length, 'tweets');
+        }
+        
+        if (Object.keys(updateData).length > 0) {
+          const { error: updateError } = await supabase
             .from('news_rss_items')
-            .update({ tweets: generatedTweets })
+            .update(updateData)
             .eq('id', newsId);
           
-          if (tweetUpdateError) {
-            console.error('Error saving tweets:', tweetUpdateError);
+          if (updateError) {
+            console.error('Error saving dialogue/tweets:', updateError);
           } else {
-            console.log('Generated and saved', generatedTweets.length, 'tweets');
+            console.log('Successfully saved dialogue and tweets for news', newsId);
           }
         }
       } else {
-        console.error('Tweet generation request failed:', dialogueResponse.status);
+        console.error('Dialogue generation request failed:', dialogueResponse.status);
       }
-    } catch (tweetError) {
-      console.error('Error generating tweets:', tweetError);
-      // Don't fail the whole operation if tweet generation fails
+    } catch (dialogueError) {
+      console.error('Error generating dialogue/tweets:', dialogueError);
+      // Don't fail the whole operation if dialogue generation fails
     }
 
     return new Response(JSON.stringify({ 
@@ -384,6 +404,7 @@ Category: ${news.category || 'general'}`;
       content: retoldContent,
       language: language.code,
       field: updateField,
+      dialogue: generatedDialogue,
       tweets: generatedTweets
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
