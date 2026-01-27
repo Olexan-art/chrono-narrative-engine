@@ -490,45 +490,146 @@ ${thirdCharacter ? `Include the unexpected appearance of ${thirdCharacter.name}.
 
     console.log('Generated multilingual dialogue with', dialogueWithLikes.length, 'messages per language');
 
-    // Generate tweets if requested (for chapters)
+    // Generate tweets if requested (for chapters or news)
     let tweets = null;
     let tweets_en = null;
     let tweets_pl = null;
     
     if (generateTweets && tweetCount > 0) {
-      console.log('Generating tweets for chapter...');
+      console.log('Generating tweets in language:', contentLanguage);
       
-      const tweetSystemPrompt = `Ти генеруєш твіти для сатиричного науково-фантастичного проекту "Точка Синхронізації".
+      // Language-specific tweet prompts
+      const tweetPrompts: Record<string, { system: string; user: string }> = {
+        'uk': {
+          system: `Ти генеруєш твіти для сатиричного науково-фантастичного проекту "Точка Синхронізації".
 
 ПРАВИЛА:
-1. Згенеруй ${tweetCount} твітів ТРЬОМА МОВАМИ (українська, англійська, польська)
+1. Згенеруй ${tweetCount} твітів УКРАЇНСЬКОЮ мовою
 2. Твіти мають бути дотепними, сатиричними коментарями про події
 3. Кожен твіт має унікального автора з креативним ніком
-4. Формат handle: @творчий_нік
+4. Формат handle: @творчий_нік (латиницею)
 
 ФОРМАТ ВІДПОВІДІ (JSON):
 {
   "tweets": [
     {"author": "Ім'я Автора", "handle": "@нік", "content": "Твіт українською", "likes": 1234, "retweets": 567}
-  ],
-  "tweets_en": [
+  ]
+}`,
+          user: `Згенеруй ${tweetCount} унікальних твітів УКРАЇНСЬКОЮ з дотепними коментарями про ці новини.`
+        },
+        'en': {
+          system: `You are generating tweets for the satirical sci-fi project "Synchronization Point".
+
+RULES:
+1. Generate ${tweetCount} tweets in ENGLISH
+2. Tweets should be witty, satirical comments about the events
+3. Each tweet has a unique author with a creative handle
+4. Handle format: @creative_handle
+
+RESPONSE FORMAT (JSON):
+{
+  "tweets": [
     {"author": "Author Name", "handle": "@handle", "content": "Tweet in English", "likes": 1234, "retweets": 567}
-  ],
-  "tweets_pl": [
+  ]
+}`,
+          user: `Generate ${tweetCount} unique ENGLISH tweets with witty comments about this news.`
+        },
+        'pl': {
+          system: `Generujesz tweety dla satyrycznego projektu science fiction "Punkt Synchronizacji".
+
+ZASADY:
+1. Wygeneruj ${tweetCount} tweetów po POLSKU
+2. Tweety powinny być dowcipne, satyryczne komentarze o wydarzeniach
+3. Każdy tweet ma unikalnego autora z kreatywnym nickiem
+4. Format handle: @kreatywny_nick
+
+FORMAT ODPOWIEDZI (JSON):
+{
+  "tweets": [
     {"author": "Imię Autora", "handle": "@nick", "content": "Tweet po polsku", "likes": 1234, "retweets": 567}
   ]
-}`;
+}`,
+          user: `Wygeneruj ${tweetCount} unikalnych tweetów PO POLSKU z dowcipnymi komentarzami o tych wiadomościach.`
+        },
+        'hi': {
+          system: `आप व्यंग्यपूर्ण साइंस-फ़िक्शन प्रोजेक्ट "सिंक्रनाइज़ेशन पॉइंट" के लिए ट्वीट्स बना रहे हैं।
 
-      const tweetUserPrompt = `КОНТЕКСТ:
+नियम:
+1. ${tweetCount} ट्वीट्स हिंदी में जनरेट करें
+2. ट्वीट्स में घटनाओं पर मज़ेदार, व्यंग्यपूर्ण टिप्पणियाँ होनी चाहिए
+3. प्रत्येक ट्वीट का एक अद्वितीय लेखक हो जिसका रचनात्मक हैंडल हो
+4. हैंडल फॉर्मेट: @creative_handle
+
+JSON फॉर्मेट में जवाब दें:
+{
+  "tweets": [
+    {"author": "लेखक का नाम", "handle": "@handle", "content": "हिंदी में ट्वीट", "likes": 1234, "retweets": 567}
+  ]
+}`,
+          user: `इस समाचार के बारे में ${tweetCount} अद्वितीय हिंदी ट्वीट्स जनरेट करें।`
+        },
+        'ta': {
+          system: `நீங்கள் "ஒத்திசைவு புள்ளி" என்ற நையாண்டி அறிவியல் புனைகதை திட்டத்திற்கான ட்வீட்களை உருவாக்குகிறீர்கள்.
+
+விதிகள்:
+1. ${tweetCount} ட்வீட்களை தமிழில் உருவாக்கவும்
+2. ட்வீட்கள் நிகழ்வுகளைப் பற்றி நகைச்சுவையான, நையாண்டியான கருத்துகளாக இருக்க வேண்டும்
+3. ஒவ்வொரு ட்வீட்டிற்கும் ஒரு தனித்துவமான ஆசிரியர் இருக்க வேண்டும்
+
+JSON வடிவத்தில் பதில்:
+{
+  "tweets": [
+    {"author": "ஆசிரியர் பெயர்", "handle": "@handle", "content": "தமிழில் ட்வீட்", "likes": 1234, "retweets": 567}
+  ]
+}`,
+          user: `இந்த செய்திகள் பற்றி ${tweetCount} தனித்துவமான தமிழ் ட்வீட்களை உருவாக்கவும்.`
+        },
+        'te': {
+          system: `మీరు "సింక్రనైజేషన్ పాయింట్" అనే వ్యంగ్య సైన్స్-ఫిక్షన్ ప్రాజెక్ట్ కోసం ట్వీట్‌లను రూపొందిస్తున్నారు.
+
+నియమాలు:
+1. ${tweetCount} ట్వీట్‌లను తెలుగులో రూపొందించండి
+2. ట్వీట్‌లు సంఘటనలపై తెలివైన, వ్యంగ్య వ్యాఖ్యలుగా ఉండాలి
+3. ప్రతి ట్వీట్‌కు ప్రత్యేక రచయిత ఉండాలి
+
+JSON ఆకృతిలో ప్రతిస్పందన:
+{
+  "tweets": [
+    {"author": "రచయిత పేరు", "handle": "@handle", "content": "తెలుగులో ట్వీట్", "likes": 1234, "retweets": 567}
+  ]
+}`,
+          user: `ఈ వార్తల గురించి ${tweetCount} ప్రత్యేక తెలుగు ట్వీట్‌లను రూపొందించండి.`
+        },
+        'bn': {
+          system: `আপনি "সিঙ্ক্রোনাইজেশন পয়েন্ট" নামক ব্যঙ্গাত্মক সাই-ফাই প্রকল্পের জন্য টুইট তৈরি করছেন।
+
+নিয়ম:
+1. ${tweetCount} টুইট বাংলায় তৈরি করুন
+2. টুইটগুলি ঘটনা সম্পর্কে মজার, ব্যঙ্গাত্মক মন্তব্য হওয়া উচিত
+3. প্রতিটি টুইটের একজন অনন্য লেখক থাকা উচিত
+
+JSON ফর্ম্যাটে উত্তর:
+{
+  "tweets": [
+    {"author": "লেখকের নাম", "handle": "@handle", "content": "বাংলায় টুইট", "likes": 1234, "retweets": 567}
+  ]
+}`,
+          user: `এই সংবাদ সম্পর্কে ${tweetCount} অনন্য বাংলা টুইট তৈরি করুন।`
+        }
+      };
+      
+      const tweetPrompt = tweetPrompts[contentLanguage] || tweetPrompts['uk'];
+
+      const tweetUserPrompt = `CONTEXT:
 ${storyContext}
 
-НОВИНИ:
+NEWS:
 ${newsContext}
 
-Згенеруй ${tweetCount} унікальних твітів ТРЬОМА МОВАМИ з дотепними коментарями про події тижня.`;
+${tweetPrompt.user}`;
 
       try {
-        const tweetContent = await callLLM(llmSettings, tweetSystemPrompt, tweetUserPrompt, useOpenAI);
+        const tweetContent = await callLLM(llmSettings, tweetPrompt.system, tweetUserPrompt, useOpenAI);
         const tweetResult = JSON.parse(tweetContent);
         
         tweets = (tweetResult.tweets || []).map((t: any) => ({
@@ -536,18 +637,23 @@ ${newsContext}
           likes: t.likes || Math.floor(Math.random() * 2000) + 100,
           retweets: t.retweets || Math.floor(Math.random() * 500) + 50
         }));
-        tweets_en = (tweetResult.tweets_en || []).map((t: any) => ({
-          ...t,
-          likes: t.likes || Math.floor(Math.random() * 2000) + 100,
-          retweets: t.retweets || Math.floor(Math.random() * 500) + 50
-        }));
-        tweets_pl = (tweetResult.tweets_pl || []).map((t: any) => ({
-          ...t,
-          likes: t.likes || Math.floor(Math.random() * 2000) + 100,
-          retweets: t.retweets || Math.floor(Math.random() * 500) + 50
-        }));
         
-        console.log('Generated', tweets.length, 'tweets');
+        // For news, we don't need multilingual tweets - just the language of the news
+        // For chapters, we generate all three languages
+        if (chapterId) {
+          tweets_en = (tweetResult.tweets_en || []).map((t: any) => ({
+            ...t,
+            likes: t.likes || Math.floor(Math.random() * 2000) + 100,
+            retweets: t.retweets || Math.floor(Math.random() * 500) + 50
+          }));
+          tweets_pl = (tweetResult.tweets_pl || []).map((t: any) => ({
+            ...t,
+            likes: t.likes || Math.floor(Math.random() * 2000) + 100,
+            retweets: t.retweets || Math.floor(Math.random() * 500) + 50
+          }));
+        }
+        
+        console.log('Generated', tweets.length, 'tweets in', contentLanguage);
       } catch (tweetError) {
         console.error('Tweet generation failed:', tweetError);
       }
