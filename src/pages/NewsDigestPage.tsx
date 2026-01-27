@@ -94,6 +94,7 @@ export default function NewsDigestPage() {
           country:news_countries!inner(code)
         `)
         .eq('country_id', selectedCountry)
+        .eq('is_archived', false)
         .not('slug', 'is', null)
         .order('published_at', { ascending: false })
         .limit(50);

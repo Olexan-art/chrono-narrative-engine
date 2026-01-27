@@ -454,6 +454,7 @@ export type Database = {
       }
       news_rss_items: {
         Row: {
+          archived_at: string | null
           category: string | null
           chat_dialogue: Json | null
           content: string | null
@@ -476,6 +477,7 @@ export type Database = {
           generated_story_id: string | null
           id: string
           image_url: string | null
+          is_archived: boolean
           published_at: string | null
           slug: string | null
           title: string
@@ -487,6 +489,7 @@ export type Database = {
           url: string
         }
         Insert: {
+          archived_at?: string | null
           category?: string | null
           chat_dialogue?: Json | null
           content?: string | null
@@ -509,6 +512,7 @@ export type Database = {
           generated_story_id?: string | null
           id?: string
           image_url?: string | null
+          is_archived?: boolean
           published_at?: string | null
           slug?: string | null
           title: string
@@ -520,6 +524,7 @@ export type Database = {
           url: string
         }
         Update: {
+          archived_at?: string | null
           category?: string | null
           chat_dialogue?: Json | null
           content?: string | null
@@ -542,6 +547,7 @@ export type Database = {
           generated_story_id?: string | null
           id?: string
           image_url?: string | null
+          is_archived?: boolean
           published_at?: string | null
           slug?: string | null
           title?: string
@@ -757,6 +763,8 @@ export type Database = {
           narrative_structure:
             | Database["public"]["Enums"]["narrative_structure"]
             | null
+          news_archive_days: number | null
+          news_auto_archive_enabled: boolean | null
           openai_api_key: string | null
           updated_at: string | null
         }
@@ -789,6 +797,8 @@ export type Database = {
           narrative_structure?:
             | Database["public"]["Enums"]["narrative_structure"]
             | null
+          news_archive_days?: number | null
+          news_auto_archive_enabled?: boolean | null
           openai_api_key?: string | null
           updated_at?: string | null
         }
@@ -821,6 +831,8 @@ export type Database = {
           narrative_structure?:
             | Database["public"]["Enums"]["narrative_structure"]
             | null
+          news_archive_days?: number | null
+          news_auto_archive_enabled?: boolean | null
           openai_api_key?: string | null
           updated_at?: string | null
         }
