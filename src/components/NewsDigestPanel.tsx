@@ -117,8 +117,11 @@ export function NewsDigestPanel({ password }: Props) {
   });
 
   // Fetch items count per country with time-based stats
-  const { data: newsStats } = useQuery({
+  const { data: newsStats, refetch: refetchStats } = useQuery({
     queryKey: ['news-rss-items-stats'],
+    staleTime: 30 * 1000, // 30 seconds
+    refetchInterval: 60 * 1000, // Refetch every minute
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const now = new Date();
       const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
