@@ -7,7 +7,108 @@ const corsHeaders = {
 
 const BASE_URL = "https://echoes2.com";
 
+// Bot detection patterns
+const BOT_PATTERNS: Record<string, { type: string; category: string }> = {
+  // Search engines
+  googlebot: { type: 'googlebot', category: 'search' },
+  'google-inspectiontool': { type: 'google-inspection', category: 'search' },
+  bingbot: { type: 'bingbot', category: 'search' },
+  slurp: { type: 'yahoobot', category: 'search' },
+  duckduckbot: { type: 'duckduckbot', category: 'search' },
+  baiduspider: { type: 'baiduspider', category: 'search' },
+  yandexbot: { type: 'yandexbot', category: 'search' },
+  sogou: { type: 'sogoubot', category: 'search' },
+  exabot: { type: 'exabot', category: 'search' },
+  'mj12bot': { type: 'majesticbot', category: 'search' },
+  'ahrefsbot': { type: 'ahrefsbot', category: 'search' },
+  'semrushbot': { type: 'semrushbot', category: 'search' },
+  
+  // AI bots
+  gptbot: { type: 'gptbot', category: 'ai' },
+  chatgpt: { type: 'chatgpt', category: 'ai' },
+  'chatgpt-user': { type: 'chatgpt-user', category: 'ai' },
+  claudebot: { type: 'claudebot', category: 'ai' },
+  'claude-web': { type: 'claude-web', category: 'ai' },
+  anthropic: { type: 'anthropic', category: 'ai' },
+  perplexitybot: { type: 'perplexitybot', category: 'ai' },
+  'cohere-ai': { type: 'cohere', category: 'ai' },
+  'bytespider': { type: 'bytedance', category: 'ai' },
+  'ccbot': { type: 'commoncrawl', category: 'ai' },
+  'diffbot': { type: 'diffbot', category: 'ai' },
+  'omgili': { type: 'omgili', category: 'ai' },
+  'youbot': { type: 'youbot', category: 'ai' },
+  'applebot': { type: 'applebot', category: 'ai' },
+  'ia_archiver': { type: 'alexa', category: 'ai' },
+  
+  // Social
+  facebookexternalhit: { type: 'facebook', category: 'social' },
+  twitterbot: { type: 'twitter', category: 'social' },
+  linkedinbot: { type: 'linkedin', category: 'social' },
+  pinterestbot: { type: 'pinterest', category: 'social' },
+  slackbot: { type: 'slack', category: 'social' },
+  telegrambot: { type: 'telegram', category: 'social' },
+  whatsapp: { type: 'whatsapp', category: 'social' },
+  discordbot: { type: 'discord', category: 'social' },
+  
+  // Other crawlers
+  'site-shot': { type: 'screenshot', category: 'other' },
+  'headlesschrome': { type: 'headless', category: 'other' },
+  phantomjs: { type: 'phantomjs', category: 'other' },
+  'lighthouse': { type: 'lighthouse', category: 'other' },
+  'chrome-lighthouse': { type: 'lighthouse', category: 'other' },
+  'pagespeed': { type: 'pagespeed', category: 'other' },
+  'gtmetrix': { type: 'gtmetrix', category: 'other' },
+};
+
+function detectBot(userAgent: string): { type: string; category: string } | null {
+  if (!userAgent) return null;
+  
+  const ua = userAgent.toLowerCase();
+  
+  for (const [pattern, info] of Object.entries(BOT_PATTERNS)) {
+    if (ua.includes(pattern)) {
+      return info;
+    }
+  }
+  
+  // Generic bot detection
+  if (ua.includes('bot') || ua.includes('crawl') || ua.includes('spider') || ua.includes('scraper')) {
+    return { type: 'unknown-bot', category: 'other' };
+  }
+  
+  return null;
+}
+
+async function logBotVisit(
+  supabase: any, 
+  botInfo: { type: string; category: string }, 
+  path: string, 
+  userAgent: string,
+  referer: string | null,
+  startTime: number
+) {
+  try {
+    const responseTime = Date.now() - startTime;
+    
+    await supabase.from('bot_visits').insert({
+      bot_type: botInfo.type,
+      bot_category: botInfo.category,
+      path,
+      user_agent: userAgent?.substring(0, 500),
+      referer: referer?.substring(0, 500),
+      response_time_ms: responseTime,
+      status_code: 200
+    });
+    
+    console.log(`Bot visit logged: ${botInfo.type} (${botInfo.category}) -> ${path}`);
+  } catch (error) {
+    console.error('Failed to log bot visit:', error);
+  }
+}
+
 Deno.serve(async (req) => {
+  const startTime = Date.now();
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -16,15 +117,26 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const path = url.searchParams.get("path") || "/";
     const lang = url.searchParams.get("lang") || "uk";
+    const userAgent = req.headers.get("user-agent") || "";
+    const referer = req.headers.get("referer");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Detect and log bot visit
+    const botInfo = detectBot(userAgent);
+    if (botInfo) {
+      // Log asynchronously - don't wait
+      logBotVisit(supabase, botInfo, path, userAgent, referer, startTime);
+    }
+
     // Parse the path to determine content type
     const readMatch = path.match(/^\/read\/(\d{4}-\d{2}-\d{2})\/(\d+)$/);
     const chapterMatch = path.match(/^\/chapter\/([a-f0-9-]+)$/);
     const dateMatch = path.match(/^\/date\/(\d{4}-\d{2}-\d{2})$/);
+    // News article match: /us/some-slug or /ua/some-slug
+    const newsMatch = path.match(/^\/([a-z]{2})\/([a-z0-9-]+)$/);
 
     let html = "";
     let title = "Точка Синхронізації";
@@ -75,6 +187,23 @@ Deno.serve(async (req) => {
         image = chapter.cover_image_url || image;
 
         html = generateChapterHTML(chapter, lang, canonicalUrl);
+      }
+    } else if (newsMatch) {
+      // News article page
+      const [, countryCode, slug] = newsMatch;
+      
+      const { data: newsItem } = await supabase
+        .from("news_rss_items")
+        .select("*, country:news_countries(*)")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (newsItem) {
+        title = newsItem.title_en || newsItem.title;
+        description = (newsItem.content_en || newsItem.content || newsItem.description_en || newsItem.description)?.substring(0, 160) + "...";
+        image = newsItem.image_url || image;
+        
+        html = generateNewsHTML(newsItem, lang, canonicalUrl);
       }
     } else if (dateMatch) {
       // Date stories page
@@ -307,6 +436,34 @@ function generateChapterHTML(chapter: any, lang: string, canonicalUrl: string) {
           <div class="story-content">${escapeHtml(monologue)}</div>
         </section>
       ` : ""}
+    </article>
+  `;
+}
+
+function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string) {
+  const title = newsItem.title_en || newsItem.title;
+  const content = newsItem.content_en || newsItem.content || newsItem.description_en || newsItem.description || "";
+  const countryName = newsItem.country?.name_en || newsItem.country?.name || "";
+
+  return `
+    <article itemscope itemtype="https://schema.org/NewsArticle">
+      ${newsItem.image_url ? `<img src="${newsItem.image_url}" alt="${escapeHtml(title)}" itemprop="image">` : ""}
+      
+      <div class="meta">
+        <time datetime="${newsItem.published_at || newsItem.created_at}" itemprop="datePublished">
+          ${new Date(newsItem.published_at || newsItem.created_at).toLocaleDateString()}
+        </time>
+        ${countryName ? ` | <span>${escapeHtml(countryName)}</span>` : ""}
+        ${newsItem.category ? ` | <span itemprop="articleSection">${escapeHtml(newsItem.category)}</span>` : ""}
+      </div>
+      
+      <h2 itemprop="headline">${escapeHtml(title)}</h2>
+      
+      <div class="story-content" itemprop="articleBody">
+        ${escapeHtml(content)}
+      </div>
+      
+      ${newsItem.url ? `<p><a href="${escapeHtml(newsItem.url)}" rel="nofollow noopener" target="_blank">Original source</a></p>` : ""}
     </article>
   `;
 }
