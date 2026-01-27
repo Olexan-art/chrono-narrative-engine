@@ -620,7 +620,7 @@ serve(async (req) => {
       // Get auto-generation settings
       const { data: settings } = await supabase
         .from('settings')
-        .select('news_auto_retell_enabled, news_auto_dialogue_enabled, news_auto_tweets_enabled, news_retell_ratio')
+        .select('news_auto_retell_enabled, news_auto_dialogue_enabled, news_auto_tweets_enabled, news_retell_ratio, news_dialogue_count, news_tweet_count')
         .limit(1)
         .single();
       
@@ -628,6 +628,8 @@ serve(async (req) => {
       const autoDialogueEnabled = settings?.news_auto_dialogue_enabled ?? true;
       const autoTweetsEnabled = settings?.news_auto_tweets_enabled ?? true;
       const retellRatio = settings?.news_retell_ratio ?? 1; // 1 = all, 5 = every 5th
+      const dialogueCount = settings?.news_dialogue_count ?? 7;
+      const tweetCount = settings?.news_tweet_count ?? 4;
       
       console.log(`Fetching all ${feeds?.length || 0} active RSS feeds with settings: retell=${autoRetellEnabled}, dialogue=${autoDialogueEnabled}, tweets=${autoTweetsEnabled}, ratio=${retellRatio}`);
       
@@ -817,12 +819,12 @@ serve(async (req) => {
                 body: JSON.stringify({
                   storyContext: `News article: ${article.title_en || article.title}\n\n${article.description_en || article.description || ''}\n\n${article.content_en || article.content || ''}`,
                   newsContext: `Source: ${article.feed?.name || 'RSS'}, Category: ${article.category || 'general'}`,
-                  messageCount: 5,
+                  messageCount: dialogueCount,
                   enableThreading: true,
                   threadProbability: 30,
                   contentLanguage,
                   generateTweets: autoTweetsEnabled,
-                  tweetCount: 4
+                  tweetCount: tweetCount
                 })
               });
               
