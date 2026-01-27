@@ -47,7 +47,7 @@ export function LatestRssNews() {
           {t('rss_news.latest')}
         </h3>
         <Link 
-          to="/news-digest" 
+          to="/news" 
           className="text-xs text-primary hover:underline flex items-center gap-1"
         >
           {t('rss_news.view_all')}

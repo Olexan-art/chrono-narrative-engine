@@ -129,7 +129,7 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
             <Globe className="w-5 h-5 text-primary" />
             {t('newsdigest.title')}
           </h2>
-          <Link to="/news-digest">
+          <Link to="/news">
             <Button variant="outline" size="sm" className="gap-2 text-xs">
               {t('rss_news.view_all')}
               <ArrowRight className="w-3 h-3" />
@@ -152,7 +152,7 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
                     <span className="font-medium text-sm">{countryName}</span>
                   </div>
                   <Link 
-                    to={`/news-digest?country=${country.code}`}
+                    to={`/news/${country.code.toLowerCase()}`}
                     className="text-xs text-primary hover:underline"
                   >
                     {t('rss_news.view_all')} →
