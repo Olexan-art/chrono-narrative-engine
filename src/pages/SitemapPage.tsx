@@ -99,7 +99,7 @@ export default function SitemapPage() {
               Sitemap
             </h1>
             <p className="text-muted-foreground">
-              Повна карта сайту Synchronization Point
+              Complete site map of Synchronization Point
             </p>
           </div>
 
@@ -108,15 +108,15 @@ export default function SitemapPage() {
             <section className="bg-card border border-border rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Globe className="w-5 h-5 text-primary" />
-                Головні сторінки
+                Main Pages
               </h2>
               <ul className="space-y-2">
                 {[
-                  { url: '/', name: 'Головна', nameEn: 'Home' },
-                  { url: '/calendar', name: 'Календар', nameEn: 'Calendar' },
-                  { url: '/chapters', name: 'Глави', nameEn: 'Chapters' },
-                  { url: '/volumes', name: 'Томи', nameEn: 'Volumes' },
-                  { url: '/news-digest', name: 'Новини', nameEn: 'News Digest' }
+                  { url: '/', name: 'Home' },
+                  { url: '/calendar', name: 'Calendar' },
+                  { url: '/chapters', name: 'Chapters' },
+                  { url: '/volumes', name: 'Volumes' },
+                  { url: '/news-digest', name: 'News Digest' }
                 ].map(page => (
                   <li key={page.url} className="flex items-center gap-2">
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
@@ -124,18 +124,17 @@ export default function SitemapPage() {
                       to={page.url} 
                       className="text-primary hover:underline"
                     >
-                      {language === 'en' ? page.nameEn : page.name}
+                      {page.name}
                     </Link>
                   </li>
                 ))}
               </ul>
             </section>
 
-            {/* Recent Stories */}
             <section className="bg-card border border-border rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-primary" />
-                Останні історії
+                Recent Stories
               </h2>
               <ul className="space-y-2 max-h-[300px] overflow-y-auto">
                 {data?.parts.map(part => (
@@ -154,7 +153,7 @@ export default function SitemapPage() {
                 to="/calendar" 
                 className="text-sm text-muted-foreground hover:text-primary mt-4 inline-block"
               >
-                Переглянути всі →
+                View all →
               </Link>
             </section>
 
@@ -162,7 +161,7 @@ export default function SitemapPage() {
             <section className="bg-card border border-border rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-primary" />
-                Глави
+                Chapters
               </h2>
               <ul className="space-y-2 columns-2 md:columns-3">
                 {data?.chapters.map(chapter => (
@@ -172,7 +171,7 @@ export default function SitemapPage() {
                       to={`/chapter/${chapter.number}`} 
                       className="text-primary hover:underline"
                     >
-                      Глава {chapter.number}
+                      Chapter {chapter.number}
                     </Link>
                   </li>
                 ))}
@@ -183,7 +182,7 @@ export default function SitemapPage() {
             <section className="bg-card border border-border rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Library className="w-5 h-5 text-primary" />
-                Томи
+                Volumes
               </h2>
               <ul className="space-y-2 columns-2 md:columns-3">
                 {data?.volumes.map(volume => {
@@ -213,7 +212,7 @@ export default function SitemapPage() {
                 <section key={country.id} className="bg-card border border-border rounded-lg p-6">
                   <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                     <Newspaper className="w-5 h-5 text-primary" />
-                    {language === 'en' ? country.name_en || country.name : country.name}
+                    {country.name_en || country.name} News
                   </h2>
                   <ul className="space-y-2 max-h-[200px] overflow-y-auto">
                     {newsItems.slice(0, 20).map((item: any) => (
@@ -230,7 +229,7 @@ export default function SitemapPage() {
                   </ul>
                   {newsItems.length > 20 && (
                     <p className="text-sm text-muted-foreground mt-2">
-                      +{newsItems.length - 20} більше новин
+                      +{newsItems.length - 20} more articles
                     </p>
                   )}
                 </section>
@@ -241,7 +240,7 @@ export default function SitemapPage() {
           {/* Footer with XML sitemap link */}
           <div className="text-center mt-12 text-sm text-muted-foreground">
             <p>
-              Для пошукових систем: 
+              For search engines: 
               <a 
                 href="https://echoes2.com/sitemap.xml" 
                 target="_blank" 
