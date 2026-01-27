@@ -603,7 +603,7 @@ serve(async (req) => {
       );
     }
 
-    // Fetch ALL active feeds (for cron job)
+    // Fetch ALL active feeds (for cron job) - with full content generation
     if (action === 'fetch_all') {
       const { data: feeds, error: feedsError } = await supabase
         .from('news_rss_feeds')
@@ -617,10 +617,22 @@ serve(async (req) => {
         );
       }
       
-      console.log(`Fetching all ${feeds?.length || 0} active RSS feeds...`);
+      // Get auto-generation settings
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('news_auto_retell_enabled, news_auto_dialogue_enabled, news_auto_tweets_enabled, news_retell_ratio')
+        .limit(1)
+        .single();
       
-      // Track inserted items per country+category for auto-retell (every 5th item)
-      const insertTracker: Map<string, { count: number; toRetell: string[] }> = new Map();
+      const autoRetellEnabled = settings?.news_auto_retell_enabled ?? true;
+      const autoDialogueEnabled = settings?.news_auto_dialogue_enabled ?? true;
+      const autoTweetsEnabled = settings?.news_auto_tweets_enabled ?? true;
+      const retellRatio = settings?.news_retell_ratio ?? 1; // 1 = all, 5 = every 5th
+      
+      console.log(`Fetching all ${feeds?.length || 0} active RSS feeds with settings: retell=${autoRetellEnabled}, dialogue=${autoDialogueEnabled}, tweets=${autoTweetsEnabled}, ratio=${retellRatio}`);
+      
+      // Track inserted items per country+category for auto-content generation
+      const insertTracker: Map<string, { count: number; toProcess: Array<{ id: string; countryCode: string }> }> = new Map();
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       
       const results = [];
@@ -670,7 +682,7 @@ serve(async (req) => {
           
           // Initialize tracker for this country+category if not exists
           if (!insertTracker.has(trackerKey)) {
-            insertTracker.set(trackerKey, { count: 0, toRetell: [] });
+            insertTracker.set(trackerKey, { count: 0, toProcess: [] });
           }
           
           for (const item of items.slice(0, 200)) {
@@ -707,13 +719,13 @@ serve(async (req) => {
               insertedCount++;
               existingUrls.add(item.link); // Track newly added
               
-              // Track for auto-retell every 5th item per country+category
+              // Track for auto-processing based on ratio
               const tracker = insertTracker.get(trackerKey)!;
               tracker.count++;
               
-              // Every 5th item gets auto-retell
-              if (tracker.count % 5 === 0) {
-                tracker.toRetell.push(insertedData.id);
+              // Add to process queue based on ratio (1 = all, 5 = every 5th)
+              if (retellRatio === 1 || tracker.count % retellRatio === 0) {
+                tracker.toProcess.push({ id: insertedData.id, countryCode });
               }
             }
           }
@@ -734,27 +746,129 @@ serve(async (req) => {
         }
       }
       
-      // Auto-retell every 5th news item per country+category
+      // Collect all items to process
+      const allToProcess: Array<{ id: string; countryCode: string }> = [];
+      for (const tracker of insertTracker.values()) {
+        allToProcess.push(...tracker.toProcess);
+      }
+      
       let totalRetelled = 0;
-      for (const [key, tracker] of insertTracker.entries()) {
-        if (tracker.toRetell.length > 0) {
-          console.log(`Auto-retelling ${tracker.toRetell.length} items for ${key}`);
-          for (const newsId of tracker.toRetell) {
-            await autoRetellNews(newsId, supabaseUrl);
-            totalRetelled++;
-            // Small delay to avoid rate limiting
-            await new Promise(r => setTimeout(r, 500));
+      let totalDialogues = 0;
+      let totalTweets = 0;
+      
+      // Process each item: retell -> dialogue -> tweets
+      for (const item of allToProcess) {
+        const newsId = item.id;
+        const countryCode = item.countryCode;
+        
+        // Detect language based on country
+        const detectLang = () => {
+          const code = countryCode.toLowerCase();
+          if (code === 'ua') return 'uk';
+          if (code === 'pl') return 'pl';
+          if (code === 'in') return 'hi';
+          return 'en';
+        };
+        const contentLanguage = detectLang();
+        
+        // Step 1: Retell
+        if (autoRetellEnabled) {
+          try {
+            console.log(`Auto-retelling news item: ${newsId}`);
+            const response = await fetch(`${supabaseUrl}/functions/v1/retell-news`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+              },
+              body: JSON.stringify({ newsId, model: 'google/gemini-3-flash-preview' })
+            });
+            
+            if (response.ok) {
+              totalRetelled++;
+              console.log(`Successfully auto-retold news ${newsId}`);
+            } else {
+              console.error(`Failed to auto-retell news ${newsId}:`, response.status);
+            }
+          } catch (error) {
+            console.error(`Error auto-retelling news ${newsId}:`, error);
           }
+          await new Promise(r => setTimeout(r, 300));
+        }
+        
+        // Step 2: Generate dialogue
+        if (autoDialogueEnabled) {
+          try {
+            // Get article data for dialogue generation
+            const { data: article } = await supabase
+              .from('news_rss_items')
+              .select('*, feed:news_rss_feeds(name)')
+              .eq('id', newsId)
+              .single();
+            
+            if (article) {
+              console.log(`Generating dialogue for news item: ${newsId}`);
+              const response = await fetch(`${supabaseUrl}/functions/v1/generate-dialogue`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+                },
+                body: JSON.stringify({
+                  storyContext: `News article: ${article.title_en || article.title}\n\n${article.description_en || article.description || ''}\n\n${article.content_en || article.content || ''}`,
+                  newsContext: `Source: ${article.feed?.name || 'RSS'}, Category: ${article.category || 'general'}`,
+                  messageCount: 5,
+                  enableThreading: true,
+                  threadProbability: 30,
+                  contentLanguage,
+                  generateTweets: autoTweetsEnabled,
+                  tweetCount: 4
+                })
+              });
+              
+              if (response.ok) {
+                const result = await response.json();
+                const updateData: Record<string, unknown> = {};
+                
+                if (result.success && result.dialogue) {
+                  updateData.chat_dialogue = result.dialogue;
+                  totalDialogues++;
+                }
+                
+                if (result.tweets) {
+                  updateData.tweets = result.tweets;
+                  totalTweets++;
+                }
+                
+                if (Object.keys(updateData).length > 0) {
+                  await supabase
+                    .from('news_rss_items')
+                    .update(updateData)
+                    .eq('id', newsId);
+                }
+                
+                console.log(`Successfully generated dialogue${autoTweetsEnabled ? ' and tweets' : ''} for ${newsId}`);
+              } else {
+                console.error(`Failed to generate dialogue for ${newsId}:`, response.status);
+              }
+            }
+          } catch (error) {
+            console.error(`Error generating dialogue for ${newsId}:`, error);
+          }
+          await new Promise(r => setTimeout(r, 300));
         }
       }
       
-      console.log(`Completed fetching ${results.length} feeds, auto-retelled ${totalRetelled} items`);
+      console.log(`Completed: ${results.length} feeds, ${allToProcess.length} processed, ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets`);
       
       return new Response(
         JSON.stringify({ 
           success: true, 
           feedsProcessed: results.length, 
+          totalInserted: allToProcess.length,
           autoRetelled: totalRetelled,
+          autoDialogues: totalDialogues,
+          autoTweets: totalTweets,
           results 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
