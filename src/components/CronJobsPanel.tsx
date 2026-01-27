@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { callEdgeFunction, adminAction } from "@/lib/api";
 import { CountryRetellRatioPanel } from "@/components/CountryRetellRatioPanel";
+import { AutoGenChart } from "@/components/AutoGenChart";
 
 interface CronJob {
   id: number;
@@ -34,11 +35,20 @@ interface PeriodStats {
   tweets: number;
 }
 
+interface DailyStats {
+  date: string;
+  label: string;
+  retold: number;
+  dialogues: number;
+  tweets: number;
+}
+
 interface AutoGenStats {
   h24: PeriodStats;
   d3: PeriodStats;
   d7: PeriodStats;
   d30: PeriodStats;
+  daily: DailyStats[];
 }
 
 interface Props {
@@ -146,13 +156,14 @@ export function CronJobsPanel({ password }: Props) {
       const result = await adminAction<{ 
         success: boolean; 
         stats: AutoGenStats;
-      }>('getAutoGenStats', password, { periods: true });
+      }>('getAutoGenStats', password, { periods: true, daily: true });
       
       return result.stats ?? {
         h24: { retold: 0, dialogues: 0, tweets: 0 },
         d3: { retold: 0, dialogues: 0, tweets: 0 },
         d7: { retold: 0, dialogues: 0, tweets: 0 },
         d30: { retold: 0, dialogues: 0, tweets: 0 },
+        daily: [],
       };
     },
     refetchInterval: 60000, // Refetch every minute
@@ -474,6 +485,11 @@ export function CronJobsPanel({ password }: Props) {
                   </tbody>
                 </table>
               </div>
+              
+              {/* Daily Chart */}
+              {stats.daily && stats.daily.length > 0 && (
+                <AutoGenChart data={stats.daily} />
+              )}
             </div>
           )}
 

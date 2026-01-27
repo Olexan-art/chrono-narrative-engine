@@ -354,6 +354,42 @@ serve(async (req) => {
           };
         }
         
+        // Helper to get stats for a specific day range
+        async function getStatsForDay(startDate: Date, endDate: Date) {
+          const startISO = startDate.toISOString();
+          const endISO = endDate.toISOString();
+          
+          const [retoldResult, dialogueResult, tweetResult] = await Promise.all([
+            supabase
+              .from('news_rss_items')
+              .select('id', { count: 'exact', head: true })
+              .gte('created_at', startISO)
+              .lt('created_at', endISO)
+              .not('content', 'is', null)
+              .gte('content', 'length.300'),
+            supabase
+              .from('news_rss_items')
+              .select('id', { count: 'exact', head: true })
+              .gte('created_at', startISO)
+              .lt('created_at', endISO)
+              .not('chat_dialogue', 'is', null)
+              .neq('chat_dialogue', '[]'),
+            supabase
+              .from('news_rss_items')
+              .select('id', { count: 'exact', head: true })
+              .gte('created_at', startISO)
+              .lt('created_at', endISO)
+              .not('tweets', 'is', null)
+              .neq('tweets', '[]')
+          ]);
+          
+          return {
+            retold: retoldResult.count || 0,
+            dialogues: dialogueResult.count || 0,
+            tweets: tweetResult.count || 0
+          };
+        }
+        
         const now = new Date();
         const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
         const d3 = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
@@ -368,6 +404,29 @@ serve(async (req) => {
           getStatsForPeriod(d30)
         ]);
         
+        // Generate daily stats for last 7 days
+        const dailyPromises = [];
+        const dayLabels = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        
+        for (let i = 6; i >= 0; i--) {
+          const dayStart = new Date(now);
+          dayStart.setHours(0, 0, 0, 0);
+          dayStart.setDate(dayStart.getDate() - i);
+          
+          const dayEnd = new Date(dayStart);
+          dayEnd.setDate(dayEnd.getDate() + 1);
+          
+          dailyPromises.push(
+            getStatsForDay(dayStart, dayEnd).then(stats => ({
+              date: dayStart.toISOString().split('T')[0],
+              label: `${dayStart.getDate()}.${String(dayStart.getMonth() + 1).padStart(2, '0')}`,
+              ...stats
+            }))
+          );
+        }
+        
+        const daily = await Promise.all(dailyPromises);
+        
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -375,7 +434,8 @@ serve(async (req) => {
               h24: stats24h,
               d3: stats3d,
               d7: stats7d,
-              d30: stats30d
+              d30: stats30d,
+              daily
             }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
