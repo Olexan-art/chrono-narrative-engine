@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { Globe, Loader2, Calendar, Newspaper, Filter, RefreshCw, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,10 +53,13 @@ const CATEGORIES = [
   { value: 'world', label: { uk: 'Світ', en: 'World', pl: 'Świat' } },
 ];
 
+const PAGE_SIZE = 30;
+
 export default function CountryNewsPage() {
   const { countryCode } = useParams<{ countryCode: string }>();
   const { language, t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   
   const dateLocale = language === 'uk' ? uk : language === 'pl' ? pl : enUS;
 
@@ -88,11 +91,18 @@ export default function CountryNewsPage() {
     }
   });
 
-  // Fetch news items
-  const { data: newsItems = [], isLoading: newsLoading, refetch } = useQuery({
-    queryKey: ['country-news-items', country?.id, selectedCategory],
-    queryFn: async () => {
-      if (!country?.id) return [];
+  // Infinite query for news items
+  const {
+    data: newsData,
+    isLoading: newsLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch
+  } = useInfiniteQuery({
+    queryKey: ['country-news-infinite', country?.id, selectedCategory],
+    queryFn: async ({ pageParam = 0 }) => {
+      if (!country?.id) return { items: [], nextPage: null };
       
       let query = supabase
         .from('news_rss_items')
@@ -105,7 +115,7 @@ export default function CountryNewsPage() {
         .eq('is_archived', false)
         .not('slug', 'is', null)
         .order('published_at', { ascending: false })
-        .limit(100);
+        .range(pageParam, pageParam + PAGE_SIZE - 1);
       
       if (selectedCategory !== 'all') {
         query = query.eq('category', selectedCategory);
@@ -113,10 +123,42 @@ export default function CountryNewsPage() {
       
       const { data, error } = await query;
       if (error) throw error;
-      return data as NewsItem[];
+      
+      const items = data as NewsItem[];
+      return {
+        items,
+        nextPage: items.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null
+      };
     },
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+    initialPageParam: 0,
     enabled: !!country?.id
   });
+
+  // Flatten all pages into single array
+  const newsItems = newsData?.pages.flatMap(page => page.items) || [];
+
+  // Intersection observer for infinite scroll
+  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+    const [target] = entries;
+    if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  useEffect(() => {
+    const element = loadMoreRef.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(handleObserver, {
+      root: null,
+      rootMargin: '100px',
+      threshold: 0.1
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [handleObserver]);
 
   const getCountryName = (c: NewsCountry) => {
     if (language === 'en' && c.name_en) return c.name_en;
@@ -361,6 +403,23 @@ export default function CountryNewsPage() {
             })}
           </div>
         )}
+
+        {/* Infinite scroll trigger */}
+        <div ref={loadMoreRef} className="py-8 flex justify-center">
+          {isFetchingNextPage && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm">
+                {language === 'en' ? 'Loading more...' : language === 'pl' ? 'Ładowanie...' : 'Завантаження...'}
+              </span>
+            </div>
+          )}
+          {!hasNextPage && newsItems.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {language === 'en' ? 'All articles loaded' : language === 'pl' ? 'Wszystkie artykuły załadowane' : 'Усі статті завантажено'}
+            </p>
+          )}
+        </div>
       </main>
     </div>
   );
