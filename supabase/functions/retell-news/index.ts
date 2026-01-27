@@ -332,11 +332,59 @@ Category: ${news.category || 'general'}`;
 
     console.log('Retold content saved to field:', updateField);
 
+    // Auto-generate tweets for this news article
+    let generatedTweets = null;
+    try {
+      console.log('Auto-generating tweets for news in language:', language.code);
+      
+      // Call generate-dialogue function with tweets only
+      const dialogueResponse = await fetch(`${supabaseUrl}/functions/v1/generate-dialogue`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storyContext: `News article: ${getTitle()}`,
+          newsContext: `${getDescription() || ''}\n\n${retoldContent}`,
+          generateTweets: true,
+          tweetCount: 4,
+          contentLanguage: language.code,
+          messageCount: 0, // Don't generate dialogue, only tweets
+        }),
+      });
+
+      if (dialogueResponse.ok) {
+        const dialogueResult = await dialogueResponse.json();
+        if (dialogueResult.tweets && dialogueResult.tweets.length > 0) {
+          generatedTweets = dialogueResult.tweets;
+          
+          // Save tweets to the news article
+          const { error: tweetUpdateError } = await supabase
+            .from('news_rss_items')
+            .update({ tweets: generatedTweets })
+            .eq('id', newsId);
+          
+          if (tweetUpdateError) {
+            console.error('Error saving tweets:', tweetUpdateError);
+          } else {
+            console.log('Generated and saved', generatedTweets.length, 'tweets');
+          }
+        }
+      } else {
+        console.error('Tweet generation request failed:', dialogueResponse.status);
+      }
+    } catch (tweetError) {
+      console.error('Error generating tweets:', tweetError);
+      // Don't fail the whole operation if tweet generation fails
+    }
+
     return new Response(JSON.stringify({ 
       success: true, 
       content: retoldContent,
       language: language.code,
-      field: updateField
+      field: updateField,
+      tweets: generatedTweets
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
