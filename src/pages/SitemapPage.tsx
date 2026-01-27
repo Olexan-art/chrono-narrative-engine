@@ -116,7 +116,7 @@ export default function SitemapPage() {
                   { url: '/calendar', name: 'Calendar' },
                   { url: '/chapters', name: 'Chapters' },
                   { url: '/volumes', name: 'Volumes' },
-                  { url: '/news-digest', name: 'News Digest' }
+                  { url: '/news', name: 'News Hub' }
                 ].map(page => (
                   <li key={page.url} className="flex items-center gap-2">
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
@@ -202,7 +202,36 @@ export default function SitemapPage() {
               </ul>
             </section>
 
-            {/* News by Country */}
+            {/* News Countries Hub */}
+            <section className="bg-card border border-border rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Newspaper className="w-5 h-5 text-primary" />
+                News by Country
+              </h2>
+              <ul className="space-y-3">
+                {data?.countries.map(country => {
+                  const countryCode = country.code.toLowerCase();
+                  const newsCount = data.newsByCountry[countryCode]?.length || 0;
+                  
+                  return (
+                    <li key={country.id} className="flex items-center gap-3">
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      <Link 
+                        to={`/news/${countryCode}`} 
+                        className="text-primary hover:underline font-medium"
+                      >
+                        {country.name_en || country.name}
+                      </Link>
+                      <span className="text-xs text-muted-foreground">
+                        ({newsCount} articles)
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+
+            {/* Recent News by Country */}
             {data?.countries.map(country => {
               const countryCode = country.code.toLowerCase();
               const newsItems = data.newsByCountry[countryCode] || [];
@@ -210,12 +239,20 @@ export default function SitemapPage() {
               
               return (
                 <section key={country.id} className="bg-card border border-border rounded-lg p-6">
-                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                    <Newspaper className="w-5 h-5 text-primary" />
-                    {country.name_en || country.name} News
-                  </h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold flex items-center gap-2">
+                      <Newspaper className="w-5 h-5 text-primary" />
+                      {country.name_en || country.name} News
+                    </h2>
+                    <Link 
+                      to={`/news/${countryCode}`}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      View all →
+                    </Link>
+                  </div>
                   <ul className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {newsItems.slice(0, 20).map((item: any) => (
+                    {newsItems.slice(0, 15).map((item: any) => (
                       <li key={item.slug} className="flex items-center gap-2">
                         <ChevronRight className="w-4 h-4 text-muted-foreground" />
                         <Link 
@@ -227,10 +264,13 @@ export default function SitemapPage() {
                       </li>
                     ))}
                   </ul>
-                  {newsItems.length > 20 && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      +{newsItems.length - 20} more articles
-                    </p>
+                  {newsItems.length > 15 && (
+                    <Link 
+                      to={`/news/${countryCode}`}
+                      className="text-sm text-muted-foreground hover:text-primary mt-3 inline-block"
+                    >
+                      +{newsItems.length - 15} more articles →
+                    </Link>
                   )}
                 </section>
               );
