@@ -768,6 +768,10 @@ export type Database = {
             | null
           news_archive_days: number | null
           news_auto_archive_enabled: boolean | null
+          news_auto_dialogue_enabled: boolean | null
+          news_auto_retell_enabled: boolean | null
+          news_auto_tweets_enabled: boolean | null
+          news_retell_ratio: number | null
           openai_api_key: string | null
           updated_at: string | null
         }
@@ -802,6 +806,10 @@ export type Database = {
             | null
           news_archive_days?: number | null
           news_auto_archive_enabled?: boolean | null
+          news_auto_dialogue_enabled?: boolean | null
+          news_auto_retell_enabled?: boolean | null
+          news_auto_tweets_enabled?: boolean | null
+          news_retell_ratio?: number | null
           openai_api_key?: string | null
           updated_at?: string | null
         }
@@ -836,6 +844,10 @@ export type Database = {
             | null
           news_archive_days?: number | null
           news_auto_archive_enabled?: boolean | null
+          news_auto_dialogue_enabled?: boolean | null
+          news_auto_retell_enabled?: boolean | null
+          news_auto_tweets_enabled?: boolean | null
+          news_retell_ratio?: number | null
           openai_api_key?: string | null
           updated_at?: string | null
         }
