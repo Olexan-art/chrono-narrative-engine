@@ -28,10 +28,17 @@ interface AutoGenSettings {
   news_tweet_count: number;
 }
 
+interface PeriodStats {
+  retold: number;
+  dialogues: number;
+  tweets: number;
+}
+
 interface AutoGenStats {
-  retoldLast24h: number;
-  dialoguesLast24h: number;
-  tweetsLast24h: number;
+  h24: PeriodStats;
+  d3: PeriodStats;
+  d7: PeriodStats;
+  d30: PeriodStats;
 }
 
 interface Props {
@@ -132,24 +139,20 @@ export function CronJobsPanel({ password }: Props) {
     }
   }, [settings]);
 
-  // Fetch auto-generation statistics (last 24h)
+  // Fetch auto-generation statistics for multiple periods
   const { data: stats } = useQuery<AutoGenStats>({
     queryKey: ['auto-gen-stats'],
     queryFn: async () => {
-      const yesterday = new Date();
-      yesterday.setHours(yesterday.getHours() - 24);
-      const yesterdayISO = yesterday.toISOString();
-      
-      // Query news_rss_items created in last 24h with retelling/dialogues/tweets
       const result = await adminAction<{ 
         success: boolean; 
-        stats: { retold: number; dialogues: number; tweets: number } 
-      }>('getAutoGenStats', password, { since: yesterdayISO });
+        stats: AutoGenStats;
+      }>('getAutoGenStats', password, { periods: true });
       
-      return {
-        retoldLast24h: result.stats?.retold ?? 0,
-        dialoguesLast24h: result.stats?.dialogues ?? 0,
-        tweetsLast24h: result.stats?.tweets ?? 0,
+      return result.stats ?? {
+        h24: { retold: 0, dialogues: 0, tweets: 0 },
+        d3: { retold: 0, dialogues: 0, tweets: 0 },
+        d7: { retold: 0, dialogues: 0, tweets: 0 },
+        d30: { retold: 0, dialogues: 0, tweets: 0 },
       };
     },
     refetchInterval: 60000, // Refetch every minute
@@ -416,29 +419,60 @@ export function CronJobsPanel({ password }: Props) {
             </div>
           </div>
 
-          {/* 24h Stats */}
+          {/* Multi-period Stats */}
           {stats && (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                <FileText className="w-5 h-5 text-blue-500" />
-                <div>
-                  <div className="font-bold text-lg">{stats.retoldLast24h}</div>
-                  <div className="text-xs text-muted-foreground">Переказів за 24г</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                <MessageSquare className="w-5 h-5 text-green-500" />
-                <div>
-                  <div className="font-bold text-lg">{stats.dialoguesLast24h}</div>
-                  <div className="text-xs text-muted-foreground">Діалогів за 24г</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg">
-                <Twitter className="w-5 h-5 text-sky-500" />
-                <div>
-                  <div className="font-bold text-lg">{stats.tweetsLast24h}</div>
-                  <div className="text-xs text-muted-foreground">Твітів за 24г</div>
-                </div>
+            <div className="space-y-4">
+              {/* Stats Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/50">
+                      <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Тип</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground font-medium">24г</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground font-medium">3 дні</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground font-medium">7 днів</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground font-medium">30 днів</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-border/30">
+                      <td className="py-2 pr-4">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-blue-500" />
+                          <span>Переказів</span>
+                        </div>
+                      </td>
+                      <td className="text-center py-2 px-3 font-bold text-blue-500">{stats.h24.retold}</td>
+                      <td className="text-center py-2 px-3 font-medium">{stats.d3.retold}</td>
+                      <td className="text-center py-2 px-3 font-medium">{stats.d7.retold}</td>
+                      <td className="text-center py-2 px-3 font-medium">{stats.d30.retold}</td>
+                    </tr>
+                    <tr className="border-b border-border/30">
+                      <td className="py-2 pr-4">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="w-4 h-4 text-green-500" />
+                          <span>Діалогів</span>
+                        </div>
+                      </td>
+                      <td className="text-center py-2 px-3 font-bold text-green-500">{stats.h24.dialogues}</td>
+                      <td className="text-center py-2 px-3 font-medium">{stats.d3.dialogues}</td>
+                      <td className="text-center py-2 px-3 font-medium">{stats.d7.dialogues}</td>
+                      <td className="text-center py-2 px-3 font-medium">{stats.d30.dialogues}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 pr-4">
+                        <div className="flex items-center gap-2">
+                          <Twitter className="w-4 h-4 text-sky-500" />
+                          <span>Твітів</span>
+                        </div>
+                      </td>
+                      <td className="text-center py-2 px-3 font-bold text-sky-500">{stats.h24.tweets}</td>
+                      <td className="text-center py-2 px-3 font-medium">{stats.d3.tweets}</td>
+                      <td className="text-center py-2 px-3 font-medium">{stats.d7.tweets}</td>
+                      <td className="text-center py-2 px-3 font-medium">{stats.d30.tweets}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
