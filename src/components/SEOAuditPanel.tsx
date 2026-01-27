@@ -60,6 +60,8 @@ export function SEOAuditPanel({ password }: { password: string }) {
   const [selectedTab, setSelectedTab] = useState('overview');
   const [fixingIssue, setFixingIssue] = useState<string | null>(null);
   const [crawlerStatus, setCrawlerStatus] = useState<{robots: boolean; sitemap: boolean; ssrRender: boolean} | null>(null);
+  const [isBulkFixing, setIsBulkFixing] = useState(false);
+  const [isPinging, setIsPinging] = useState(false);
   const queryClient = useQueryClient();
 
   // Check crawler accessibility
@@ -129,6 +131,77 @@ export function SEOAuditPanel({ password }: { password: string }) {
       toast.error('Помилка автовиправлення');
     } finally {
       setFixingIssue(null);
+    }
+  };
+
+  // Bulk auto-fix all missing meta descriptions
+  const handleBulkAutoFix = async () => {
+    setIsBulkFixing(true);
+    
+    try {
+      // Get all parts without seo_description
+      const { data: partsToFix } = await supabase
+        .from('parts')
+        .select('id, content, content_en, seo_description')
+        .eq('status', 'published')
+        .or('seo_description.is.null,seo_description.eq.')
+        .limit(200);
+      
+      if (!partsToFix || partsToFix.length === 0) {
+        toast.info('Усі історії вже мають мета-описи');
+        setIsBulkFixing(false);
+        return;
+      }
+      
+      let fixedCount = 0;
+      for (const part of partsToFix) {
+        if (part.seo_description && part.seo_description.length > 50) continue;
+        
+        const content = part.content_en || part.content || '';
+        const cleanContent = content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+        if (cleanContent.length < 50) continue;
+        
+        const seoDescription = cleanContent.slice(0, 155) + (cleanContent.length > 155 ? '...' : '');
+        
+        const { error } = await supabase
+          .from('parts')
+          .update({ seo_description: seoDescription })
+          .eq('id', part.id);
+        
+        if (!error) fixedCount++;
+      }
+      
+      toast.success(`Згенеровано ${fixedCount} мета-описів`);
+      queryClient.invalidateQueries({ queryKey: ['seo-audit'] });
+    } catch (error) {
+      console.error('Bulk fix error:', error);
+      toast.error('Помилка масового виправлення');
+    } finally {
+      setIsBulkFixing(false);
+    }
+  };
+
+  // Ping search engines
+  const handlePingSearchEngines = async () => {
+    setIsPinging(true);
+    
+    try {
+      const result = await callEdgeFunction<{
+        success: boolean;
+        results: Array<{ service: string; success: boolean; status?: number; error?: string }>;
+      }>('ping-sitemap', {});
+      
+      if (result.success) {
+        toast.success('Пошукові системи повідомлені про оновлення');
+      } else {
+        const failed = result.results.filter(r => !r.success).map(r => r.service).join(', ');
+        toast.warning(`Деякі сервіси не відповіли: ${failed}`);
+      }
+    } catch (error) {
+      console.error('Ping error:', error);
+      toast.error('Помилка пінгу пошукових систем');
+    } finally {
+      setIsPinging(false);
     }
   };
 
@@ -425,7 +498,7 @@ export function SEOAuditPanel({ password }: { password: string }) {
             Аналіз оптимізації для пошукових систем за Google SEO Starter Guide
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button 
             variant="outline" 
             onClick={() => refetch()}
@@ -433,6 +506,30 @@ export function SEOAuditPanel({ password }: { password: string }) {
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Оновити
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleBulkAutoFix}
+            disabled={isBulkFixing}
+          >
+            {isBulkFixing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Zap className="w-4 h-4 mr-2" />
+            )}
+            Масове виправлення
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handlePingSearchEngines}
+            disabled={isPinging}
+          >
+            {isPinging ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Globe className="w-4 h-4 mr-2" />
+            )}
+            Пінг Google/Bing
           </Button>
           <Button
             onClick={() => generateAIRecommendations.mutate()}

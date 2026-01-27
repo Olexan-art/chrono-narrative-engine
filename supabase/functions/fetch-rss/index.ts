@@ -863,6 +863,30 @@ serve(async (req) => {
       
       console.log(`Completed: ${results.length} feeds, ${allToProcess.length} processed, ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets`);
       
+      // Ping search engines if new content was added
+      if (allToProcess.length > 0) {
+        try {
+          console.log('Pinging search engines about new content...');
+          const pingResponse = await fetch(`${supabaseUrl}/functions/v1/ping-sitemap`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+            },
+            body: JSON.stringify({})
+          });
+          
+          if (pingResponse.ok) {
+            const pingResult = await pingResponse.json();
+            console.log('Search engine ping result:', pingResult);
+          } else {
+            console.error('Failed to ping search engines:', pingResponse.status);
+          }
+        } catch (pingError) {
+          console.error('Error pinging search engines:', pingError);
+        }
+      }
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -871,6 +895,7 @@ serve(async (req) => {
           autoRetelled: totalRetelled,
           autoDialogues: totalDialogues,
           autoTweets: totalTweets,
+          searchEnginesPinged: allToProcess.length > 0,
           results 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
