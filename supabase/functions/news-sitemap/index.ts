@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const BASE_URL = "https://echoes2.com";
-const SUPABASE_FUNCTION_URL = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1";
+const SITEMAP_BASE_URL = "https://echoes2.com/api";
 
 // Helper to add hreflang links for multilingual pages
 function addHreflangLinks(url: string): string {
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     
     // Ping search engines in background if action=generate and ping not disabled
     if (action === "generate" && pingEnabled && urlCount > 0) {
-      const sitemapUrl = `${SUPABASE_FUNCTION_URL}/news-sitemap?country=${countryCode}`;
+      const sitemapUrl = `${SITEMAP_BASE_URL}/news-sitemap?country=${countryCode}`;
       const sitemapType = `news-${countryCode}`;
       
       EdgeRuntime.waitUntil(
@@ -159,7 +159,7 @@ async function generateSitemapIndex(supabase: any, startTime: number): Promise<R
   for (const country of countries || []) {
     xml += `
   <sitemap>
-    <loc>https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap?country=${country.code.toLowerCase()}</loc>
+    <loc>${SITEMAP_BASE_URL}/news-sitemap?country=${country.code.toLowerCase()}</loc>
     <lastmod>${now}</lastmod>
   </sitemap>`;
   }
