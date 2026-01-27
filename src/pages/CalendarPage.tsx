@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
+import { SEOHead } from "@/components/SEOHead";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Part } from "@/types/database";
 import { useAdminStore } from "@/stores/adminStore";
@@ -69,8 +70,21 @@ export default function CalendarPage() {
     }
   };
 
+  const pageTitle = language === 'en' ? 'Story Calendar' : language === 'pl' ? 'Kalendarz historii' : 'Календар історій';
+  const pageDescription = language === 'en' 
+    ? 'Browse daily AI-generated science fiction stories based on real-world news events' 
+    : language === 'pl' 
+    ? 'Przeglądaj codzienne historie science fiction generowane przez AI na podstawie prawdziwych wydarzeń'
+    : 'Переглядайте щоденні оповідання наукової фантастики, згенеровані ШІ на основі реальних новин';
+
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={pageTitle}
+        description={pageDescription}
+        canonicalUrl="https://echoes2.com/calendar"
+        keywords={['calendar', 'daily', 'stories', 'AI', 'science fiction', 'календар', 'історії']}
+      />
       <Header />
       
       <main className="container mx-auto px-4 py-8">

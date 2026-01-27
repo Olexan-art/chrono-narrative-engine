@@ -7,12 +7,15 @@ import { BookOpen, ChevronLeft, ChevronRight, Filter, Sparkles, MessageCircle } 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/Header";
+import { SEOHead } from "@/components/SEOHead";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const ITEMS_PER_PAGE = 9;
 
 export default function ChaptersPage() {
+  const { t, language } = useLanguage();
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -72,8 +75,21 @@ export default function ChaptersPage() {
     setCurrentPage(1); // Reset to first page when filter changes
   };
 
+  const pageTitle = language === 'en' ? 'Chapters Archive' : language === 'pl' ? 'Archiwum rozdziałów' : 'Архів глав';
+  const pageDescription = language === 'en' 
+    ? 'Weekly narrative chapters with AI-generated monologues and commentary based on real news' 
+    : language === 'pl' 
+    ? 'Tygodniowe rozdziały narracyjne z monologami i komentarzami AI na podstawie prawdziwych wiadomości'
+    : 'Тижневі наративні глави з монологами та коментарями ШІ на основі реальних новин';
+
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={pageTitle}
+        description={pageDescription}
+        canonicalUrl="https://echoes2.com/chapters"
+        keywords={['chapters', 'weekly', 'narrative', 'AI', 'science fiction', 'глави', 'тиждень']}
+      />
       <Header />
       
       <main className="container mx-auto px-4 py-8">

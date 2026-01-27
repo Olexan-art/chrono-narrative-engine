@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Library, Eye, BookOpen, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
+import { SEOHead } from "@/components/SEOHead";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +10,13 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function VolumesPage() {
   const { t, language } = useLanguage();
+  
+  const pageTitle = language === 'en' ? 'Volumes Archive' : language === 'pl' ? 'Archiwum tomów' : 'Архів томів';
+  const pageDescription = language === 'en' 
+    ? 'Monthly volumes collecting weekly chapters of AI-generated science fiction narratives' 
+    : language === 'pl' 
+    ? 'Miesięczne tomy zbierające tygodniowe rozdziały narracji science fiction generowanych przez AI'
+    : 'Місячні томи, що збирають тижневі глави наративів наукової фантастики, згенерованих ШІ';
 
   const { data: volumes = [], isLoading } = useQuery({
     queryKey: ['volumes-with-stats', language],
@@ -68,6 +76,12 @@ export default function VolumesPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={pageTitle}
+        description={pageDescription}
+        canonicalUrl="https://echoes2.com/volumes"
+        keywords={['volumes', 'monthly', 'archive', 'AI', 'science fiction', 'томи', 'архів']}
+      />
       <Header />
       
       <main className="container mx-auto px-4 py-8">

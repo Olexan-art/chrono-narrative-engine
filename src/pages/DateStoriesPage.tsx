@@ -5,6 +5,7 @@ import { uk, enUS, pl } from "date-fns/locale";
 import { BookOpen, Calendar, ArrowLeft, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
+import { SEOHead } from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -59,9 +60,32 @@ export default function DateStoriesPage() {
   };
 
   const parsedDate = date ? parseISO(date) : new Date();
+  
+  const formattedDate = format(parsedDate, 'd MMMM yyyy', { locale: dateLocale });
+  const pageTitle = language === 'en' 
+    ? `Stories for ${formattedDate}` 
+    : language === 'pl' 
+    ? `Opowiadania na ${formattedDate}` 
+    : `Оповідання за ${formattedDate}`;
+  const pageDescription = language === 'en'
+    ? `AI-generated science fiction stories published on ${formattedDate}`
+    : language === 'pl'
+    ? `Opowiadania science fiction wygenerowane przez AI opublikowane ${formattedDate}`
+    : `Оповідання наукової фантастики, згенеровані ШІ, опубліковані ${formattedDate}`;
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title={pageTitle}
+        description={pageDescription}
+        canonicalUrl={`https://echoes2.com/date/${date}`}
+        keywords={['stories', date || '', 'AI', 'science fiction']}
+        breadcrumbs={[
+          { name: language === 'en' ? 'Home' : language === 'pl' ? 'Strona główna' : 'Головна', url: 'https://echoes2.com/' },
+          { name: language === 'en' ? 'Calendar' : language === 'pl' ? 'Kalendarz' : 'Календар', url: 'https://echoes2.com/calendar' },
+          { name: formattedDate, url: `https://echoes2.com/date/${date}` }
+        ]}
+      />
       <Header />
       
       <main className="container mx-auto px-4 py-6 md:py-8">
