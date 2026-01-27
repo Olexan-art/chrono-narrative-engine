@@ -324,39 +324,58 @@ serve(async (req) => {
       }
 
       case 'getAutoGenStats': {
-        const since = data?.since || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        // Helper to get stats for a specific period
+        async function getStatsForPeriod(since: string) {
+          const [retoldResult, dialogueResult, tweetResult] = await Promise.all([
+            supabase
+              .from('news_rss_items')
+              .select('id', { count: 'exact', head: true })
+              .gte('created_at', since)
+              .not('content', 'is', null)
+              .gte('content', 'length.300'),
+            supabase
+              .from('news_rss_items')
+              .select('id', { count: 'exact', head: true })
+              .gte('created_at', since)
+              .not('chat_dialogue', 'is', null)
+              .neq('chat_dialogue', '[]'),
+            supabase
+              .from('news_rss_items')
+              .select('id', { count: 'exact', head: true })
+              .gte('created_at', since)
+              .not('tweets', 'is', null)
+              .neq('tweets', '[]')
+          ]);
+          
+          return {
+            retold: retoldResult.count || 0,
+            dialogues: dialogueResult.count || 0,
+            tweets: tweetResult.count || 0
+          };
+        }
         
-        // Count retold items (content field has significant length)
-        const { count: retoldCount } = await supabase
-          .from('news_rss_items')
-          .select('id', { count: 'exact', head: true })
-          .gte('created_at', since)
-          .not('content', 'is', null)
-          .gte('content', 'length.300');
+        const now = new Date();
+        const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+        const d3 = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
+        const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
         
-        // Count items with dialogues
-        const { count: dialogueCount } = await supabase
-          .from('news_rss_items')
-          .select('id', { count: 'exact', head: true })
-          .gte('created_at', since)
-          .not('chat_dialogue', 'is', null)
-          .neq('chat_dialogue', '[]');
-        
-        // Count items with tweets
-        const { count: tweetCount } = await supabase
-          .from('news_rss_items')
-          .select('id', { count: 'exact', head: true })
-          .gte('created_at', since)
-          .not('tweets', 'is', null)
-          .neq('tweets', '[]');
+        // Fetch all periods in parallel
+        const [stats24h, stats3d, stats7d, stats30d] = await Promise.all([
+          getStatsForPeriod(h24),
+          getStatsForPeriod(d3),
+          getStatsForPeriod(d7),
+          getStatsForPeriod(d30)
+        ]);
         
         return new Response(
           JSON.stringify({ 
             success: true, 
             stats: {
-              retold: retoldCount || 0,
-              dialogues: dialogueCount || 0,
-              tweets: tweetCount || 0
+              h24: stats24h,
+              d3: stats3d,
+              d7: stats7d,
+              d30: stats30d
             }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
