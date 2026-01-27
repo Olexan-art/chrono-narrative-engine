@@ -167,8 +167,8 @@ export function SEOHead({
         name: 'Synchronization Point',
         alternateName: 'Точка Синхронізації',
         description: 'AI-powered narrative generation system that transforms real-world news into science fiction stories',
-        url: 'https://chrono-narrative-engine.lovable.app',
-        logo: 'https://chrono-narrative-engine.lovable.app/favicon.png',
+        url: 'https://echoes2.com',
+        logo: 'https://echoes2.com/favicon.png',
         sameAs: [],
         knowsAbout: ['Artificial Intelligence', 'Science Fiction', 'News Analysis', 'Narrative Generation', 'Ukrainian Literature']
       };
@@ -187,14 +187,14 @@ export function SEOHead({
           '@type': 'Organization',
           name: 'Synchronization Point AI',
           description: 'AI-powered narrative generation system',
-          url: 'https://chrono-narrative-engine.lovable.app'
+          url: 'https://echoes2.com'
         },
         publisher: {
           '@type': 'Organization',
           name: 'Точка Синхронізації',
           logo: {
             '@type': 'ImageObject',
-            url: 'https://chrono-narrative-engine.lovable.app/favicon.png'
+            url: 'https://echoes2.com/favicon.png'
           }
         },
         keywords: keywords.join(', '),
@@ -232,7 +232,7 @@ export function SEOHead({
         // WebSite schema enhancements
         mainSchema.potentialAction = {
           '@type': 'SearchAction',
-          target: 'https://chrono-narrative-engine.lovable.app/calendar?q={search_term_string}',
+          target: 'https://echoes2.com/calendar?q={search_term_string}',
           'query-input': 'required name=search_term_string'
         };
       }

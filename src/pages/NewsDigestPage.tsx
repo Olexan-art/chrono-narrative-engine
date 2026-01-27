@@ -143,7 +143,7 @@ export default function NewsDigestPage() {
       <SEOHead
         title={t('newsdigest.title')}
         description={t('newsdigest.description')}
-        canonicalUrl="https://chrono-narrative-engine.lovable.app/news-digest"
+        canonicalUrl="https://echoes2.com/news-digest"
       />
       <Header />
       
