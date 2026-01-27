@@ -17,6 +17,7 @@ import ChapterRedirect from "./pages/ChapterRedirect";
 import NewsHubPage from "./pages/NewsHubPage";
 import CountryNewsPage from "./pages/CountryNewsPage";
 import NewsArticlePage from "./pages/NewsArticlePage";
+import NewsDigestRedirect from "./pages/NewsDigestRedirect";
 import SitemapPage from "./pages/SitemapPage";
 import AdminPage from "./pages/AdminPage";
 import EditPartPage from "./pages/EditPartPage";
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/volume-legacy/:id" element={<VolumeRedirect />} />
             <Route path="/sitemap" element={<SitemapPage />} />
             <Route path="/news" element={<NewsHubPage />} />
+            <Route path="/news-digest" element={<NewsDigestRedirect />} />
             <Route path="/news/:countryCode" element={<CountryNewsPage />} />
             <Route path="/news/:country/:slug" element={<NewsArticlePage />} />
             <Route path="/read/:date" element={<ReadPage />} />

@@ -126,10 +126,10 @@ Deno.serve(async (req) => {
   </url>
   
   <url>
-    <loc>${BASE_URL}/news-digest</loc>
+    <loc>${BASE_URL}/news</loc>
     <lastmod>${now}</lastmod>
     <changefreq>hourly</changefreq>
-    <priority>0.8</priority>${addHreflangLinks(`${BASE_URL}/news-digest`)}
+    <priority>0.8</priority>${addHreflangLinks(`${BASE_URL}/news`)}
   </url>
   
   <url>
@@ -187,6 +187,18 @@ Deno.serve(async (req) => {
     <loc>${url}</loc>
     <lastmod>${volume.updated_at || now}</lastmod>
     <changefreq>monthly</changefreq>
+    <priority>0.7</priority>${addHreflangLinks(url)}
+  </url>`;
+    }
+
+    // Add country news hub pages (/news/:countryCode)
+    for (const country of newsCountries || []) {
+      const url = `${BASE_URL}/news/${country.code.toLowerCase()}`;
+      xml += `
+  <url>
+    <loc>${url}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>hourly</changefreq>
     <priority>0.7</priority>${addHreflangLinks(url)}
   </url>`;
     }
