@@ -46,7 +46,7 @@ export function DashboardPanel({ password }: Props) {
         supabase.from('view_counts').select('views, unique_visitors'),
         supabase.from('news_countries').select(`
           id, name, flag, code,
-          news_rss_items(id, fetched_at)
+          news_rss_items(id, published_at, fetched_at, is_archived)
         `).eq('is_active', true)
       ]);
 
@@ -56,10 +56,19 @@ export function DashboardPanel({ password }: Props) {
 
       // Calculate news per country with time-based stats
       const countriesStats = countriesWithCounts?.map(c => {
-        const items = c.news_rss_items as Array<{ id: string; fetched_at: string }> || [];
-        const total = items.length;
-        const last24hCount = items.filter(i => new Date(i.fetched_at) >= last24h).length;
-        const last7dCount = items.filter(i => new Date(i.fetched_at) >= last7d).length;
+        const items = c.news_rss_items as Array<{ id: string; published_at: string | null; fetched_at: string; is_archived: boolean }> || [];
+        // Only count non-archived items
+        const activeItems = items.filter(i => !i.is_archived);
+        const total = activeItems.length;
+        // Use published_at for time stats, fallback to fetched_at
+        const last24hCount = activeItems.filter(i => {
+          const itemDate = i.published_at ? new Date(i.published_at) : new Date(i.fetched_at);
+          return itemDate >= last24h;
+        }).length;
+        const last7dCount = activeItems.filter(i => {
+          const itemDate = i.published_at ? new Date(i.published_at) : new Date(i.fetched_at);
+          return itemDate >= last7d;
+        }).length;
         
         return {
           id: c.id,
