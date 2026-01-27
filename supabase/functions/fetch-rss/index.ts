@@ -624,14 +624,25 @@ serve(async (req) => {
         .limit(1)
         .single();
       
+      // Get per-country retell ratios
+      const { data: countriesWithRatio } = await supabase
+        .from('news_countries')
+        .select('id, code, retell_ratio')
+        .eq('is_active', true);
+      
+      const countryRatioMap = new Map<string, number>();
+      for (const c of countriesWithRatio || []) {
+        countryRatioMap.set(c.id, c.retell_ratio ?? 100);
+      }
+      
       const autoRetellEnabled = settings?.news_auto_retell_enabled ?? true;
       const autoDialogueEnabled = settings?.news_auto_dialogue_enabled ?? true;
       const autoTweetsEnabled = settings?.news_auto_tweets_enabled ?? true;
-      const retellRatio = settings?.news_retell_ratio ?? 1; // 1 = all, 5 = every 5th
+      const globalRetellRatio = settings?.news_retell_ratio ?? 1; // Fallback if per-country not set
       const dialogueCount = settings?.news_dialogue_count ?? 7;
       const tweetCount = settings?.news_tweet_count ?? 4;
       
-      console.log(`Fetching all ${feeds?.length || 0} active RSS feeds with settings: retell=${autoRetellEnabled}, dialogue=${autoDialogueEnabled}, tweets=${autoTweetsEnabled}, ratio=${retellRatio}`);
+      console.log(`Fetching all ${feeds?.length || 0} active RSS feeds with settings: retell=${autoRetellEnabled}, dialogue=${autoDialogueEnabled}, tweets=${autoTweetsEnabled}`);
       
       // Track inserted items per country+category for auto-content generation
       const insertTracker: Map<string, { count: number; toProcess: Array<{ id: string; countryCode: string }> }> = new Map();
@@ -721,12 +732,15 @@ serve(async (req) => {
               insertedCount++;
               existingUrls.add(item.link); // Track newly added
               
-              // Track for auto-processing based on ratio
+              // Track for auto-processing based on per-country ratio
               const tracker = insertTracker.get(trackerKey)!;
               tracker.count++;
               
-              // Add to process queue based on ratio (1 = all, 5 = every 5th)
-              if (retellRatio === 1 || tracker.count % retellRatio === 0) {
+              // Get per-country retell ratio (percentage 1-100), fallback to global setting
+              const countryRetellRatio = countryRatioMap.get(feed.country_id) ?? 100;
+              const shouldProcess = Math.random() * 100 < countryRetellRatio;
+              
+              if (shouldProcess) {
                 tracker.toProcess.push({ id: insertedData.id, countryCode });
               }
             }

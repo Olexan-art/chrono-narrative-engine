@@ -307,6 +307,7 @@ export type Database = {
           name: string
           name_en: string | null
           name_pl: string | null
+          retell_ratio: number | null
           sort_order: number
           updated_at: string
         }
@@ -319,6 +320,7 @@ export type Database = {
           name: string
           name_en?: string | null
           name_pl?: string | null
+          retell_ratio?: number | null
           sort_order?: number
           updated_at?: string
         }
@@ -331,6 +333,7 @@ export type Database = {
           name?: string
           name_en?: string | null
           name_pl?: string | null
+          retell_ratio?: number | null
           sort_order?: number
           updated_at?: string
         }
@@ -861,34 +864,43 @@ export type Database = {
       }
       sitemap_metadata: {
         Row: {
+          bing_ping_success: boolean | null
           country_code: string | null
           created_at: string
           file_size_bytes: number | null
           generation_time_ms: number | null
+          google_ping_success: boolean | null
           id: string
           last_generated_at: string | null
+          last_ping_at: string | null
           sitemap_type: string
           updated_at: string
           url_count: number
         }
         Insert: {
+          bing_ping_success?: boolean | null
           country_code?: string | null
           created_at?: string
           file_size_bytes?: number | null
           generation_time_ms?: number | null
+          google_ping_success?: boolean | null
           id?: string
           last_generated_at?: string | null
+          last_ping_at?: string | null
           sitemap_type: string
           updated_at?: string
           url_count?: number
         }
         Update: {
+          bing_ping_success?: boolean | null
           country_code?: string | null
           created_at?: string
           file_size_bytes?: number | null
           generation_time_ms?: number | null
+          google_ping_success?: boolean | null
           id?: string
           last_generated_at?: string | null
+          last_ping_at?: string | null
           sitemap_type?: string
           updated_at?: string
           url_count?: number

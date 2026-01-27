@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Clock, RefreshCw, Loader2, Play, Calendar, Zap, MessageSquare, Twitter, FileText, Settings, BarChart3 } from "lucide-react";
+import { Clock, RefreshCw, Loader2, Play, Zap, MessageSquare, Twitter, FileText, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { callEdgeFunction, adminAction } from "@/lib/api";
+import { CountryRetellRatioPanel } from "@/components/CountryRetellRatioPanel";
 
 interface CronJob {
   id: number;
@@ -43,12 +44,7 @@ const FREQUENCY_OPTIONS = [
   { value: '6hours', label: 'Кожні 6 годин', schedule: '0 */6 * * *' },
 ];
 
-const RATIO_OPTIONS = [
-  { value: 1, label: 'Всі новини (100%)' },
-  { value: 2, label: 'Кожна 2-га (50%)' },
-  { value: 5, label: 'Кожна 5-та (20%)' },
-  { value: 10, label: 'Кожна 10-та (10%)' },
-];
+// Global ratio is now per-country, but keep for backwards compat
 
 const DIALOGUE_COUNT_OPTIONS = [
   { value: 5, label: '5 повідомлень' },
@@ -314,33 +310,6 @@ export function CronJobsPanel({ password }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Ratio selector */}
-          <div className="space-y-2">
-            <Label>Частота обробки новин</Label>
-            <Select
-              value={autoGenSettings.news_retell_ratio.toString()}
-              onValueChange={handleRatioChange}
-              disabled={settingsLoading || updateSettingsMutation.isPending}
-            >
-              <SelectTrigger className="w-full sm:w-[250px]">
-                {settingsLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <SelectValue />
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                {RATIO_OPTIONS.map(option => (
-                  <SelectItem key={option.value} value={option.value.toString()}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Скільки новин обробляти при кожному запуску RSS
-            </p>
-          </div>
 
           {/* Toggle switches */}
           <div className="grid gap-4 sm:grid-cols-3">
@@ -550,13 +519,16 @@ export function CronJobsPanel({ password }: Props) {
         </CardContent>
       </Card>
 
+      {/* Per-country Retell Ratio Settings */}
+      <CountryRetellRatioPanel />
+
       {/* Cron Jobs List */}
       <Card className="cosmic-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-primary" />
+                <Clock className="w-5 h-5 text-primary" />
                 Заплановані завдання (Cron Jobs)
               </CardTitle>
               <CardDescription>
