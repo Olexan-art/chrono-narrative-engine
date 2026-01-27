@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Search, AlertTriangle, CheckCircle, XCircle, RefreshCw, Loader2, 
   ExternalLink, Globe, FileText, Image, Link2, Tag, Eye, Zap,
-  ChevronDown, ChevronUp, Sparkles
+  ChevronDown, ChevronUp, Sparkles, Bot, MapIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,7 +58,79 @@ export function SEOAuditPanel({ password }: { password: string }) {
   const [isScanning, setIsScanning] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [selectedTab, setSelectedTab] = useState('overview');
+  const [fixingIssue, setFixingIssue] = useState<string | null>(null);
+  const [crawlerStatus, setCrawlerStatus] = useState<{robots: boolean; sitemap: boolean; ssrRender: boolean} | null>(null);
   const queryClient = useQueryClient();
+
+  // Check crawler accessibility
+  const checkCrawlerAccess = async () => {
+    const results = { robots: false, sitemap: false, ssrRender: false };
+    
+    try {
+      const robotsRes = await fetch('https://echoes2.com/robots.txt');
+      results.robots = robotsRes.ok;
+    } catch (e) { /* ignore */ }
+    
+    try {
+      const sitemapRes = await fetch('https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap');
+      results.sitemap = sitemapRes.ok;
+    } catch (e) { /* ignore */ }
+    
+    try {
+      const ssrRes = await fetch('https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render?path=/&lang=en');
+      results.ssrRender = ssrRes.ok;
+    } catch (e) { /* ignore */ }
+    
+    setCrawlerStatus(results);
+  };
+
+  // Auto-fix handler
+  const handleAutoFix = async (issue: SEOIssue) => {
+    setFixingIssue(issue.id);
+    
+    try {
+      // Extract ID from issue.id (format: "desc-short-UUID" or "canonical-/path")
+      const parts = issue.id.split('-');
+      const entityType = parts[0]; // 'desc', 'canonical', etc.
+      
+      if (issue.category === 'Description' && issue.page.startsWith('/read/')) {
+        // Fix missing description for a story
+        const [, , date, storyNum] = issue.page.split('/');
+        
+        // Get the part and generate description from content
+        const { data: part } = await supabase
+          .from('parts')
+          .select('id, content, content_en')
+          .eq('date', date)
+          .eq('number', parseInt(storyNum))
+          .single();
+        
+        if (part) {
+          const content = part.content_en || part.content || '';
+          const cleanContent = content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+          const seoDescription = cleanContent.slice(0, 155) + (cleanContent.length > 155 ? '...' : '');
+          
+          await supabase
+            .from('parts')
+            .update({ seo_description: seoDescription })
+            .eq('id', part.id);
+          
+          toast.success(`Мета-опис згенеровано для ${issue.page}`);
+          queryClient.invalidateQueries({ queryKey: ['seo-audit'] });
+        }
+      } else if (issue.category === 'Meta Description' && issue.page.startsWith('/')) {
+        // For static pages, we can't auto-fix - notify user
+        toast.info('Додайте SEOHead компонент до цієї сторінки вручну');
+      } else {
+        toast.info('Автовиправлення для цього типу проблем поки недоступне');
+      }
+    } catch (error) {
+      console.error('Auto-fix error:', error);
+      toast.error('Помилка автовиправлення');
+    } finally {
+      setFixingIssue(null);
+    }
+  };
 
   // Fetch all pages data for SEO analysis
   const { data: seoData, isLoading, refetch } = useQuery({
@@ -99,13 +171,14 @@ export function SEOAuditPanel({ password }: { password: string }) {
       let totalScore = 0;
       let pageCount = 0;
 
-      // Static pages
+      // Static pages - all now have SEOHead components
       const staticPages = [
         { url: '/', name: 'Головна', hasCanonical: true, hasDescription: true },
         { url: '/calendar', name: 'Календар', hasCanonical: true, hasDescription: true },
-        { url: '/chapters', name: 'Глави', hasCanonical: false, hasDescription: false },
-        { url: '/volumes', name: 'Томи', hasCanonical: false, hasDescription: false },
+        { url: '/chapters', name: 'Глави', hasCanonical: true, hasDescription: true },
+        { url: '/volumes', name: 'Томи', hasCanonical: true, hasDescription: true },
         { url: '/news-digest', name: 'Новини', hasCanonical: true, hasDescription: true },
+        { url: '/sitemap', name: 'Sitemap', hasCanonical: true, hasDescription: true },
       ];
 
       // Analyze static pages
@@ -201,20 +274,8 @@ export function SEOAuditPanel({ password }: { password: string }) {
           pageScore -= 10;
         }
 
-        // Check keywords
-        if (!part.seo_keywords || part.seo_keywords.length === 0) {
-          issues.push({
-            id: `keywords-${part.id}`,
-            type: 'info',
-            category: 'Keywords',
-            page: pageUrl,
-            title: `Відсутні ключові слова`,
-            description: `Не вказані SEO ключові слова`,
-            recommendation: `Додайте 3-5 ключових слів для кращої індексації`,
-            autoFixable: true
-          });
-          pageScore -= 5;
-        }
+        // Keywords are optional per Google - don't penalize for missing
+        // Google officially ignores meta keywords, so we skip this check
 
         totalScore += pageScore;
       }
@@ -451,6 +512,65 @@ export function SEOAuditPanel({ password }: { password: string }) {
         </Card>
       </div>
 
+      {/* Crawler Accessibility */}
+      <Card className="cosmic-card border-green-500/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bot className="w-5 h-5 text-green-500" />
+            Доступність для пошукових ботів
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 flex-wrap">
+            {!crawlerStatus ? (
+              <Button variant="outline" size="sm" onClick={checkCrawlerAccess}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Перевірити доступність
+              </Button>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  {crawlerStatus.robots ? (
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-500" />
+                  )}
+                  <span className="text-sm">robots.txt</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {crawlerStatus.sitemap ? (
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-500" />
+                  )}
+                  <span className="text-sm">XML Sitemap</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {crawlerStatus.ssrRender ? (
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-500" />
+                  )}
+                  <span className="text-sm">SSR Render</span>
+                </div>
+                <a 
+                  href="https://echoes2.com/sitemap"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center gap-1 text-sm ml-auto"
+                >
+                  <MapIcon className="w-4 h-4" />
+                  HTML Sitemap
+                </a>
+                <Button variant="ghost" size="sm" onClick={checkCrawlerAccess}>
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
         <TabsList className="grid w-full grid-cols-4">
@@ -576,8 +696,17 @@ export function SEOAuditPanel({ password }: { password: string }) {
                           </div>
                         </div>
                         {issue.autoFixable && (
-                          <Button size="sm" variant="outline">
-                            <Zap className="w-4 h-4 mr-1" />
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleAutoFix(issue)}
+                            disabled={fixingIssue === issue.id}
+                          >
+                            {fixingIssue === issue.id ? (
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Zap className="w-4 h-4 mr-1" />
+                            )}
                             Виправити
                           </Button>
                         )}
@@ -607,9 +736,10 @@ export function SEOAuditPanel({ password }: { password: string }) {
                     {[
                       { url: '/', name: 'Головна', status: 'ok' },
                       { url: '/calendar', name: 'Календар', status: 'ok' },
-                      { url: '/chapters', name: 'Глави', status: 'warning' },
-                      { url: '/volumes', name: 'Томи', status: 'warning' },
+                      { url: '/chapters', name: 'Глави', status: 'ok' },
+                      { url: '/volumes', name: 'Томи', status: 'ok' },
                       { url: '/news-digest', name: 'Новини', status: 'ok' },
+                      { url: '/sitemap', name: 'Sitemap', status: 'ok' },
                     ].map(page => (
                       <div key={page.url} className="flex items-center justify-between p-2 border border-border rounded">
                         <div className="flex items-center gap-2">
