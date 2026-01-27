@@ -131,6 +131,13 @@ Deno.serve(async (req) => {
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>${addHreflangLinks(`${BASE_URL}/news-digest`)}
   </url>
+  
+  <url>
+    <loc>${BASE_URL}/sitemap</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>${addHreflangLinks(`${BASE_URL}/sitemap`)}
+  </url>
 `;
 
     // Add date listing pages (/date/:date) for each unique date with stories
