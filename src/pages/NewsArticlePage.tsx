@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
-import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
 import { NewsDialogueSection } from "@/components/NewsDialogueSection";
+import { NewsTweetCard } from "@/components/NewsTweetCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { callEdgeFunction } from "@/lib/api";
@@ -61,6 +62,39 @@ export default function NewsArticlePage() {
       return { ...item, country: countryData };
     },
     enabled: !!country && !!slug
+  });
+
+  // Fetch adjacent news articles for navigation
+  const { data: adjacentNews } = useQuery({
+    queryKey: ['adjacent-news', article?.id, article?.country_id],
+    queryFn: async () => {
+      if (!article?.published_at || !article?.country_id) return { prev: null, next: null };
+
+      // Get previous article (older)
+      const { data: prevData } = await supabase
+        .from('news_rss_items')
+        .select('id, slug, title, title_en')
+        .eq('country_id', article.country_id)
+        .not('slug', 'is', null)
+        .lt('published_at', article.published_at)
+        .order('published_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Get next article (newer)
+      const { data: nextData } = await supabase
+        .from('news_rss_items')
+        .select('id, slug, title, title_en')
+        .eq('country_id', article.country_id)
+        .not('slug', 'is', null)
+        .gt('published_at', article.published_at)
+        .order('published_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      return { prev: prevData, next: nextData };
+    },
+    enabled: !!article?.id && !!article?.country_id && !!article?.published_at
   });
 
   // Detect the language of the news content
@@ -133,7 +167,49 @@ export default function NewsArticlePage() {
     }
   });
 
-  // Generate story from this news
+  // Generate tweets for this news
+  const generateTweetsMutation = useMutation({
+    mutationFn: async () => {
+      if (!article) throw new Error('No article');
+      
+      const contentLanguage = detectNewsLanguage();
+      console.log('Generating tweets in language:', contentLanguage);
+      
+      const result = await callEdgeFunction<{
+        success: boolean;
+        tweets: Array<{
+          author: string;
+          handle: string;
+          content: string;
+          likes: number;
+          retweets: number;
+        }>;
+      }>('generate-dialogue', {
+        storyContext: `News article: ${getLocalizedField('title')}\n\n${getLocalizedField('description') || ''}\n\n${getLocalizedField('content') || ''}`,
+        newsContext: `Source: ${article.feed?.name || 'RSS'}, Category: ${article.category || article.feed?.category || 'general'}`,
+        generateTweets: true,
+        tweetCount: 4,
+        contentLanguage
+      });
+      
+      if (!result.success) throw new Error('Tweet generation failed');
+      
+      // Save tweets to article
+      await supabase
+        .from('news_rss_items')
+        .update({ tweets: result.tweets })
+        .eq('id', article.id);
+      
+      return result.tweets;
+    },
+    onSuccess: () => {
+      toast.success(language === 'en' ? 'Tweets generated' : language === 'pl' ? 'Tweety wygenerowane' : 'Твіти згенеровано');
+      queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Error generating tweets');
+    }
+  });
   const generateStoryMutation = useMutation({
     mutationFn: async () => {
       if (!article) throw new Error('No article');
@@ -209,6 +285,7 @@ export default function NewsArticlePage() {
     : article.country.name;
 
   const chatDialogue = Array.isArray(article.chat_dialogue) ? article.chat_dialogue : [];
+  const tweets = Array.isArray((article as any).tweets) ? (article as any).tweets : [];
 
   // Generate SEO keywords from content
   const generateKeywords = (): string[] => {
@@ -333,6 +410,34 @@ export default function NewsArticlePage() {
                   {t('news.read_original')}
                 </a>
               </div>
+
+              {/* Tweets Section */}
+              {tweets.length > 0 && (
+                <NewsTweetCard tweets={tweets} />
+              )}
+              
+              {/* Generate Tweets Button - Admin only */}
+              {isAdminAuthenticated && (
+                <div className="pt-4">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => generateTweetsMutation.mutate()}
+                    disabled={generateTweetsMutation.isPending}
+                  >
+                    {generateTweetsMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Twitter className="w-4 h-4" />
+                    )}
+                    {tweets.length > 0 
+                      ? (language === 'en' ? 'Regenerate Tweets' : language === 'pl' ? 'Regeneruj tweety' : 'Перегенерувати твіти')
+                      : (language === 'en' ? 'Generate Tweets' : language === 'pl' ? 'Generuj tweety' : 'Генерувати твіти')
+                    }
+                  </Button>
+                </div>
+              )}
             </article>
 
             {/* Character Dialogue Section - MOBILE ONLY (below article) */}
@@ -343,6 +448,47 @@ export default function NewsArticlePage() {
               onGenerateDialogue={() => generateDialogueMutation.mutate()}
               className="mt-8 lg:hidden"
             />
+
+            {/* Navigation - Previous / Next */}
+            <nav className="flex items-center justify-between mt-8 pt-6 border-t border-border">
+              {adjacentNews?.prev ? (
+                <Link to={`/news/${article.country.code.toLowerCase()}/${adjacentNews.prev.slug}`}>
+                  <Button variant="outline" className="gap-2">
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline max-w-[150px] truncate">
+                      {language === 'en' ? (adjacentNews.prev.title_en || adjacentNews.prev.title) : adjacentNews.prev.title}
+                    </span>
+                    <span className="sm:hidden">
+                      {language === 'en' ? 'Previous' : language === 'pl' ? 'Poprzedni' : 'Попередня'}
+                    </span>
+                  </Button>
+                </Link>
+              ) : (
+                <div />
+              )}
+              
+              <Link to={`/news-digest?country=${article.country.code}`}>
+                <Button variant="ghost" size="sm" className="text-xs">
+                  {article.country.flag} {language === 'en' ? 'All news' : language === 'pl' ? 'Wszystkie' : 'Всі новини'}
+                </Button>
+              </Link>
+              
+              {adjacentNews?.next ? (
+                <Link to={`/news/${article.country.code.toLowerCase()}/${adjacentNews.next.slug}`}>
+                  <Button variant="outline" className="gap-2">
+                    <span className="hidden sm:inline max-w-[150px] truncate">
+                      {language === 'en' ? (adjacentNews.next.title_en || adjacentNews.next.title) : adjacentNews.next.title}
+                    </span>
+                    <span className="sm:hidden">
+                      {language === 'en' ? 'Next' : language === 'pl' ? 'Następny' : 'Наступна'}
+                    </span>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+              ) : (
+                <div />
+              )}
+            </nav>
           </div>
 
           {/* Sidebar */}

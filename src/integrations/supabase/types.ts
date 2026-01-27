@@ -486,6 +486,7 @@ export type Database = {
           title_hi: string | null
           title_ta: string | null
           title_te: string | null
+          tweets: Json | null
           url: string
         }
         Insert: {
@@ -521,6 +522,7 @@ export type Database = {
           title_hi?: string | null
           title_ta?: string | null
           title_te?: string | null
+          tweets?: Json | null
           url: string
         }
         Update: {
@@ -556,6 +558,7 @@ export type Database = {
           title_hi?: string | null
           title_ta?: string | null
           title_te?: string | null
+          tweets?: Json | null
           url?: string
         }
         Relationships: [
