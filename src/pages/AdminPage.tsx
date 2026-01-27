@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock, Archive, Map } from "lucide-react";
+import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock, Archive, Map, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import { NewsDigestPanel } from "@/components/NewsDigestPanel";
 import { CronJobsPanel } from "@/components/CronJobsPanel";
 import { NewsArchivePanel } from "@/components/NewsArchivePanel";
 import { SitemapManagementPanel } from "@/components/SitemapManagementPanel";
+import { SEOAuditPanel } from "@/components/SEOAuditPanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -722,6 +723,10 @@ export default function AdminPage() {
               <Map className="w-4 h-4 text-blue-500" />
               Сайтмапи
             </TabsTrigger>
+            <TabsTrigger value="seo" className="gap-2">
+              <Search className="w-4 h-4 text-purple-500" />
+              SEO
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               Налаштування
@@ -782,6 +787,10 @@ export default function AdminPage() {
 
           <TabsContent value="sitemaps" className="mt-6">
             <SitemapManagementPanel />
+          </TabsContent>
+
+          <TabsContent value="seo" className="mt-6">
+            <SEOAuditPanel password={password} />
           </TabsContent>
 
           <TabsContent value="settings" className="mt-6">

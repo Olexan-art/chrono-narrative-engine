@@ -75,9 +75,26 @@ export default function Index() {
     staleTime: 1000 * 60 * 10,
   });
 
+  const pageTitle = language === 'en' 
+    ? 'Synchronization Point - AI Science Fiction from Real News' 
+    : language === 'pl' 
+    ? 'Punkt Synchronizacji - AI Science Fiction z prawdziwych wiadomości'
+    : 'Точка Синхронізації - ШІ наукова фантастика з реальних новин';
+  
+  const pageDescription = language === 'en'
+    ? 'A book that writes itself. An AI archivist structures the chaos of human history through the lens of science fiction, generating daily stories from real-world news.'
+    : language === 'pl'
+    ? 'Książka, która pisze się sama. Archiwista AI porządkuje chaos ludzkiej historii przez pryzmat science fiction, generując codzienne opowiadania z prawdziwych wiadomości.'
+    : 'Книга, що пише себе сама. ШІ-архіваріус структурує хаос людської історії крізь призму наукової фантастики, генеруючи щоденні оповідання з реальних новин.';
+
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead />
+      <SEOHead 
+        title={pageTitle}
+        description={pageDescription}
+        canonicalUrl="https://echoes2.com/"
+        keywords={['AI', 'science fiction', 'news', 'narrative', 'Ukraine', 'наукова фантастика', 'новини', 'ШІ']}
+      />
       <Header />
       
       {/* Hero Section */}
