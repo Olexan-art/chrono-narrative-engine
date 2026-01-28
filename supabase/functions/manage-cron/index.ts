@@ -14,6 +14,8 @@ const RSS_SCHEDULES = {
   '6hours': '0 */6 * * *',
 };
 
+const CACHE_SCHEDULE = '0 */6 * * *'; // Every 6 hours
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -205,6 +207,66 @@ serve(async (req) => {
               error: 'Could not query cron jobs directly'
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      case 'setup_cache_cron': {
+        // Set up cache refresh cron job (every 6 hours)
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const adminPassword = Deno.env.get('ADMIN_PASSWORD') || '1907';
+        
+        try {
+          // Try to unschedule existing job first
+          await supabase.rpc('exec_sql', {
+            sql: "SELECT cron.unschedule('refresh-cache-6hours')"
+          });
+        } catch {
+          console.log('No existing cache cron job, continuing...');
+        }
+        
+        try {
+          const cronCommand = `
+            SELECT net.http_get(
+              url:='${supabaseUrl}/functions/v1/cache-pages?action=refresh-all&password=${adminPassword}',
+              headers:='{"Content-Type": "application/json"}'::jsonb
+            ) as request_id;
+          `;
+          
+          await supabase.rpc('exec_sql', {
+            sql: `SELECT cron.schedule('refresh-cache-6hours', '${CACHE_SCHEDULE}', $$${cronCommand}$$)`
+          });
+          
+          console.log('Cache cron job scheduled successfully');
+          
+          return new Response(
+            JSON.stringify({ success: true, message: 'Cache refresh cron job scheduled every 6 hours' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error('Error setting up cache cron:', error);
+          return new Response(
+            JSON.stringify({ error: 'Failed to set up cache cron job' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      case 'remove_cache_cron': {
+        try {
+          await supabase.rpc('exec_sql', {
+            sql: "SELECT cron.unschedule('refresh-cache-6hours')"
+          });
+          
+          return new Response(
+            JSON.stringify({ success: true, message: 'Cache cron job removed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error('Error removing cache cron:', error);
+          return new Response(
+            JSON.stringify({ error: 'Failed to remove cache cron job' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
       }
