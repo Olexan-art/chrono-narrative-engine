@@ -4,11 +4,11 @@
 # Traditional Search Engines
 User-agent: Googlebot
 Allow: /
-Crawl-delay: 1
+
 
 User-agent: Bingbot
 Allow: /
-Crawl-delay: 1
+
 
 User-agent: Yandex
 Allow: /
