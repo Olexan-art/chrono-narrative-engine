@@ -83,14 +83,14 @@
   </head>
 
   <body>
-    <!-- SEO Content for Crawlers (hidden when JS loads) -->
-    <div id="seo-content" style="font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-      <header>
+    <!-- SEO Content for Crawlers - VISIBLE BY DEFAULT for bots, hidden by React -->
+    <div id="seo-content">
+      <header style="font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
         <h1>Synchronization Point | Точка Синхронізації</h1>
         <p><strong>AI Archive of Human History</strong> — A book that writes itself through AI-generated science fiction based on real news events.</p>
       </header>
       
-      <main>
+      <main style="font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
         <section>
           <h2>About the Project</h2>
           <p>Synchronization Point is an innovative AI-powered storytelling platform that transforms daily news into compelling science fiction narratives. Our AI archivist structures the chaos of human history, creating a continuous narrative that reflects our world through a speculative lens.</p>
@@ -148,7 +148,7 @@
         </section>
       </main>
       
-      <footer>
+      <footer style="font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
         <p>© 2024-2025 Synchronization Point. AI-generated content based on real news events.</p>
         <p>Contact: <a href="https://echoes2.com">echoes2.com</a></p>
       </footer>
@@ -159,30 +159,38 @@
     
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Hide SEO content when React loads -->
+    <!-- Hide SEO content ONLY after React successfully mounts -->
     <script>
-      // Hide static SEO content once React hydrates
-      if (document.getElementById('root')) {
-        var checkReact = setInterval(function() {
-          if (document.getElementById('root').children.length > 0) {
-            var seoContent = document.getElementById('seo-content');
-            if (seoContent) seoContent.style.display = 'none';
-            clearInterval(checkReact);
-          }
-        }, 100);
-        // Fallback: hide after 3 seconds anyway
-        setTimeout(function() {
-          var seoContent = document.getElementById('seo-content');
-          if (seoContent) seoContent.style.display = 'none';
-          clearInterval(checkReact);
-        }, 3000);
-      }
+      (function() {
+        var seoContent = document.getElementById('seo-content');
+        var root = document.getElementById('root');
+        if (root && seoContent) {
+          // Use MutationObserver for reliable detection
+          var observer = new MutationObserver(function(mutations) {
+            if (root.children.length > 0) {
+              seoContent.style.display = 'none';
+              observer.disconnect();
+            }
+          });
+          observer.observe(root, { childList: true });
+          
+          // Fallback timeout - but only hide if React actually loaded
+          setTimeout(function() {
+            if (root.children.length > 0) {
+              seoContent.style.display = 'none';
+            }
+            observer.disconnect();
+          }, 5000);
+        }
+      })();
     </script>
     
-    <!-- Noscript fallback -->
+    <!-- Noscript fallback - show SEO content, hide React root -->
     <noscript>
       <style>#root { display: none; }</style>
-      <p>This website requires JavaScript to function. Please enable JavaScript or use a modern browser.</p>
+      <p style="font-family: system-ui, sans-serif; padding: 20px;">
+        This website requires JavaScript to function. Please enable JavaScript or use a modern browser.
+      </p>
     </noscript>
   </body>
 </html>
