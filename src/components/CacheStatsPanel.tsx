@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Loader2, Database, Clock, HardDrive, Zap, Calendar, FileText, Settings2 } from "lucide-react";
+import { RefreshCw, Loader2, Database, Clock, HardDrive, Zap, Calendar, FileText, Settings2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,10 +30,29 @@ interface CacheStats {
   }>;
 }
 
+interface CacheRefreshLog {
+  path: string;
+  success: boolean;
+  timeMs?: number;
+  error?: string;
+  timestamp: Date;
+}
+
 export function CacheStatsPanel({ password }: Props) {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSettingUpCron, setIsSettingUpCron] = useState(false);
+  const [refreshLogs, setRefreshLogs] = useState<CacheRefreshLog[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
+  const [refreshStats, setRefreshStats] = useState<{ total: number; successful: number; failed: number } | null>(null);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll logs to bottom
+  useEffect(() => {
+    if (logsEndRef.current && showLogs) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [refreshLogs, showLogs]);
 
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -87,7 +106,18 @@ export function CacheStatsPanel({ password }: Props) {
 
   const handleRefreshCache = async () => {
     setIsRefreshing(true);
+    setRefreshLogs([]);
+    setRefreshStats(null);
+    setShowLogs(true);
+    
     try {
+      // Add initial log entry
+      setRefreshLogs([{ 
+        path: 'Запуск оновлення кешу...', 
+        success: true, 
+        timestamp: new Date() 
+      }]);
+
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/cache-pages?action=refresh-all&password=${password}`,
         {
@@ -103,10 +133,34 @@ export function CacheStatsPanel({ password }: Props) {
       }
 
       const result = await response.json();
+      
+      // Process results and add to logs
+      if (result.results && Array.isArray(result.results)) {
+        const logs: CacheRefreshLog[] = result.results.map((r: { path: string; success: boolean; timeMs?: number; error?: string }) => ({
+          path: r.path,
+          success: r.success,
+          timeMs: r.timeMs,
+          error: r.error,
+          timestamp: new Date(),
+        }));
+        setRefreshLogs(prev => [...prev.slice(0, 1), ...logs]);
+      }
+
+      setRefreshStats({
+        total: result.total || 0,
+        successful: result.successful || 0,
+        failed: result.failed || 0,
+      });
+
       toast.success(`Кеш оновлено: ${result.successful}/${result.total} сторінок`);
       queryClient.invalidateQueries({ queryKey: ['cache-stats'] });
     } catch (error) {
       console.error('Failed to refresh cache:', error);
+      setRefreshLogs(prev => [...prev, { 
+        path: `Помилка: ${error instanceof Error ? error.message : 'Невідома помилка'}`, 
+        success: false, 
+        timestamp: new Date() 
+      }]);
       toast.error('Не вдалося оновити кеш');
     } finally {
       setIsRefreshing(false);
@@ -170,6 +224,87 @@ export function CacheStatsPanel({ password }: Props) {
           {isRefreshing ? 'Оновлюється...' : 'Оновити кеш'}
         </Button>
       </div>
+
+      {/* Real-time Refresh Logs */}
+      {showLogs && (
+        <Card className="cosmic-card border-primary/30">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                {isRefreshing && (
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                  </span>
+                )}
+                <Database className="w-4 h-4" />
+                Лог оновлення кешу
+              </CardTitle>
+              {refreshStats && (
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="flex items-center gap-1 text-green-500">
+                    <CheckCircle2 className="w-4 h-4" />
+                    {refreshStats.successful}
+                  </span>
+                  {refreshStats.failed > 0 && (
+                    <span className="flex items-center gap-1 text-destructive">
+                      <XCircle className="w-4 h-4" />
+                      {refreshStats.failed}
+                    </span>
+                  )}
+                  <span className="text-muted-foreground">
+                    / {refreshStats.total}
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="max-h-[300px] overflow-y-auto space-y-1 font-mono text-xs bg-muted/30 rounded-lg p-3">
+              {refreshLogs.map((log, i) => (
+                <div 
+                  key={i} 
+                  className={`flex items-start gap-2 py-1 animate-fade-in ${
+                    i === 0 ? 'text-muted-foreground' : ''
+                  }`}
+                >
+                  {i === 0 ? (
+                    <AlertCircle className="w-3 h-3 mt-0.5 text-primary shrink-0" />
+                  ) : log.success ? (
+                    <CheckCircle2 className="w-3 h-3 mt-0.5 text-green-500 shrink-0" />
+                  ) : (
+                    <XCircle className="w-3 h-3 mt-0.5 text-destructive shrink-0" />
+                  )}
+                  <span className="flex-1 break-all">
+                    {log.path}
+                    {log.timeMs && (
+                      <span className="text-muted-foreground ml-2">({log.timeMs}ms)</span>
+                    )}
+                    {log.error && (
+                      <span className="text-destructive ml-2">— {log.error}</span>
+                    )}
+                  </span>
+                </div>
+              ))}
+              {isRefreshing && refreshLogs.length <= 1 && (
+                <div className="flex items-center gap-2 py-1 text-muted-foreground">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Завантаження сторінок...</span>
+                </div>
+              )}
+              <div ref={logsEndRef} />
+            </div>
+            {!isRefreshing && refreshStats && (
+              <div className="mt-3 pt-3 border-t border-border/50 text-sm text-muted-foreground">
+                Оновлено {refreshStats.successful} з {refreshStats.total} сторінок
+                {refreshStats.failed > 0 && (
+                  <span className="text-destructive"> ({refreshStats.failed} помилок)</span>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {!cacheStats ? (
         <Card className="cosmic-card border-amber-500/30">
