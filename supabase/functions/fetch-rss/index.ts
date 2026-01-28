@@ -55,9 +55,26 @@ function parseRSSDate(dateStr: string): Date | null {
   }
 }
 
+// Decode HTML entities in text
+function decodeHTMLEntities(text: string): string {
+  return text
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#(\d+);/gi, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&#x([a-fA-F0-9]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)));
+}
+
 // Generate URL-friendly slug from title
 function generateSlug(title: string): string {
-  return title
+  // First decode HTML entities
+  const decodedTitle = decodeHTMLEntities(title);
+  
+  return decodedTitle
     .toLowerCase()
     .replace(/[^\w\s-]/g, '') // Remove special characters
     .replace(/\s+/g, '-') // Replace spaces with hyphens
