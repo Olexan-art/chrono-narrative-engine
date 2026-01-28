@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Database, CheckCircle2, XCircle, TrendingUp, RefreshCw, Loader2, Globe, Zap, Play, ExternalLink } from "lucide-react";
+import { Database, CheckCircle2, XCircle, TrendingUp, RefreshCw, Loader2, Globe, Zap, Play, ExternalLink, Bot } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -154,7 +154,8 @@ export function BotCacheAnalyticsPanel({ password }: { password: string }) {
       hitRate: 0, 
       avgHitTime: 0, 
       avgMissTime: 0,
-      timeSaved: 0
+      timeSaved: 0,
+      byBot: {} as Record<string, { total: number; hits: number; misses: number }>
     };
 
     const hits = visits.filter(v => v.cache_status === 'HIT');
@@ -170,6 +171,17 @@ export function BotCacheAnalyticsPanel({ password }: { password: string }) {
     // Time saved = hits * (avg miss time - avg hit time)
     const timeSaved = hits.length * (avgMissTime - avgHitTime);
 
+    // Stats by bot type
+    const byBot: Record<string, { total: number; hits: number; misses: number }> = {};
+    visits.forEach(v => {
+      if (!byBot[v.bot_type]) {
+        byBot[v.bot_type] = { total: 0, hits: 0, misses: 0 };
+      }
+      byBot[v.bot_type].total++;
+      if (v.cache_status === 'HIT') byBot[v.bot_type].hits++;
+      else if (v.cache_status === 'MISS') byBot[v.bot_type].misses++;
+    });
+
     return {
       total: visits.length,
       hits: hits.length,
@@ -178,6 +190,7 @@ export function BotCacheAnalyticsPanel({ password }: { password: string }) {
       avgHitTime,
       avgMissTime,
       timeSaved: Math.round(timeSaved / 1000), // in seconds
+      byBot
     };
   }, [visits]);
 
@@ -263,6 +276,21 @@ export function BotCacheAnalyticsPanel({ password }: { password: string }) {
       MISS: p.misses,
     }));
   }, [topPaths]);
+
+  // Bot stats for bar chart
+  const botStatsData = useMemo(() => {
+    return Object.entries(stats.byBot)
+      .map(([name, data]) => ({
+        name: name.length > 15 ? name.substring(0, 15) + '...' : name,
+        fullName: name,
+        HIT: data.hits,
+        MISS: data.misses,
+        total: data.total,
+        hitRate: data.total > 0 ? Math.round((data.hits / data.total) * 100) : 0
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+  }, [stats.byBot]);
 
   if (isLoading) {
     return (
@@ -559,6 +587,52 @@ export function BotCacheAnalyticsPanel({ password }: { password: string }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Bot Stats Bar Chart */}
+      <Card className="cosmic-card">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bot className="w-4 h-4" />
+            Статистика по ботах (HIT/MISS)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {botStatsData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={botStatsData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis 
+                  dataKey="name" 
+                  type="category" 
+                  stroke="hsl(var(--muted-foreground))" 
+                  fontSize={10} 
+                  width={120}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }}
+                  formatter={(value: number, name: string) => [value, name]}
+                  labelFormatter={(label) => {
+                    const bot = botStatsData.find(d => d.name === label);
+                    return bot ? `${bot.fullName} (${bot.hitRate}% HIT)` : label;
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="HIT" stackId="a" fill={CACHE_COLORS.HIT} radius={[0, 0, 0, 0]} />
+                <Bar dataKey="MISS" stackId="a" fill={CACHE_COLORS.MISS} radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[350px] text-muted-foreground">
+              Немає даних
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Top Paths Bar Chart */}
       <Card className="cosmic-card">

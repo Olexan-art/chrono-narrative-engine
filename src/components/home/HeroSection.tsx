@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Link } from "react-router-dom";
-import { BookOpen, Calendar, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroTweets } from "@/components/HeroTweets";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -34,20 +34,12 @@ export const HeroSection = memo(function HeroSection({ latestParts }: HeroSectio
             </p>
             
             <div className="flex flex-wrap gap-2 md:gap-3 justify-center lg:justify-start">
-              <Link to="/calendar">
+              <Link to="/news/us">
                 <Button size="sm" className="gap-2 text-xs md:text-sm transition-all duration-300 hover:scale-105 active:scale-95">
-                  <Calendar className="w-3 h-3 md:w-4 md:h-4" />
-                  {t('hero.archive')}
+                  <Sparkles className="w-3 h-3 md:w-4 md:h-4" />
+                  {t('hero.allUsNews')}
                 </Button>
               </Link>
-              {latestParts[0] && (
-                <Link to={`/read/${latestParts[0].date}`}>
-                  <Button size="sm" variant="outline" className="gap-2 text-xs md:text-sm transition-all duration-300 hover:scale-105 active:scale-95">
-                    <BookOpen className="w-3 h-3 md:w-4 md:h-4" />
-                    {t('hero.latest')}
-                  </Button>
-                </Link>
-              )}
             </div>
           </div>
 

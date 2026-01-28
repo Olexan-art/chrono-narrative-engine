@@ -23,6 +23,7 @@ const translations: Record<Language, Record<string, string>> = {
     'hero.description': 'Книга, що пише сама себе. Архіватор структурує хаос людської історії через призму наукової фантастики.',
     'hero.archive': 'Переглянути архів',
     'hero.latest': 'Читати останнє',
+    'hero.allUsNews': 'Усі новини USA',
     
     // Structure
     'structure.month': 'МІСЯЦЬ → ТОМ',
@@ -192,6 +193,7 @@ const translations: Record<Language, Record<string, string>> = {
     'hero.description': 'A book that writes itself. An AI archivist structures the chaos of human history through the lens of science fiction.',
     'hero.archive': 'Browse Archive',
     'hero.latest': 'Read Latest',
+    'hero.allUsNews': 'All USA News',
     
     // Structure
     'structure.month': 'MONTH → VOLUME',
@@ -361,6 +363,7 @@ const translations: Record<Language, Record<string, string>> = {
     'hero.description': 'Książka, która pisze się sama. Archiwista AI strukturyzuje chaos ludzkiej historii przez pryzmat fantastyki naukowej.',
     'hero.archive': 'Przeglądaj Archiwum',
     'hero.latest': 'Czytaj Najnowsze',
+    'hero.allUsNews': 'Wszystkie wiadomości USA',
     
     // Structure
     'structure.month': 'MIESIĄC → TOM',
