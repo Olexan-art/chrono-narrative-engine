@@ -818,6 +818,7 @@ export type Database = {
           news_tweet_count: number | null
           openai_api_key: string | null
           updated_at: string | null
+          zai_api_key: string | null
         }
         Insert: {
           anthropic_api_key?: string | null
@@ -858,6 +859,7 @@ export type Database = {
           news_tweet_count?: number | null
           openai_api_key?: string | null
           updated_at?: string | null
+          zai_api_key?: string | null
         }
         Update: {
           anthropic_api_key?: string | null
@@ -898,6 +900,7 @@ export type Database = {
           news_tweet_count?: number | null
           openai_api_key?: string | null
           updated_at?: string | null
+          zai_api_key?: string | null
         }
         Relationships: []
       }
