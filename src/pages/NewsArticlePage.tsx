@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
 import { NewsDialogueSection } from "@/components/NewsDialogueSection";
+import { RelatedCountryNews } from "@/components/RelatedCountryNews";
 import { NewsTweetCard } from "@/components/NewsTweetCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -467,7 +468,7 @@ export default function NewsArticlePage() {
                 <div />
               )}
               
-              <Link to={`/news-digest?country=${article.country.code}`}>
+              <Link to={`/news/${article.country.code.toLowerCase()}`}>
                 <Button variant="ghost" size="sm" className="text-xs">
                   {article.country.flag} {language === 'en' ? 'All news' : language === 'pl' ? 'Wszystkie' : 'Всі новини'}
                 </Button>
@@ -489,6 +490,16 @@ export default function NewsArticlePage() {
                 <div />
               )}
             </nav>
+
+            {/* Related Country News - MOBILE ONLY */}
+            <RelatedCountryNews
+              countryId={article.country_id}
+              countryCode={article.country.code}
+              countryName={countryName}
+              countryFlag={article.country.flag}
+              currentArticleId={article.id}
+              className="mt-8 lg:hidden"
+            />
           </div>
 
           {/* Sidebar */}
@@ -593,6 +604,16 @@ export default function NewsArticlePage() {
               isAdminAuthenticated={isAdminAuthenticated}
               isGenerating={generateDialogueMutation.isPending}
               onGenerateDialogue={() => generateDialogueMutation.mutate()}
+              className="hidden lg:block"
+            />
+
+            {/* Related Country News - DESKTOP ONLY */}
+            <RelatedCountryNews
+              countryId={article.country_id}
+              countryCode={article.country.code}
+              countryName={countryName}
+              countryFlag={article.country.flag}
+              currentArticleId={article.id}
               className="hidden lg:block"
             />
           </aside>
