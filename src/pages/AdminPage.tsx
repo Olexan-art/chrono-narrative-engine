@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock, Archive, Map, Search, Activity } from "lucide-react";
+import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock, Archive, Map, Search, Activity, ChartArea } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,6 @@ import { Header } from "@/components/Header";
 import { GenerationPanel } from "@/components/GenerationPanel";
 import { WeekGenerationPanel } from "@/components/WeekGenerationPanel";
 import { ChaptersPanel } from "@/components/ChaptersPanel";
-import { AnalyticsPanel } from "@/components/AnalyticsPanel";
 import { SEOHead } from "@/components/SEOHead";
 import CharactersPanel from "@/components/CharactersPanel";
 import DialogueManagementPanel from "@/components/DialogueManagementPanel";
@@ -27,6 +26,7 @@ import { NewsArchivePanel } from "@/components/NewsArchivePanel";
 import { SitemapManagementPanel } from "@/components/SitemapManagementPanel";
 import { SEOAuditPanel } from "@/components/SEOAuditPanel";
 import { BotVisitsPanel } from "@/components/BotVisitsPanel";
+import { StatisticsPanel } from "@/components/StatisticsPanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -701,6 +701,10 @@ export default function AdminPage() {
           <TabsList className="flex flex-wrap gap-1 h-auto py-2">
             <TabsTrigger value="dashboard" className="gap-2">
               <BarChart3 className="w-4 h-4" />
+              Дашборд
+            </TabsTrigger>
+            <TabsTrigger value="statistics" className="gap-2">
+              <ChartArea className="w-4 h-4 text-primary" />
               Статистика
             </TabsTrigger>
             <TabsTrigger value="generate" className="gap-2">
@@ -739,10 +743,6 @@ export default function AdminPage() {
               <Globe className="w-4 h-4 text-cyan-500" />
               Кротовиина
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="gap-2">
-              <TrendingUp className="w-4 h-4" />
-              Аналітика
-            </TabsTrigger>
             <TabsTrigger value="cron" className="gap-2">
               <Clock className="w-4 h-4 text-green-500" />
               Cron Jobs
@@ -771,6 +771,10 @@ export default function AdminPage() {
 
           <TabsContent value="dashboard" className="mt-6">
             <DashboardPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="statistics" className="mt-6">
+            <StatisticsPanel password={password} />
           </TabsContent>
 
           <TabsContent value="generate" className="mt-6">
@@ -807,10 +811,6 @@ export default function AdminPage() {
 
           <TabsContent value="newsdigest" className="mt-6">
             <NewsDigestPanel password={password} />
-          </TabsContent>
-
-          <TabsContent value="analytics" className="mt-6">
-            <AnalyticsPanel password={password} />
           </TabsContent>
 
           <TabsContent value="cron" className="mt-6">
