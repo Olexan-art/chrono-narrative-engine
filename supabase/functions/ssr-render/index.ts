@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const path = url.searchParams.get("path") || "/";
     const lang = url.searchParams.get("lang") || "uk";
+    const useCache = url.searchParams.get("cache") !== "false"; // Default: use cache
     const userAgent = req.headers.get("user-agent") || "";
     const referer = req.headers.get("referer");
 
@@ -129,6 +130,27 @@ Deno.serve(async (req) => {
     if (botInfo) {
       // Log asynchronously - don't wait
       logBotVisit(supabase, botInfo, path, userAgent, referer, startTime);
+    }
+
+    // Try to serve from cache first (if enabled)
+    if (useCache) {
+      const { data: cached } = await supabase
+        .from("cached_pages")
+        .select("html, expires_at")
+        .eq("path", path)
+        .maybeSingle();
+
+      if (cached && new Date(cached.expires_at) > new Date()) {
+        console.log(`Serving cached page for ${path}`);
+        return new Response(cached.html, {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=3600, s-maxage=86400",
+            "X-Cache": "HIT",
+          },
+        });
+      }
     }
 
     // Parse the path to determine content type
@@ -280,6 +302,7 @@ Deno.serve(async (req) => {
         ...corsHeaders,
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "public, max-age=3600, s-maxage=86400",
+        "X-Cache": "MISS",
       },
     });
   } catch (error) {

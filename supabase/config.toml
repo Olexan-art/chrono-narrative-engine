@@ -88,3 +88,12 @@ verify_jwt = false
 
 [functions.news-sitemap]
 verify_jwt = false
+
+[functions.cache-pages]
+verify_jwt = false
+
+[functions.ping-sitemap]
+verify_jwt = false
+
+[functions.retell-news]
+verify_jwt = false

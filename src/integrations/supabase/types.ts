@@ -53,6 +53,48 @@ export type Database = {
         }
         Relationships: []
       }
+      cached_pages: {
+        Row: {
+          canonical_url: string | null
+          created_at: string
+          description: string | null
+          expires_at: string
+          generation_time_ms: number | null
+          html: string
+          html_size_bytes: number | null
+          id: string
+          path: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          canonical_url?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string
+          generation_time_ms?: number | null
+          html: string
+          html_size_bytes?: number | null
+          id?: string
+          path: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          canonical_url?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string
+          generation_time_ms?: number | null
+          html?: string
+          html_size_bytes?: number | null
+          id?: string
+          path?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chapters: {
         Row: {
           chat_dialogue: Json | null
