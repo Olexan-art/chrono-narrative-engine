@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshCw, Loader2, TrendingUp, Eye, BarChart3, FileText, BookOpen, Library, Bot, Activity, Sparkles, Globe, Clock, Calendar, Users, MessageSquare, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +51,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 export function StatisticsPanel({ password }: Props) {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [viewsTimeRange, setViewsTimeRange] = useState<'24h' | '7d' | '14d' | '30d'>('14d');
 
   // Dashboard stats
   const { data: dashboardStats, isLoading: dashboardLoading } = useQuery({
@@ -136,25 +138,35 @@ export function StatisticsPanel({ password }: Props) {
     }
   });
 
-  // Daily views chart
+  // Daily views chart with dynamic range
   const { data: dailyViews = [] } = useQuery({
-    queryKey: ['statistics-daily-views'],
+    queryKey: ['statistics-daily-views', viewsTimeRange],
     queryFn: async () => {
+      const daysCount = viewsTimeRange === '24h' ? 1 : viewsTimeRange === '7d' ? 7 : viewsTimeRange === '14d' ? 14 : 30;
       const endDate = format(new Date(), 'yyyy-MM-dd');
-      const startDate = format(subDays(new Date(), 13), 'yyyy-MM-dd');
+      const startDate = format(subDays(new Date(), daysCount - 1), 'yyyy-MM-dd');
 
       const { data } = await supabase
         .from('daily_views')
-        .select('view_date, views, entity_type')
+        .select('view_date, views, entity_type, entity_id')
         .gte('view_date', startDate)
         .lte('view_date', endDate)
         .order('view_date', { ascending: true });
 
-      const grouped: Record<string, { date: string; parts: number; chapters: number; volumes: number; total: number }> = {};
+      // Fetch country info for news items
+      const { data: countries } = await supabase
+        .from('news_countries')
+        .select('id, code, name, flag')
+        .eq('is_active', true);
+
+      const countriesMap = new Map(countries?.map(c => [c.id, c]) || []);
+
+      // Aggregate by date
+      const grouped: Record<string, { date: string; parts: number; chapters: number; volumes: number; news: number; total: number }> = {};
       
-      for (let i = 0; i < 14; i++) {
-        const d = format(subDays(new Date(), 13 - i), 'yyyy-MM-dd');
-        grouped[d] = { date: d, parts: 0, chapters: 0, volumes: 0, total: 0 };
+      for (let i = 0; i < daysCount; i++) {
+        const d = format(subDays(new Date(), daysCount - 1 - i), 'yyyy-MM-dd');
+        grouped[d] = { date: d, parts: 0, chapters: 0, volumes: 0, news: 0, total: 0 };
       }
 
       for (const row of (data || [])) {
@@ -162,11 +174,63 @@ export function StatisticsPanel({ password }: Props) {
           if (row.entity_type === 'part') grouped[row.view_date].parts += row.views;
           else if (row.entity_type === 'chapter') grouped[row.view_date].chapters += row.views;
           else if (row.entity_type === 'volume') grouped[row.view_date].volumes += row.views;
+          else if (row.entity_type === 'news') grouped[row.view_date].news += row.views;
           grouped[row.view_date].total += row.views;
         }
       }
 
       return Object.values(grouped).map(d => ({ ...d, label: format(new Date(d.date), 'd MMM', { locale: uk }) }));
+    }
+  });
+
+  // News views by country
+  const { data: newsViewsByCountry = [] } = useQuery({
+    queryKey: ['statistics-news-views-by-country', viewsTimeRange],
+    queryFn: async () => {
+      const daysCount = viewsTimeRange === '24h' ? 1 : viewsTimeRange === '7d' ? 7 : viewsTimeRange === '14d' ? 14 : 30;
+      const startDate = format(subDays(new Date(), daysCount - 1), 'yyyy-MM-dd');
+
+      // Get all news views
+      const { data: newsViews } = await supabase
+        .from('daily_views')
+        .select('entity_id, views')
+        .eq('entity_type', 'news')
+        .gte('view_date', startDate);
+
+      if (!newsViews?.length) return [];
+
+      // Get news items with country info
+      const newsIds = [...new Set(newsViews.map(v => v.entity_id))];
+      const { data: newsItems } = await supabase
+        .from('news_rss_items')
+        .select('id, country_id')
+        .in('id', newsIds);
+
+      const { data: countries } = await supabase
+        .from('news_countries')
+        .select('id, code, name, flag')
+        .eq('is_active', true);
+
+      const newsCountryMap = new Map(newsItems?.map(n => [n.id, n.country_id]) || []);
+      const countriesMap = new Map(countries?.map(c => [c.id, c]) || []);
+
+      // Aggregate views by country
+      const byCountry: Record<string, { id: string; code: string; name: string; flag: string; views: number }> = {};
+      
+      for (const view of newsViews) {
+        const countryId = newsCountryMap.get(view.entity_id);
+        if (countryId) {
+          const country = countriesMap.get(countryId);
+          if (country) {
+            if (!byCountry[country.code]) {
+              byCountry[country.code] = { ...country, views: 0 };
+            }
+            byCountry[country.code].views += view.views;
+          }
+        }
+      }
+
+      return Object.values(byCountry).sort((a, b) => b.views - a.views);
     }
   });
 
@@ -266,6 +330,7 @@ export function StatisticsPanel({ password }: Props) {
       queryClient.invalidateQueries({ queryKey: ['statistics-dashboard'] }),
       queryClient.invalidateQueries({ queryKey: ['statistics-views'] }),
       queryClient.invalidateQueries({ queryKey: ['statistics-daily-views'] }),
+      queryClient.invalidateQueries({ queryKey: ['statistics-news-views-by-country'] }),
       queryClient.invalidateQueries({ queryKey: ['statistics-top-content'] }),
       queryClient.invalidateQueries({ queryKey: ['statistics-auto-gen'] }),
       queryClient.invalidateQueries({ queryKey: ['statistics-bots'] }),
@@ -275,9 +340,12 @@ export function StatisticsPanel({ password }: Props) {
 
   const chartConfig = {
     parts: { label: "Оповідання", color: "hsl(var(--primary))" },
-    chapters: { label: "Глави", color: "hsl(var(--secondary))" },
-    volumes: { label: "Томи", color: "hsl(var(--accent))" },
+    chapters: { label: "Глави", color: "hsl(var(--primary) / 0.6)" },
+    volumes: { label: "Томи", color: "hsl(var(--primary) / 0.4)" },
+    news: { label: "Новини", color: "hsl(var(--chart-2))" },
   };
+
+  const viewsTimeRangeLabel = viewsTimeRange === '24h' ? '24 години' : viewsTimeRange === '7d' ? '7 днів' : viewsTimeRange === '14d' ? '14 днів' : '30 днів';
 
   if (dashboardLoading) {
     return (
@@ -435,12 +503,25 @@ export function StatisticsPanel({ password }: Props) {
 
       {/* Daily Views Chart */}
       <Card className="cosmic-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            Перегляди за 14 днів
-          </CardTitle>
-          <CardDescription>Динаміка переглядів контенту</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              Перегляди за {viewsTimeRangeLabel}
+            </CardTitle>
+            <CardDescription>Динаміка переглядів контенту та новин</CardDescription>
+          </div>
+          <Select value={viewsTimeRange} onValueChange={(v) => setViewsTimeRange(v as any)}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="24h">24 години</SelectItem>
+              <SelectItem value="7d">7 днів</SelectItem>
+              <SelectItem value="14d">14 днів</SelectItem>
+              <SelectItem value="30d">30 днів</SelectItem>
+            </SelectContent>
+          </Select>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px]">
@@ -451,16 +532,72 @@ export function StatisticsPanel({ password }: Props) {
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="parts" name="Оповідання" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} stackId="a" />
                 <Bar dataKey="chapters" name="Глави" fill="hsl(var(--primary) / 0.6)" radius={[4, 4, 0, 0]} stackId="a" />
-                <Bar dataKey="volumes" name="Томи" fill="hsl(var(--primary) / 0.3)" radius={[4, 4, 0, 0]} stackId="a" />
+                <Bar dataKey="volumes" name="Томи" fill="hsl(var(--primary) / 0.4)" radius={[4, 4, 0, 0]} stackId="a" />
+                <Bar dataKey="news" name="Новини" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} stackId="a" />
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
+          
+          {/* News Views by Country */}
+          {newsViewsByCountry.length > 0 && (
+            <div className="mt-6 pt-4 border-t border-border">
+              <p className="text-sm font-medium text-muted-foreground mb-3">Перегляди новин по країнах:</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {newsViewsByCountry.map((country) => (
+                  <div key={country.code} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{country.flag}</span>
+                      <span className="text-sm font-medium">{country.code.toUpperCase()}</span>
+                    </div>
+                    <Badge variant="secondary" className="font-mono">{country.views}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
+      {/* Bot Stats Bar Chart - same as in BotCacheAnalyticsPanel */}
+      {botStats && botStats.topBots && botStats.topBots.length > 0 && (
+        <Card className="cosmic-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Bot className="w-4 h-4 text-emerald-500" />
+              Статистика ботів (7 днів)
+            </CardTitle>
+            <CardDescription>Топ боти по кількості запитів</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={botStats.topBots.slice(0, 8)} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis 
+                  dataKey="name" 
+                  type="category" 
+                  stroke="hsl(var(--muted-foreground))" 
+                  fontSize={10} 
+                  width={120}
+                  tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Bar dataKey="value" name="Запитів" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Bot Stats & News by Country Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Bot Visits */}
+        {/* Bot Visits Daily */}
         <Card className="cosmic-card">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -488,18 +625,6 @@ export function StatisticsPanel({ password }: Props) {
                         <Area type="monotone" dataKey="visits" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.2)" />
                       </AreaChart>
                     </ResponsiveContainer>
-                  </div>
-                )}
-
-                {botStats.topBots && botStats.topBots.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground mb-2">Топ боти:</p>
-                    {botStats.topBots.slice(0, 3).map((bot: { name: string; value: number }) => (
-                      <div key={bot.name} className="flex items-center justify-between text-sm">
-                        <span className="truncate max-w-[150px]">{bot.name}</span>
-                        <span className="font-mono">{bot.value}</span>
-                      </div>
-                    ))}
                   </div>
                 )}
               </div>
