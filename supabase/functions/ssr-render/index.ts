@@ -135,8 +135,10 @@ Deno.serve(async (req) => {
     const readMatch = path.match(/^\/read\/(\d{4}-\d{2}-\d{2})\/(\d+)$/);
     const chapterMatch = path.match(/^\/chapter\/([a-f0-9-]+)$/);
     const dateMatch = path.match(/^\/date\/(\d{4}-\d{2}-\d{2})$/);
-    // News article match: /us/some-slug or /ua/some-slug
-    const newsMatch = path.match(/^\/([a-z]{2})\/([a-z0-9-]+)$/);
+    // News article match: /news/us/some-slug
+    const newsArticleMatch = path.match(/^\/news\/([a-z]{2})\/([a-z0-9-]+)$/);
+    // News country list: /news/us or /news/ua
+    const newsCountryMatch = path.match(/^\/news\/([a-z]{2})$/);
 
     let html = "";
     let title = "Точка Синхронізації";
@@ -188,9 +190,9 @@ Deno.serve(async (req) => {
 
         html = generateChapterHTML(chapter, lang, canonicalUrl);
       }
-    } else if (newsMatch) {
-      // News article page
-      const [, countryCode, slug] = newsMatch;
+    } else if (newsArticleMatch) {
+      // News article page: /news/us/slug
+      const [, countryCode, slug] = newsArticleMatch;
       
       const { data: newsItem } = await supabase
         .from("news_rss_items")
@@ -204,6 +206,33 @@ Deno.serve(async (req) => {
         image = newsItem.image_url || image;
         
         html = generateNewsHTML(newsItem, lang, canonicalUrl);
+      }
+    } else if (newsCountryMatch) {
+      // News country listing page: /news/us
+      const [, countryCode] = newsCountryMatch;
+      
+      // Fetch country info - use ilike for case-insensitive match
+      const { data: country } = await supabase
+        .from("news_countries")
+        .select("*")
+        .ilike("code", countryCode)
+        .maybeSingle();
+      
+      // Fetch recent news for this country
+      const { data: newsItems } = await supabase
+        .from("news_rss_items")
+        .select("*, country:news_countries(*)")
+        .eq("country_id", country?.id)
+        .eq("is_archived", false)
+        .order("published_at", { ascending: false })
+        .limit(30);
+
+      if (country) {
+        const countryName = country.name_en || country.name;
+        title = `${country.flag} ${countryName} News | Synchronization Point`;
+        description = `Latest news from ${countryName}. AI-curated news digest with retelling and character dialogues.`;
+        
+        html = generateNewsCountryHTML(newsItems || [], country, lang, canonicalUrl);
       }
     } else if (dateMatch) {
       // Date stories page
@@ -511,6 +540,44 @@ function generateHomeHTML(parts: any[], lang: string, canonicalUrl: string) {
       <a href="https://echoes2.com/calendar">📅 Calendar Archive</a> |
       <a href="https://echoes2.com/chapters">📚 Chapters</a> |
       <a href="https://echoes2.com/volumes">📖 Volumes</a>
+    </nav>
+  `;
+}
+
+function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, canonicalUrl: string) {
+  const countryName = country?.name_en || country?.name || "News";
+  const flag = country?.flag || "";
+
+  return `
+    <h2>${flag} ${escapeHtml(countryName)} News</h2>
+    <p>${newsItems.length} articles</p>
+    
+    <ul itemscope itemtype="https://schema.org/ItemList">
+      ${newsItems.map((item, index) => {
+        const title = item.title_en || item.title;
+        const date = item.published_at ? new Date(item.published_at).toLocaleDateString() : "";
+        const slug = item.slug || "";
+        const countryCode = country?.code || "us";
+        
+        return `
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="${index + 1}">
+            <a href="https://echoes2.com/news/${countryCode}/${slug}" itemprop="url">
+              <span itemprop="name">${escapeHtml(title)}</span>
+            </a>
+            ${date ? `<span class="meta"> - ${date}</span>` : ""}
+            ${item.category ? ` <span class="category">[${escapeHtml(item.category)}]</span>` : ""}
+          </li>
+        `;
+      }).join("")}
+    </ul>
+    
+    <nav>
+      <a href="https://echoes2.com/news">← All Countries</a> |
+      <a href="https://echoes2.com/news/us">🇺🇸 USA</a> |
+      <a href="https://echoes2.com/news/ua">🇺🇦 Ukraine</a> |
+      <a href="https://echoes2.com/news/pl">🇵🇱 Poland</a> |
+      <a href="https://echoes2.com/news/in">🇮🇳 India</a>
     </nav>
   `;
 }
