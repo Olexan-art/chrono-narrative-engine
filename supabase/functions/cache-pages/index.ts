@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-password',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-password, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 const BASE_URL = 'https://echoes2.com';
@@ -186,7 +186,9 @@ async function getAllPagesToCache(
       const uniqueDates = [...new Set(dates.map((d: { date: string }) => d.date))];
       console.log(`Found ${uniqueDates.length} unique dates to cache`);
       for (const date of uniqueDates) {
+        // Both routes exist in the SPA; cache both so bots/tools can index either URL.
         pages.push(`/read/${date}`);
+        pages.push(`/date/${date}`);
       }
     }
   }

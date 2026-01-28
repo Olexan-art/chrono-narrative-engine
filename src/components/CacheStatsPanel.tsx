@@ -72,7 +72,6 @@ export function CacheStatsPanel({ password }: Props) {
           `${SUPABASE_URL}/functions/v1/cache-pages?action=stats&password=${password}`,
           {
             method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
           }
         );
 
@@ -101,8 +100,11 @@ export function CacheStatsPanel({ password }: Props) {
           body: JSON.stringify({ action: 'get_cache_cron_status', password }),
         });
         
-        if (!response.ok) throw new Error('Failed to get cron status');
-        return response.json();
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
+        }
+        return data;
       } catch {
         return { enabled: false, frequency: '6hours' };
       }
@@ -135,7 +137,6 @@ export function CacheStatsPanel({ password }: Props) {
         `${SUPABASE_URL}/functions/v1/cache-pages?action=${action}&password=${password}`,
         {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
         }
       );
 
@@ -205,7 +206,8 @@ export function CacheStatsPanel({ password }: Props) {
         }),
       });
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
 
       const labels: Record<string, string> = {
         '6hours': '6 годин',
@@ -217,7 +219,7 @@ export function CacheStatsPanel({ password }: Props) {
       queryClient.invalidateQueries({ queryKey: ['cache-cron-status'] });
     } catch (error) {
       console.error('Failed to set cache cron:', error);
-      toast.error('Не вдалося налаштувати автооновлення');
+      toast.error(`Не вдалося налаштувати автооновлення: ${error instanceof Error ? error.message : 'помилка'}`);
     } finally {
       setIsSettingUpCron(false);
     }
@@ -232,13 +234,14 @@ export function CacheStatsPanel({ password }: Props) {
         body: JSON.stringify({ action: 'remove_cache_cron', password }),
       });
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
 
       toast.success('Автооновлення вимкнено');
       queryClient.invalidateQueries({ queryKey: ['cache-cron-status'] });
     } catch (error) {
       console.error('Failed to remove cache cron:', error);
-      toast.error('Не вдалося вимкнути автооновлення');
+      toast.error(`Не вдалося вимкнути автооновлення: ${error instanceof Error ? error.message : 'помилка'}`);
     } finally {
       setIsSettingUpCron(false);
     }
