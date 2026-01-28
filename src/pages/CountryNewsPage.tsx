@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
+import { OtherCountriesNews } from "@/components/OtherCountriesNews";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -420,6 +421,11 @@ export default function CountryNewsPage() {
             </p>
           )}
         </div>
+
+        {/* Cross-linking: News from Other Countries */}
+        {countryCode && (
+          <OtherCountriesNews excludeCountryCode={countryCode} />
+        )}
       </main>
     </div>
   );
