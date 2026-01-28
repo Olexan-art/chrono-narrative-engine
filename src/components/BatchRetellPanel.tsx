@@ -27,6 +27,9 @@ const AI_MODELS = [
   { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (точний)' },
   { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini' },
   { value: 'openai/gpt-5', label: 'GPT-5 (потужний)' },
+  { value: 'GLM-4.7', label: 'Z.AI GLM-4.7 (найпотужніший)', provider: 'zai' },
+  { value: 'GLM-4.7-Flash', label: 'Z.AI GLM-4.7-Flash (швидкий)', provider: 'zai' },
+  { value: 'GLM-4.5-Air', label: 'Z.AI GLM-4.5-Air (легкий)', provider: 'zai' },
 ];
 
 interface LogEntry {
