@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           bot_category: string
           bot_type: string
+          cache_status: string | null
           created_at: string
           id: string
           ip_country: string | null
@@ -30,6 +31,7 @@ export type Database = {
         Insert: {
           bot_category: string
           bot_type: string
+          cache_status?: string | null
           created_at?: string
           id?: string
           ip_country?: string | null
@@ -42,6 +44,7 @@ export type Database = {
         Update: {
           bot_category?: string
           bot_type?: string
+          cache_status?: string | null
           created_at?: string
           id?: string
           ip_country?: string | null

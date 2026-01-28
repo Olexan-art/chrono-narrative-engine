@@ -85,7 +85,8 @@ async function logBotVisit(
   path: string, 
   userAgent: string,
   referer: string | null,
-  startTime: number
+  startTime: number,
+  cacheStatus: 'HIT' | 'MISS'
 ) {
   try {
     const responseTime = Date.now() - startTime;
@@ -97,10 +98,11 @@ async function logBotVisit(
       user_agent: userAgent?.substring(0, 500),
       referer: referer?.substring(0, 500),
       response_time_ms: responseTime,
-      status_code: 200
+      status_code: 200,
+      cache_status: cacheStatus
     });
     
-    console.log(`Bot visit logged: ${botInfo.type} (${botInfo.category}) -> ${path}`);
+    console.log(`Bot visit logged: ${botInfo.type} (${botInfo.category}) -> ${path} [${cacheStatus}]`);
   } catch (error) {
     console.error('Failed to log bot visit:', error);
   }
@@ -125,12 +127,8 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Detect and log bot visit
+    // Detect bot
     const botInfo = detectBot(userAgent);
-    if (botInfo) {
-      // Log asynchronously - don't wait
-      logBotVisit(supabase, botInfo, path, userAgent, referer, startTime);
-    }
 
     // Try to serve from cache first (if enabled)
     if (useCache) {
@@ -141,7 +139,13 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (cached && new Date(cached.expires_at) > new Date()) {
-        console.log(`Serving cached page for ${path}`);
+        console.log(`Serving cached page for ${path} [CACHE HIT]`);
+        
+        // Log bot visit with CACHE HIT
+        if (botInfo) {
+          logBotVisit(supabase, botInfo, path, userAgent, referer, startTime, 'HIT');
+        }
+        
         return new Response(cached.html, {
           headers: {
             ...corsHeaders,
@@ -151,6 +155,11 @@ Deno.serve(async (req) => {
           },
         });
       }
+    }
+    
+    // Log bot visit with CACHE MISS (will generate fresh content)
+    if (botInfo) {
+      logBotVisit(supabase, botInfo, path, userAgent, referer, startTime, 'MISS');
     }
 
     // Parse the path to determine content type
