@@ -44,7 +44,7 @@ export const LatestUsaNews = memo(function LatestUsaNews() {
         .not('content_en', 'is', null)
         .not('slug', 'is', null)
         .order('published_at', { ascending: false })
-        .limit(3);
+        .limit(6);
 
       return (news || []).map(item => ({
         ...item,
@@ -77,7 +77,7 @@ export const LatestUsaNews = memo(function LatestUsaNews() {
           <span className="text-xl">🇺🇸</span>
           <span className="text-xs font-mono text-primary uppercase tracking-wider flex items-center gap-1">
             <Sparkles className="w-3 h-3" />
-            {language === 'en' ? 'AI Retold from USA' : 'AI Переказ з США'}
+            Full retelling
           </span>
         </div>
 
@@ -112,7 +112,7 @@ export const LatestUsaNews = memo(function LatestUsaNews() {
                     <div className="flex items-center gap-1.5 mb-1">
                       <span className="inline-flex items-center text-[10px] px-1 py-0 h-4 border border-primary/30 text-primary rounded-sm">
                         <Sparkles className="w-2 h-2 mr-0.5" />
-                        {language === 'en' ? 'Retold' : 'Переказ'}
+                        Full retelling
                       </span>
                       {item.category && (
                         <span className="inline-flex items-center text-[10px] px-1 py-0 h-4 bg-secondary text-secondary-foreground rounded-sm">
