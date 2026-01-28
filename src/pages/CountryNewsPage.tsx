@@ -354,7 +354,7 @@ export default function CountryNewsPage() {
                           <div className="absolute top-2 left-2">
                             <Badge className="bg-primary/90 text-primary-foreground gap-1">
                               <Sparkles className="w-3 h-3" />
-                              AI
+                              Full retelling
                             </Badge>
                           </div>
                         )}
