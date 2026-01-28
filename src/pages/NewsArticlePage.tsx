@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
-import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter } from "lucide-react";
+import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +27,9 @@ const AI_MODELS = [
   { value: 'google/gemini-3-pro-preview', label: 'Gemini 3 Pro' },
   { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini' },
   { value: 'openai/gpt-5', label: 'GPT-5 (потужний)' },
+  { value: 'GLM-4.7', label: 'Z.AI GLM-4.7 (найпотужніший)', provider: 'zai' },
+  { value: 'GLM-4.7-Flash', label: 'Z.AI GLM-4.7-Flash (швидкий)', provider: 'zai' },
+  { value: 'GLM-4.5-Air', label: 'Z.AI GLM-4.5-Air (легкий)', provider: 'zai' },
 ];
 export default function NewsArticlePage() {
   const { country, slug } = useParams<{ country: string; slug: string }>();
@@ -35,6 +38,7 @@ export default function NewsArticlePage() {
   const queryClient = useQueryClient();
   const { isAuthenticated: isAdminAuthenticated } = useAdminStore();
   const [selectedModel, setSelectedModel] = useState(AI_MODELS[0].value);
+  const [selectedTweetModel, setSelectedTweetModel] = useState(AI_MODELS[0].value);
 
   // Fetch news article by country code and slug
   const { data: article, isLoading } = useQuery({
@@ -175,7 +179,7 @@ export default function NewsArticlePage() {
       if (!article) throw new Error('No article');
       
       const contentLanguage = detectNewsLanguage();
-      console.log('Generating tweets in language:', contentLanguage);
+      console.log('Generating tweets in language:', contentLanguage, 'with model:', selectedTweetModel);
       
       const result = await callEdgeFunction<{
         success: boolean;
@@ -191,7 +195,9 @@ export default function NewsArticlePage() {
         newsContext: `Source: ${article.feed?.name || 'RSS'}, Category: ${article.category || article.feed?.category || 'general'}`,
         generateTweets: true,
         tweetCount: 4,
-        contentLanguage
+        contentLanguage,
+        model: selectedTweetModel,
+        isHypeTweet: true
       });
       
       if (!result.success) throw new Error('Tweet generation failed');
@@ -205,7 +211,7 @@ export default function NewsArticlePage() {
       return result.tweets;
     },
     onSuccess: () => {
-      toast.success(language === 'en' ? 'Tweets generated' : language === 'pl' ? 'Tweety wygenerowane' : 'Твіти згенеровано');
+      toast.success(language === 'en' ? 'Hype tweet generated!' : language === 'pl' ? 'Hype tweet wygenerowany!' : 'Хайповий твіт згенеровано!');
       queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] });
     },
     onError: (error) => {
@@ -564,24 +570,48 @@ export default function NewsArticlePage() {
                   </CardContent>
                 </Card>
 
-                {/* Generate Story Card */}
-                <Card className="border-primary/30 bg-primary/5">
+                {/* Generate Hype Tweet Card */}
+                <Card className="border-orange-500/30 bg-orange-500/5">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-primary" />
-                      {t('news.create_story')}
+                      <Flame className="w-4 h-4 text-orange-500" />
+                      {language === 'en' ? 'Hype Tweet' : language === 'pl' ? 'Hype Tweet' : 'Хайповий твіт'}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {t('news.create_story_desc')}
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'en' 
+                        ? 'Generate a viral tweet based on this news' 
+                        : language === 'pl' 
+                        ? 'Wygeneruj wiralowego tweeta na podstawie tej wiadomości'
+                        : 'Згенерувати вірусний твіт на основі цієї новини'}
                     </p>
+                    <Select value={selectedTweetModel} onValueChange={setSelectedTweetModel}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={t('news.select_model')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AI_MODELS.map(model => (
+                          <SelectItem key={model.value} value={model.value}>
+                            {model.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button 
                       className="w-full gap-2"
-                      onClick={() => generateStoryMutation.mutate()}
+                      variant="secondary"
+                      onClick={() => generateTweetsMutation.mutate()}
+                      disabled={generateTweetsMutation.isPending}
                     >
-                      <Sparkles className="w-4 h-4" />
-                      {t('news.generate_story')}
+                      {generateTweetsMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Flame className="w-4 h-4" />
+                      )}
+                      {generateTweetsMutation.isPending 
+                        ? (language === 'en' ? 'Generating...' : language === 'pl' ? 'Generowanie...' : 'Генерація...')
+                        : (language === 'en' ? 'Generate Hype Tweet' : language === 'pl' ? 'Generuj Hype Tweet' : 'Генерувати хайповий твіт')}
                     </Button>
                   </CardContent>
                 </Card>

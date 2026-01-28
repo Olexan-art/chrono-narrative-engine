@@ -261,7 +261,9 @@ serve(async (req) => {
       chapterId,
       generateTweets = false,
       tweetCount = 4,
-      contentLanguage = 'uk' // Language of the news content: 'uk', 'en', 'hi', 'ta', 'te', 'bn', etc.
+      contentLanguage = 'uk', // Language of the news content: 'uk', 'en', 'hi', 'ta', 'te', 'bn', etc.
+      model, // Override model for generation
+      isHypeTweet = false // Generate viral/hype style tweets
     } = await req.json();
 
     const supabase = createClient(
@@ -276,15 +278,30 @@ serve(async (req) => {
       .limit(1)
       .single();
 
-    const llmSettings: LLMSettings = settingsData || {
-      llm_provider: 'lovable',
-      llm_text_provider: null,
-      llm_text_model: 'google/gemini-3-flash-preview',
-      openai_api_key: null,
-      gemini_api_key: null,
-      anthropic_api_key: null,
-      zai_api_key: null
+    const llmSettings: LLMSettings = {
+      llm_provider: settingsData?.llm_provider || 'lovable',
+      llm_text_provider: settingsData?.llm_text_provider || null,
+      llm_text_model: model || settingsData?.llm_text_model || 'google/gemini-3-flash-preview',
+      openai_api_key: settingsData?.openai_api_key || null,
+      gemini_api_key: settingsData?.gemini_api_key || null,
+      anthropic_api_key: settingsData?.anthropic_api_key || null,
+      zai_api_key: settingsData?.zai_api_key || null
     };
+
+    // Determine provider from model if specified
+    if (model) {
+      if (model.startsWith('GLM-')) {
+        llmSettings.llm_text_provider = 'zai';
+      } else if (model.startsWith('google/') || model.startsWith('openai/')) {
+        llmSettings.llm_text_provider = 'lovable';
+      } else if (model.startsWith('gpt-')) {
+        llmSettings.llm_text_provider = 'openai';
+      } else if (model.startsWith('gemini-')) {
+        llmSettings.llm_text_provider = 'gemini';
+      } else if (model.startsWith('claude-')) {
+        llmSettings.llm_text_provider = 'anthropic';
+      }
+    }
 
     // Fetch all active characters
     const { data: charactersData } = await supabase
@@ -531,18 +548,37 @@ ${thirdCharacter ? `Include the unexpected appearance of ${thirdCharacter.name}.
     let tweets_pl = null;
     
     if (generateTweets && tweetCount > 0) {
-      console.log('Generating tweets in language:', contentLanguage);
+      console.log('Generating tweets in language:', contentLanguage, 'hype mode:', isHypeTweet);
       
+      // Hype tweet style additions
+      const hypeStyleUk = isHypeTweet ? `
+5. Твіти мають бути ВІРУСНИМИ - провокативними, емоційними, з hook на початку
+6. Використовуй смайли 🔥💀🚨😱 для привернення уваги
+7. Короткі речення, максимум впливу
+8. Стиль Twitter/X хайпу - наче це може стати вірусним` : '';
+      
+      const hypeStyleEn = isHypeTweet ? `
+5. Tweets must be VIRAL - provocative, emotional, with a hook at the start
+6. Use emojis 🔥💀🚨😱 for attention
+7. Short punchy sentences, maximum impact
+8. Twitter/X hype style - like it could go viral` : '';
+      
+      const hypeStylePl = isHypeTweet ? `
+5. Tweety muszą być WIRALOWE - prowokacyjne, emocjonalne, z haczykiem na początku
+6. Używaj emoji 🔥💀🚨😱 dla przyciągnięcia uwagi
+7. Krótkie zdania, maksymalny wpływ
+8. Styl hype'u Twitter/X - jakby mogło stać się wiralowe` : '';
+
       // Language-specific tweet prompts
       const tweetPrompts: Record<string, { system: string; user: string }> = {
         'uk': {
-          system: `Ти генеруєш твіти для сатиричного науково-фантастичного проекту "Точка Синхронізації".
+          system: `Ти генеруєш ${isHypeTweet ? 'ХАЙПОВІ вірусні ' : ''}твіти для сатиричного науково-фантастичного проекту "Точка Синхронізації".
 
 ПРАВИЛА:
 1. Згенеруй ${tweetCount} твітів УКРАЇНСЬКОЮ мовою
 2. Твіти мають бути дотепними, сатиричними коментарями про події
 3. Кожен твіт має унікального автора з креативним ніком
-4. Формат handle: @творчий_нік (латиницею)
+4. Формат handle: @творчий_нік (латиницею)${hypeStyleUk}
 
 ФОРМАТ ВІДПОВІДІ (JSON):
 {
@@ -550,16 +586,16 @@ ${thirdCharacter ? `Include the unexpected appearance of ${thirdCharacter.name}.
     {"author": "Ім'я Автора", "handle": "@нік", "content": "Твіт українською", "likes": 1234, "retweets": 567}
   ]
 }`,
-          user: `Згенеруй ${tweetCount} унікальних твітів УКРАЇНСЬКОЮ з дотепними коментарями про ці новини.`
+          user: `Згенеруй ${tweetCount} унікальних ${isHypeTweet ? 'ХАЙПОВИХ вірусних ' : ''}твітів УКРАЇНСЬКОЮ з дотепними коментарями про ці новини.`
         },
         'en': {
-          system: `You are generating tweets for the satirical sci-fi project "Synchronization Point".
+          system: `You are generating ${isHypeTweet ? 'VIRAL HYPE ' : ''}tweets for the satirical sci-fi project "Synchronization Point".
 
 RULES:
 1. Generate ${tweetCount} tweets in ENGLISH
 2. Tweets should be witty, satirical comments about the events
 3. Each tweet has a unique author with a creative handle
-4. Handle format: @creative_handle
+4. Handle format: @creative_handle${hypeStyleEn}
 
 RESPONSE FORMAT (JSON):
 {
@@ -567,16 +603,16 @@ RESPONSE FORMAT (JSON):
     {"author": "Author Name", "handle": "@handle", "content": "Tweet in English", "likes": 1234, "retweets": 567}
   ]
 }`,
-          user: `Generate ${tweetCount} unique ENGLISH tweets with witty comments about this news.`
+          user: `Generate ${tweetCount} unique ${isHypeTweet ? 'VIRAL HYPE ' : ''}ENGLISH tweets with witty comments about this news.`
         },
         'pl': {
-          system: `Generujesz tweety dla satyrycznego projektu science fiction "Punkt Synchronizacji".
+          system: `Generujesz ${isHypeTweet ? 'WIRALOWE ' : ''}tweety dla satyrycznego projektu science fiction "Punkt Synchronizacji".
 
 ZASADY:
 1. Wygeneruj ${tweetCount} tweetów po POLSKU
 2. Tweety powinny być dowcipne, satyryczne komentarze o wydarzeniach
 3. Każdy tweet ma unikalnego autora z kreatywnym nickiem
-4. Format handle: @kreatywny_nick
+4. Format handle: @kreatywny_nick${hypeStylePl}
 
 FORMAT ODPOWIEDZI (JSON):
 {
@@ -584,7 +620,7 @@ FORMAT ODPOWIEDZI (JSON):
     {"author": "Imię Autora", "handle": "@nick", "content": "Tweet po polsku", "likes": 1234, "retweets": 567}
   ]
 }`,
-          user: `Wygeneruj ${tweetCount} unikalnych tweetów PO POLSKU z dowcipnymi komentarzami o tych wiadomościach.`
+          user: `Wygeneruj ${tweetCount} unikalnych ${isHypeTweet ? 'WIRALOWYCH ' : ''}tweetów PO POLSKU z dowcipnymi komentarzami o tych wiadomościach.`
         },
         'hi': {
           system: `आप व्यंग्यपूर्ण साइंस-फ़िक्शन प्रोजेक्ट "सिंक्रनाइज़ेशन पॉइंट" के लिए ट्वीट्स बना रहे हैं।
