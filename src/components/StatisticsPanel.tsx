@@ -12,6 +12,7 @@ import { uk } from "date-fns/locale";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { AutoGenChart } from "@/components/AutoGenChart";
+import { CacheStatsPanel } from "@/components/CacheStatsPanel";
 
 interface Props {
   password: string;
@@ -542,6 +543,9 @@ export function StatisticsPanel({ password }: Props) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cache Stats Panel */}
+      <CacheStatsPanel password={password} />
 
       {/* Top Content */}
       <Card className="cosmic-card">
