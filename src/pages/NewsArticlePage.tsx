@@ -492,6 +492,12 @@ export default function NewsArticlePage() {
               )}
             </nav>
 
+            {/* Other Countries News - After navigation */}
+            <OtherCountriesNews
+              excludeCountryCode={article.country.code}
+              className="mt-8"
+            />
+
             {/* Related Country News - MOBILE ONLY */}
             <RelatedCountryNews
               countryId={article.country_id}
@@ -500,12 +506,6 @@ export default function NewsArticlePage() {
               countryFlag={article.country.flag}
               currentArticleId={article.id}
               className="mt-8 lg:hidden"
-            />
-
-            {/* Other Countries News - MOBILE ONLY */}
-            <OtherCountriesNews
-              excludeCountryCode={article.country.code}
-              className="lg:hidden"
             />
           </div>
 
@@ -621,12 +621,6 @@ export default function NewsArticlePage() {
               countryName={countryName}
               countryFlag={article.country.flag}
               currentArticleId={article.id}
-              className="hidden lg:block"
-            />
-
-            {/* Other Countries News - DESKTOP ONLY */}
-            <OtherCountriesNews
-              excludeCountryCode={article.country.code}
               className="hidden lg:block"
             />
           </aside>
