@@ -6,7 +6,7 @@ export type NarrativeSpecial = 'conspiratorial' | 'transmedia' | 'personal' | 'c
 export type StoryStatus = 'draft' | 'scheduled' | 'published';
 export type PartCategory = 'story' | 'just_business';
 
-export type LLMProvider = 'lovable' | 'openai' | 'gemini' | 'anthropic';
+export type LLMProvider = 'lovable' | 'openai' | 'gemini' | 'anthropic' | 'zai';
 
 export interface Settings {
   id: string;
@@ -30,6 +30,7 @@ export interface Settings {
   openai_api_key: string | null;
   gemini_api_key: string | null;
   anthropic_api_key: string | null;
+  zai_api_key: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -77,6 +78,14 @@ export const LLM_MODELS = {
       { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
       { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
       { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
+    ],
+    image: []
+  },
+  zai: {
+    text: [
+      { value: 'GLM-4.7', label: 'GLM-4.7 (найпотужніший)' },
+      { value: 'GLM-4.7-Flash', label: 'GLM-4.7-Flash (швидкий)' },
+      { value: 'GLM-4.5-Air', label: 'GLM-4.5-Air (легкий)' },
     ],
     image: []
   }
