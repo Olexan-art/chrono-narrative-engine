@@ -1,15 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Loader2, Database, Clock, HardDrive, Zap, Calendar, FileText, Settings2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { RefreshCw, Loader2, Database, Clock, HardDrive, Zap, Calendar, FileText, Settings2, CheckCircle2, XCircle, AlertCircle, Newspaper, Timer, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface Props {
   password: string;
@@ -36,21 +37,27 @@ interface CacheRefreshLog {
   timeMs?: number;
   error?: string;
   timestamp: Date;
+  isHeader?: boolean;
 }
+
+type RefreshAction = 'refresh-all' | 'refresh-recent' | 'refresh-news';
 
 export function CacheStatsPanel({ password }: Props) {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentAction, setCurrentAction] = useState<RefreshAction | null>(null);
   const [isSettingUpCron, setIsSettingUpCron] = useState(false);
   const [refreshLogs, setRefreshLogs] = useState<CacheRefreshLog[]>([]);
   const [showLogs, setShowLogs] = useState(false);
   const [refreshStats, setRefreshStats] = useState<{ total: number; successful: number; failed: number } | null>(null);
+  const [currentProgress, setCurrentProgress] = useState(0);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const logsContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll logs to bottom
+  // Auto-scroll logs to bottom with smooth animation
   useEffect(() => {
-    if (logsEndRef.current && showLogs) {
-      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (logsContainerRef.current && showLogs) {
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
     }
   }, [refreshLogs, showLogs]);
 
@@ -65,17 +72,12 @@ export function CacheStatsPanel({ password }: Props) {
           `${SUPABASE_URL}/functions/v1/cache-pages?action=stats&password=${password}`,
           {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
           }
         );
 
         if (!response.ok) {
-          if (response.status === 404) {
-            // Function not deployed yet
-            return null;
-          }
+          if (response.status === 404) return null;
           throw new Error(`HTTP ${response.status}`);
         }
 
@@ -85,65 +87,81 @@ export function CacheStatsPanel({ password }: Props) {
         return null;
       }
     },
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 60000,
   });
 
-  // Check if cache cron is enabled by looking at cron jobs
+  // Check cache cron status with frequency
   const { data: cronStatus } = useQuery({
     queryKey: ['cache-cron-status'],
     queryFn: async () => {
       try {
-        const { data } = await supabase.rpc('exec_sql', {
-          sql: "SELECT jobname FROM cron.job WHERE jobname = 'refresh-cache-6hours' LIMIT 1"
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-cron`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_cache_cron_status', password }),
         });
-        const jobs = data as Array<{ jobname: string }> | null;
-        return { enabled: jobs && jobs.length > 0 };
+        
+        if (!response.ok) throw new Error('Failed to get cron status');
+        return response.json();
       } catch {
-        return { enabled: false };
+        return { enabled: false, frequency: '6hours' };
       }
     }
   });
 
-  const handleRefreshCache = async () => {
+  const handleRefreshCache = async (action: RefreshAction) => {
     setIsRefreshing(true);
+    setCurrentAction(action);
     setRefreshLogs([]);
     setRefreshStats(null);
     setShowLogs(true);
+    setCurrentProgress(0);
+    
+    const actionLabels: Record<RefreshAction, string> = {
+      'refresh-all': '🔄 Повне оновлення всіх сторінок...',
+      'refresh-recent': '⏰ Оновлення сторінок за 24 години...',
+      'refresh-news': '📰 Оновлення новин за 7 днів...',
+    };
     
     try {
-      // Add initial log entry
       setRefreshLogs([{ 
-        path: 'Запуск оновлення кешу...', 
+        path: actionLabels[action], 
         success: true, 
-        timestamp: new Date() 
+        timestamp: new Date(),
+        isHeader: true,
       }]);
 
       const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/cache-pages?action=refresh-all&password=${password}`,
+        `${SUPABASE_URL}/functions/v1/cache-pages?action=${action}&password=${password}`,
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const result = await response.json();
       
-      // Process results and add to logs
+      // Process results with staggered animation
       if (result.results && Array.isArray(result.results)) {
-        const logs: CacheRefreshLog[] = result.results.map((r: { path: string; success: boolean; timeMs?: number; error?: string }) => ({
-          path: r.path,
-          success: r.success,
-          timeMs: r.timeMs,
-          error: r.error,
-          timestamp: new Date(),
-        }));
-        setRefreshLogs(prev => [...prev.slice(0, 1), ...logs]);
+        const batchSize = 10;
+        for (let i = 0; i < result.results.length; i += batchSize) {
+          const batch = result.results.slice(i, i + batchSize);
+          const logs: CacheRefreshLog[] = batch.map((r: { path: string; success: boolean; timeMs?: number; error?: string }) => ({
+            path: r.path,
+            success: r.success,
+            timeMs: r.timeMs,
+            error: r.error,
+            timestamp: new Date(),
+          }));
+          
+          setRefreshLogs(prev => [...prev, ...logs]);
+          setCurrentProgress(Math.min(100, Math.round(((i + batchSize) / result.results.length) * 100)));
+          
+          // Small delay for visual effect
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
       }
 
       setRefreshStats({
@@ -152,47 +170,75 @@ export function CacheStatsPanel({ password }: Props) {
         failed: result.failed || 0,
       });
 
+      setCurrentProgress(100);
       toast.success(`Кеш оновлено: ${result.successful}/${result.total} сторінок`);
       queryClient.invalidateQueries({ queryKey: ['cache-stats'] });
     } catch (error) {
       console.error('Failed to refresh cache:', error);
       setRefreshLogs(prev => [...prev, { 
-        path: `Помилка: ${error instanceof Error ? error.message : 'Невідома помилка'}`, 
+        path: `❌ Помилка: ${error instanceof Error ? error.message : 'Невідома помилка'}`, 
         success: false, 
         timestamp: new Date() 
       }]);
       toast.error('Не вдалося оновити кеш');
     } finally {
       setIsRefreshing(false);
+      setCurrentAction(null);
     }
   };
 
-  const handleToggleCron = async (enabled: boolean) => {
+  const handleSetCronFrequency = async (frequency: string) => {
+    if (frequency === 'off') {
+      await handleRemoveCron();
+      return;
+    }
+    
     setIsSettingUpCron(true);
     try {
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/manage-cron`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: enabled ? 'setup_cache_cron' : 'remove_cache_cron',
-            password,
-          }),
-        }
-      );
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-cron`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'setup_cache_cron',
+          password,
+          data: { frequency },
+        }),
+      });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-      toast.success(enabled ? 'Автооновлення кешу увімкнено' : 'Автооновлення вимкнено');
+      const labels: Record<string, string> = {
+        '6hours': '6 годин',
+        '12hours': '12 годин',
+        '24hours': '24 години',
+      };
+      
+      toast.success(`Автооновлення: кожні ${labels[frequency]}`);
       queryClient.invalidateQueries({ queryKey: ['cache-cron-status'] });
     } catch (error) {
-      console.error('Failed to toggle cache cron:', error);
-      toast.error('Не вдалося змінити налаштування');
+      console.error('Failed to set cache cron:', error);
+      toast.error('Не вдалося налаштувати автооновлення');
+    } finally {
+      setIsSettingUpCron(false);
+    }
+  };
+
+  const handleRemoveCron = async () => {
+    setIsSettingUpCron(true);
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-cron`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove_cache_cron', password }),
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      toast.success('Автооновлення вимкнено');
+      queryClient.invalidateQueries({ queryKey: ['cache-cron-status'] });
+    } catch (error) {
+      console.error('Failed to remove cache cron:', error);
+      toast.error('Не вдалося вимкнути автооновлення');
     } finally {
       setIsSettingUpCron(false);
     }
@@ -208,26 +254,58 @@ export function CacheStatsPanel({ password }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header with Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
           <Database className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-semibold">Кеш HTML сторінок</h3>
         </div>
-        <Button 
-          onClick={handleRefreshCache} 
-          variant="default" 
-          size="sm" 
-          disabled={isRefreshing}
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? 'Оновлюється...' : 'Оновити кеш'}
-        </Button>
+        
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Main refresh button with dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="default" 
+                size="sm" 
+                disabled={isRefreshing}
+                className="min-w-[140px]"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Оновлюється...' : 'Оновити кеш'}
+                <ChevronDown className="w-4 h-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem 
+                onClick={() => handleRefreshCache('refresh-all')}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Все повністю
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleRefreshCache('refresh-recent')}
+                disabled={isRefreshing}
+              >
+                <Timer className="w-4 h-4 mr-2" />
+                За 24 години
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleRefreshCache('refresh-news')}
+                disabled={isRefreshing}
+              >
+                <Newspaper className="w-4 h-4 mr-2" />
+                Новини (7 днів)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Real-time Refresh Logs */}
       {showLogs && (
-        <Card className="cosmic-card border-primary/30">
+        <Card className="cosmic-card border-primary/30 overflow-hidden">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
@@ -238,47 +316,72 @@ export function CacheStatsPanel({ password }: Props) {
                   </span>
                 )}
                 <Database className="w-4 h-4" />
-                Лог оновлення кешу
+                Лог оновлення
               </CardTitle>
-              {refreshStats && (
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="flex items-center gap-1 text-green-500">
-                    <CheckCircle2 className="w-4 h-4" />
-                    {refreshStats.successful}
-                  </span>
-                  {refreshStats.failed > 0 && (
-                    <span className="flex items-center gap-1 text-destructive">
-                      <XCircle className="w-4 h-4" />
-                      {refreshStats.failed}
+              <div className="flex items-center gap-4">
+                {isRefreshing && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all duration-300 ease-out"
+                        style={{ width: `${currentProgress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs tabular-nums">{currentProgress}%</span>
+                  </div>
+                )}
+                {refreshStats && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="flex items-center gap-1 text-green-500">
+                      <CheckCircle2 className="w-4 h-4" />
+                      {refreshStats.successful}
                     </span>
-                  )}
-                  <span className="text-muted-foreground">
-                    / {refreshStats.total}
-                  </span>
-                </div>
-              )}
+                    {refreshStats.failed > 0 && (
+                      <span className="flex items-center gap-1 text-destructive">
+                        <XCircle className="w-4 h-4" />
+                        {refreshStats.failed}
+                      </span>
+                    )}
+                    <span className="text-muted-foreground">/ {refreshStats.total}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="max-h-[300px] overflow-y-auto space-y-1 font-mono text-xs bg-muted/30 rounded-lg p-3">
+            <div 
+              ref={logsContainerRef}
+              className="max-h-[350px] overflow-y-auto space-y-0.5 font-mono text-xs bg-background/50 rounded-lg p-3 border border-border/30"
+            >
               {refreshLogs.map((log, i) => (
                 <div 
                   key={i} 
-                  className={`flex items-start gap-2 py-1 animate-fade-in ${
-                    i === 0 ? 'text-muted-foreground' : ''
+                  className={`flex items-start gap-2 py-1 px-2 rounded transition-all duration-300 ${
+                    log.isHeader 
+                      ? 'bg-primary/10 text-primary font-medium' 
+                      : log.success 
+                        ? 'hover:bg-muted/30' 
+                        : 'bg-destructive/10 text-destructive'
                   }`}
+                  style={{
+                    animation: 'fadeSlideIn 0.3s ease-out forwards',
+                    animationDelay: `${Math.min(i * 20, 500)}ms`,
+                    opacity: 0,
+                  }}
                 >
-                  {i === 0 ? (
-                    <AlertCircle className="w-3 h-3 mt-0.5 text-primary shrink-0" />
+                  {log.isHeader ? (
+                    <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                   ) : log.success ? (
-                    <CheckCircle2 className="w-3 h-3 mt-0.5 text-green-500 shrink-0" />
+                    <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 text-green-500 shrink-0" />
                   ) : (
-                    <XCircle className="w-3 h-3 mt-0.5 text-destructive shrink-0" />
+                    <XCircle className="w-3.5 h-3.5 mt-0.5 text-destructive shrink-0" />
                   )}
                   <span className="flex-1 break-all">
                     {log.path}
                     {log.timeMs && (
-                      <span className="text-muted-foreground ml-2">({log.timeMs}ms)</span>
+                      <span className="text-muted-foreground ml-2 tabular-nums">
+                        ({log.timeMs}ms)
+                      </span>
                     )}
                     {log.error && (
                       <span className="text-destructive ml-2">— {log.error}</span>
@@ -287,19 +390,29 @@ export function CacheStatsPanel({ password }: Props) {
                 </div>
               ))}
               {isRefreshing && refreshLogs.length <= 1 && (
-                <div className="flex items-center gap-2 py-1 text-muted-foreground">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  <span>Завантаження сторінок...</span>
+                <div className="flex items-center gap-2 py-2 text-muted-foreground">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Завантаження списку сторінок...</span>
                 </div>
               )}
               <div ref={logsEndRef} />
             </div>
             {!isRefreshing && refreshStats && (
-              <div className="mt-3 pt-3 border-t border-border/50 text-sm text-muted-foreground">
-                Оновлено {refreshStats.successful} з {refreshStats.total} сторінок
-                {refreshStats.failed > 0 && (
-                  <span className="text-destructive"> ({refreshStats.failed} помилок)</span>
-                )}
+              <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  ✓ Оновлено {refreshStats.successful} з {refreshStats.total} сторінок
+                  {refreshStats.failed > 0 && (
+                    <span className="text-destructive"> ({refreshStats.failed} помилок)</span>
+                  )}
+                </span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowLogs(false)}
+                  className="text-xs"
+                >
+                  Сховати
+                </Button>
               </div>
             )}
           </CardContent>
@@ -312,7 +425,7 @@ export function CacheStatsPanel({ password }: Props) {
             <div className="text-center py-8">
               <Database className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
               <p className="text-muted-foreground mb-4">
-                Функція кешування ще не задеплоєна або недоступна
+                Функція кешування ще не задеплоєна
               </p>
               <p className="text-sm text-muted-foreground">
                 Опублікуйте проєкт щоб активувати кешування
@@ -364,16 +477,23 @@ export function CacheStatsPanel({ password }: Props) {
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-3">
                   <Settings2 className="w-5 h-5 text-purple-500" />
-                  <div className="flex items-center gap-2">
-                    <Switch 
-                      id="cache-cron"
-                      checked={cronStatus?.enabled || false}
-                      onCheckedChange={handleToggleCron}
+                  <div className="flex-1">
+                    <Label className="text-xs text-muted-foreground mb-1 block">Авто</Label>
+                    <Select
+                      value={cronStatus?.enabled ? cronStatus.frequency : 'off'}
+                      onValueChange={handleSetCronFrequency}
                       disabled={isSettingUpCron}
-                    />
-                    <Label htmlFor="cache-cron" className="text-xs text-muted-foreground">
-                      Авто (6г)
-                    </Label>
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Вимкнено" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="off">Вимкнено</SelectItem>
+                        <SelectItem value="6hours">6 годин</SelectItem>
+                        <SelectItem value="12hours">12 годин</SelectItem>
+                        <SelectItem value="24hours">24 години</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>
@@ -389,12 +509,12 @@ export function CacheStatsPanel({ password }: Props) {
                   Закешовані сторінки
                 </CardTitle>
                 <CardDescription>
-                  Останні оновлення кешу
+                  Останні {Math.min(cacheStats.pages.length, 30)} з {cacheStats.totalPages} сторінок
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="max-h-[400px] overflow-y-auto space-y-2">
-                  {cacheStats.pages.slice(0, 20).map((page, i) => (
+                  {cacheStats.pages.slice(0, 30).map((page, i) => (
                     <div 
                       key={i} 
                       className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
@@ -412,8 +532,11 @@ export function CacheStatsPanel({ password }: Props) {
                           <Calendar className="w-3 h-3" />
                           {format(new Date(page.updatedAt), 'd MMM HH:mm', { locale: uk })}
                         </div>
-                        <Badge variant={new Date(page.expiresAt) > new Date() ? 'secondary' : 'destructive'} className="text-xs">
-                          {new Date(page.expiresAt) > new Date() ? 'Активний' : 'Закінчився'}
+                        <Badge 
+                          variant={new Date(page.expiresAt) > new Date() ? 'secondary' : 'destructive'} 
+                          className="text-xs"
+                        >
+                          {new Date(page.expiresAt) > new Date() ? 'Активний' : 'Прострочено'}
                         </Badge>
                       </div>
                     </div>
@@ -424,6 +547,20 @@ export function CacheStatsPanel({ password }: Props) {
           )}
         </>
       )}
+
+      {/* CSS for animations */}
+      <style>{`
+        @keyframes fadeSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-4px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

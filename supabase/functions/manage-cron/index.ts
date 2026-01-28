@@ -14,7 +14,11 @@ const RSS_SCHEDULES = {
   '6hours': '0 */6 * * *',
 };
 
-const CACHE_SCHEDULE = '0 */6 * * *'; // Every 6 hours
+const CACHE_SCHEDULES: Record<string, string> = {
+  '6hours': '0 */6 * * *',
+  '12hours': '0 */12 * * *',
+  '24hours': '0 0 * * *',
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -212,14 +216,16 @@ serve(async (req) => {
       }
 
       case 'setup_cache_cron': {
-        // Set up cache refresh cron job (every 6 hours)
+        // Set up cache refresh cron job with configurable frequency
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const adminPassword = Deno.env.get('ADMIN_PASSWORD') || '1907';
+        const frequency = data?.frequency || '6hours';
+        const schedule = CACHE_SCHEDULES[frequency] || CACHE_SCHEDULES['6hours'];
         
         try {
           // Try to unschedule existing job first
           await supabase.rpc('exec_sql', {
-            sql: "SELECT cron.unschedule('refresh-cache-6hours')"
+            sql: "SELECT cron.unschedule('refresh-cache-auto')"
           });
         } catch {
           console.log('No existing cache cron job, continuing...');
@@ -234,13 +240,18 @@ serve(async (req) => {
           `;
           
           await supabase.rpc('exec_sql', {
-            sql: `SELECT cron.schedule('refresh-cache-6hours', '${CACHE_SCHEDULE}', $$${cronCommand}$$)`
+            sql: `SELECT cron.schedule('refresh-cache-auto', '${schedule}', $$${cronCommand}$$)`
           });
           
-          console.log('Cache cron job scheduled successfully');
+          console.log(`Cache cron job scheduled: ${frequency} (${schedule})`);
           
           return new Response(
-            JSON.stringify({ success: true, message: 'Cache refresh cron job scheduled every 6 hours' }),
+            JSON.stringify({ 
+              success: true, 
+              message: `Cache refresh scheduled: ${frequency}`,
+              frequency,
+              schedule
+            }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch (error) {
@@ -252,10 +263,42 @@ serve(async (req) => {
         }
       }
 
+      case 'get_cache_cron_status': {
+        try {
+          const { data: result } = await supabase.rpc('exec_sql', {
+            sql: "SELECT jobname, schedule FROM cron.job WHERE jobname = 'refresh-cache-auto' LIMIT 1"
+          });
+          
+          const jobs = result as Array<{ jobname: string; schedule: string }> | null;
+          if (jobs && jobs.length > 0) {
+            const schedule = jobs[0].schedule;
+            let frequency = '6hours';
+            if (schedule === '0 */12 * * *') frequency = '12hours';
+            else if (schedule === '0 0 * * *') frequency = '24hours';
+            else if (schedule === '0 */6 * * *') frequency = '6hours';
+            
+            return new Response(
+              JSON.stringify({ enabled: true, frequency, schedule }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          return new Response(
+            JSON.stringify({ enabled: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch {
+          return new Response(
+            JSON.stringify({ enabled: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
       case 'remove_cache_cron': {
         try {
           await supabase.rpc('exec_sql', {
-            sql: "SELECT cron.unschedule('refresh-cache-6hours')"
+            sql: "SELECT cron.unschedule('refresh-cache-auto')"
           });
           
           return new Response(
