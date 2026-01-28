@@ -372,32 +372,71 @@ Deno.serve(async (req) => {
         html = generateChapterHTML(chapter, lang, canonicalUrl);
       }
     } else if (newsArticleMatch) {
-      // News article page: /news/us/slug
+      // News article page: /news/us/slug - include "More from country" and "Other countries" links
       const [, countryCode, slug] = newsArticleMatch;
       
-      const { data: newsItem } = await supabase
-        .from("news_rss_items")
-        .select("*, country:news_countries(*)")
-        .eq("slug", slug)
-        .maybeSingle();
+      // Fetch article and all countries for cross-linking
+      const [{ data: newsItem }, { data: allCountries }] = await Promise.all([
+        supabase
+          .from("news_rss_items")
+          .select("*, country:news_countries(*)")
+          .eq("slug", slug)
+          .maybeSingle(),
+        supabase
+          .from("news_countries")
+          .select("id, code, name, name_en, flag")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+      ]);
 
       if (newsItem) {
         title = newsItem.title_en || newsItem.title;
         description = (newsItem.content_en || newsItem.content || newsItem.description_en || newsItem.description)?.substring(0, 160) + "...";
         image = newsItem.image_url || image;
         
-        html = generateNewsHTML(newsItem, lang, canonicalUrl);
+        // Fetch "More from country" links (6 articles)
+        const { data: moreFromCountry } = await supabase
+          .from("news_rss_items")
+          .select("slug, title, title_en, published_at, country:news_countries(code, name_en, flag)")
+          .eq("country_id", newsItem.country_id)
+          .eq("is_archived", false)
+          .neq("id", newsItem.id)
+          .order("published_at", { ascending: false })
+          .limit(6);
+        
+        // Fetch "Other countries" news (3 per country)
+        const otherCountries = (allCountries || []).filter((c: any) => c.id !== newsItem.country_id);
+        const otherCountriesNewsPromises = otherCountries.map((c: any) =>
+          supabase
+            .from("news_rss_items")
+            .select("slug, title, title_en, published_at, country:news_countries(code, name_en, flag)")
+            .eq("country_id", c.id)
+            .eq("is_archived", false)
+            .order("published_at", { ascending: false })
+            .limit(3)
+        );
+        const otherCountriesResults = await Promise.all(otherCountriesNewsPromises);
+        const otherCountriesNews = otherCountriesResults.flatMap(r => r.data || []);
+        
+        html = generateNewsHTML(newsItem, lang, canonicalUrl, moreFromCountry || [], otherCountriesNews);
       }
     } else if (newsCountryMatch) {
-      // News country listing page: /news/us
+      // News country listing page: /news/us - include cross-country links
       const [, countryCode] = newsCountryMatch;
       
-      // Fetch country info - use ilike for case-insensitive match
-      const { data: country } = await supabase
-        .from("news_countries")
-        .select("*")
-        .ilike("code", countryCode)
-        .maybeSingle();
+      // Fetch country info and all countries for cross-linking
+      const [{ data: country }, { data: allCountries }] = await Promise.all([
+        supabase
+          .from("news_countries")
+          .select("*")
+          .ilike("code", countryCode)
+          .maybeSingle(),
+        supabase
+          .from("news_countries")
+          .select("id, code, name, name_en, flag")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+      ]);
       
       // Fetch recent news for this country
       const { data: newsItems } = await supabase
@@ -407,13 +446,27 @@ Deno.serve(async (req) => {
         .eq("is_archived", false)
         .order("published_at", { ascending: false })
         .limit(30);
+      
+      // Fetch news from other countries for cross-linking
+      const otherCountries = (allCountries || []).filter((c: any) => c.id !== country?.id);
+      const otherCountriesNewsPromises = otherCountries.map((c: any) =>
+        supabase
+          .from("news_rss_items")
+          .select("slug, title, title_en, published_at, country:news_countries(code, name_en, flag)")
+          .eq("country_id", c.id)
+          .eq("is_archived", false)
+          .order("published_at", { ascending: false })
+          .limit(3)
+      );
+      const otherCountriesResults = await Promise.all(otherCountriesNewsPromises);
+      const otherCountriesNews = otherCountriesResults.flatMap(r => r.data || []);
 
       if (country) {
         const countryName = country.name_en || country.name;
         title = `${country.flag} ${countryName} News | Synchronization Point`;
         description = `Latest news from ${countryName}. AI-curated news digest with retelling and character dialogues.`;
         
-        html = generateNewsCountryHTML(newsItems || [], country, lang, canonicalUrl);
+        html = generateNewsCountryHTML(newsItems || [], country, lang, canonicalUrl, otherCountriesNews);
       }
     } else if (dateMatch) {
       // Date stories page
@@ -433,16 +486,57 @@ Deno.serve(async (req) => {
         html = generateDateHTML(parts, date, lang, canonicalUrl);
       }
     } else if (path === "/" || path === "") {
-      // Home page
-      const { data: latestParts } = await supabase
-        .from("parts")
-        .select("*, chapter:chapters(*)")
-        .eq("status", "published")
-        .order("date", { ascending: false })
-        .order("number", { ascending: false })
-        .limit(10);
+      // Home page - fetch all sections for full content
+      const [
+        { data: latestParts },
+        { data: latestUsNews },
+        { data: latestChapters },
+        { data: countries }
+      ] = await Promise.all([
+        supabase
+          .from("parts")
+          .select("*, chapter:chapters(*)")
+          .eq("status", "published")
+          .order("date", { ascending: false })
+          .order("number", { ascending: false })
+          .limit(6),
+        supabase
+          .from("news_rss_items")
+          .select("slug, title, title_en, content_en, published_at, country:news_countries(code, name_en, flag)")
+          .eq("is_archived", false)
+          .not("content_en", "is", null)
+          .order("published_at", { ascending: false })
+          .limit(6),
+        supabase
+          .from("chapters")
+          .select("number, title, title_en, title_pl, description, description_en")
+          .not("narrator_monologue", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(6),
+        supabase
+          .from("news_countries")
+          .select("id, code, name, name_en, flag")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+      ]);
+      
+      // Fetch latest news per country for "News by Country" section
+      const countryNewsPromises = (countries || []).map((c: any) =>
+        supabase
+          .from("news_rss_items")
+          .select("slug, title, title_en, published_at, country:news_countries(code, name_en, flag)")
+          .eq("country_id", c.id)
+          .eq("is_archived", false)
+          .order("published_at", { ascending: false })
+          .limit(4)
+      );
+      const countryNewsResults = await Promise.all(countryNewsPromises);
+      const countryNewsMap = (countries || []).map((c: any, i: number) => ({
+        country: c,
+        news: countryNewsResults[i]?.data || []
+      }));
 
-      html = generateHomeHTML(latestParts || [], lang, canonicalUrl);
+      html = generateHomeHTML(latestParts || [], lang, canonicalUrl, latestUsNews || [], latestChapters || [], countryNewsMap);
     }
 
     // Generate full HTML document
@@ -651,10 +745,19 @@ function generateChapterHTML(chapter: any, lang: string, canonicalUrl: string) {
   `;
 }
 
-function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string) {
+function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, moreFromCountry: any[] = [], otherCountriesNews: any[] = []) {
   const title = newsItem.title_en || newsItem.title;
   const content = newsItem.content_en || newsItem.content || newsItem.description_en || newsItem.description || "";
   const countryName = newsItem.country?.name_en || newsItem.country?.name || "";
+  const countryCode = newsItem.country?.code || "us";
+
+  // Group other countries news by country
+  const otherByCountry: Record<string, any[]> = {};
+  for (const item of otherCountriesNews) {
+    const code = item.country?.code || "unknown";
+    if (!otherByCountry[code]) otherByCountry[code] = [];
+    otherByCountry[code].push(item);
+  }
 
   return `
     <article itemscope itemtype="https://schema.org/NewsArticle">
@@ -676,6 +779,41 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string) {
       
       ${newsItem.url ? `<p><a href="${escapeHtml(newsItem.url)}" rel="nofollow noopener" target="_blank">Original source</a></p>` : ""}
     </article>
+    
+    ${moreFromCountry.length > 0 ? `
+      <section>
+        <h3>More from ${escapeHtml(countryName)}</h3>
+        <ul>
+          ${moreFromCountry.map(item => `
+            <li><a href="https://echoes2.com/news/${countryCode}/${item.slug}">${escapeHtml(item.title_en || item.title)}</a></li>
+          `).join("")}
+        </ul>
+      </section>
+    ` : ""}
+    
+    ${Object.keys(otherByCountry).length > 0 ? `
+      <section>
+        <h3>News from Other Countries</h3>
+        ${Object.entries(otherByCountry).map(([code, items]) => {
+          const first = items[0];
+          const flag = first?.country?.flag || "";
+          const name = first?.country?.name_en || code;
+          return `
+            <h4>${escapeHtml(flag)} ${escapeHtml(name)}</h4>
+            <ul>
+              ${items.map(item => `
+                <li><a href="https://echoes2.com/news/${code}/${item.slug}">${escapeHtml(item.title_en || item.title)}</a></li>
+              `).join("")}
+            </ul>
+          `;
+        }).join("")}
+      </section>
+    ` : ""}
+    
+    <nav>
+      <a href="https://echoes2.com/news/${countryCode}">← Back to ${escapeHtml(countryName)} News</a> |
+      <a href="https://echoes2.com/news">All Countries</a>
+    </nav>
   `;
 }
 
@@ -699,12 +837,18 @@ function generateDateHTML(parts: any[], date: string, lang: string, canonicalUrl
   `;
 }
 
-function generateHomeHTML(parts: any[], lang: string, canonicalUrl: string) {
+function generateHomeHTML(
+  parts: any[], 
+  lang: string, 
+  canonicalUrl: string,
+  latestUsNews: any[] = [],
+  latestChapters: any[] = [],
+  countryNewsMap: { country: any; news: any[] }[] = []
+) {
   const titleField = lang === "en" ? "title_en" : lang === "pl" ? "title_pl" : "title";
 
   return `
     <h2>Latest Stories</h2>
-    
     <ul itemscope itemtype="https://schema.org/ItemList">
       ${parts.map((part, index) => `
         <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
@@ -718,6 +862,58 @@ function generateHomeHTML(parts: any[], lang: string, canonicalUrl: string) {
       `).join("")}
     </ul>
     
+    ${latestUsNews.length > 0 ? `
+      <section>
+        <h2>✨ Full Retelling (USA News)</h2>
+        <ul>
+          ${latestUsNews.map(item => `
+            <li>
+              <a href="https://echoes2.com/news/${item.country?.code || 'us'}/${item.slug}">
+                ${escapeHtml(item.title_en || item.title)}
+              </a>
+              <span class="meta"> - Full retelling</span>
+            </li>
+          `).join("")}
+        </ul>
+      </section>
+    ` : ""}
+    
+    ${latestChapters.length > 0 ? `
+      <section>
+        <h2>📚 Weekly Chapters</h2>
+        <ul>
+          ${latestChapters.map(ch => `
+            <li>
+              <a href="https://echoes2.com/chapter/${ch.number}">
+                Chapter ${ch.number}: ${escapeHtml(ch[titleField] || ch.title)}
+              </a>
+            </li>
+          `).join("")}
+        </ul>
+      </section>
+    ` : ""}
+    
+    ${countryNewsMap.length > 0 ? `
+      <section>
+        <h2>📰 News by Country</h2>
+        ${countryNewsMap.map(({ country, news }) => {
+          if (!news || news.length === 0) return "";
+          return `
+            <h3><a href="https://echoes2.com/news/${country.code}">${country.flag || ""} ${escapeHtml(country.name_en || country.name)}</a></h3>
+            <ul>
+              ${news.map(item => `
+                <li>
+                  <a href="https://echoes2.com/news/${item.country?.code || country.code}/${item.slug}">
+                    ${escapeHtml(item.title_en || item.title)}
+                  </a>
+                </li>
+              `).join("")}
+            </ul>
+          `;
+        }).join("")}
+      </section>
+    ` : ""}
+    
     <nav>
       <a href="https://echoes2.com/news">📰 News</a> |
       <a href="https://echoes2.com/calendar">📅 Calendar Archive</a> |
@@ -728,9 +924,18 @@ function generateHomeHTML(parts: any[], lang: string, canonicalUrl: string) {
   `;
 }
 
-function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, canonicalUrl: string) {
+function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, canonicalUrl: string, otherCountriesNews: any[] = []) {
   const countryName = country?.name_en || country?.name || "News";
   const flag = country?.flag || "";
+  const countryCode = country?.code || "us";
+
+  // Group other countries news by country
+  const otherByCountry: Record<string, any[]> = {};
+  for (const item of otherCountriesNews) {
+    const code = item.country?.code || "unknown";
+    if (!otherByCountry[code]) otherByCountry[code] = [];
+    otherByCountry[code].push(item);
+  }
 
   return `
     <h2>${flag} ${escapeHtml(countryName)} News</h2>
@@ -741,7 +946,6 @@ function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, c
         const title = item.title_en || item.title;
         const date = item.published_at ? new Date(item.published_at).toLocaleDateString() : "";
         const slug = item.slug || "";
-        const countryCode = country?.code || "us";
         
         return `
           <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
@@ -755,6 +959,25 @@ function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, c
         `;
       }).join("")}
     </ul>
+    
+    ${Object.keys(otherByCountry).length > 0 ? `
+      <section>
+        <h3>News from Other Countries</h3>
+        ${Object.entries(otherByCountry).map(([code, items]) => {
+          const first = items[0];
+          const otherFlag = first?.country?.flag || "";
+          const otherName = first?.country?.name_en || code;
+          return `
+            <h4><a href="https://echoes2.com/news/${code}">${escapeHtml(otherFlag)} ${escapeHtml(otherName)}</a></h4>
+            <ul>
+              ${items.map(item => `
+                <li><a href="https://echoes2.com/news/${code}/${item.slug}">${escapeHtml(item.title_en || item.title)}</a></li>
+              `).join("")}
+            </ul>
+          `;
+        }).join("")}
+      </section>
+    ` : ""}
     
     <nav>
       <a href="https://echoes2.com/news">← All Countries</a> |
