@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, BarChart, Bar } from "recharts";
 import { useToast } from "@/hooks/use-toast";
+import { callEdgeFunction } from "@/lib/api";
 interface BotVisitWithCache {
   id: string;
   bot_type: string;
@@ -42,35 +43,40 @@ export function BotCacheAnalyticsPanel({ password }: { password: string }) {
   } | null>(null);
   const { toast } = useToast();
 
-  const BOT_USER_AGENTS: Record<string, string> = {
-    googlebot: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-    bingbot: 'Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)',
-    gptbot: 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.0; +https://openai.com/gptbot)',
-    claudebot: 'Mozilla/5.0 (compatible; ClaudeBot/1.0; +mailto:support@anthropic.com)'
-  };
-
   const runSSRTest = async () => {
     setIsTesting(true);
     setTestResult(null);
     
     try {
       const startTime = Date.now();
-      const ssrUrl = `https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render?path=${encodeURIComponent(testPath)}&lang=en`;
-      
-      const response = await fetch(ssrUrl, {
-        headers: {
-          'User-Agent': BOT_USER_AGENTS[testBotType],
-          'Accept': 'text/html',
-        },
+      const result = await callEdgeFunction<{
+        ok: boolean;
+        status: number;
+        statusText: string;
+        xCache: string | null;
+        xRobotsTag: string | null;
+        responseTimeMs: number;
+        contentLength: number;
+        hasCanonical: boolean;
+        canonical: string | null;
+        hasRobotsMeta: boolean;
+        robotsMeta: string | null;
+        linksCount: number;
+        html: string;
+      }>('bot-ssr-test', {
+        password,
+        path: testPath,
+        botType: testBotType,
+        lang: 'en',
       });
-      
+
       const responseTime = Date.now() - startTime;
-      const html = await response.text();
-      const cacheStatus = response.headers.get('X-Cache') || 'UNKNOWN';
+      const html = result.html || '';
+      const cacheStatus = result.xCache || 'UNKNOWN';
       
       // Analyze the HTML
-      const hasCanonical = html.includes('<link rel="canonical"');
-      const hasRobots = html.includes('<meta name="robots"');
+      const hasCanonical = result.hasCanonical || html.includes('<link rel="canonical"');
+      const hasRobots = result.hasRobotsMeta || html.includes('<meta name="robots"');
       const linksMatch = html.match(/<a\s+[^>]*href=/gi);
       const linksCount = linksMatch?.length || 0;
       

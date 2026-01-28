@@ -97,3 +97,6 @@ verify_jwt = false
 
 [functions.retell-news]
 verify_jwt = false
+
+[functions.bot-ssr-test]
+verify_jwt = false
