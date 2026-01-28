@@ -257,6 +257,31 @@ function SettingsPanel({ password }: { password: string }) {
                   </p>
                 </div>
               )}
+
+              {textProvider === 'zai' && (
+                <div className="space-y-2">
+                  <Label>Z.AI API Key</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type={showApiKeys.zai ? 'text' : 'password'}
+                      value={settings.zai_api_key || ''}
+                      onChange={(e) => updateMutation.mutate({ zai_api_key: e.target.value })}
+                      placeholder="..."
+                      className="font-mono"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => toggleApiKeyVisibility('zai')}
+                    >
+                      {showApiKeys.zai ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Отримати ключ: <a href="https://z.ai/model-api" target="_blank" rel="noopener" className="text-primary hover:underline">z.ai/model-api</a>
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -303,6 +328,12 @@ function SettingsPanel({ password }: { password: string }) {
                       <div className="flex items-center gap-2">
                         <span>🧠</span>
                         Anthropic
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="zai">
+                      <div className="flex items-center gap-2">
+                        <span>🇨🇳</span>
+                        Z.AI (GLM)
                       </div>
                     </SelectItem>
                   </SelectContent>
