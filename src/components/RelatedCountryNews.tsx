@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { ArrowRight, Newspaper } from "lucide-react";
@@ -19,6 +19,28 @@ interface RelatedCountryNewsProps {
   className?: string;
 }
 
+interface NewsItem {
+  id: string;
+  title: string;
+  title_en: string | null;
+  description: string | null;
+  description_en: string | null;
+  image_url: string | null;
+  published_at: string | null;
+  slug: string | null;
+  category: string | null;
+}
+
+// Fisher-Yates shuffle
+function shuffleArray<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 export const RelatedCountryNews = memo(function RelatedCountryNews({
   countryId,
   countryCode,
@@ -33,26 +55,65 @@ export const RelatedCountryNews = memo(function RelatedCountryNews({
   const { data: relatedNews = [], isLoading } = useQuery({
     queryKey: ['related-country-news', countryId, currentArticleId, language],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('news_rss_items')
-        .select(`
-          id, 
-          title, 
-          title_en,
-          description,
-          description_en,
-          image_url, 
-          published_at, 
-          slug,
-          category
-        `)
-        .eq('country_id', countryId)
-        .neq('id', currentArticleId)
-        .not('slug', 'is', null)
-        .order('published_at', { ascending: false })
-        .limit(6);
+      const today = new Date();
+      const todayStart = startOfDay(today).toISOString();
+      const todayEnd = endOfDay(today).toISOString();
+
+      // Fetch all in parallel
+      const [latestResult, todayResult, allResult] = await Promise.all([
+        // 1. Get 2 latest news (excluding current)
+        supabase
+          .from('news_rss_items')
+          .select('id, title, title_en, description, description_en, image_url, published_at, slug, category')
+          .eq('country_id', countryId)
+          .neq('id', currentArticleId)
+          .not('slug', 'is', null)
+          .order('published_at', { ascending: false })
+          .limit(2),
+        
+        // 2. Get today's news for random selection
+        supabase
+          .from('news_rss_items')
+          .select('id, title, title_en, description, description_en, image_url, published_at, slug, category')
+          .eq('country_id', countryId)
+          .neq('id', currentArticleId)
+          .not('slug', 'is', null)
+          .gte('published_at', todayStart)
+          .lte('published_at', todayEnd)
+          .order('published_at', { ascending: false })
+          .limit(20),
+        
+        // 3. Get more news for random selection from this country
+        supabase
+          .from('news_rss_items')
+          .select('id, title, title_en, description, description_en, image_url, published_at, slug, category')
+          .eq('country_id', countryId)
+          .neq('id', currentArticleId)
+          .not('slug', 'is', null)
+          .order('published_at', { ascending: false })
+          .limit(50)
+      ]);
+
+      const latestNews = (latestResult.data || []) as NewsItem[];
+      const todayNews = (todayResult.data || []) as NewsItem[];
+      const allNews = (allResult.data || []) as NewsItem[];
+
+      // Collect used IDs to avoid duplicates
+      const usedIds = new Set<string>([currentArticleId, ...latestNews.map(n => n.id)]);
+
+      // 2 random from today (excluding latest)
+      const todayFiltered = todayNews.filter(n => !usedIds.has(n.id));
+      const randomToday = shuffleArray(todayFiltered).slice(0, 2);
+      randomToday.forEach(n => usedIds.add(n.id));
+
+      // 2 random from all (excluding already selected)
+      const allFiltered = allNews.filter(n => !usedIds.has(n.id));
+      const randomAll = shuffleArray(allFiltered).slice(0, 2);
+
+      // Combine: 2 latest + 2 random today + 2 random all
+      const combined = [...latestNews, ...randomToday, ...randomAll];
       
-      return data || [];
+      return combined.slice(0, 6);
     },
     enabled: !!countryId && !!currentArticleId,
     staleTime: 1000 * 60 * 5,
