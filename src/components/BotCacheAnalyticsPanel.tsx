@@ -1,13 +1,15 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Database, CheckCircle2, XCircle, TrendingUp, RefreshCw, Loader2, Globe, Zap } from "lucide-react";
+import { Database, CheckCircle2, XCircle, TrendingUp, RefreshCw, Loader2, Globe, Zap, Play, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, BarChart, Bar } from "recharts";
-
+import { useToast } from "@/hooks/use-toast";
 interface BotVisitWithCache {
   id: string;
   bot_type: string;
@@ -25,6 +27,89 @@ const CACHE_COLORS = {
 
 export function BotCacheAnalyticsPanel({ password }: { password: string }) {
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d');
+  const [testPath, setTestPath] = useState('/sitemap');
+  const [testBotType, setTestBotType] = useState<'googlebot' | 'bingbot' | 'gptbot' | 'claudebot'>('googlebot');
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ 
+    cacheStatus?: string; 
+    responseTime?: number; 
+    contentLength?: number;
+    hasCanonical?: boolean;
+    hasRobots?: boolean;
+    linksCount?: number;
+    error?: string;
+    htmlPreview?: string;
+  } | null>(null);
+  const { toast } = useToast();
+
+  const BOT_USER_AGENTS: Record<string, string> = {
+    googlebot: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    bingbot: 'Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)',
+    gptbot: 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.0; +https://openai.com/gptbot)',
+    claudebot: 'Mozilla/5.0 (compatible; ClaudeBot/1.0; +mailto:support@anthropic.com)'
+  };
+
+  const runSSRTest = async () => {
+    setIsTesting(true);
+    setTestResult(null);
+    
+    try {
+      const startTime = Date.now();
+      const ssrUrl = `https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render?path=${encodeURIComponent(testPath)}&lang=en`;
+      
+      const response = await fetch(ssrUrl, {
+        headers: {
+          'User-Agent': BOT_USER_AGENTS[testBotType],
+          'Accept': 'text/html',
+        },
+      });
+      
+      const responseTime = Date.now() - startTime;
+      const html = await response.text();
+      const cacheStatus = response.headers.get('X-Cache') || 'UNKNOWN';
+      
+      // Analyze the HTML
+      const hasCanonical = html.includes('<link rel="canonical"');
+      const hasRobots = html.includes('<meta name="robots"');
+      const linksMatch = html.match(/<a\s+[^>]*href=/gi);
+      const linksCount = linksMatch?.length || 0;
+      
+      // Extract a preview of the content (first 1500 chars, cleaned)
+      const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      let htmlPreview = bodyMatch?.[1] || html.substring(0, 2000);
+      // Clean some tags for preview
+      htmlPreview = htmlPreview
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .substring(0, 2000);
+      
+      setTestResult({
+        cacheStatus,
+        responseTime,
+        contentLength: html.length,
+        hasCanonical,
+        hasRobots,
+        linksCount,
+        htmlPreview,
+      });
+      
+      toast({
+        title: `SSR тест завершено [${cacheStatus}]`,
+        description: `${testPath} — ${responseTime}ms, ${linksCount} лінків`,
+      });
+    } catch (error) {
+      setTestResult({
+        error: error instanceof Error ? error.message : 'Failed to fetch SSR',
+      });
+      toast({
+        title: 'Помилка SSR тесту',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   const getTimeRangeDate = () => {
     const now = new Date();
@@ -207,6 +292,91 @@ export function BotCacheAnalyticsPanel({ password }: { password: string }) {
           </Button>
         </div>
       </div>
+
+      {/* SSR Test Tool */}
+      <Card className="cosmic-card border-primary/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Play className="w-4 h-4 text-primary" />
+            Тест Bot-SSR запиту
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <Input
+                placeholder="/sitemap, /news/us, /chapter/15..."
+                value={testPath}
+                onChange={(e) => setTestPath(e.target.value)}
+                className="font-mono"
+              />
+            </div>
+            <Select value={testBotType} onValueChange={(v) => setTestBotType(v as any)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="googlebot">Googlebot</SelectItem>
+                <SelectItem value="bingbot">Bingbot</SelectItem>
+                <SelectItem value="gptbot">GPTBot</SelectItem>
+                <SelectItem value="claudebot">ClaudeBot</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={runSSRTest} disabled={isTesting || !testPath}>
+              {isTesting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Play className="w-4 h-4 mr-2" />}
+              Тест
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => window.open(`https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render?path=${encodeURIComponent(testPath)}&lang=en`, '_blank')}
+            >
+              <ExternalLink className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          {testResult && (
+            <div className="space-y-3">
+              {testResult.error ? (
+                <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive">
+                  <strong>Помилка:</strong> {testResult.error}
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-3">
+                    <Badge variant={testResult.cacheStatus === 'HIT' ? 'default' : 'secondary'} className={testResult.cacheStatus === 'HIT' ? 'bg-green-500' : 'bg-orange-500'}>
+                      X-Cache: {testResult.cacheStatus}
+                    </Badge>
+                    <Badge variant="outline">{testResult.responseTime}ms</Badge>
+                    <Badge variant="outline">{Math.round((testResult.contentLength || 0) / 1024)}KB</Badge>
+                    <Badge variant={testResult.hasCanonical ? 'default' : 'destructive'}>
+                      {testResult.hasCanonical ? '✓' : '✗'} Canonical
+                    </Badge>
+                    <Badge variant={testResult.hasRobots ? 'default' : 'destructive'}>
+                      {testResult.hasRobots ? '✓' : '✗'} Robots
+                    </Badge>
+                    <Badge variant={testResult.linksCount && testResult.linksCount > 5 ? 'default' : 'destructive'}>
+                      {testResult.linksCount} лінків
+                    </Badge>
+                  </div>
+                  
+                  {testResult.htmlPreview && (
+                    <div className="border border-border rounded-lg overflow-hidden">
+                      <div className="bg-muted/50 px-3 py-2 border-b border-border text-sm font-medium">
+                        HTML превʼю (боти бачать це)
+                      </div>
+                      <ScrollArea className="h-[300px]">
+                        <pre className="p-3 text-xs font-mono whitespace-pre-wrap break-all">
+                          {testResult.htmlPreview}
+                        </pre>
+                      </ScrollArea>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
