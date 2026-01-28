@@ -13,11 +13,44 @@ interface LLMSettings {
   openai_api_key: string | null;
   gemini_api_key: string | null;
   anthropic_api_key: string | null;
+  zai_api_key: string | null;
 }
 
 async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: string, overrideModel?: string): Promise<string> {
   const provider = settings.llm_text_provider || settings.llm_provider || 'lovable';
   const model = overrideModel || settings.llm_text_model || 'google/gemini-3-flash-preview';
+  
+  // Z.AI provider - OpenAI-compatible API
+  if (provider === 'zai') {
+    const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
+    if (!apiKey) throw new Error('Z.AI API key not configured');
+
+    console.log('Using Z.AI with model:', model || 'GLM-4.7');
+    
+    const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model || 'GLM-4.7',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Z.AI error:', response.status, errorText);
+      throw new Error(`Z.AI error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  }
   
   if (provider === 'lovable' || !settings.openai_api_key) {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
