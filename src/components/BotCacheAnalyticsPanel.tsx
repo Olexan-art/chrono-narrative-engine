@@ -18,8 +18,24 @@ interface BotVisitWithCache {
   path: string;
   cache_status: string | null;
   response_time_ms: number | null;
+  status_code: number | null;
   created_at: string;
 }
+
+// Error type classification based on status codes
+const getErrorType = (statusCode: number | null, cacheStatus: string | null): string | null => {
+  if (!statusCode || statusCode === 200) return null;
+  if (statusCode === 404) return '404 Not Found';
+  if (statusCode === 500) return '500 Server Error';
+  if (statusCode === 502) return '502 Bad Gateway';
+  if (statusCode === 503) return '503 Service Unavailable';
+  if (statusCode === 504) return '504 Gateway Timeout';
+  if (statusCode === 401) return '401 Unauthorized';
+  if (statusCode === 403) return '403 Forbidden';
+  if (statusCode >= 400 && statusCode < 500) return `${statusCode} Client Error`;
+  if (statusCode >= 500) return `${statusCode} Server Error`;
+  return null;
+};
 
 const CACHE_COLORS = {
   HIT: 'hsl(var(--chart-1))',
@@ -134,7 +150,7 @@ export function BotCacheAnalyticsPanel({ password }: { password: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bot_visits')
-        .select('id, bot_type, bot_category, path, cache_status, response_time_ms, created_at')
+        .select('id, bot_type, bot_category, path, cache_status, response_time_ms, status_code, created_at')
         .gte('created_at', getTimeRangeDate())
         .order('created_at', { ascending: false })
         .limit(5000);
@@ -242,19 +258,30 @@ export function BotCacheAnalyticsPanel({ password }: { password: string }) {
     ].filter(d => d.value > 0);
   }, [stats]);
 
-  // Top paths by visits (with HIT/MISS breakdown)
+  // Top paths by visits (with HIT/MISS breakdown and error tracking)
   const topPaths = useMemo(() => {
     if (!visits?.length) return [];
     
-    const pathStats: Record<string, { total: number; hits: number; misses: number }> = {};
+    const pathStats: Record<string, { 
+      total: number; 
+      hits: number; 
+      misses: number;
+      errors: Record<string, number>;
+    }> = {};
     
     visits.forEach(v => {
       if (!pathStats[v.path]) {
-        pathStats[v.path] = { total: 0, hits: 0, misses: 0 };
+        pathStats[v.path] = { total: 0, hits: 0, misses: 0, errors: {} };
       }
       pathStats[v.path].total++;
       if (v.cache_status === 'HIT') pathStats[v.path].hits++;
       else if (v.cache_status === 'MISS') pathStats[v.path].misses++;
+      
+      // Track errors
+      const errorType = getErrorType(v.status_code, v.cache_status);
+      if (errorType) {
+        pathStats[v.path].errors[errorType] = (pathStats[v.path].errors[errorType] || 0) + 1;
+      }
     });
 
     return Object.entries(pathStats)
@@ -262,6 +289,11 @@ export function BotCacheAnalyticsPanel({ password }: { password: string }) {
         path,
         ...data,
         hitRate: data.total > 0 ? Math.round((data.hits / data.total) * 100) : 0,
+        hasErrors: Object.keys(data.errors).length > 0,
+        errorSummary: Object.entries(data.errors)
+          .sort((a, b) => b[1] - a[1])
+          .map(([err, count]) => `${err}: ${count}`)
+          .join(', '),
       }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 15);
@@ -684,35 +716,42 @@ export function BotCacheAnalyticsPanel({ password }: { password: string }) {
           <CardTitle className="text-base">Деталі по сторінках</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="max-h-[400px] overflow-y-auto">
+          <div className="max-h-[500px] overflow-y-auto">
             <div className="space-y-2">
               {topPaths.map((item, i) => (
                 <div 
                   key={item.path} 
-                  className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+                  className={`p-3 rounded-lg hover:bg-muted/50 transition-colors ${item.hasErrors ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted/30'}`}
                 >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <span className="text-muted-foreground text-sm w-6">{i + 1}.</span>
-                    <span className="font-mono text-sm truncate" title={item.path}>
-                      {item.path}
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-muted-foreground text-sm w-6">{i + 1}.</span>
+                      <span className="font-mono text-sm truncate" title={item.path}>
+                        {item.path}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <Badge variant="outline" className="text-green-500 border-green-500/30">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        {item.hits}
+                      </Badge>
+                      <Badge variant="outline" className="text-orange-500 border-orange-500/30">
+                        <XCircle className="w-3 h-3 mr-1" />
+                        {item.misses}
+                      </Badge>
+                      <Badge 
+                        variant={item.hitRate >= 80 ? "default" : item.hitRate >= 50 ? "secondary" : "destructive"}
+                        className="min-w-[50px] justify-center"
+                      >
+                        {item.hitRate}%
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Badge variant="outline" className="text-green-500 border-green-500/30">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      {item.hits}
-                    </Badge>
-                    <Badge variant="outline" className="text-orange-500 border-orange-500/30">
-                      <XCircle className="w-3 h-3 mr-1" />
-                      {item.misses}
-                    </Badge>
-                    <Badge 
-                      variant={item.hitRate >= 80 ? "default" : item.hitRate >= 50 ? "secondary" : "destructive"}
-                      className="min-w-[50px] justify-center"
-                    >
-                      {item.hitRate}%
-                    </Badge>
-                  </div>
+                  {item.hasErrors && (
+                    <div className="mt-2 pl-9 text-xs text-destructive">
+                      ⚠️ Помилки: {item.errorSummary}
+                    </div>
+                  )}
                 </div>
               ))}
               {topPaths.length === 0 && (
