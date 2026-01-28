@@ -272,6 +272,42 @@ async function generateAndCachePage(
   }
 }
 
+// Process pages in batches with concurrency control
+async function processPagesInBatches(
+  supabase: any,
+  pages: string[],
+  serviceKey: string,
+  concurrency: number = 5
+): Promise<{ path: string; success: boolean; timeMs?: number; error?: string }[]> {
+  const results: { path: string; success: boolean; timeMs?: number; error?: string }[] = [];
+  
+  for (let i = 0; i < pages.length; i += concurrency) {
+    const batch = pages.slice(i, i + concurrency);
+    const batchPromises = batch.map(async (path) => {
+      const result = await generateAndCachePage(supabase, path, serviceKey);
+      console.log(`[${i + batch.indexOf(path) + 1}/${pages.length}] ${path}: ${result.success ? 'OK' : result.error}`);
+      return { path, ...result };
+    });
+    
+    const batchResults = await Promise.all(batchPromises);
+    results.push(...batchResults);
+  }
+  
+  return results;
+}
+
+// Store job status in database
+async function updateJobStatus(
+  supabase: any, 
+  jobId: string, 
+  status: 'running' | 'completed' | 'failed',
+  data: object
+) {
+  // Use a simple in-memory approach since we don't have a jobs table
+  // The frontend will poll for results
+  console.log(`Job ${jobId}: ${status}`, JSON.stringify(data));
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -281,6 +317,9 @@ Deno.serve(async (req) => {
   const action = url.searchParams.get('action') || 'refresh-all';
   const specificPath = url.searchParams.get('path');
   const password = url.searchParams.get('password') || req.headers.get('x-admin-password');
+  const batchSize = parseInt(url.searchParams.get('batchSize') || '50');
+  const offset = parseInt(url.searchParams.get('offset') || '0');
+  const async = url.searchParams.get('async') === 'true';
 
   // Verify admin password
   const adminPassword = Deno.env.get('ADMIN_PASSWORD');
@@ -309,34 +348,68 @@ Deno.serve(async (req) => {
       });
     }
 
+    // New batch-aware refresh actions
     if (action === 'refresh-all' || action === 'refresh-recent' || action === 'refresh-news') {
       // Determine filter type
       let filter: 'all' | 'recent-24h' | 'news-7d' = 'all';
       if (action === 'refresh-recent') filter = 'recent-24h';
       if (action === 'refresh-news') filter = 'news-7d';
 
-      // Refresh pages based on filter
-      const pages = await getAllPagesToCache(supabase, filter);
-      const results: { path: string; success: boolean; timeMs?: number; error?: string }[] = [];
-
-      console.log(`Starting cache refresh (${filter}) for ${pages.length} pages...`);
-
-      for (const path of pages) {
-        const result = await generateAndCachePage(supabase, path, serviceKey);
-        results.push({ path, ...result });
-        console.log(`Cached ${path}: ${result.success ? 'OK' : result.error}`);
-        
-        // Small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // Get all pages to cache
+      const allPages = await getAllPagesToCache(supabase, filter);
+      const totalPages = allPages.length;
+      
+      // If requesting batch info only
+      if (url.searchParams.get('info') === 'true') {
+        return new Response(JSON.stringify({
+          action,
+          filter,
+          totalPages,
+          recommendedBatches: Math.ceil(totalPages / 50),
+          batchSize: 50,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
+
+      // Get batch of pages
+      const pagesToProcess = allPages.slice(offset, offset + batchSize);
+      
+      if (pagesToProcess.length === 0) {
+        return new Response(JSON.stringify({
+          action,
+          filter,
+          total: totalPages,
+          processed: offset,
+          batchSize: 0,
+          hasMore: false,
+          successful: 0,
+          failed: 0,
+          results: [],
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log(`Processing batch: offset=${offset}, size=${pagesToProcess.length}, total=${totalPages}`);
+
+      // Process batch with concurrency
+      const results = await processPagesInBatches(supabase, pagesToProcess, serviceKey, 5);
 
       const successful = results.filter(r => r.success).length;
       const failed = results.filter(r => !r.success).length;
+      const hasMore = offset + batchSize < totalPages;
+      const nextOffset = hasMore ? offset + batchSize : null;
 
       return new Response(JSON.stringify({
         action,
         filter,
-        total: pages.length,
+        total: totalPages,
+        processed: Math.min(offset + batchSize, totalPages),
+        batchStart: offset,
+        batchSize: pagesToProcess.length,
+        hasMore,
+        nextOffset,
         successful,
         failed,
         results,

@@ -120,7 +120,7 @@ export function CacheStatsPanel({ password }: Props) {
     setCurrentProgress(0);
     
     const actionLabels: Record<RefreshAction, string> = {
-      'refresh-all': '🔄 Повне оновлення всіх сторінок...',
+      'refresh-all': '🔄 Повне оновлення всіх сторінок (батчами)...',
       'refresh-recent': '⏰ Оновлення сторінок за 24 години...',
       'refresh-news': '📰 Оновлення новин за 7 днів...',
     };
@@ -133,23 +133,56 @@ export function CacheStatsPanel({ password }: Props) {
         isHeader: true,
       }]);
 
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/cache-pages?action=${action}&password=${password}`,
-        {
-          method: 'GET',
-        }
+      // First, get info about total pages
+      const infoResponse = await fetch(
+        `${SUPABASE_URL}/functions/v1/cache-pages?action=${action}&password=${password}&info=true`,
+        { method: 'GET' }
       );
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const result = await response.json();
       
-      // Process results with staggered animation
-      if (result.results && Array.isArray(result.results)) {
-        const batchSize = 10;
-        for (let i = 0; i < result.results.length; i += batchSize) {
-          const batch = result.results.slice(i, i + batchSize);
-          const logs: CacheRefreshLog[] = batch.map((r: { path: string; success: boolean; timeMs?: number; error?: string }) => ({
+      if (!infoResponse.ok) throw new Error(`HTTP ${infoResponse.status}`);
+      const info = await infoResponse.json();
+      
+      const totalPages = info.totalPages || 0;
+      const batchSize = 50; // Process 50 pages per batch
+      let offset = 0;
+      let totalSuccessful = 0;
+      let totalFailed = 0;
+      const allResults: { path: string; success: boolean; timeMs?: number; error?: string }[] = [];
+
+      setRefreshLogs(prev => [...prev, { 
+        path: `📊 Знайдено ${totalPages} сторінок. Обробка батчами по ${batchSize}...`, 
+        success: true, 
+        timestamp: new Date(),
+        isHeader: true,
+      }]);
+
+      // Process in batches
+      while (offset < totalPages) {
+        const batchNum = Math.floor(offset / batchSize) + 1;
+        const totalBatches = Math.ceil(totalPages / batchSize);
+        
+        setRefreshLogs(prev => [...prev, { 
+          path: `🔄 Батч ${batchNum}/${totalBatches} (${offset}-${Math.min(offset + batchSize, totalPages)})...`, 
+          success: true, 
+          timestamp: new Date(),
+          isHeader: true,
+        }]);
+
+        const response = await fetch(
+          `${SUPABASE_URL}/functions/v1/cache-pages?action=${action}&password=${password}&batchSize=${batchSize}&offset=${offset}`,
+          { method: 'GET' }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Batch ${batchNum} failed: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        
+        // Process results
+        if (result.results && Array.isArray(result.results)) {
+          const logs: CacheRefreshLog[] = result.results.map((r: { path: string; success: boolean; timeMs?: number; error?: string }) => ({
             path: r.path,
             success: r.success,
             timeMs: r.timeMs,
@@ -158,21 +191,30 @@ export function CacheStatsPanel({ password }: Props) {
           }));
           
           setRefreshLogs(prev => [...prev, ...logs]);
-          setCurrentProgress(Math.min(100, Math.round(((i + batchSize) / result.results.length) * 100)));
-          
-          // Small delay for visual effect
-          await new Promise(resolve => setTimeout(resolve, 50));
+          allResults.push(...result.results);
+        }
+
+        totalSuccessful += result.successful || 0;
+        totalFailed += result.failed || 0;
+        offset += batchSize;
+
+        // Update progress
+        setCurrentProgress(Math.min(100, Math.round((offset / totalPages) * 100)));
+        
+        // Small delay between batches to avoid overwhelming the server
+        if (result.hasMore) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
 
       setRefreshStats({
-        total: result.total || 0,
-        successful: result.successful || 0,
-        failed: result.failed || 0,
+        total: totalPages,
+        successful: totalSuccessful,
+        failed: totalFailed,
       });
 
       setCurrentProgress(100);
-      toast.success(`Кеш оновлено: ${result.successful}/${result.total} сторінок`);
+      toast.success(`Кеш оновлено: ${totalSuccessful}/${totalPages} сторінок`);
       queryClient.invalidateQueries({ queryKey: ['cache-stats'] });
     } catch (error) {
       console.error('Failed to refresh cache:', error);
