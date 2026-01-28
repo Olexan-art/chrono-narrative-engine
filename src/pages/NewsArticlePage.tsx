@@ -377,11 +377,21 @@ export default function NewsArticlePage() {
                 </h1>
                 
                 {article.image_url && (
-                  <img 
-                    src={article.image_url} 
-                    alt="" 
-                    className="w-full h-auto max-h-96 object-cover rounded-lg border border-border mb-4"
-                  />
+                  <div className="relative">
+                    <img 
+                      src={article.image_url} 
+                      alt="" 
+                      className="w-full h-auto max-h-96 object-cover rounded-lg border border-border mb-4"
+                    />
+                    {article.content_en && article.content_en.length > 100 && (
+                      <div className="absolute top-3 left-3">
+                        <Badge className="bg-primary/90 text-primary-foreground gap-1">
+                          <Sparkles className="w-3 h-3" />
+                          Full retelling
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
                 )}
               </header>
 
