@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock, Archive, Map, Search, Activity, ChartArea, Database } from "lucide-react";
+import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock, Archive, Map, Search, Activity, ChartArea, Database, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import { SitemapManagementPanel } from "@/components/SitemapManagementPanel";
 import { SEOAuditPanel } from "@/components/SEOAuditPanel";
 import { BotVisitsPanel } from "@/components/BotVisitsPanel";
 import { BotCacheAnalyticsPanel } from "@/components/BotCacheAnalyticsPanel";
+import { BotErrorsPanel } from "@/components/BotErrorsPanel";
 import { StatisticsPanel } from "@/components/StatisticsPanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
@@ -768,6 +769,10 @@ export default function AdminPage() {
               <Database className="w-4 h-4 text-cyan-500" />
               Cache HIT
             </TabsTrigger>
+            <TabsTrigger value="bot-errors" className="gap-2">
+              <AlertTriangle className="w-4 h-4 text-destructive" />
+              Помилки
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               Налаштування
@@ -844,6 +849,10 @@ export default function AdminPage() {
 
           <TabsContent value="settings" className="mt-6">
             <SettingsPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="bot-errors" className="mt-6">
+            <BotErrorsPanel password={password} />
           </TabsContent>
         </Tabs>
       </main>
