@@ -9,6 +9,34 @@ const corsHeaders = {
 // Track inserted items per country+category for auto-retell
 const insertedItemsTracker: Map<string, string[]> = new Map();
 
+// Helper to trigger cache generation for a news page
+async function autoCacheNewsPage(
+  countryCode: string, 
+  slug: string, 
+  supabaseUrl: string
+): Promise<void> {
+  try {
+    const path = `/news/${countryCode}/${slug}`;
+    console.log(`Auto-caching news page: ${path}`);
+    
+    const response = await fetch(`${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(path)}&password=${Deno.env.get('ADMIN_PASSWORD')}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+      }
+    });
+    
+    if (!response.ok) {
+      console.error(`Failed to auto-cache ${path}:`, response.status);
+    } else {
+      const result = await response.json();
+      console.log(`Auto-cached ${path}: ${result.success ? 'OK' : result.error}`);
+    }
+  } catch (error) {
+    console.error(`Error auto-caching news page:`, error);
+  }
+}
+
 // Helper to call retell-news for an item
 async function autoRetellNews(newsId: string, supabaseUrl: string): Promise<void> {
   try {
@@ -393,6 +421,9 @@ serve(async (req) => {
         const existingUrls = new Set((existingItems || []).map(item => item.url));
         
         let insertedCount = 0;
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const countryCode = feed.news_countries?.code?.toLowerCase() || 'us';
+        
         for (const item of items.slice(0, limit)) {
           // Skip if already exists
           if (existingUrls.has(item.link)) continue;
@@ -423,6 +454,9 @@ serve(async (req) => {
           if (!insertError) {
             insertedCount++;
             existingUrls.add(item.link); // Track newly added
+            
+            // Auto-cache the newly inserted news page
+            autoCacheNewsPage(countryCode, slug, supabaseUrl);
           }
         }
         
@@ -508,6 +542,9 @@ serve(async (req) => {
         
         // Insert only new items into database
         let insertedCount = 0;
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const countryCode = feed.news_countries?.code?.toLowerCase() || 'us';
+        
         for (const item of items.slice(0, 200)) { // Limit to 200 items per feed
           // Skip if already exists
           if (existingUrls.has(item.link)) continue;
@@ -540,6 +577,9 @@ serve(async (req) => {
           if (!insertError) {
             insertedCount++;
             existingUrls.add(item.link);
+            
+            // Auto-cache the newly inserted news page
+            autoCacheNewsPage(countryCode, slug, supabaseUrl);
           }
         }
         
@@ -662,7 +702,7 @@ serve(async (req) => {
       console.log(`Fetching all ${feeds?.length || 0} active RSS feeds with settings: retell=${autoRetellEnabled}, dialogue=${autoDialogueEnabled}, tweets=${autoTweetsEnabled}`);
       
       // Track inserted items per country+category for auto-content generation
-      const insertTracker: Map<string, { count: number; toProcess: Array<{ id: string; countryCode: string }> }> = new Map();
+      const insertTracker: Map<string, { count: number; toProcess: Array<{ id: string; countryCode: string; slug: string }> }> = new Map();
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       
       const results = [];
@@ -749,6 +789,9 @@ serve(async (req) => {
               insertedCount++;
               existingUrls.add(item.link); // Track newly added
               
+              // Auto-cache the newly inserted news page
+              autoCacheNewsPage(countryCode.toLowerCase(), slug, supabaseUrl);
+              
               // Track for auto-processing based on per-country ratio
               const tracker = insertTracker.get(trackerKey)!;
               tracker.count++;
@@ -758,7 +801,7 @@ serve(async (req) => {
               const shouldProcess = Math.random() * 100 < countryRetellRatio;
               
               if (shouldProcess) {
-                tracker.toProcess.push({ id: insertedData.id, countryCode });
+                tracker.toProcess.push({ id: insertedData.id, countryCode, slug });
               }
             }
           }
@@ -780,7 +823,7 @@ serve(async (req) => {
       }
       
       // Collect all items to process
-      const allToProcess: Array<{ id: string; countryCode: string }> = [];
+      const allToProcess: Array<{ id: string; countryCode: string; slug: string }> = [];
       for (const tracker of insertTracker.values()) {
         allToProcess.push(...tracker.toProcess);
       }
@@ -793,6 +836,7 @@ serve(async (req) => {
       for (const item of allToProcess) {
         const newsId = item.id;
         const countryCode = item.countryCode;
+        const slug = item.slug;
         
         // Detect language based on country
         const detectLang = () => {
@@ -820,6 +864,9 @@ serve(async (req) => {
             if (response.ok) {
               totalRetelled++;
               console.log(`Successfully auto-retold news ${newsId}`);
+              
+              // Update cache after retelling completes
+              autoCacheNewsPage(countryCode.toLowerCase(), slug, supabaseUrl);
             } else {
               console.error(`Failed to auto-retell news ${newsId}:`, response.status);
             }

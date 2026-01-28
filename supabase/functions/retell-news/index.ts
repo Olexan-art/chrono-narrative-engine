@@ -6,6 +6,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to trigger cache update for a news page
+async function updateNewsCache(
+  countryCode: string, 
+  slug: string, 
+  supabaseUrl: string
+): Promise<void> {
+  try {
+    const path = `/news/${countryCode}/${slug}`;
+    console.log(`Updating cache for news page: ${path}`);
+    
+    const response = await fetch(`${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(path)}&password=${Deno.env.get('ADMIN_PASSWORD')}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+      }
+    });
+    
+    if (!response.ok) {
+      console.error(`Failed to update cache for ${path}:`, response.status);
+    } else {
+      const result = await response.json();
+      console.log(`Cache updated for ${path}: ${result.success ? 'OK' : result.error}`);
+    }
+  } catch (error) {
+    console.error(`Error updating cache for news page:`, error);
+  }
+}
+
 interface LLMSettings {
   llm_provider: string;
   llm_text_provider: string | null;
@@ -430,6 +458,12 @@ Category: ${news.category || 'general'}`;
     } catch (dialogueError) {
       console.error('Error generating dialogue/tweets:', dialogueError);
       // Don't fail the whole operation if dialogue generation fails
+    }
+
+    // Update cache for this news article after retelling is complete
+    const countryCode = news.country?.code?.toLowerCase() || 'us';
+    if (news.slug) {
+      await updateNewsCache(countryCode, news.slug, supabaseUrl);
     }
 
     return new Response(JSON.stringify({ 
