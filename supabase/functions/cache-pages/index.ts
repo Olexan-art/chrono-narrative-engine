@@ -54,21 +54,11 @@ async function getAllPagesToCache(
       }
     }
   } else if (filter === 'recent-24h') {
-    // Only pages updated in last 24 hours
-    const { data: recentPages } = await supabase
-      .from('cached_pages')
-      .select('path')
-      .gte('updated_at', oneDayAgo.toISOString());
+    // IMPORTANT:
+    // Do NOT derive "recent" from cached_pages.updated_at.
+    // After a full refresh it would include almost everything and make this action time out.
 
-    if (recentPages) {
-      for (const p of recentPages) {
-        if (!pages.includes(p.path)) {
-          pages.push(p.path);
-        }
-      }
-    }
-
-    // Also add news from last 24 hours
+    // Add news from last 24 hours
     const { data: newsItems } = await supabase
       .from('news_rss_items')
       .select('slug, country_id, news_countries!inner(code)')
@@ -85,6 +75,29 @@ async function getAllPagesToCache(
             pages.push(path);
           }
         }
+      }
+    }
+
+    // Add stories published in last 24 hours (including date index routes)
+    const { data: stories } = await supabase
+      .from('parts')
+      .select('date, number')
+      .eq('status', 'published')
+      .gte('published_at', oneDayAgo.toISOString())
+      .order('date', { ascending: false });
+
+    if (stories) {
+      const dates = new Set<string>();
+      for (const story of stories) {
+        const storyPath = `/read/${story.date}/${story.number}`;
+        if (!pages.includes(storyPath)) pages.push(storyPath);
+        dates.add(story.date);
+      }
+      for (const date of dates) {
+        const readDatePath = `/read/${date}`;
+        const datePath = `/date/${date}`;
+        if (!pages.includes(readDatePath)) pages.push(readDatePath);
+        if (!pages.includes(datePath)) pages.push(datePath);
       }
     }
   } else {

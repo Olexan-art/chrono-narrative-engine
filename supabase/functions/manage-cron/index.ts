@@ -6,7 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const ADMIN_PASSWORD = '1907';
+// IMPORTANT: use the configured backend secret; keep a fallback only for legacy deployments
+const ADMIN_PASSWORD = Deno.env.get('ADMIN_PASSWORD') || '1907';
 
 const RSS_SCHEDULES = {
   '30min': '*/30 * * * *',
