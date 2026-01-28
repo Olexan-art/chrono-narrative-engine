@@ -12,6 +12,7 @@ import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
 import { NewsDialogueSection } from "@/components/NewsDialogueSection";
 import { RelatedCountryNews } from "@/components/RelatedCountryNews";
+import { OtherCountriesNews } from "@/components/OtherCountriesNews";
 import { NewsTweetCard } from "@/components/NewsTweetCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -500,6 +501,12 @@ export default function NewsArticlePage() {
               currentArticleId={article.id}
               className="mt-8 lg:hidden"
             />
+
+            {/* Other Countries News - MOBILE ONLY */}
+            <OtherCountriesNews
+              excludeCountryCode={article.country.code}
+              className="lg:hidden"
+            />
           </div>
 
           {/* Sidebar */}
@@ -614,6 +621,12 @@ export default function NewsArticlePage() {
               countryName={countryName}
               countryFlag={article.country.flag}
               currentArticleId={article.id}
+              className="hidden lg:block"
+            />
+
+            {/* Other Countries News - DESKTOP ONLY */}
+            <OtherCountriesNews
+              excludeCountryCode={article.country.code}
               className="hidden lg:block"
             />
           </aside>
