@@ -408,6 +408,7 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
                   <SelectItem value="openai">OpenAI</SelectItem>
                   <SelectItem value="gemini">Google Gemini</SelectItem>
                   <SelectItem value="anthropic">Anthropic</SelectItem>
+                  <SelectItem value="zai">Z.AI (GLM)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
