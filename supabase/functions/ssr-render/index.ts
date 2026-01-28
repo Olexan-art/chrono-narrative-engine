@@ -117,9 +117,11 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const path = url.searchParams.get("path") || "/";
-    const lang = url.searchParams.get("lang") || "uk";
-    const useCache = url.searchParams.get("cache") !== "false"; // Default: use cache
+    // NOTE: Support POST body for tooling/testing; GET+query is still the canonical interface.
+    const body = req.method !== "GET" ? await req.json().catch(() => null) : null;
+    const path = url.searchParams.get("path") || body?.path || "/";
+    const lang = url.searchParams.get("lang") || body?.lang || "uk";
+    const useCache = (url.searchParams.get("cache") || body?.cache) !== "false"; // Default: use cache
     const userAgent = req.headers.get("user-agent") || "";
     const referer = req.headers.get("referer");
 
@@ -164,7 +166,11 @@ Deno.serve(async (req) => {
 
     // Parse the path to determine content type
     const readMatch = path.match(/^\/read\/(\d{4}-\d{2}-\d{2})\/(\d+)$/);
-    const chapterMatch = path.match(/^\/chapter\/([a-f0-9-]+)$/);
+    const readDateMatch = path.match(/^\/read\/(\d{4}-\d{2}-\d{2})$/);
+    // Support both canonical numeric route (/chapter/15) and legacy UUID route (/chapter/<uuid>)
+    const chapterNumberMatch = path.match(/^\/chapter\/(\d+)$/);
+    const chapterUuidMatch = path.match(/^\/chapter\/([a-f0-9-]+)$/);
+    const volumeMatch = path.match(/^\/volume\/(\d{4}-\d{2})$/);
     const dateMatch = path.match(/^\/date\/(\d{4}-\d{2}-\d{2})$/);
     // News article match: /news/us/some-slug
     const newsArticleMatch = path.match(/^\/news\/([a-z]{2})\/([a-z0-9-]+)$/);
@@ -177,7 +183,132 @@ Deno.serve(async (req) => {
     let image = `${BASE_URL}/favicon.png`;
     let canonicalUrl = BASE_URL + path;
 
-    if (readMatch) {
+    if (path === "/sitemap") {
+      // HTML sitemap page (critical for crawlers like Screaming Frog)
+      title = "Sitemap | Точка Синхронізації";
+      description = "HTML sitemap with links to all major sections and content pages.";
+
+      const [{ data: countries }, { data: volumes }, { data: chapters }, { data: partsForDates }, { data: partsForStories }] = await Promise.all([
+        supabase
+          .from("news_countries")
+          .select("code, name, name_en, flag, sort_order")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("volumes")
+          .select("id, year, month, title, title_en, title_pl")
+          .order("year", { ascending: false })
+          .order("month", { ascending: false })
+          .limit(300),
+        supabase
+          .from("chapters")
+          .select("number, title, title_en, title_pl")
+          .order("number", { ascending: false })
+          .limit(300),
+        // dates list (used for /date/:date links)
+        supabase
+          .from("parts")
+          .select("date")
+          .eq("status", "published")
+          .order("date", { ascending: false })
+          .limit(1000),
+        // story links (sample up to 1000 newest; full coverage via sitemap.xml)
+        supabase
+          .from("parts")
+          .select("date, number, title, title_en, title_pl")
+          .eq("status", "published")
+          .order("date", { ascending: false })
+          .order("number", { ascending: false })
+          .limit(1000),
+      ]);
+
+      const uniqueDates = [...new Set((partsForDates || []).map((p: { date: string }) => p.date))].slice(0, 120);
+      html = generateSitemapHTML(
+        {
+          countries: countries || [],
+          volumes: volumes || [],
+          chapters: chapters || [],
+          dates: uniqueDates,
+          stories: partsForStories || [],
+        },
+        lang,
+      );
+    } else if (path === "/news") {
+      // News hub (/news)
+      title = "News | Точка Синхронізації";
+      description = "AI-curated news by country.";
+      const { data: countries } = await supabase
+        .from("news_countries")
+        .select("code, name, name_en, flag, sort_order")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+
+      html = generateNewsHubHTML(countries || [], lang);
+    } else if (path === "/chapters") {
+      title = "Chapters | Точка Синхронізації";
+      description = "All chapters.";
+
+      const { data: chapters } = await supabase
+        .from("chapters")
+        .select("number, title, title_en, title_pl")
+        .order("number", { ascending: false })
+        .limit(1000);
+
+      html = generateChaptersIndexHTML(chapters || [], lang);
+    } else if (path === "/volumes") {
+      title = "Volumes | Точка Синхронізації";
+      description = "All volumes.";
+
+      const { data: volumes } = await supabase
+        .from("volumes")
+        .select("year, month, title, title_en, title_pl")
+        .order("year", { ascending: false })
+        .order("month", { ascending: false })
+        .limit(1000);
+
+      html = generateVolumesIndexHTML(volumes || [], lang);
+    } else if (path === "/calendar" || path === "/read") {
+      // Lightweight crawler-friendly index of recent dates
+      title = "Archive | Точка Синхронізації";
+      description = "Browse recent dates.";
+
+      const { data: datesRaw } = await supabase
+        .from("parts")
+        .select("date")
+        .eq("status", "published")
+        .order("date", { ascending: false })
+        .limit(1000);
+      const dates = [...new Set((datesRaw || []).map((d: { date: string }) => d.date))].slice(0, 120);
+
+      html = generateCalendarIndexHTML(dates, lang);
+    } else if (volumeMatch) {
+      const [, yearMonth] = volumeMatch;
+      const [yearStr, monthStr] = yearMonth.split("-");
+      const year = parseInt(yearStr, 10);
+      const month = parseInt(monthStr, 10);
+
+      const { data: volume } = await supabase
+        .from("volumes")
+        .select("*")
+        .eq("year", year)
+        .eq("month", month)
+        .maybeSingle();
+
+      if (volume) {
+        const titleField = lang === "en" ? "title_en" : lang === "pl" ? "title_pl" : "title";
+        title = volume[titleField] || volume.title;
+        description = volume.summary_en || volume.summary || description;
+        image = volume.cover_image_url || image;
+
+        const { data: chapters } = await supabase
+          .from("chapters")
+          .select("number, title, title_en, title_pl")
+          .eq("volume_id", volume.id)
+          .order("number", { ascending: true });
+
+        html = generateVolumeHTML(volume, chapters || [], lang);
+      }
+    } else if (readMatch) {
       // Story page
       const [, date, storyNumber] = readMatch;
       const partIndex = parseInt(storyNumber, 10) - 1;
@@ -201,15 +332,34 @@ Deno.serve(async (req) => {
 
         html = generateStoryHTML(part, lang, canonicalUrl);
       }
-    } else if (chapterMatch) {
-      // Chapter page
-      const [, chapterId] = chapterMatch;
+    } else if (readDateMatch) {
+      // Date list under /read/:date (canonical SPA route)
+      const [, date] = readDateMatch;
 
-      const { data: chapter } = await supabase
+      const { data: parts } = await supabase
+        .from("parts")
+        .select("*, chapter:chapters(*)")
+        .eq("date", date)
+        .eq("status", "published")
+        .order("number", { ascending: true });
+
+      if (parts && parts.length > 0) {
+        title = `${date} | Точка Синхронізації`;
+        description = `${parts.length} ${parts.length === 1 ? "історія" : "історій"} за ${date}`;
+        html = generateDateHTML(parts, date, lang, canonicalUrl);
+      }
+    } else if (chapterNumberMatch || chapterUuidMatch) {
+      // Chapter page
+      const chapterNumber = chapterNumberMatch ? parseInt(chapterNumberMatch[1], 10) : null;
+      const chapterUuid = chapterUuidMatch ? chapterUuidMatch[1] : null;
+
+      const chapterQuery = supabase
         .from("chapters")
-        .select("*, volume:volumes(*)")
-        .eq("id", chapterId)
-        .single();
+        .select("*, volume:volumes(*)");
+
+      const { data: chapter } = chapterNumber !== null
+        ? await chapterQuery.eq("number", chapterNumber).maybeSingle()
+        : await chapterQuery.eq("id", chapterUuid).maybeSingle();
 
       if (chapter) {
         const titleField = lang === "en" ? "title_en" : lang === "pl" ? "title_pl" : "title";
@@ -539,7 +689,7 @@ function generateDateHTML(parts: any[], date: string, lang: string, canonicalUrl
     <ul>
       ${parts.map((part, index) => `
         <li>
-          <a href="${canonicalUrl.replace(/\/date\/.*/, `/read/${date}/${index + 1}`)}">
+          <a href="https://echoes2.com/read/${date}/${index + 1}">
             ${escapeHtml(part[titleField] || part.title)}
           </a>
           ${part.is_flash_news ? " ⚡" : ""}
@@ -569,9 +719,11 @@ function generateHomeHTML(parts: any[], lang: string, canonicalUrl: string) {
     </ul>
     
     <nav>
+      <a href="https://echoes2.com/news">📰 News</a> |
       <a href="https://echoes2.com/calendar">📅 Calendar Archive</a> |
       <a href="https://echoes2.com/chapters">📚 Chapters</a> |
-      <a href="https://echoes2.com/volumes">📖 Volumes</a>
+      <a href="https://echoes2.com/volumes">📖 Volumes</a> |
+      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
     </nav>
   `;
 }
@@ -611,6 +763,192 @@ function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, c
       <a href="https://echoes2.com/news/pl">🇵🇱 Poland</a> |
       <a href="https://echoes2.com/news/in">🇮🇳 India</a>
     </nav>
+  `;
+}
+
+function generateNewsHubHTML(countries: any[], lang: string) {
+  const nameField = lang === "en" ? "name_en" : lang === "pl" ? "name_pl" : "name";
+
+  return `
+    <h2>News by Country</h2>
+    <p>Select a country to browse the latest news articles.</p>
+
+    <ul>
+      ${countries.map((c) => {
+        const code = c.code;
+        const flag = c.flag || "";
+        const name = c[nameField] || c.name_en || c.name || code;
+        return `<li><a href="https://echoes2.com/news/${escapeHtml(code)}">${escapeHtml(flag)} ${escapeHtml(name)}</a></li>`;
+      }).join("")}
+    </ul>
+
+    <nav>
+      <a href="https://echoes2.com/">← Home</a> |
+      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+    </nav>
+  `;
+}
+
+function generateChaptersIndexHTML(chapters: any[], lang: string) {
+  const titleField = lang === "en" ? "title_en" : lang === "pl" ? "title_pl" : "title";
+
+  return `
+    <h2>Chapters</h2>
+    <p>${chapters.length} chapters</p>
+
+    <ul>
+      ${chapters.map((ch) => {
+        const title = ch[titleField] || ch.title;
+        return `<li><a href="https://echoes2.com/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(title)}</a></li>`;
+      }).join("")}
+    </ul>
+
+    <nav>
+      <a href="https://echoes2.com/">← Home</a> |
+      <a href="https://echoes2.com/volumes">📖 Volumes</a> |
+      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+    </nav>
+  `;
+}
+
+function generateVolumesIndexHTML(volumes: any[], lang: string) {
+  const titleField = lang === "en" ? "title_en" : lang === "pl" ? "title_pl" : "title";
+
+  return `
+    <h2>Volumes</h2>
+    <p>${volumes.length} volumes</p>
+
+    <ul>
+      ${volumes.map((v) => {
+        const monthStr = String(v.month).padStart(2, "0");
+        const yearMonth = `${v.year}-${monthStr}`;
+        const title = v[titleField] || v.title || yearMonth;
+        return `<li><a href="https://echoes2.com/volume/${yearMonth}">${escapeHtml(title)} (${yearMonth})</a></li>`;
+      }).join("")}
+    </ul>
+
+    <nav>
+      <a href="https://echoes2.com/">← Home</a> |
+      <a href="https://echoes2.com/chapters">📚 Chapters</a> |
+      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+    </nav>
+  `;
+}
+
+function generateVolumeHTML(volume: any, chapters: any[], lang: string) {
+  const titleField = lang === "en" ? "title_en" : lang === "pl" ? "title_pl" : "title";
+  const title = volume[titleField] || volume.title;
+  const monthStr = String(volume.month).padStart(2, "0");
+  const yearMonth = `${volume.year}-${monthStr}`;
+
+  return `
+    <h2>${escapeHtml(title)} (${yearMonth})</h2>
+    ${volume.cover_image_url ? `<img src="${escapeHtml(volume.cover_image_url)}" alt="${escapeHtml(title)}">` : ""}
+    ${volume.summary ? `<p>${escapeHtml(volume.summary_en || volume.summary)}</p>` : ""}
+
+    <h3>Chapters in this volume</h3>
+    <ul>
+      ${chapters.map((ch) => {
+        const chTitle = ch[titleField] || ch.title;
+        return `<li><a href="https://echoes2.com/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(chTitle)}</a></li>`;
+      }).join("")}
+    </ul>
+
+    <nav>
+      <a href="https://echoes2.com/volumes">← Volumes</a> |
+      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+    </nav>
+  `;
+}
+
+function generateCalendarIndexHTML(dates: string[], lang: string) {
+  return `
+    <h2>Archive</h2>
+    <p>Recent dates (${dates.length})</p>
+
+    <ul>
+      ${dates.map((d) => {
+        const date = escapeHtml(d);
+        return `<li><a href="https://echoes2.com/date/${date}">${date}</a> | <a href="https://echoes2.com/read/${date}">/read/${date}</a></li>`;
+      }).join("")}
+    </ul>
+
+    <nav>
+      <a href="https://echoes2.com/">← Home</a> |
+      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+    </nav>
+  `;
+}
+
+function generateSitemapHTML(
+  data: {
+    countries: any[];
+    volumes: any[];
+    chapters: any[];
+    dates: string[];
+    stories: any[];
+  },
+  lang: string,
+) {
+  const titleField = lang === "en" ? "title_en" : lang === "pl" ? "title_pl" : "title";
+  const nameField = lang === "en" ? "name_en" : lang === "pl" ? "name_pl" : "name";
+
+  return `
+    <h2>HTML Sitemap</h2>
+    <p>
+      Full XML sitemap: <a href="https://echoes2.com/sitemap.xml">sitemap.xml</a>
+    </p>
+
+    <h3>Sections</h3>
+    <ul>
+      <li><a href="https://echoes2.com/">Home</a></li>
+      <li><a href="https://echoes2.com/news">News</a></li>
+      <li><a href="https://echoes2.com/calendar">Calendar</a></li>
+      <li><a href="https://echoes2.com/chapters">Chapters</a></li>
+      <li><a href="https://echoes2.com/volumes">Volumes</a></li>
+    </ul>
+
+    <h3>Countries</h3>
+    <ul>
+      ${data.countries.map((c) => {
+        const code = c.code;
+        const flag = c.flag || "";
+        const name = c[nameField] || c.name_en || c.name || code;
+        return `<li><a href="https://echoes2.com/news/${escapeHtml(code)}">${escapeHtml(flag)} ${escapeHtml(name)}</a></li>`;
+      }).join("")}
+    </ul>
+
+    <h3>Volumes (recent)</h3>
+    <ul>
+      ${data.volumes.map((v) => {
+        const monthStr = String(v.month).padStart(2, "0");
+        const yearMonth = `${v.year}-${monthStr}`;
+        const title = v[titleField] || v.title || yearMonth;
+        return `<li><a href="https://echoes2.com/volume/${yearMonth}">${escapeHtml(title)}</a></li>`;
+      }).join("")}
+    </ul>
+
+    <h3>Chapters (recent)</h3>
+    <ul>
+      ${data.chapters.map((ch) => {
+        const title = ch[titleField] || ch.title;
+        return `<li><a href="https://echoes2.com/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(title)}</a></li>`;
+      }).join("")}
+    </ul>
+
+    <h3>Dates (recent)</h3>
+    <ul>
+      ${data.dates.map((d) => `<li><a href="https://echoes2.com/date/${escapeHtml(d)}">${escapeHtml(d)}</a></li>`).join("")}
+    </ul>
+
+    <h3>Stories (latest 1000)</h3>
+    <p>For full coverage, use <a href="https://echoes2.com/sitemap.xml">sitemap.xml</a>.</p>
+    <ul>
+      ${data.stories.map((p) => {
+        const t = p[titleField] || p.title;
+        return `<li><a href="https://echoes2.com/read/${escapeHtml(p.date)}/${p.number}">${escapeHtml(t)}</a></li>`;
+      }).join("")}
+    </ul>
   `;
 }
 
