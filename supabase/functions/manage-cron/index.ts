@@ -6,8 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// IMPORTANT: use the configured backend secret; keep a fallback only for legacy deployments
-const ADMIN_PASSWORD = Deno.env.get('ADMIN_PASSWORD') || '1907';
+// IMPORTANT: use the configured backend secret - no fallback for security
+const ADMIN_PASSWORD = Deno.env.get('ADMIN_PASSWORD');
 
 const RSS_SCHEDULES = {
   '30min': '*/30 * * * *',
@@ -27,6 +27,15 @@ serve(async (req) => {
   }
 
   try {
+    // Verify ADMIN_PASSWORD is configured
+    if (!ADMIN_PASSWORD) {
+      console.error('ADMIN_PASSWORD environment variable not configured');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { action, password, data } = await req.json();
 
     // Verify password for all actions
