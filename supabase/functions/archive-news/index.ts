@@ -6,12 +6,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// IMPORTANT: use the configured backend secret - no fallback for security
+const ADMIN_PASSWORD = Deno.env.get('ADMIN_PASSWORD');
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Verify ADMIN_PASSWORD is configured
+    if (!ADMIN_PASSWORD) {
+      console.error('ADMIN_PASSWORD environment variable not configured');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -74,7 +86,7 @@ serve(async (req) => {
 
       case 'run_archive': {
         // Verify password
-        if (password !== '1907') {
+        if (password !== ADMIN_PASSWORD) {
           return new Response(
             JSON.stringify({ error: 'Невірний пароль' }),
             { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -108,7 +120,7 @@ serve(async (req) => {
 
       case 'unarchive': {
         // Verify password
-        if (password !== '1907') {
+        if (password !== ADMIN_PASSWORD) {
           return new Response(
             JSON.stringify({ error: 'Невірний пароль' }),
             { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -141,7 +153,7 @@ serve(async (req) => {
 
       case 'archive_items': {
         // Verify password
-        if (password !== '1907') {
+        if (password !== ADMIN_PASSWORD) {
           return new Response(
             JSON.stringify({ error: 'Невірний пароль' }),
             { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -174,7 +186,7 @@ serve(async (req) => {
 
       case 'update_settings': {
         // Verify password
-        if (password !== '1907') {
+        if (password !== ADMIN_PASSWORD) {
           return new Response(
             JSON.stringify({ error: 'Невірний пароль' }),
             { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
