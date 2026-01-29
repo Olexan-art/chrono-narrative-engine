@@ -41,6 +41,17 @@ export default function NewsArticlePage() {
   const [selectedModel, setSelectedModel] = useState(AI_MODELS[0].value);
   const [selectedTweetModel, setSelectedTweetModel] = useState(AI_MODELS[0].value);
 
+  // Helper to get localized field - defined early so can be used in mutations
+  const getLocalizedField = (field: string, articleData?: any) => {
+    const data = articleData || article;
+    if (!data) return '';
+    // Try language-specific field first, fallback to English, then base field
+    const langField = (data as any)[`${field}_${language}`];
+    const enField = (data as any)[`${field}_en`];
+    const baseField = (data as any)[field];
+    return langField || enField || baseField;
+  };
+
   // Fetch news article by country code and slug
   const { data: article, isLoading } = useQuery({
     queryKey: ['news-article', country, slug],
@@ -253,6 +264,31 @@ export default function NewsArticlePage() {
     }
   });
 
+  // Translate news to English mutation - MUST be before conditional returns
+  const translateToEnglishMutation = useMutation({
+    mutationFn: async () => {
+      if (!article) throw new Error('No article');
+      
+      const result = await callEdgeFunction<{ success: boolean; error?: string }>(
+        'translate-news',
+        { newsId: article.id, targetLanguage: 'en' }
+      );
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Translation failed');
+      }
+      
+      return result;
+    },
+    onSuccess: () => {
+      toast.success('Перекладено на англійську');
+      queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Error translating');
+    }
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -278,15 +314,6 @@ export default function NewsArticlePage() {
     );
   }
 
-  // Get localized content based on current language
-  const getLocalizedField = (field: string) => {
-    // Try language-specific field first, fallback to English, then base field
-    const langField = (article as any)[`${field}_${language}`];
-    const enField = (article as any)[`${field}_en`];
-    const baseField = (article as any)[field];
-    return langField || enField || baseField;
-  };
-
   const countryName = language === 'en' 
     ? article.country.name_en || article.country.name
     : language === 'pl'
@@ -302,31 +329,6 @@ export default function NewsArticlePage() {
   // Check if this is a Ukrainian news article (for translate button)
   const isUkrainianNews = article.country?.code?.toLowerCase() === 'ua';
   const hasEnglishContent = !!(article.content_en || article.title_en);
-
-  // Translate news to English mutation
-  const translateToEnglishMutation = useMutation({
-    mutationFn: async () => {
-      if (!article) throw new Error('No article');
-      
-      const result = await callEdgeFunction<{ success: boolean; error?: string }>(
-        'translate-news',
-        { newsId: article.id, targetLanguage: 'en' }
-      );
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Translation failed');
-      }
-      
-      return result;
-    },
-    onSuccess: () => {
-      toast.success('Перекладено на англійську');
-      queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] });
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Error translating');
-    }
-  });
 
   // Generate SEO keywords from content
   const generateKeywords = (): string[] => {
