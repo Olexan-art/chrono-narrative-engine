@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Clock, RefreshCw, Loader2, Play, Zap, MessageSquare, Twitter, FileText, Settings } from "lucide-react";
+import { Clock, RefreshCw, Loader2, Play, Zap, MessageSquare, Twitter, FileText, Settings, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -61,6 +61,12 @@ const FREQUENCY_OPTIONS = [
   { value: '6hours', label: 'Кожні 6 годин', schedule: '0 */6 * * *' },
 ];
 
+const PENDING_FREQUENCY_OPTIONS = [
+  { value: '15min', label: 'Кожні 15 хвилин', schedule: '*/15 * * * *' },
+  { value: '30min', label: 'Кожні 30 хвилин', schedule: '*/30 * * * *' },
+  { value: '1hour', label: 'Кожну годину', schedule: '0 * * * *' },
+];
+
 // Global ratio is now per-country, but keep for backwards compat
 
 const DIALOGUE_COUNT_OPTIONS = [
@@ -102,6 +108,8 @@ export function CronJobsPanel({ password }: Props) {
     news_dialogue_count: 7,
     news_tweet_count: 4,
   });
+  const [pendingCronEnabled, setPendingCronEnabled] = useState(false);
+  const [pendingCronFrequency, setPendingCronFrequency] = useState('30min');
 
   // Fetch current RSS schedule
   const { data: rssSchedule, isLoading: scheduleLoading } = useQuery({
@@ -119,6 +127,26 @@ export function CronJobsPanel({ password }: Props) {
         return '1hour';
       } catch {
         return '1hour';
+      }
+    }
+  });
+
+  // Fetch pending cron status
+  const { data: pendingCronStatus } = useQuery({
+    queryKey: ['pending-cron-status'],
+    queryFn: async () => {
+      try {
+        const result = await callEdgeFunction<{ enabled: boolean; frequency?: string; schedule?: string }>(
+          'manage-cron',
+          { action: 'get_pending_cron_status', password }
+        );
+        if (result.enabled) {
+          setPendingCronEnabled(true);
+          setPendingCronFrequency(result.frequency || '30min');
+        }
+        return result;
+      } catch {
+        return { enabled: false };
       }
     }
   });
@@ -281,9 +309,110 @@ export function CronJobsPanel({ password }: Props) {
     }
   });
 
+  // Setup pending cron job
+  const setupPendingCronMutation = useMutation({
+    mutationFn: async (frequency: string) => {
+      return callEdgeFunction<{ success: boolean; frequency: string; schedule: string }>(
+        'manage-cron',
+        { action: 'setup_pending_cron', password, data: { frequency } }
+      );
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['pending-cron-status'] });
+      queryClient.invalidateQueries({ queryKey: ['cron-jobs'] });
+      setPendingCronEnabled(true);
+      toast({ 
+        title: 'Cron активовано',
+        description: `Пропущені новини будуть оброблятися ${PENDING_FREQUENCY_OPTIONS.find(f => f.value === result.frequency)?.label?.toLowerCase()}`
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Помилка',
+        description: error instanceof Error ? error.message : 'Не вдалося налаштувати cron',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Remove pending cron job
+  const removePendingCronMutation = useMutation({
+    mutationFn: async () => {
+      return callEdgeFunction<{ success: boolean }>(
+        'manage-cron',
+        { action: 'remove_pending_cron', password }
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-cron-status'] });
+      queryClient.invalidateQueries({ queryKey: ['cron-jobs'] });
+      setPendingCronEnabled(false);
+      toast({ title: 'Cron вимкнено' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Помилка',
+        description: error instanceof Error ? error.message : 'Не вдалося вимкнути cron',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Trigger manual process_pending
+  const triggerPendingMutation = useMutation({
+    mutationFn: async () => {
+      return callEdgeFunction<{ 
+        success: boolean; 
+        processed: number; 
+        retelled: number;
+        dialogues?: number;
+        tweets?: number;
+      }>(
+        'fetch-rss',
+        { action: 'process_pending', limit: 20 }
+      );
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['news-rss-items-count'] });
+      queryClient.invalidateQueries({ queryKey: ['auto-gen-stats'] });
+      
+      const parts = [`${result.processed} новин`];
+      if (result.retelled) parts.push(`${result.retelled} переказів`);
+      if (result.dialogues) parts.push(`${result.dialogues} діалогів`);
+      if (result.tweets) parts.push(`${result.tweets} твітів`);
+      
+      toast({ 
+        title: 'Пропущені новини оброблено',
+        description: `Оброблено: ${parts.join(', ')}`
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Помилка',
+        description: error instanceof Error ? error.message : 'Не вдалося запустити',
+        variant: 'destructive'
+      });
+    }
+  });
+
   const handleFrequencyChange = (value: string) => {
     setSelectedFrequency(value);
     updateScheduleMutation.mutate(value);
+  };
+
+  const handlePendingCronToggle = (enabled: boolean) => {
+    if (enabled) {
+      setupPendingCronMutation.mutate(pendingCronFrequency);
+    } else {
+      removePendingCronMutation.mutate();
+    }
+  };
+
+  const handlePendingFrequencyChange = (value: string) => {
+    setPendingCronFrequency(value);
+    if (pendingCronEnabled) {
+      setupPendingCronMutation.mutate(value);
+    }
   };
 
   const handleSettingToggle = (key: keyof AutoGenSettings, value: boolean) => {
@@ -565,6 +694,87 @@ export function CronJobsPanel({ password }: Props) {
               )}
               Запустити зараз
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Process Pending Cron Settings */}
+      <Card className="cosmic-card border-orange-500/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RotateCcw className="w-5 h-5 text-orange-500" />
+            Обробка пропущених новин
+          </CardTitle>
+          <CardDescription>
+            Автоматична обробка новин, які не отримали переказ/діалоги через ліміти
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border border-border/50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <RotateCcw className="w-5 h-5 text-orange-500" />
+              <div>
+                <div className="font-medium text-sm">Автообробка</div>
+                <div className="text-xs text-muted-foreground">
+                  Регулярно обробляти пропущені новини
+                </div>
+              </div>
+            </div>
+            <Switch
+              checked={pendingCronEnabled}
+              onCheckedChange={handlePendingCronToggle}
+              disabled={setupPendingCronMutation.isPending || removePendingCronMutation.isPending}
+            />
+          </div>
+
+          <div className="flex items-end gap-4 flex-wrap">
+            <div className="space-y-2 flex-1 min-w-[200px]">
+              <Label>Частота обробки</Label>
+              <Select
+                value={pendingCronFrequency}
+                onValueChange={handlePendingFrequencyChange}
+                disabled={setupPendingCronMutation.isPending || !pendingCronEnabled}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PENDING_FREQUENCY_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex items-center gap-2">
+                        <span>{option.label}</span>
+                        <span className="text-xs text-muted-foreground font-mono">
+                          ({option.schedule})
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <Button
+              onClick={() => triggerPendingMutation.mutate()}
+              disabled={triggerPendingMutation.isPending}
+              variant="outline"
+              className="gap-2"
+            >
+              {triggerPendingMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )}
+              Запустити зараз
+            </Button>
+          </div>
+
+          <div className="p-3 bg-muted/30 rounded-lg text-sm">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Zap className="w-4 h-4 text-orange-500" />
+              <span>
+                Обробляє до 20 новин за раз для країн з 100% ratio (US, UA), які не отримали контент
+              </span>
+            </div>
           </div>
         </CardContent>
       </Card>
