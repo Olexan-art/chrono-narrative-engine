@@ -541,6 +541,39 @@ Category: ${news.category || 'general'}`;
       // Don't fail the whole operation if dialogue generation fails
     }
 
+    // Search Wikipedia for entities mentioned in the news
+    try {
+      if (keywords && keywords.length > 0) {
+        console.log('Searching Wikipedia for entities from keywords:', keywords);
+        
+        const wikiResponse = await fetch(`${supabaseUrl}/functions/v1/search-wiki`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            newsId,
+            title: getTitle(),
+            keywords,
+            language: language.code === 'uk' ? 'uk' : language.code === 'pl' ? 'pl' : 'en',
+          }),
+        });
+
+        if (wikiResponse.ok) {
+          const wikiResult = await wikiResponse.json();
+          if (wikiResult.success && wikiResult.count > 0) {
+            console.log(`Found ${wikiResult.count} Wikipedia entities`);
+          }
+        } else {
+          console.error('Wikipedia search failed:', wikiResponse.status);
+        }
+      }
+    } catch (wikiError) {
+      console.error('Error searching Wikipedia:', wikiError);
+      // Don't fail the whole operation if wiki search fails
+    }
+
     // Update cache for this news article after retelling is complete
     const countryCode = news.country?.code?.toLowerCase() || 'us';
     if (news.slug) {

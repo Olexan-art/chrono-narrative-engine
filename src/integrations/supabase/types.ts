@@ -680,6 +680,51 @@ export type Database = {
           },
         ]
       }
+      news_wiki_entities: {
+        Row: {
+          created_at: string
+          id: string
+          match_source: string
+          match_term: string | null
+          news_item_id: string
+          relevance_score: number | null
+          wiki_entity_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_source?: string
+          match_term?: string | null
+          news_item_id: string
+          relevance_score?: number | null
+          wiki_entity_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_source?: string
+          match_term?: string | null
+          news_item_id?: string
+          relevance_score?: number | null
+          wiki_entity_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_wiki_entities_news_item_id_fkey"
+            columns: ["news_item_id"]
+            isOneToOne: false
+            referencedRelation: "news_rss_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_wiki_entities_wiki_entity_id_fkey"
+            columns: ["wiki_entity_id"]
+            isOneToOne: false
+            referencedRelation: "wiki_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parts: {
         Row: {
           category: string | null
@@ -1117,6 +1162,66 @@ export type Database = {
           title_pl?: string | null
           updated_at?: string | null
           year?: number
+        }
+        Relationships: []
+      }
+      wiki_entities: {
+        Row: {
+          created_at: string
+          description: string | null
+          description_en: string | null
+          entity_type: string
+          extract: string | null
+          extract_en: string | null
+          id: string
+          image_url: string | null
+          last_searched_at: string | null
+          name: string
+          name_en: string | null
+          raw_data: Json | null
+          search_count: number
+          updated_at: string
+          wiki_id: string
+          wiki_url: string
+          wiki_url_en: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          description_en?: string | null
+          entity_type?: string
+          extract?: string | null
+          extract_en?: string | null
+          id?: string
+          image_url?: string | null
+          last_searched_at?: string | null
+          name: string
+          name_en?: string | null
+          raw_data?: Json | null
+          search_count?: number
+          updated_at?: string
+          wiki_id: string
+          wiki_url: string
+          wiki_url_en?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          description_en?: string | null
+          entity_type?: string
+          extract?: string | null
+          extract_en?: string | null
+          id?: string
+          image_url?: string | null
+          last_searched_at?: string | null
+          name?: string
+          name_en?: string | null
+          raw_data?: Json | null
+          search_count?: number
+          updated_at?: string
+          wiki_id?: string
+          wiki_url?: string
+          wiki_url_en?: string | null
         }
         Relationships: []
       }

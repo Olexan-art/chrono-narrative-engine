@@ -15,6 +15,7 @@ import { RelatedCountryNews } from "@/components/RelatedCountryNews";
 import { OtherCountriesNews } from "@/components/OtherCountriesNews";
 import { NewsTweetCard } from "@/components/NewsTweetCard";
 import { NewsKeyPoints, NewsKeywords } from "@/components/NewsKeyPoints";
+import { NewsWikiEntities } from "@/components/NewsWikiEntities";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { callEdgeFunction } from "@/lib/api";
@@ -741,6 +742,14 @@ export default function NewsArticlePage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Wikipedia Entities */}
+            <NewsWikiEntities 
+              newsId={article.id}
+              title={getLocalizedField('title')}
+              keywords={articleKeywords}
+              showSearchButton
+            />
 
             {/* Character Dialogue Section - DESKTOP ONLY (in sidebar) */}
             <NewsDialogueSection
