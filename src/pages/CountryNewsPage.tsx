@@ -13,6 +13,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
+import { isNewsRetold, hasNewsDialogue } from "@/lib/countryContentConfig";
 
 interface NewsCountry {
   id: string;
@@ -29,7 +30,12 @@ interface NewsItem {
   title_en: string | null;
   description: string | null;
   description_en: string | null;
+  content: string | null;
   content_en: string | null;
+  content_hi: string | null;
+  content_ta: string | null;
+  content_te: string | null;
+  content_bn: string | null;
   url: string;
   slug: string | null;
   image_url: string | null;
@@ -108,7 +114,8 @@ export default function CountryNewsPage() {
       let query = supabase
         .from('news_rss_items')
         .select(`
-          id, title, title_en, description, description_en, content_en,
+          id, title, title_en, description, description_en, 
+          content, content_en, content_hi, content_ta, content_te, content_bn,
           url, slug, image_url, category, published_at, chat_dialogue, tweets,
           news_rss_feeds!inner(name)
         `)
@@ -181,14 +188,14 @@ export default function CountryNewsPage() {
     }
   };
 
-  // Check if item has AI retold content
+  // Check if item has AI retold content using country-specific config
   const hasRetoldContent = (item: NewsItem) => {
-    return item.content_en && item.content_en.length > 100;
+    return isNewsRetold(item as unknown as Record<string, unknown>, countryCode?.toUpperCase() || 'US');
   };
 
   // Check if item has dialogues
   const hasDialogues = (item: NewsItem) => {
-    return item.chat_dialogue && Array.isArray(item.chat_dialogue) && item.chat_dialogue.length > 0;
+    return hasNewsDialogue(item as unknown as Record<string, unknown>);
   };
 
   if (countryLoading) {
