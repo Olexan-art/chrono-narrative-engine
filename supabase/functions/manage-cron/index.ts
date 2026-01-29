@@ -21,6 +21,12 @@ const CACHE_SCHEDULES: Record<string, string> = {
   '24hours': '0 0 * * *',
 };
 
+const PENDING_SCHEDULES: Record<string, string> = {
+  '15min': '*/15 * * * *',
+  '30min': '*/30 * * * *',
+  '1hour': '0 * * * *',
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -319,6 +325,106 @@ serve(async (req) => {
           console.error('Error removing cache cron:', error);
           return new Response(
             JSON.stringify({ error: 'Failed to remove cache cron job' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      case 'setup_pending_cron': {
+        // Set up process_pending cron job with configurable frequency
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const frequency = data?.frequency || '30min';
+        const schedule = PENDING_SCHEDULES[frequency] || PENDING_SCHEDULES['30min'];
+        
+        try {
+          // Try to unschedule existing job first
+          await supabase.rpc('exec_sql', {
+            sql: "SELECT cron.unschedule('process-pending-news')"
+          });
+        } catch {
+          console.log('No existing pending cron job, continuing...');
+        }
+        
+        try {
+          const cronCommand = `
+            SELECT net.http_post(
+              url:='${supabaseUrl}/functions/v1/fetch-rss',
+              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceRoleKey}"}'::jsonb,
+              body:='{"action": "process_pending", "limit": 20}'::jsonb
+            ) as request_id;
+          `;
+          
+          await supabase.rpc('exec_sql', {
+            sql: `SELECT cron.schedule('process-pending-news', '${schedule}', $$${cronCommand}$$)`
+          });
+          
+          console.log(`Pending news cron job scheduled: ${frequency} (${schedule})`);
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: `Process pending scheduled: ${frequency}`,
+              frequency,
+              schedule
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error('Error setting up pending cron:', error);
+          return new Response(
+            JSON.stringify({ error: 'Failed to set up pending cron job' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      case 'get_pending_cron_status': {
+        try {
+          const { data: result } = await supabase.rpc('exec_sql', {
+            sql: "SELECT jobname, schedule FROM cron.job WHERE jobname = 'process-pending-news' LIMIT 1"
+          });
+          
+          const jobs = result as Array<{ jobname: string; schedule: string }> | null;
+          if (jobs && jobs.length > 0) {
+            const schedule = jobs[0].schedule;
+            let frequency = '30min';
+            if (schedule === '*/15 * * * *') frequency = '15min';
+            else if (schedule === '*/30 * * * *') frequency = '30min';
+            else if (schedule === '0 * * * *') frequency = '1hour';
+            
+            return new Response(
+              JSON.stringify({ enabled: true, frequency, schedule }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          return new Response(
+            JSON.stringify({ enabled: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch {
+          return new Response(
+            JSON.stringify({ enabled: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      case 'remove_pending_cron': {
+        try {
+          await supabase.rpc('exec_sql', {
+            sql: "SELECT cron.unschedule('process-pending-news')"
+          });
+          
+          return new Response(
+            JSON.stringify({ success: true, message: 'Pending cron job removed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error('Error removing pending cron:', error);
+          return new Response(
+            JSON.stringify({ error: 'Failed to remove pending cron job' }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }

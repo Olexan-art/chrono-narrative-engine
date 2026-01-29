@@ -829,8 +829,8 @@ serve(async (req) => {
       }
       
       // Limit processing to avoid timeout (edge function has ~50s limit)
-      // Each item takes ~2-5s for retelling, so limit to 10 items per run
-      const MAX_ITEMS_PER_RUN = 10;
+      // Each item takes ~2-5s for retelling, so limit to 20 items per run
+      const MAX_ITEMS_PER_RUN = 20;
       const itemsToProcess = allToProcess.slice(0, MAX_ITEMS_PER_RUN);
       const skippedCount = Math.max(0, allToProcess.length - MAX_ITEMS_PER_RUN);
       
