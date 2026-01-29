@@ -82,8 +82,15 @@ const EXCLUDED_PATHS = [
   '/llms.txt',
   '/llms-full.txt',
   '/.well-known/',
-  '/api/',
 ];
+
+// API rewrites to Supabase Edge Functions
+const API_REWRITES = {
+  '/api/sitemap': `${SSR_ENDPOINT.replace('/ssr-render', '/sitemap')}`,
+  '/api/news-sitemap': `${SSR_ENDPOINT.replace('/ssr-render', '/news-sitemap')}`,
+  '/api/ssr-render': SSR_ENDPOINT,
+  '/api/llms-txt': `${SSR_ENDPOINT.replace('/ssr-render', '/llms-txt')}`,
+};
 
 // Check if User-Agent is a bot
 function isBot(userAgent) {
@@ -133,7 +140,45 @@ export default {
     const pathname = url.pathname;
     const userAgent = request.headers.get('User-Agent') || '';
     
-    // Skip excluded paths (assets, API, etc.)
+    // Handle API rewrites to Supabase Edge Functions
+    for (const [apiPath, targetUrl] of Object.entries(API_REWRITES)) {
+      if (pathname.startsWith(apiPath)) {
+        try {
+          // Build the target URL with query params
+          const targetUrlObj = new URL(targetUrl);
+          // Copy query params from original request
+          url.searchParams.forEach((value, key) => {
+            targetUrlObj.searchParams.set(key, value);
+          });
+          
+          const proxyResponse = await fetch(targetUrlObj.toString(), {
+            method: request.method,
+            headers: {
+              'User-Agent': userAgent,
+              'Accept': request.headers.get('Accept') || '*/*',
+            },
+          });
+          
+          if (proxyResponse.ok) {
+            const body = await proxyResponse.text();
+            const contentType = proxyResponse.headers.get('Content-Type') || 'application/xml';
+            
+            return new Response(body, {
+              status: proxyResponse.status,
+              headers: {
+                'Content-Type': contentType,
+                'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+                'Access-Control-Allow-Origin': '*',
+              },
+            });
+          }
+        } catch (error) {
+          console.error('API proxy failed:', error);
+        }
+      }
+    }
+    
+    // Skip excluded paths (assets, etc.)
     if (isExcludedPath(pathname)) {
       return env.ASSETS.fetch(request);
     }
