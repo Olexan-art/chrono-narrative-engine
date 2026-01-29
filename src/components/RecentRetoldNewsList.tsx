@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, FileText, MessageSquare, Twitter, ListChecks, Database, ExternalLink } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { uk } from "date-fns/locale";
+import { isNewsRetold, hasNewsDialogue } from "@/lib/countryContentConfig";
 
 interface RecentRetoldNewsItem {
   id: string;
@@ -37,6 +38,9 @@ export function RecentRetoldNewsList() {
           content,
           content_en,
           content_hi,
+          content_ta,
+          content_te,
+          content_bn,
           key_points,
           key_points_en,
           chat_dialogue,
@@ -45,7 +49,7 @@ export function RecentRetoldNewsList() {
         `)
         .eq('is_archived', false)
         .order('fetched_at', { ascending: false })
-        .limit(100);
+        .limit(150);
 
       if (error) throw error;
 
@@ -64,16 +68,9 @@ export function RecentRetoldNewsList() {
         const country = item.country as unknown as { code: string; flag: string };
         const countryCode = country?.code || 'US';
         
-        // Check if retold based on country config
-        let hasRetold = false;
-        if (countryCode === 'US') {
-          hasRetold = (item.content_en?.length || 0) > 300;
-        } else if (countryCode === 'IN') {
-          hasRetold = (item.content_hi?.length || 0) > 300;
-        } else {
-          // PL, UA - check native content
-          hasRetold = (item.content?.length || 0) > 500;
-        }
+        // Use centralized isNewsRetold function for consistency
+        const itemRecord = item as unknown as Record<string, unknown>;
+        const hasRetold = isNewsRetold(itemRecord, countryCode);
 
         // Skip non-retold items
         if (!hasRetold) continue;
@@ -85,9 +82,8 @@ export function RecentRetoldNewsList() {
           (Array.isArray(keyPoints) && keyPoints.length > 0) ||
           (Array.isArray(keyPointsEn) && keyPointsEn.length > 0);
 
-        // Check dialogue
-        const dialogue = item.chat_dialogue as unknown;
-        const hasDialogue = Array.isArray(dialogue) && dialogue.length > 0;
+        // Use centralized hasNewsDialogue function
+        const hasDialogue = hasNewsDialogue(itemRecord);
 
         // Check tweets
         const tweets = item.tweets as unknown;
