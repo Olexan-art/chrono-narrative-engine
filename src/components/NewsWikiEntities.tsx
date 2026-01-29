@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Search, Sparkles } from "lucide-react";
+import { Loader2, Search, Sparkles, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { WikiEntityCard } from "@/components/WikiEntityCard";
@@ -25,6 +25,13 @@ interface WikiEntity {
   extract_en: string | null;
 }
 
+interface NewsWikiLink {
+  id: string;
+  match_term: string | null;
+  match_source: string;
+  wiki_entity: WikiEntity;
+}
+
 interface NewsWikiEntitiesProps {
   newsId: string;
   title?: string;
@@ -38,7 +45,7 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
   const { isAuthenticated: isAdmin } = useAdminStore();
 
   // Fetch linked entities for this news
-  const { data: entities, isLoading } = useQuery({
+  const { data: entityLinks, isLoading } = useQuery({
     queryKey: ['news-wiki-entities', newsId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -62,7 +69,12 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
 
       return data
         .filter(d => d.wiki_entity)
-        .map(d => d.wiki_entity as WikiEntity);
+        .map(d => ({
+          id: d.id,
+          match_term: d.match_term,
+          match_source: d.match_source,
+          wiki_entity: d.wiki_entity as WikiEntity
+        })) as NewsWikiLink[];
     },
     enabled: !!newsId,
   });
@@ -112,6 +124,32 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
     },
   });
 
+  // Delete entity link mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (linkId: string) => {
+      const { error } = await supabase
+        .from('news_wiki_entities')
+        .delete()
+        .eq('id', linkId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(
+        language === 'uk' 
+          ? 'Сутність видалено' 
+          : language === 'pl'
+          ? 'Podmiot usunięty'
+          : 'Entity removed'
+      );
+      queryClient.invalidateQueries({ queryKey: ['news-wiki-entities', newsId] });
+      queryClient.invalidateQueries({ queryKey: ['news-with-entities'] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Delete error');
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-4">
@@ -120,7 +158,7 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
     );
   }
 
-  const hasEntities = entities && entities.length > 0;
+  const hasEntities = entityLinks && entityLinks.length > 0;
 
   // Don't render anything if no entities and not admin
   if (!hasEntities && !isAdmin) {
@@ -137,8 +175,21 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
       </CardHeader>
       <CardContent className="space-y-3">
         {hasEntities ? (
-          entities.map((entity) => (
-            <WikiEntityCard key={entity.id} entity={entity} compact={entities.length > 2} />
+          entityLinks.map((link) => (
+            <div key={link.id} className="relative group">
+              <WikiEntityCard entity={link.wiki_entity} compact={entityLinks.length > 2} />
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive/10 hover:bg-destructive/20 text-destructive"
+                  onClick={() => deleteMutation.mutate(link.id)}
+                  disabled={deleteMutation.isPending}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
           ))
         ) : (
           <p className="text-xs text-muted-foreground">
