@@ -6,7 +6,6 @@ const corsHeaders = {
 };
 
 const BASE_URL = "https://echoes2.com";
-const SITEMAP_BASE_URL = "https://echoes2.com/api";
 const CACHE_TTL_HOURS = 6; // Cache sitemap for 6 hours
 
 // Helper to add hreflang links for multilingual pages
@@ -39,7 +38,13 @@ async function getCachedSitemap(supabase: any, cachePath: string): Promise<strin
 }
 
 // Save sitemap to cache
-async function cacheSitemap(supabase: any, cachePath: string, xml: string, countryName?: string): Promise<void> {
+async function cacheSitemap(
+  supabase: any,
+  functionsBaseUrl: string,
+  cachePath: string,
+  xml: string,
+  countryName?: string
+): Promise<void> {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + CACHE_TTL_HOURS * 60 * 60 * 1000);
   
@@ -50,7 +55,7 @@ async function cacheSitemap(supabase: any, cachePath: string, xml: string, count
       html: xml,
       title: `News Sitemap: ${countryName || 'Index'}`,
       description: `XML News Sitemap for ${BASE_URL}`,
-      canonical_url: `${BASE_URL}${cachePath}`,
+      canonical_url: `${functionsBaseUrl}${cachePath}`,
       expires_at: expiresAt.toISOString(),
       updated_at: now.toISOString(),
       html_size_bytes: new TextEncoder().encode(xml).length,
@@ -115,6 +120,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const functionsBaseUrl = `${supabaseUrl}/functions/v1`;
 
     const url = new URL(req.url);
     const countryCode = url.searchParams.get("country")?.toLowerCase();
@@ -124,7 +130,7 @@ Deno.serve(async (req) => {
 
     // If no country specified, return sitemap index
     if (!countryCode) {
-      return await generateSitemapIndex(supabase, startTime, forceRefresh);
+      return await generateSitemapIndex(supabase, functionsBaseUrl, startTime, forceRefresh);
     }
 
     // Validate country code
@@ -142,7 +148,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const cachePath = `/api/news-sitemap?country=${countryCode}`;
+    const cachePath = `/news-sitemap?country=${countryCode}`;
 
     // Check cache first (unless force refresh or action=generate)
     if (!forceRefresh && action !== "generate") {
@@ -164,11 +170,11 @@ Deno.serve(async (req) => {
     const { xml, urlCount } = await generateCountrySitemap(supabase, country, startTime);
     
     // Cache the generated sitemap
-    await cacheSitemap(supabase, cachePath, xml, country.name);
+    await cacheSitemap(supabase, functionsBaseUrl, cachePath, xml, country.name);
     
     // Ping search engines in background if action=generate and ping not disabled
     if (action === "generate" && pingEnabled && urlCount > 0) {
-      const sitemapUrl = `${SITEMAP_BASE_URL}/news-sitemap?country=${countryCode}`;
+      const sitemapUrl = `${functionsBaseUrl}/news-sitemap?country=${countryCode}`;
       const sitemapType = `news-${countryCode}`;
       
       EdgeRuntime.waitUntil(
@@ -201,8 +207,13 @@ Deno.serve(async (req) => {
   }
 });
 
-async function generateSitemapIndex(supabase: any, startTime: number, forceRefresh: boolean): Promise<Response> {
-  const cachePath = "/api/news-sitemap-index";
+async function generateSitemapIndex(
+  supabase: any,
+  functionsBaseUrl: string,
+  startTime: number,
+  forceRefresh: boolean
+): Promise<Response> {
+  const cachePath = "/news-sitemap-index";
 
   // Check cache first (unless force refresh)
   if (!forceRefresh) {
@@ -250,7 +261,7 @@ async function generateSitemapIndex(supabase: any, startTime: number, forceRefre
   for (const country of countries || []) {
     xml += `
   <sitemap>
-    <loc>${SITEMAP_BASE_URL}/news-sitemap?country=${country.code.toLowerCase()}</loc>
+    <loc>${functionsBaseUrl}/news-sitemap?country=${country.code.toLowerCase()}</loc>
     <lastmod>${now}</lastmod>
   </sitemap>`;
   }
@@ -259,7 +270,7 @@ async function generateSitemapIndex(supabase: any, startTime: number, forceRefre
 </sitemapindex>`;
 
   // Cache the index
-  await cacheSitemap(supabase, cachePath, xml, 'Index');
+  await cacheSitemap(supabase, functionsBaseUrl, cachePath, xml, 'Index');
 
   return new Response(xml, { 
     headers: {
