@@ -39,8 +39,8 @@ export function NewsKeyPoints({
     return 'Теми';
   };
 
-  // For Ukrainian news, show bilingual content
-  if (isUkrainian && hasEnglishContent) {
+  // For Ukrainian news, always show bilingual layout (UA first, EN second if available)
+  if (isUkrainian && hasContent) {
     return (
       <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader className="pb-3">
@@ -50,7 +50,7 @@ export function NewsKeyPoints({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* English Key Points */}
+          {/* English Key Points - shown FIRST if available */}
           {keyPointsEn.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 mb-2">
@@ -71,9 +71,9 @@ export function NewsKeyPoints({
             </div>
           )}
 
-          {/* Ukrainian Key Points */}
+          {/* Ukrainian Key Points - always shown for Ukrainian news */}
           {keyPoints.length > 0 && (
-            <div className="space-y-2 pt-3 border-t border-border/30">
+            <div className={`space-y-2 ${keyPointsEn.length > 0 ? 'pt-3 border-t border-border/30' : ''}`}>
               <div className="flex items-center gap-2 mb-2">
                 <Badge variant="outline" className="text-xs font-semibold bg-yellow-500/10 text-yellow-400 border-yellow-500/30">
                   UA
