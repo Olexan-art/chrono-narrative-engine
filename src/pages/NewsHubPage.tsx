@@ -221,9 +221,9 @@ export default function NewsHubPage() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 mb-1">
                                   {isRetold && (
-                                    <Badge variant="default" className="text-[10px] px-1 py-0 h-4 gap-0.5">
-                                      <Sparkles className="w-2 h-2" />
-                                      AI
+                                    <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4 gap-0.5">
+                                      <Sparkles className="w-2.5 h-2.5" />
+                                      Full retelling
                                     </Badge>
                                   )}
                                   <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
