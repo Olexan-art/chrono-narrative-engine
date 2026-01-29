@@ -135,10 +135,10 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
           {language === 'uk' ? 'Згадані сутності' : language === 'pl' ? 'Wspomniane podmioty' : 'Mentioned Entities'}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-3">
         {hasEntities ? (
           entities.map((entity) => (
-            <WikiEntityCard key={entity.id} entity={entity} compact />
+            <WikiEntityCard key={entity.id} entity={entity} compact={entities.length > 2} />
           ))
         ) : (
           <p className="text-xs text-muted-foreground">
