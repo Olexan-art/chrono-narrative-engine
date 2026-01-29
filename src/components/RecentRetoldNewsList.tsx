@@ -24,7 +24,7 @@ interface RecentRetoldNewsItem {
 }
 
 export function RecentRetoldNewsList() {
-  const { data: recentNews = [], isLoading } = useQuery({
+  const { data: recentNews = [], isLoading, isFetching } = useQuery({
     queryKey: ['recent-retold-news'],
     queryFn: async () => {
       // Fetch news items that have been retold (content_en > 300 chars for US, content > 500 for others)
@@ -129,8 +129,19 @@ export function RecentRetoldNewsList() {
         <CardTitle className="flex items-center gap-2 text-base">
           <FileText className="w-4 h-4 text-primary" />
           Останні переказані новини
+          {isFetching && !isLoading && (
+            <span className="relative flex h-2 w-2 ml-1">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+          )}
         </CardTitle>
-        <CardDescription>Новини з AI-контентом (показано {recentNews.length})</CardDescription>
+        <CardDescription>
+          Новини з AI-контентом (показано {recentNews.length})
+          {isFetching && !isLoading && (
+            <span className="ml-2 text-green-500 text-xs animate-pulse">оновлюється...</span>
+          )}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[400px] pr-4">
