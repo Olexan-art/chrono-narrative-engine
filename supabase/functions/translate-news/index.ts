@@ -46,6 +46,8 @@ serve(async (req) => {
     const title = news.title || '';
     const description = news.description || '';
     const content = news.content || '';
+    const keyPoints = Array.isArray(news.key_points) ? news.key_points : [];
+    const themes = Array.isArray(news.themes) ? news.themes : [];
 
     if (!title && !content) {
       throw new Error('No content to translate');
@@ -60,12 +62,16 @@ IMPORTANT RULES:
 2. Keep proper nouns and names as appropriate for the target language
 3. Maintain the same structure and paragraph breaks
 4. Do NOT add commentary or interpretation
+5. Translate key_points array items as an array of strings
+6. Translate themes array items as an array of strings
 
 RESPONSE FORMAT (JSON):
 {
   "title": "translated title",
   "description": "translated description",
-  "content": "translated content"
+  "content": "translated content",
+  "key_points": ["translated point 1", "translated point 2", ...],
+  "themes": ["translated theme 1", "translated theme 2", ...]
 }
 
 Only include fields that have content in the original.`;
@@ -79,7 +85,13 @@ DESCRIPTION:
 ${description}
 
 CONTENT:
-${content}`;
+${content}
+
+KEY POINTS:
+${JSON.stringify(keyPoints)}
+
+THEMES:
+${JSON.stringify(themes)}`;
 
     console.log(`Translating news ${newsId} to ${targetLanguage}`);
 
@@ -123,7 +135,7 @@ ${content}`;
 
     // Build update data
     const langSuffix = `_${targetLanguage}`;
-    const updateData: Record<string, string> = {};
+    const updateData: Record<string, any> = {};
 
     if (translated.title) {
       updateData[`title${langSuffix}`] = translated.title;
@@ -133,6 +145,12 @@ ${content}`;
     }
     if (translated.content) {
       updateData[`content${langSuffix}`] = translated.content;
+    }
+    if (translated.key_points && Array.isArray(translated.key_points) && translated.key_points.length > 0) {
+      updateData[`key_points${langSuffix}`] = translated.key_points;
+    }
+    if (translated.themes && Array.isArray(translated.themes) && translated.themes.length > 0) {
+      updateData[`themes${langSuffix}`] = translated.themes;
     }
 
     if (Object.keys(updateData).length === 0) {
