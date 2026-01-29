@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import { Globe, Loader2, Calendar, Newspaper, Filter, RefreshCw, ChevronRight, Sparkles } from "lucide-react";
+import { Globe, Loader2, Calendar, Newspaper, Filter, RefreshCw, ChevronRight, Sparkles, BookUser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -145,6 +145,23 @@ export default function CountryNewsPage() {
 
   // Flatten all pages into single array
   const newsItems = newsData?.pages.flatMap(page => page.items) || [];
+
+  // Get news IDs that have wiki entities
+  const newsIds = newsItems.map(item => item.id);
+  const { data: entityCounts = [] } = useQuery({
+    queryKey: ['news-with-entities', newsIds],
+    queryFn: async () => {
+      if (newsIds.length === 0) return [];
+      const { data } = await supabase
+        .from('news_wiki_entities')
+        .select('news_item_id')
+        .in('news_item_id', newsIds);
+      return data?.map(d => d.news_item_id) || [];
+    },
+    enabled: newsIds.length > 0,
+  });
+
+  const hasWikiEntities = (itemId: string) => entityCounts.includes(itemId);
 
   // Intersection observer for infinite scroll
   const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
@@ -380,6 +397,12 @@ export default function CountryNewsPage() {
                           {hasDialogue && (
                             <Badge variant="secondary" className="text-xs">
                               💬
+                            </Badge>
+                          )}
+                          {hasWikiEntities(item.id) && (
+                            <Badge variant="outline" className="text-xs gap-0.5 border-primary/40 text-primary">
+                              <BookUser className="w-2.5 h-2.5" />
+                              {language === 'uk' ? 'картка' : language === 'pl' ? 'karta' : 'card'}
                             </Badge>
                           )}
                         </div>
