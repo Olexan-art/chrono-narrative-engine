@@ -39,9 +39,7 @@ export function SEOHead({
 }: SEOHeadProps) {
   const { language } = useLanguage();
 
-  const fullTitle = title.includes('Точка Синхронізації') 
-    ? title 
-    : `${title} | Точка Синхронізації`;
+  const fullTitle = title;
 
   useEffect(() => {
     // Update document title
