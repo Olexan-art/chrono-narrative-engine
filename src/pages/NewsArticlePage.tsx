@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
-import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame } from "lucide-react";
+import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { NewsDialogueSection } from "@/components/NewsDialogueSection";
 import { RelatedCountryNews } from "@/components/RelatedCountryNews";
 import { OtherCountriesNews } from "@/components/OtherCountriesNews";
 import { NewsTweetCard } from "@/components/NewsTweetCard";
+import { NewsKeyPoints, NewsKeywords } from "@/components/NewsKeyPoints";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { callEdgeFunction } from "@/lib/api";
@@ -294,6 +295,38 @@ export default function NewsArticlePage() {
 
   const chatDialogue = Array.isArray(article.chat_dialogue) ? article.chat_dialogue : [];
   const tweets = Array.isArray((article as any).tweets) ? (article as any).tweets : [];
+  const keyPoints = Array.isArray((article as any).key_points) ? (article as any).key_points : [];
+  const themes = Array.isArray((article as any).themes) ? (article as any).themes : [];
+  const articleKeywords = Array.isArray((article as any).keywords) ? (article as any).keywords : [];
+
+  // Check if this is a Ukrainian news article (for translate button)
+  const isUkrainianNews = article.country?.code?.toLowerCase() === 'ua';
+  const hasEnglishContent = !!(article.content_en || article.title_en);
+
+  // Translate news to English mutation
+  const translateToEnglishMutation = useMutation({
+    mutationFn: async () => {
+      if (!article) throw new Error('No article');
+      
+      const result = await callEdgeFunction<{ success: boolean; error?: string }>(
+        'translate-news',
+        { newsId: article.id, targetLanguage: 'en' }
+      );
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Translation failed');
+      }
+      
+      return result;
+    },
+    onSuccess: () => {
+      toast.success('Перекладено на англійську');
+      queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Error translating');
+    }
+  });
 
   // Generate SEO keywords from content
   const generateKeywords = (): string[] => {
@@ -378,9 +411,12 @@ export default function NewsArticlePage() {
                   )}
                 </div>
                 
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-serif leading-tight mb-4">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-serif leading-tight mb-2">
                   {getLocalizedField('title')}
                 </h1>
+
+                {/* Keywords - under title */}
+                <NewsKeywords keywords={articleKeywords} />
                 
                 {article.image_url && (
                   <div className="relative">
@@ -401,7 +437,12 @@ export default function NewsArticlePage() {
                 )}
               </header>
 
-              {/* Content */}
+              {/* Key Points Block - before content */}
+              <NewsKeyPoints 
+                keyPoints={keyPoints} 
+                themes={themes} 
+                keywords={articleKeywords} 
+              />
               <div className="prose prose-invert max-w-none">
                 {getLocalizedField('description') && (
                   <p className="text-lg text-muted-foreground font-serif leading-relaxed">
@@ -416,8 +457,8 @@ export default function NewsArticlePage() {
                 )}
               </div>
 
-              {/* Original link */}
-              <div className="pt-4 border-t border-border">
+              {/* Original link and translate button */}
+              <div className="pt-4 border-t border-border flex flex-wrap items-center gap-4">
                 <a 
                   href={article.url} 
                   target="_blank" 
@@ -427,6 +468,30 @@ export default function NewsArticlePage() {
                   <ExternalLink className="w-4 h-4" />
                   {t('news.read_original')}
                 </a>
+                
+                {/* Translate to English button - for Ukrainian news only */}
+                {isUkrainianNews && !hasEnglishContent && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => translateToEnglishMutation.mutate()}
+                    disabled={translateToEnglishMutation.isPending}
+                  >
+                    {translateToEnglishMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Languages className="w-4 h-4" />
+                    )}
+                    Перекласти на англійську
+                  </Button>
+                )}
+                {isUkrainianNews && hasEnglishContent && (
+                  <Badge variant="secondary" className="gap-1">
+                    <Languages className="w-3 h-3" />
+                    EN available
+                  </Badge>
+                )}
               </div>
 
               {/* Tweets Section */}

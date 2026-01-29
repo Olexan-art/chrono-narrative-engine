@@ -100,3 +100,6 @@ verify_jwt = false
 
 [functions.bot-ssr-test]
 verify_jwt = false
+
+[functions.translate-news]
+verify_jwt = false

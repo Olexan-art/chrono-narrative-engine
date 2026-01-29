@@ -565,8 +565,11 @@ export type Database = {
           id: string
           image_url: string | null
           is_archived: boolean
+          key_points: Json | null
+          keywords: string[] | null
           published_at: string | null
           slug: string | null
+          themes: string[] | null
           title: string
           title_bn: string | null
           title_en: string | null
@@ -601,8 +604,11 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_archived?: boolean
+          key_points?: Json | null
+          keywords?: string[] | null
           published_at?: string | null
           slug?: string | null
+          themes?: string[] | null
           title: string
           title_bn?: string | null
           title_en?: string | null
@@ -637,8 +643,11 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_archived?: boolean
+          key_points?: Json | null
+          keywords?: string[] | null
           published_at?: string | null
           slug?: string | null
+          themes?: string[] | null
           title?: string
           title_bn?: string | null
           title_en?: string | null

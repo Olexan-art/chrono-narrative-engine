@@ -232,59 +232,91 @@ serve(async (req) => {
     const language = detectLanguage();
     console.log('Retelling news in language:', language.name, '| Title:', news.title);
 
-    // Language-specific prompts
+    // Language-specific prompts for retelling with key points, themes, and keywords
     const prompts: Record<string, { system: string; user: string }> = {
       'uk': {
         system: `Ти — професійний журналіст та редактор новин. Твоє завдання — переказати новину детально, розширено та інформативно українською мовою.
 
+ФОРМАТ ВІДПОВІДІ (JSON):
+{
+  "content": "Повний переказ новини (3-5 абзаців, 300-500 слів)",
+  "key_points": ["Головна теза 1", "Головна теза 2", "Головна теза 3", "Головна теза 4"],
+  "themes": ["Тема1", "Тема2", "Тема3"],
+  "keywords": ["ключове слово 1", "ключове слово 2", "ключове слово 3", "ключове слово 4", "ключове слово 5"]
+}
+
 Правила:
 1. Зберігай всі ключові факти з оригіналу
 2. Розширюй контекст та пояснюй важливі деталі
-3. Додавай релевантний бекграунд якщо потрібно
-4. Пиши чітко, без повторів
-5. Використовуй журналістський стиль
-6. Обсяг: 3-5 абзаців (300-500 слів)
+3. key_points — 4-5 найважливіших тез/висновків з новини (короткі речення)
+4. themes — 2-4 основні категорії/тематики які затрагує новина (одне-два слова кожна)
+5. keywords — 5-8 пошукових ключових слів по яким можна знайти цю новину
+6. Пиши чітко, без повторів, журналістським стилем
 7. НЕ вигадуй нові факти, лише розширюй наявні`,
-        user: `Перекажи цю новину детально українською мовою:`
+        user: `Перекажи цю новину детально українською мовою та видай JSON з ключовими тезами, темами та пошуковими словами:`
       },
       'en': {
         system: `You are a professional journalist and news editor. Your task is to retell the news in detail, expanded and informatively in English.
 
+RESPONSE FORMAT (JSON):
+{
+  "content": "Full news retelling (3-5 paragraphs, 300-500 words)",
+  "key_points": ["Key takeaway 1", "Key takeaway 2", "Key takeaway 3", "Key takeaway 4"],
+  "themes": ["Theme1", "Theme2", "Theme3"],
+  "keywords": ["keyword 1", "keyword 2", "keyword 3", "keyword 4", "keyword 5"]
+}
+
 Rules:
 1. Preserve all key facts from the original
 2. Expand context and explain important details
-3. Add relevant background if needed
-4. Write clearly, without repetition
-5. Use journalistic style
-6. Length: 3-5 paragraphs (300-500 words)
+3. key_points — 4-5 most important takeaways/conclusions from the news (short sentences)
+4. themes — 2-4 main categories/topics the news covers (one-two words each)
+5. keywords — 5-8 search keywords to find this news
+6. Write clearly, without repetition, journalistic style
 7. DO NOT invent new facts, only expand existing ones`,
-        user: `Retell this news in detail in English:`
+        user: `Retell this news in detail in English and output JSON with key points, themes, and search keywords:`
       },
       'pl': {
         system: `Jesteś profesjonalnym dziennikarzem i redaktorem wiadomości. Twoim zadaniem jest szczegółowe, rozszerzone i informacyjne opowiedzenie wiadomości po polsku.
 
+FORMAT ODPOWIEDZI (JSON):
+{
+  "content": "Pełne opowiedzenie wiadomości (3-5 akapitów, 300-500 słów)",
+  "key_points": ["Główna teza 1", "Główna teza 2", "Główna teza 3", "Główna teza 4"],
+  "themes": ["Temat1", "Temat2", "Temat3"],
+  "keywords": ["słowo kluczowe 1", "słowo kluczowe 2", "słowo kluczowe 3", "słowo kluczowe 4", "słowo kluczowe 5"]
+}
+
 Zasady:
 1. Zachowaj wszystkie kluczowe fakty z oryginału
 2. Rozszerzaj kontekst i wyjaśniaj ważne szczegóły
-3. Dodaj odpowiednie tło, jeśli potrzeba
-4. Pisz jasno, bez powtórzeń
-5. Używaj stylu dziennikarskiego
-6. Objętość: 3-5 akapitów (300-500 słów)
+3. key_points — 4-5 najważniejszych tez/wniosków z wiadomości (krótkie zdania)
+4. themes — 2-4 główne kategorie/tematy, które porusza wiadomość (jedno-dwa słowa każdy)
+5. keywords — 5-8 słów kluczowych do wyszukania tej wiadomości
+6. Pisz jasno, bez powtórzeń, stylem dziennikarskim
 7. NIE wymyślaj nowych faktów, tylko rozszerzaj istniejące`,
-        user: `Opowiedz szczegółowo tę wiadomość po polsku:`
+        user: `Opowiedz szczegółowo tę wiadomość po polsku i podaj JSON z głównymi tezami, tematami i słowami kluczowymi:`
       },
       'hi': {
         system: `आप एक पेशेवर पत्रकार और समाचार संपादक हैं। आपका कार्य समाचार को विस्तार से, विस्तारित और सूचनात्मक रूप से हिंदी में पुनः बताना है।
 
+प्रतिक्रिया प्रारूप (JSON):
+{
+  "content": "पूर्ण समाचार पुनर्कथन (3-5 पैराग्राफ, 300-500 शब्द)",
+  "key_points": ["मुख्य बिंदु 1", "मुख्य बिंदु 2", "मुख्य बिंदु 3", "मुख्य बिंदु 4"],
+  "themes": ["विषय1", "विषय2", "विषय3"],
+  "keywords": ["कीवर्ड 1", "कीवर्ड 2", "कीवर्ड 3", "कीवर्ड 4", "कीवर्ड 5"]
+}
+
 नियम:
 1. मूल से सभी प्रमुख तथ्यों को संरक्षित करें
 2. संदर्भ का विस्तार करें और महत्वपूर्ण विवरण स्पष्ट करें
-3. यदि आवश्यक हो तो प्रासंगिक पृष्ठभूमि जोड़ें
-4. स्पष्ट रूप से लिखें, बिना दोहराव के
-5. पत्रकारिता शैली का उपयोग करें
-6. लंबाई: 3-5 पैराग्राफ (300-500 शब्द)
+3. key_points — समाचार से 4-5 सबसे महत्वपूर्ण बिंदु/निष्कर्ष (संक्षिप्त वाक्य)
+4. themes — 2-4 मुख्य श्रेणियां/विषय जो समाचार कवर करता है
+5. keywords — इस समाचार को खोजने के लिए 5-8 खोज कीवर्ड
+6. स्पष्ट रूप से लिखें, पत्रकारिता शैली में
 7. नए तथ्य न बनाएं, केवल मौजूदा को विस्तारित करें`,
-        user: `इस समाचार को हिंदी में विस्तार से बताएं:`
+        user: `इस समाचार को हिंदी में विस्तार से बताएं और मुख्य बिंदुओं, विषयों और खोज शब्दों के साथ JSON दें:`
       },
       'ta': {
         system: `நீங்கள் ஒரு தொழில்முறை பத்திரிகையாளர் மற்றும் செய்தி ஆசிரியர். உங்கள் பணி செய்தியை விரிவாக, விரிவாக்கப்பட்ட மற்றும் தகவலறிந்த முறையில் தமிழில் மீண்டும் சொல்வது.
@@ -367,7 +399,40 @@ Original content: ${getContent() || 'No content'}
 
 Category: ${news.category || 'general'}`;
 
-    const retoldContent = await callLLM(settings as LLMSettings, prompt.system, userPrompt, model);
+    const rawResponse = await callLLM(settings as LLMSettings, prompt.system, userPrompt, model);
+
+    // Parse JSON response or use raw content as fallback
+    let retoldContent = rawResponse;
+    let keyPoints: string[] = [];
+    let themes: string[] = [];
+    let keywords: string[] = [];
+
+    try {
+      // Try to extract JSON from response (may be wrapped in markdown code blocks)
+      const jsonMatch = rawResponse.match(/```json\s*([\s\S]*?)\s*```/) || 
+                        rawResponse.match(/```\s*([\s\S]*?)\s*```/) ||
+                        [null, rawResponse];
+      const jsonStr = jsonMatch[1] || rawResponse;
+      
+      // Try to parse as JSON
+      const parsed = JSON.parse(jsonStr.trim());
+      if (parsed.content) {
+        retoldContent = parsed.content;
+      }
+      if (Array.isArray(parsed.key_points)) {
+        keyPoints = parsed.key_points.slice(0, 5);
+      }
+      if (Array.isArray(parsed.themes)) {
+        themes = parsed.themes.slice(0, 4);
+      }
+      if (Array.isArray(parsed.keywords)) {
+        keywords = parsed.keywords.slice(0, 8);
+      }
+      console.log('Parsed JSON response - key_points:', keyPoints.length, 'themes:', themes.length, 'keywords:', keywords.length);
+    } catch (parseError) {
+      // If JSON parsing fails, use raw content
+      console.log('Response is not JSON, using raw content');
+    }
 
     // Determine which field to update based on language
     const getUpdateField = () => {
@@ -379,11 +444,27 @@ Category: ${news.category || 'general'}`;
       return 'content';
     };
 
-    // Update the news article with the retold content in the appropriate field
+    // Build update data with content and metadata
     const updateField = getUpdateField();
+    const updateData: Record<string, unknown> = {
+      [updateField]: retoldContent
+    };
+
+    // Add key_points, themes, keywords if extracted
+    if (keyPoints.length > 0) {
+      updateData.key_points = keyPoints;
+    }
+    if (themes.length > 0) {
+      updateData.themes = themes;
+    }
+    if (keywords.length > 0) {
+      updateData.keywords = keywords;
+    }
+
+    // Update the news article with the retold content and metadata
     const { error: updateError } = await supabase
       .from('news_rss_items')
-      .update({ [updateField]: retoldContent })
+      .update(updateData)
       .eq('id', newsId);
 
     if (updateError) {
@@ -391,7 +472,7 @@ Category: ${news.category || 'general'}`;
       throw new Error('Failed to save retold content');
     }
 
-    console.log('Retold content saved to field:', updateField);
+    console.log('Retold content saved to field:', updateField, '| key_points:', keyPoints.length, '| themes:', themes.length, '| keywords:', keywords.length);
 
     // Get settings for dialogue and tweet counts
     const dialogueCount = settings.news_dialogue_count ?? 5;
@@ -471,6 +552,9 @@ Category: ${news.category || 'general'}`;
       content: retoldContent,
       language: language.code,
       field: updateField,
+      keyPoints,
+      themes,
+      keywords,
       dialogue: generatedDialogue,
       tweets: generatedTweets
     }), {
