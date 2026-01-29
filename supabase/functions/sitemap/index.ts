@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const BASE_URL = "https://echoes2.com";
+const CACHE_TTL_HOURS = 6; // Cache sitemap for 6 hours
 
 // Helper to add hreflang links for multilingual pages
 function addHreflangLinks(url: string): string {
@@ -64,6 +65,47 @@ async function fetchAllRows<T>(
   return allRows;
 }
 
+// Check cached sitemap
+async function getCachedSitemap(supabase: any, cachePath: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("cached_pages")
+    .select("html, expires_at")
+    .eq("path", cachePath)
+    .single();
+
+  if (error || !data) return null;
+  
+  // Check if cache is still valid
+  if (new Date(data.expires_at) > new Date()) {
+    console.log(`Cache HIT for sitemap: ${cachePath}`);
+    return data.html;
+  }
+  
+  console.log(`Cache EXPIRED for sitemap: ${cachePath}`);
+  return null;
+}
+
+// Save sitemap to cache
+async function cacheSitemap(supabase: any, cachePath: string, xml: string): Promise<void> {
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + CACHE_TTL_HOURS * 60 * 60 * 1000);
+  
+  await supabase
+    .from("cached_pages")
+    .upsert({
+      path: cachePath,
+      html: xml,
+      title: `Sitemap: ${cachePath}`,
+      description: `XML Sitemap for ${BASE_URL}`,
+      canonical_url: `${BASE_URL}${cachePath}`,
+      expires_at: expiresAt.toISOString(),
+      updated_at: now.toISOString(),
+      html_size_bytes: new TextEncoder().encode(xml).length,
+    }, { onConflict: 'path' });
+  
+  console.log(`Cached sitemap: ${cachePath}, expires: ${expiresAt.toISOString()}`);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -73,6 +115,28 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const url = new URL(req.url);
+    const forceRefresh = url.searchParams.get("refresh") === "true";
+    const cachePath = "/api/sitemap";
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cachedXml = await getCachedSitemap(supabase, cachePath);
+      if (cachedXml) {
+        return new Response(cachedXml, { 
+          headers: {
+            ...corsHeaders,
+            "X-Cache": "HIT",
+            "Cache-Control": "public, max-age=21600", // 6 hours
+          },
+          status: 200 
+        });
+      }
+    }
+
+    // Generate fresh sitemap
+    const startTime = Date.now();
 
     // Fetch all published parts
     const { data: parts, error: partsError } = await supabase
@@ -142,6 +206,10 @@ Deno.serve(async (req) => {
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
+  <!-- Main Sitemap for ${BASE_URL} -->
+  <!-- Generated: ${now} -->
+  <!-- Cache TTL: ${CACHE_TTL_HOURS} hours -->
   
   <!-- Static pages -->
   <url>
@@ -268,8 +336,19 @@ Deno.serve(async (req) => {
     xml += `
 </urlset>`;
 
+    // Cache the generated sitemap
+    await cacheSitemap(supabase, cachePath, xml);
+
+    const generationTime = Date.now() - startTime;
+    console.log(`Sitemap generated in ${generationTime}ms, ${newsItems.length + (parts?.length || 0)} URLs`);
+
     return new Response(xml, { 
-      headers: corsHeaders,
+      headers: {
+        ...corsHeaders,
+        "X-Cache": "MISS",
+        "X-Generation-Time": `${generationTime}ms`,
+        "Cache-Control": "public, max-age=21600",
+      },
       status: 200 
     });
 
