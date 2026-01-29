@@ -1,4 +1,5 @@
-import { Heart, Repeat2, MessageCircle, Share } from "lucide-react";
+import { useEffect } from "react";
+import { Heart, Repeat2, MessageCircle, Share, Twitter } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Tweet {
@@ -21,16 +22,52 @@ function formatNumber(num: number): string {
 }
 
 export function NewsTweetCard({ tweets }: NewsTweetCardProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  
+  // Load Twitter widgets script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://platform.twitter.com/widgets.js';
+    script.async = true;
+    script.charset = 'utf-8';
+    document.body.appendChild(script);
+    
+    return () => {
+      // Cleanup if needed
+      const existingScript = document.querySelector('script[src="https://platform.twitter.com/widgets.js"]');
+      if (existingScript) {
+        existingScript.remove();
+      }
+    };
+  }, []);
   
   if (!tweets || tweets.length === 0) return null;
 
+  const followText = language === 'en' 
+    ? 'Follow us on X' 
+    : language === 'pl' 
+    ? 'Obserwuj nas na X' 
+    : 'Підписуйся на X';
+
   return (
     <div className="mt-6 pt-4 border-t border-border">
-      <h3 className="text-xs md:text-sm font-mono text-muted-foreground mb-4 flex items-center gap-2">
-        <span className="text-lg font-bold">📡</span>
-        {t('tweets.observers')}
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xs md:text-sm font-mono text-muted-foreground flex items-center gap-2">
+          <span className="text-lg font-bold">📡</span>
+          {t('tweets.observers')}
+        </h3>
+        
+        {/* Twitter Follow Button */}
+        <a
+          href="https://twitter.com/bravenewnews4"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1DA1F2] hover:bg-[#1a8cd8] text-white text-xs font-medium transition-colors"
+        >
+          <Twitter className="w-3.5 h-3.5" fill="currentColor" />
+          <span>{followText}</span>
+        </a>
+      </div>
       
       <div className="grid gap-3 sm:grid-cols-2">
         {tweets.map((tweet, i) => (
