@@ -329,6 +329,10 @@ export default function NewsArticlePage() {
   // Check if this is a Ukrainian news article (for translate button)
   const isUkrainianNews = article.country?.code?.toLowerCase() === 'ua';
   const hasEnglishContent = !!(article.content_en || article.title_en);
+  
+  // English key points and themes for bilingual display
+  const keyPointsEn = Array.isArray((article as any).key_points_en) ? (article as any).key_points_en : [];
+  const themesEn = Array.isArray((article as any).themes_en) ? (article as any).themes_en : [];
 
   // Generate SEO keywords from content
   const generateKeywords = (): string[] => {
@@ -443,7 +447,10 @@ export default function NewsArticlePage() {
               <NewsKeyPoints 
                 keyPoints={keyPoints} 
                 themes={themes} 
-                keywords={articleKeywords} 
+                keywords={articleKeywords}
+                isUkrainian={isUkrainianNews}
+                keyPointsEn={keyPointsEn}
+                themesEn={themesEn}
               />
               <div className="prose prose-invert max-w-none">
                 {getLocalizedField('description') && (
