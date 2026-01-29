@@ -14,6 +14,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { AutoGenChart } from "@/components/AutoGenChart";
 import { CacheStatsPanel } from "@/components/CacheStatsPanel";
+import { RecentRetoldNewsList } from "@/components/RecentRetoldNewsList";
 
 interface Props {
   password: string;
@@ -334,6 +335,7 @@ export function StatisticsPanel({ password }: Props) {
       queryClient.invalidateQueries({ queryKey: ['statistics-top-content'] }),
       queryClient.invalidateQueries({ queryKey: ['statistics-auto-gen'] }),
       queryClient.invalidateQueries({ queryKey: ['statistics-bots'] }),
+      queryClient.invalidateQueries({ queryKey: ['recent-retold-news'] }),
     ]);
     setIsRefreshing(false);
   };
@@ -500,6 +502,9 @@ export function StatisticsPanel({ password }: Props) {
       {autoGenStats?.daily && autoGenStats.daily.length > 0 && (
         <AutoGenChart data={autoGenStats.daily} />
       )}
+
+      {/* Recent Retold News List */}
+      <RecentRetoldNewsList />
 
       {/* Daily Views Chart */}
       <Card className="cosmic-card">
