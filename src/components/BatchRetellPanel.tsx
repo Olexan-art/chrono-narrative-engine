@@ -213,12 +213,17 @@ function BatchRetellPanelComponent() {
           addLog('success', `✅ Успішно переказано: ${news.title.slice(0, 50)}...`, news.id, news.title);
           setStats(prev => {
             const newProcessed = prev.processed + 1;
+            const newSuccess = prev.success + 1;
             // Update average time per item
             if (startTime) {
               const elapsed = Date.now() - startTime;
               setAvgTimePerItem(elapsed / newProcessed);
             }
-            return { ...prev, processed: newProcessed, success: prev.success + 1 };
+            // Refresh retold news list every 5 successful retells
+            if (newSuccess % 5 === 0) {
+              queryClient.invalidateQueries({ queryKey: ['recent-retold-news'] });
+            }
+            return { ...prev, processed: newProcessed, success: newSuccess };
           });
           
           // Step 2: Generate dialogue if enabled
@@ -299,6 +304,7 @@ function BatchRetellPanelComponent() {
     queryClient.invalidateQueries({ queryKey: ['latest-usa-retold-news'] });
     queryClient.invalidateQueries({ queryKey: ['country-news'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['recent-retold-news'] });
   }, [selectedCountry, newsForDate, retellMode, selectedModel, countries, selectedDate, addLog, queryClient, maxCount, generateDialogues, selectedCountryCode, onlyWithoutRetell]);
 
   // Batch dialogue generation only
@@ -409,6 +415,7 @@ function BatchRetellPanelComponent() {
     queryClient.invalidateQueries({ queryKey: ['news-for-date'] });
     queryClient.invalidateQueries({ queryKey: ['country-news'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['recent-retold-news'] });
   }, [selectedCountry, newsForDate, retellMode, selectedModel, countries, selectedDate, addLog, queryClient, maxCount, selectedCountryCode]);
 
   const stopBatchRetell = useCallback(() => {
