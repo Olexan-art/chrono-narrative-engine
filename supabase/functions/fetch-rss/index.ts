@@ -990,6 +990,52 @@ serve(async (req) => {
       );
     }
 
+    // Get pending counts by country (for dashboard display)
+    if (action === 'get_pending_stats') {
+      // Get countries with 100% retell ratio
+      const { data: countries } = await supabase
+        .from('news_countries')
+        .select('id, code, name, flag, retell_ratio')
+        .eq('is_active', true)
+        .gte('retell_ratio', 100);
+      
+      if (!countries || countries.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, pendingByCountry: [], total: 0 }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const pendingByCountry: { countryId: string; code: string; name: string; flag: string; count: number }[] = [];
+      let totalPending = 0;
+      
+      for (const country of countries) {
+        const { count } = await supabase
+          .from('news_rss_items')
+          .select('*', { count: 'exact', head: true })
+          .eq('country_id', country.id)
+          .is('content_en', null)
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+        
+        const pendingCount = count || 0;
+        if (pendingCount > 0) {
+          pendingByCountry.push({
+            countryId: country.id,
+            code: country.code,
+            name: country.name,
+            flag: country.flag,
+            count: pendingCount
+          });
+          totalPending += pendingCount;
+        }
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, pendingByCountry, total: totalPending }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Process pending news items that should have been retold but weren't (catch-up for missed items)
     if (action === 'process_pending') {
       const { countryCode, limit: processLimit = 10 } = body;
@@ -1018,7 +1064,7 @@ serve(async (req) => {
       
       if (countryIds.length === 0) {
         return new Response(
-          JSON.stringify({ success: true, message: 'No countries with 100% retell ratio', processed: 0 }),
+          JSON.stringify({ success: true, message: 'No countries with 100% retell ratio', processed: 0, logs: [] }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -1026,7 +1072,7 @@ serve(async (req) => {
       // Find news items that should be retold but aren't (100% ratio countries, no content_en, recent)
       let query = supabase
         .from('news_rss_items')
-        .select('id, title, slug, country:news_countries(code)')
+        .select('id, title, slug, country:news_countries(code, name, flag)')
         .in('country_id', countryIds)
         .is('content_en', null)
         .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
@@ -1038,7 +1084,7 @@ serve(async (req) => {
         if (country) {
           query = supabase
             .from('news_rss_items')
-            .select('id, title, slug, country:news_countries(code)')
+            .select('id, title, slug, country:news_countries(code, name, flag)')
             .eq('country_id', country.id)
             .is('content_en', null)
             .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
@@ -1051,7 +1097,7 @@ serve(async (req) => {
       
       if (!pendingItems || pendingItems.length === 0) {
         return new Response(
-          JSON.stringify({ success: true, message: 'No pending items to process', processed: 0 }),
+          JSON.stringify({ success: true, message: 'No pending items to process', processed: 0, logs: [] }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -1062,12 +1108,16 @@ serve(async (req) => {
       let totalRetelled = 0;
       let totalDialogues = 0;
       let totalTweets = 0;
+      const logs: { id: string; title: string; country: string; flag: string; step: string; status: 'success' | 'error' | 'skip'; message: string; timestamp: string }[] = [];
       
       for (const item of pendingItems) {
         const newsId = item.id;
-        const countryData = item.country as unknown as { code: string } | null;
+        const countryData = item.country as unknown as { code: string; name: string; flag: string } | null;
         const itemCountryCode = countryData?.code?.toLowerCase() || 'us';
+        const countryName = countryData?.name || 'Unknown';
+        const countryFlag = countryData?.flag || '🏳️';
         const slug = item.slug;
+        const shortTitle = item.title?.slice(0, 60) + (item.title?.length > 60 ? '...' : '');
         
         // Step 1: Retell
         if (autoRetellEnabled) {
@@ -1084,11 +1134,14 @@ serve(async (req) => {
             
             if (response.ok) {
               totalRetelled++;
+              logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'retell', status: 'success', message: 'Переказано', timestamp: new Date().toISOString() });
               console.log(`[Pending] Successfully retold: ${newsId}`);
             } else {
+              logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'retell', status: 'error', message: `HTTP ${response.status}`, timestamp: new Date().toISOString() });
               console.error(`[Pending] Failed to retell ${newsId}:`, response.status);
             }
           } catch (error) {
+            logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'retell', status: 'error', message: String(error), timestamp: new Date().toISOString() });
             console.error(`[Pending] Error retelling ${newsId}:`, error);
           }
           await new Promise(r => setTimeout(r, 200));
@@ -1141,10 +1194,14 @@ serve(async (req) => {
                   
                   totalDialogues++;
                   if (result.tweets) totalTweets++;
+                  logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'dialogue', status: 'success', message: `Діалог + ${result.tweets ? 'твіти' : 'без твітів'}`, timestamp: new Date().toISOString() });
                 }
+              } else {
+                logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'dialogue', status: 'error', message: `HTTP ${response.status}`, timestamp: new Date().toISOString() });
               }
             }
           } catch (error) {
+            logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'dialogue', status: 'error', message: String(error), timestamp: new Date().toISOString() });
             console.error(`[Pending] Error generating dialogue for ${newsId}:`, error);
           }
           await new Promise(r => setTimeout(r, 200));
@@ -1158,8 +1215,10 @@ serve(async (req) => {
           success: true,
           pendingFound: pendingItems.length,
           processed: totalRetelled,
+          retelled: totalRetelled,
           dialogues: totalDialogues,
-          tweets: totalTweets
+          tweets: totalTweets,
+          logs
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

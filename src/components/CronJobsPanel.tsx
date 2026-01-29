@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Clock, RefreshCw, Loader2, Play, Zap, MessageSquare, Twitter, FileText, Settings, RotateCcw } from "lucide-react";
+import { Clock, RefreshCw, Loader2, Play, Zap, MessageSquare, Twitter, FileText, Settings, RotateCcw, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { callEdgeFunction, adminAction } from "@/lib/api";
 import { CountryRetellRatioPanel } from "@/components/CountryRetellRatioPanel";
@@ -49,6 +50,25 @@ interface AutoGenStats {
   d7: PeriodStats;
   d30: PeriodStats;
   daily: DailyStats[];
+}
+
+interface PendingCountryStats {
+  countryId: string;
+  code: string;
+  name: string;
+  flag: string;
+  count: number;
+}
+
+interface PendingLog {
+  id: string;
+  title: string;
+  country: string;
+  flag: string;
+  step: string;
+  status: 'success' | 'error' | 'skip';
+  message: string;
+  timestamp: string;
 }
 
 interface Props {
@@ -110,6 +130,9 @@ export function CronJobsPanel({ password }: Props) {
   });
   const [pendingCronEnabled, setPendingCronEnabled] = useState(false);
   const [pendingCronFrequency, setPendingCronFrequency] = useState('30min');
+  const [pendingLogs, setPendingLogs] = useState<PendingLog[]>([]);
+  const [processingStartTime, setProcessingStartTime] = useState<Date | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Fetch current RSS schedule
   const { data: rssSchedule, isLoading: scheduleLoading } = useQuery({
@@ -176,6 +199,32 @@ export function CronJobsPanel({ password }: Props) {
       });
     }
   }, [settings]);
+
+  // Elapsed timer effect for processing
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (processingStartTime) {
+      interval = setInterval(() => {
+        setElapsedSeconds(Math.floor((Date.now() - processingStartTime.getTime()) / 1000));
+      }, 1000);
+    } else {
+      setElapsedSeconds(0);
+    }
+    return () => clearInterval(interval);
+  }, [processingStartTime]);
+
+  // Fetch pending stats by country
+  const { data: pendingStats, refetch: refetchPendingStats } = useQuery<{ pendingByCountry: PendingCountryStats[]; total: number }>({
+    queryKey: ['pending-news-stats'],
+    queryFn: async () => {
+      const result = await callEdgeFunction<{ success: boolean; pendingByCountry: PendingCountryStats[]; total: number }>(
+        'fetch-rss',
+        { action: 'get_pending_stats' }
+      );
+      return { pendingByCountry: result.pendingByCountry || [], total: result.total || 0 };
+    },
+    refetchInterval: 30000 // Refetch every 30 seconds
+  });
 
   // Fetch auto-generation statistics for multiple periods
   const { data: stats } = useQuery<AutoGenStats>({
@@ -361,20 +410,29 @@ export function CronJobsPanel({ password }: Props) {
   // Trigger manual process_pending
   const triggerPendingMutation = useMutation({
     mutationFn: async () => {
+      setPendingLogs([]);
+      setProcessingStartTime(new Date());
       return callEdgeFunction<{ 
         success: boolean; 
         processed: number; 
         retelled: number;
         dialogues?: number;
         tweets?: number;
+        logs?: PendingLog[];
       }>(
         'fetch-rss',
         { action: 'process_pending', limit: 20 }
       );
     },
     onSuccess: (result) => {
+      setProcessingStartTime(null);
+      if (result.logs) {
+        setPendingLogs(result.logs);
+      }
       queryClient.invalidateQueries({ queryKey: ['news-rss-items-count'] });
       queryClient.invalidateQueries({ queryKey: ['auto-gen-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-news-stats'] });
+      refetchPendingStats();
       
       const parts = [`${result.processed} новин`];
       if (result.retelled) parts.push(`${result.retelled} переказів`);
@@ -387,6 +445,7 @@ export function CronJobsPanel({ password }: Props) {
       });
     },
     onError: (error) => {
+      setProcessingStartTime(null);
       toast({
         title: 'Помилка',
         description: error instanceof Error ? error.message : 'Не вдалося запустити',
@@ -704,12 +763,38 @@ export function CronJobsPanel({ password }: Props) {
           <CardTitle className="flex items-center gap-2">
             <RotateCcw className="w-5 h-5 text-orange-500" />
             Обробка пропущених новин
+            {pendingStats && pendingStats.total > 0 && (
+              <Badge variant="destructive" className="ml-2">
+                {pendingStats.total} очікують
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>
             Автоматична обробка новин, які не отримали переказ/діалоги через ліміти
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Pending counts by country */}
+          {pendingStats && pendingStats.pendingByCountry.length > 0 && (
+            <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertCircle className="w-4 h-4 text-orange-500" />
+                <span className="font-medium text-sm">Необроблені новини по країнах:</span>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {pendingStats.pendingByCountry.map((country) => (
+                  <div key={country.countryId} className="flex items-center gap-2 bg-background/50 px-3 py-1.5 rounded-md">
+                    <span className="text-lg">{country.flag}</span>
+                    <span className="text-sm font-medium">{country.code.toUpperCase()}</span>
+                    <Badge variant="outline" className="bg-orange-500/20 text-orange-600 border-orange-500/30">
+                      {country.count}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between p-4 border border-border/50 rounded-lg">
             <div className="flex items-center gap-3">
               <RotateCcw className="w-5 h-5 text-orange-500" />
@@ -767,6 +852,68 @@ export function CronJobsPanel({ password }: Props) {
               Запустити зараз
             </Button>
           </div>
+
+          {/* Processing indicator with timer */}
+          {triggerPendingMutation.isPending && (
+            <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-orange-500 animate-pulse" />
+                <span className="font-medium">Обробка...</span>
+                <span className="text-sm text-muted-foreground ml-auto">
+                  {Math.floor(elapsedSeconds / 60)}:{(elapsedSeconds % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Real-time logs */}
+          {pendingLogs.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Лог обробки</Label>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setPendingLogs([])}
+                  className="h-6 text-xs"
+                >
+                  Очистити
+                </Button>
+              </div>
+              <ScrollArea className="h-[200px] border border-border/50 rounded-lg">
+                <div className="p-3 space-y-2">
+                  {pendingLogs.map((log, idx) => (
+                    <div 
+                      key={`${log.id}-${log.step}-${idx}`}
+                      className="flex items-start gap-2 text-xs animate-fade-in"
+                    >
+                      {log.status === 'success' ? (
+                        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                      ) : log.status === 'error' ? (
+                        <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span>{log.flag}</span>
+                          <Badge variant="outline" className="text-[10px] h-4 px-1">
+                            {log.step}
+                          </Badge>
+                          <span className={log.status === 'success' ? 'text-green-500' : log.status === 'error' ? 'text-red-500' : 'text-muted-foreground'}>
+                            {log.message}
+                          </span>
+                        </div>
+                        <div className="text-muted-foreground truncate mt-0.5">
+                          {log.title}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
 
           <div className="p-3 bg-muted/30 rounded-lg text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
