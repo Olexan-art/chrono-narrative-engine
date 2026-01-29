@@ -828,12 +828,20 @@ serve(async (req) => {
         allToProcess.push(...tracker.toProcess);
       }
       
+      // Limit processing to avoid timeout (edge function has ~50s limit)
+      // Each item takes ~2-5s for retelling, so limit to 10 items per run
+      const MAX_ITEMS_PER_RUN = 10;
+      const itemsToProcess = allToProcess.slice(0, MAX_ITEMS_PER_RUN);
+      const skippedCount = Math.max(0, allToProcess.length - MAX_ITEMS_PER_RUN);
+      
+      console.log(`Processing queue: ${itemsToProcess.length} items (${skippedCount} skipped due to limit). Total candidates: ${allToProcess.length}`);
+      
       let totalRetelled = 0;
       let totalDialogues = 0;
       let totalTweets = 0;
       
       // Process each item: retell -> dialogue -> tweets
-      for (const item of allToProcess) {
+      for (const item of itemsToProcess) {
         const newsId = item.id;
         const countryCode = item.countryCode;
         const slug = item.slug;
@@ -939,10 +947,10 @@ serve(async (req) => {
         }
       }
       
-      console.log(`Completed: ${results.length} feeds, ${allToProcess.length} processed, ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets`);
+      console.log(`Completed: ${results.length} feeds, ${itemsToProcess.length} processed (${skippedCount} skipped), ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets`);
       
       // Ping search engines if new content was added
-      if (allToProcess.length > 0) {
+      if (itemsToProcess.length > 0) {
         try {
           console.log('Pinging search engines about new content...');
           const pingResponse = await fetch(`${supabaseUrl}/functions/v1/ping-sitemap`, {
@@ -969,12 +977,189 @@ serve(async (req) => {
         JSON.stringify({ 
           success: true, 
           feedsProcessed: results.length, 
-          totalInserted: allToProcess.length,
+          totalCandidates: allToProcess.length,
+          totalProcessed: itemsToProcess.length,
+          skippedDueToLimit: skippedCount,
           autoRetelled: totalRetelled,
           autoDialogues: totalDialogues,
           autoTweets: totalTweets,
-          searchEnginesPinged: allToProcess.length > 0,
+          searchEnginesPinged: itemsToProcess.length > 0,
           results 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Process pending news items that should have been retold but weren't (catch-up for missed items)
+    if (action === 'process_pending') {
+      const { countryCode, limit: processLimit = 10 } = body;
+      
+      // Get auto-generation settings
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('news_auto_retell_enabled, news_auto_dialogue_enabled, news_auto_tweets_enabled, news_dialogue_count, news_tweet_count')
+        .limit(1)
+        .single();
+      
+      const autoRetellEnabled = settings?.news_auto_retell_enabled ?? true;
+      const autoDialogueEnabled = settings?.news_auto_dialogue_enabled ?? true;
+      const autoTweetsEnabled = settings?.news_auto_tweets_enabled ?? true;
+      const dialogueCount = settings?.news_dialogue_count ?? 7;
+      const tweetCount = settings?.news_tweet_count ?? 4;
+      
+      // Get countries with 100% retell ratio
+      const { data: countries } = await supabase
+        .from('news_countries')
+        .select('id, code, retell_ratio')
+        .eq('is_active', true)
+        .gte('retell_ratio', 100);
+      
+      const countryIds = countries?.map(c => c.id) || [];
+      
+      if (countryIds.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, message: 'No countries with 100% retell ratio', processed: 0 }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Find news items that should be retold but aren't (100% ratio countries, no content_en, recent)
+      let query = supabase
+        .from('news_rss_items')
+        .select('id, title, slug, country:news_countries(code)')
+        .in('country_id', countryIds)
+        .is('content_en', null)
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
+        .order('created_at', { ascending: false })
+        .limit(processLimit);
+      
+      if (countryCode) {
+        const country = countries?.find(c => c.code.toLowerCase() === countryCode.toLowerCase());
+        if (country) {
+          query = supabase
+            .from('news_rss_items')
+            .select('id, title, slug, country:news_countries(code)')
+            .eq('country_id', country.id)
+            .is('content_en', null)
+            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+            .order('created_at', { ascending: false })
+            .limit(processLimit);
+        }
+      }
+      
+      const { data: pendingItems } = await query;
+      
+      if (!pendingItems || pendingItems.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, message: 'No pending items to process', processed: 0 }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`Processing ${pendingItems.length} pending items for retelling`);
+      
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      let totalRetelled = 0;
+      let totalDialogues = 0;
+      let totalTweets = 0;
+      
+      for (const item of pendingItems) {
+        const newsId = item.id;
+        const countryData = item.country as unknown as { code: string } | null;
+        const itemCountryCode = countryData?.code?.toLowerCase() || 'us';
+        const slug = item.slug;
+        
+        // Step 1: Retell
+        if (autoRetellEnabled) {
+          try {
+            console.log(`[Pending] Retelling news: ${newsId}`);
+            const response = await fetch(`${supabaseUrl}/functions/v1/retell-news`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+              },
+              body: JSON.stringify({ newsId, model: 'google/gemini-3-flash-preview' })
+            });
+            
+            if (response.ok) {
+              totalRetelled++;
+              console.log(`[Pending] Successfully retold: ${newsId}`);
+            } else {
+              console.error(`[Pending] Failed to retell ${newsId}:`, response.status);
+            }
+          } catch (error) {
+            console.error(`[Pending] Error retelling ${newsId}:`, error);
+          }
+          await new Promise(r => setTimeout(r, 200));
+        }
+        
+        // Step 2: Generate dialogue
+        if (autoDialogueEnabled) {
+          try {
+            const { data: article } = await supabase
+              .from('news_rss_items')
+              .select('*, feed:news_rss_feeds(name)')
+              .eq('id', newsId)
+              .single();
+            
+            if (article) {
+              console.log(`[Pending] Generating dialogue for: ${newsId}`);
+              const detectLang = () => {
+                if (itemCountryCode === 'ua') return 'uk';
+                if (itemCountryCode === 'pl') return 'pl';
+                if (itemCountryCode === 'in') return 'hi';
+                return 'en';
+              };
+              
+              const response = await fetch(`${supabaseUrl}/functions/v1/generate-dialogue`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+                },
+                body: JSON.stringify({
+                  storyContext: `News article: ${article.title_en || article.title}\n\n${article.description_en || article.description || ''}\n\n${article.content_en || article.content || ''}`,
+                  newsContext: `Source: ${article.feed?.name || 'RSS'}, Category: ${article.category || 'general'}`,
+                  messageCount: dialogueCount,
+                  generateTweets: autoTweetsEnabled,
+                  tweetCount,
+                  contentLanguage: detectLang()
+                })
+              });
+              
+              if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.dialogue) {
+                  await supabase
+                    .from('news_rss_items')
+                    .update({
+                      chat_dialogue: result.dialogue,
+                      tweets: result.tweets || null
+                    })
+                    .eq('id', newsId);
+                  
+                  totalDialogues++;
+                  if (result.tweets) totalTweets++;
+                }
+              }
+            }
+          } catch (error) {
+            console.error(`[Pending] Error generating dialogue for ${newsId}:`, error);
+          }
+          await new Promise(r => setTimeout(r, 200));
+        }
+      }
+      
+      console.log(`[Pending] Completed: ${pendingItems.length} items, ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets`);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          pendingFound: pendingItems.length,
+          processed: totalRetelled,
+          dialogues: totalDialogues,
+          tweets: totalTweets
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
