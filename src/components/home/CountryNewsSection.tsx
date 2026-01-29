@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
 import { Link } from "react-router-dom";
-import { Globe, ArrowRight, Newspaper } from "lucide-react";
+import { Globe, ArrowRight, Newspaper, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,6 +18,7 @@ interface NewsItem {
   title_en: string | null;
   description: string | null;
   description_en: string | null;
+  content_en: string | null;
   image_url: string | null;
   published_at: string | null;
   slug: string | null;
@@ -70,6 +71,7 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
             title_en,
             description,
             description_en,
+            content_en,
             image_url, 
             published_at, 
             slug,
@@ -165,6 +167,7 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
                     const localizedTitle = language === 'en' 
                       ? (item.title_en || item.title)
                       : item.title;
+                    const isRetold = item.content_en && item.content_en.length > 100;
 
                     return (
                       <Link
@@ -173,7 +176,11 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
                         className="group block"
                       >
                         <article 
-                          className="flex gap-3 p-2 rounded-lg border border-border/50 bg-card hover:border-primary/50 hover:bg-primary/5 transition-all duration-200"
+                          className={`flex gap-3 p-2 rounded-lg border bg-card transition-all duration-200 ${
+                            isRetold 
+                              ? 'border-primary/30 hover:border-primary/50 bg-primary/5' 
+                              : 'border-border/50 hover:border-primary/50 hover:bg-primary/5'
+                          }`}
                           style={{ animationDelay: `${idx * 50}ms` }}
                         >
                           {item.image_url && (
@@ -186,6 +193,12 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
                           )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 mb-1">
+                              {isRetold && (
+                                <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4 gap-0.5">
+                                  <Sparkles className="w-2.5 h-2.5" />
+                                  Full retelling
+                                </Badge>
+                              )}
                               <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
                                 {item.category || 'news'}
                               </Badge>

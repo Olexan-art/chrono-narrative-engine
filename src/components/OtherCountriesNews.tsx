@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
 import { Link } from "react-router-dom";
-import { ArrowRight, Globe } from "lucide-react";
+import { ArrowRight, Globe, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +44,7 @@ export const OtherCountriesNews = memo(function OtherCountriesNews({
               id, 
               title, 
               title_en,
+              content_en,
               image_url, 
               published_at, 
               slug,
@@ -131,6 +132,7 @@ export const OtherCountriesNews = memo(function OtherCountriesNews({
                   const localizedTitle = language === 'en' 
                     ? (item.title_en || item.title)
                     : item.title;
+                  const isRetold = item.content_en && item.content_en.length > 100;
 
                   return (
                     <Link
@@ -139,7 +141,11 @@ export const OtherCountriesNews = memo(function OtherCountriesNews({
                       className="group block"
                     >
                       <article 
-                        className="flex gap-3 p-2 rounded-lg border border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200"
+                        className={`flex gap-3 p-2 rounded-lg border transition-all duration-200 ${
+                          isRetold 
+                            ? 'border-primary/30 bg-primary/5 hover:border-primary/50' 
+                            : 'border-border/50 hover:border-primary/50 hover:bg-primary/5'
+                        }`}
                         style={{ animationDelay: `${(countryIdx * 3 + idx) * 50}ms` }}
                       >
                         {item.image_url && (
@@ -151,11 +157,19 @@ export const OtherCountriesNews = memo(function OtherCountriesNews({
                           />
                         )}
                         <div className="flex-1 min-w-0">
-                          {item.category && (
-                            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 mb-1">
-                              {item.category}
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-1.5 mb-1">
+                            {isRetold && (
+                              <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4 gap-0.5">
+                                <Sparkles className="w-2.5 h-2.5" />
+                                Full retelling
+                              </Badge>
+                            )}
+                            {item.category && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                                {item.category}
+                              </Badge>
+                            )}
+                          </div>
                           <h4 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">
                             {localizedTitle}
                           </h4>
