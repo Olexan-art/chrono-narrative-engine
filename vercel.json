@@ -3,6 +3,10 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
+    { "source": "/api/sitemap", "destination": "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap" },
+    { "source": "/api/news-sitemap", "destination": "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap" },
+    { "source": "/api/ssr-render", "destination": "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render" },
+    { "source": "/api/llms-txt", "destination": "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/llms-txt" },
     { "source": "/(.*)", "destination": "/" }
   ]
 }
