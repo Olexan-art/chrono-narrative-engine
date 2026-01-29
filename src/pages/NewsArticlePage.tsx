@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
-import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages } from "lucide-react";
+import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -466,16 +466,29 @@ export default function NewsArticlePage() {
                 )}
               </div>
 
-              {/* Original link and translate button */}
-              <div className="pt-4 border-t border-border flex flex-wrap items-center gap-4">
+              {/* Original link, share, and translate button */}
+              <div className="pt-4 border-t border-border flex flex-wrap items-center gap-3">
                 <a 
                   href={article.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-primary hover:underline"
+                  className="inline-flex items-center gap-2 text-primary hover:underline text-sm"
                 >
                   <ExternalLink className="w-4 h-4" />
                   {t('news.read_original')}
+                </a>
+                
+                {/* Share to Twitter/X button */}
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                    `${getLocalizedField('title')}\n\n📰 via @bravenewnews4`
+                  )}&url=${encodeURIComponent(canonicalUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1DA1F2] hover:bg-[#1a8cd8] text-white text-xs font-medium transition-colors"
+                >
+                  <Twitter className="w-3.5 h-3.5" fill="currentColor" />
+                  <span>{language === 'en' ? 'Share on X' : language === 'pl' ? 'Udostępnij na X' : 'Поділитися в X'}</span>
                 </a>
                 
                 {/* Translate to English button - for Ukrainian news only */}
