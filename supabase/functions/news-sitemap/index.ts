@@ -7,6 +7,7 @@ const corsHeaders = {
 
 const BASE_URL = "https://echoes2.com";
 const SITEMAP_BASE_URL = "https://echoes2.com/api";
+const CACHE_TTL_HOURS = 6; // Cache sitemap for 6 hours
 
 // Helper to add hreflang links for multilingual pages
 function addHreflangLinks(url: string): string {
@@ -15,6 +16,47 @@ function addHreflangLinks(url: string): string {
     <xhtml:link rel="alternate" hreflang="en" href="${url}" />
     <xhtml:link rel="alternate" hreflang="pl" href="${url}" />
     <xhtml:link rel="alternate" hreflang="x-default" href="${url}" />`;
+}
+
+// Check cached sitemap
+async function getCachedSitemap(supabase: any, cachePath: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("cached_pages")
+    .select("html, expires_at")
+    .eq("path", cachePath)
+    .single();
+
+  if (error || !data) return null;
+  
+  // Check if cache is still valid
+  if (new Date(data.expires_at) > new Date()) {
+    console.log(`Cache HIT for sitemap: ${cachePath}`);
+    return data.html;
+  }
+  
+  console.log(`Cache EXPIRED for sitemap: ${cachePath}`);
+  return null;
+}
+
+// Save sitemap to cache
+async function cacheSitemap(supabase: any, cachePath: string, xml: string, countryName?: string): Promise<void> {
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + CACHE_TTL_HOURS * 60 * 60 * 1000);
+  
+  await supabase
+    .from("cached_pages")
+    .upsert({
+      path: cachePath,
+      html: xml,
+      title: `News Sitemap: ${countryName || 'Index'}`,
+      description: `XML News Sitemap for ${BASE_URL}`,
+      canonical_url: `${BASE_URL}${cachePath}`,
+      expires_at: expiresAt.toISOString(),
+      updated_at: now.toISOString(),
+      html_size_bytes: new TextEncoder().encode(xml).length,
+    }, { onConflict: 'path' });
+  
+  console.log(`Cached news sitemap: ${cachePath}, expires: ${expiresAt.toISOString()}`);
 }
 
 // Ping search engines about sitemap updates
@@ -77,11 +119,12 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const countryCode = url.searchParams.get("country")?.toLowerCase();
     const action = url.searchParams.get("action"); // 'generate' to force regeneration
+    const forceRefresh = url.searchParams.get("refresh") === "true";
     const pingEnabled = url.searchParams.get("ping") !== "false"; // Enable ping by default
 
     // If no country specified, return sitemap index
     if (!countryCode) {
-      return await generateSitemapIndex(supabase, startTime);
+      return await generateSitemapIndex(supabase, startTime, forceRefresh);
     }
 
     // Validate country code
@@ -99,8 +142,29 @@ Deno.serve(async (req) => {
       );
     }
 
+    const cachePath = `/api/news-sitemap?country=${countryCode}`;
+
+    // Check cache first (unless force refresh or action=generate)
+    if (!forceRefresh && action !== "generate") {
+      const cachedXml = await getCachedSitemap(supabase, cachePath);
+      if (cachedXml) {
+        return new Response(cachedXml, { 
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/xml; charset=utf-8",
+            "X-Cache": "HIT",
+            "Cache-Control": "public, max-age=21600",
+          },
+          status: 200 
+        });
+      }
+    }
+
     // Generate sitemap for specific country
     const { xml, urlCount } = await generateCountrySitemap(supabase, country, startTime);
+    
+    // Cache the generated sitemap
+    await cacheSitemap(supabase, cachePath, xml, country.name);
     
     // Ping search engines in background if action=generate and ping not disabled
     if (action === "generate" && pingEnabled && urlCount > 0) {
@@ -113,12 +177,16 @@ Deno.serve(async (req) => {
         )
       );
     }
+
+    const generationTime = Date.now() - startTime;
     
     return new Response(xml, { 
       headers: {
         ...corsHeaders,
         "Content-Type": "application/xml; charset=utf-8",
-        "Cache-Control": "public, max-age=86400", // Cache for 24 hours
+        "X-Cache": "MISS",
+        "X-Generation-Time": `${generationTime}ms`,
+        "Cache-Control": "public, max-age=21600",
       },
       status: 200 
     });
@@ -133,7 +201,25 @@ Deno.serve(async (req) => {
   }
 });
 
-async function generateSitemapIndex(supabase: any, startTime: number): Promise<Response> {
+async function generateSitemapIndex(supabase: any, startTime: number, forceRefresh: boolean): Promise<Response> {
+  const cachePath = "/api/news-sitemap-index";
+
+  // Check cache first (unless force refresh)
+  if (!forceRefresh) {
+    const cachedXml = await getCachedSitemap(supabase, cachePath);
+    if (cachedXml) {
+      return new Response(cachedXml, { 
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/xml; charset=utf-8",
+          "X-Cache": "HIT",
+          "Cache-Control": "public, max-age=21600",
+        },
+        status: 200 
+      });
+    }
+  }
+
   // Get all active countries
   const { data: countries, error } = await supabase
     .from("news_countries")
@@ -146,7 +232,12 @@ async function generateSitemapIndex(supabase: any, startTime: number): Promise<R
   const now = new Date().toISOString();
   
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <!-- News Sitemap Index for ${BASE_URL} -->
+  <!-- Generated: ${now} -->
+  <!-- Cache TTL: ${CACHE_TTL_HOURS} hours -->
+`;
 
   // Add main sitemap
   xml += `
@@ -167,11 +258,15 @@ async function generateSitemapIndex(supabase: any, startTime: number): Promise<R
   xml += `
 </sitemapindex>`;
 
+  // Cache the index
+  await cacheSitemap(supabase, cachePath, xml, 'Index');
+
   return new Response(xml, { 
     headers: {
       ...corsHeaders,
       "Content-Type": "application/xml; charset=utf-8",
-      "Cache-Control": "public, max-age=86400",
+      "X-Cache": "MISS",
+      "Cache-Control": "public, max-age=21600",
     },
     status: 200 
   });
@@ -254,6 +349,7 @@ async function generateCountrySitemap(
   <!-- News sitemap for ${country.name} (${country.code}) -->
   <!-- Generated: ${now} -->
   <!-- Total URLs: ${urlCount} -->
+  <!-- Cache TTL: ${CACHE_TTL_HOURS} hours -->
 `;
 
   // Add news article pages
