@@ -17,6 +17,53 @@ function addHreflangLinks(url: string): string {
     <xhtml:link rel="alternate" hreflang="x-default" href="${url}" />`;
 }
 
+// Helper to fetch all rows with pagination (bypasses 1000 row limit)
+async function fetchAllRows<T>(
+  supabase: any,
+  tableName: string,
+  selectQuery: string,
+  filters: { column: string; op: string; value: any }[] = [],
+  orderBy?: { column: string; ascending: boolean }
+): Promise<T[]> {
+  const PAGE_SIZE = 1000;
+  let allRows: T[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = supabase.from(tableName).select(selectQuery);
+    
+    for (const filter of filters) {
+      if (filter.op === 'eq') query = query.eq(filter.column, filter.value);
+      else if (filter.op === 'not.is.null') query = query.not(filter.column, 'is', null);
+    }
+    
+    if (orderBy) {
+      query = query.order(orderBy.column, { ascending: orderBy.ascending });
+    }
+    
+    query = query.range(offset, offset + PAGE_SIZE - 1);
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error(`Error fetching ${tableName}:`, error);
+      break;
+    }
+    
+    if (!data || data.length === 0) {
+      hasMore = false;
+    } else {
+      allRows = allRows.concat(data);
+      offset += PAGE_SIZE;
+      hasMore = data.length === PAGE_SIZE;
+    }
+  }
+  
+  console.log(`Fetched ${allRows.length} rows from ${tableName}`);
+  return allRows;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -60,14 +107,14 @@ Deno.serve(async (req) => {
 
     if (countriesError) throw countriesError;
 
-    // Fetch news items with slugs
-    const { data: newsItems, error: newsError } = await supabase
-      .from("news_rss_items")
-      .select("id, slug, country_id, fetched_at")
-      .not("slug", "is", null)
-      .order("fetched_at", { ascending: false });
-
-    if (newsError) throw newsError;
+    // Fetch ALL news items with slugs using pagination
+    const newsItems = await fetchAllRows<{ id: string; slug: string; country_id: string; fetched_at: string }>(
+      supabase,
+      'news_rss_items',
+      'id, slug, country_id, fetched_at',
+      [{ column: 'slug', op: 'not.is.null', value: null }],
+      { column: 'fetched_at', ascending: false }
+    );
 
     // Group parts by date to count stories per day and get latest update
     const partsByDate = new Map<string, { count: number; updated_at: string }>();
