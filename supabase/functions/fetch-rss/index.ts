@@ -1037,13 +1037,14 @@ serve(async (req) => {
     }
 
     // Process pending news items that should have been retold but weren't (catch-up for missed items)
+    // Now with batch processing and concurrency control
     if (action === 'process_pending') {
-      const { countryCode, limit: processLimit = 10 } = body;
+      const { countryCode, limit: processLimit = 20, batchSize = 5 } = body;
       
-      // Get auto-generation settings
+      // Get auto-generation settings including LLM model
       const { data: settings } = await supabase
         .from('settings')
-        .select('news_auto_retell_enabled, news_auto_dialogue_enabled, news_auto_tweets_enabled, news_dialogue_count, news_tweet_count')
+        .select('news_auto_retell_enabled, news_auto_dialogue_enabled, news_auto_tweets_enabled, news_dialogue_count, news_tweet_count, llm_text_model, llm_text_provider')
         .limit(1)
         .single();
       
@@ -1052,6 +1053,11 @@ serve(async (req) => {
       const autoTweetsEnabled = settings?.news_auto_tweets_enabled ?? true;
       const dialogueCount = settings?.news_dialogue_count ?? 7;
       const tweetCount = settings?.news_tweet_count ?? 4;
+      
+      // Determine LLM model name for display
+      const llmProvider = settings?.llm_text_provider || 'lovable';
+      const llmModel = settings?.llm_text_model || 'google/gemini-3-flash-preview';
+      const llmDisplayName = llmModel.split('/').pop() || llmModel;
       
       // Get countries with 100% retell ratio
       const { data: countries } = await supabase
@@ -1064,7 +1070,7 @@ serve(async (req) => {
       
       if (countryIds.length === 0) {
         return new Response(
-          JSON.stringify({ success: true, message: 'No countries with 100% retell ratio', processed: 0, logs: [] }),
+          JSON.stringify({ success: true, message: 'No countries with 100% retell ratio', processed: 0, logs: [], llmModel: llmDisplayName }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -1097,12 +1103,12 @@ serve(async (req) => {
       
       if (!pendingItems || pendingItems.length === 0) {
         return new Response(
-          JSON.stringify({ success: true, message: 'No pending items to process', processed: 0, logs: [] }),
+          JSON.stringify({ success: true, message: 'No pending items to process', processed: 0, logs: [], llmModel: llmDisplayName }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      console.log(`Processing ${pendingItems.length} pending items for retelling`);
+      console.log(`[Pending] Processing ${pendingItems.length} items in batches of ${batchSize} using ${llmDisplayName}`);
       
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       let totalRetelled = 0;
@@ -1110,19 +1116,22 @@ serve(async (req) => {
       let totalTweets = 0;
       const logs: { id: string; title: string; country: string; flag: string; step: string; status: 'success' | 'error' | 'skip'; message: string; timestamp: string }[] = [];
       
-      for (const item of pendingItems) {
+      // Define pending item type
+      type PendingItem = { id: string; title: string; slug: string | null; country: { code: string; name: string; flag: string }[] | null };
+      
+      // Helper function to process a single item
+      async function processItem(item: PendingItem): Promise<void> {
         const newsId = item.id;
         const countryData = item.country as unknown as { code: string; name: string; flag: string } | null;
         const itemCountryCode = countryData?.code?.toLowerCase() || 'us';
         const countryName = countryData?.name || 'Unknown';
         const countryFlag = countryData?.flag || '🏳️';
-        const slug = item.slug;
         const shortTitle = item.title?.slice(0, 60) + (item.title?.length > 60 ? '...' : '');
         
         // Step 1: Retell
         if (autoRetellEnabled) {
           try {
-            console.log(`[Pending] Retelling news: ${newsId}`);
+            console.log(`[Pending] Retelling: ${newsId}`);
             const response = await fetch(`${supabaseUrl}/functions/v1/retell-news`, {
               method: 'POST',
               headers: {
@@ -1134,17 +1143,13 @@ serve(async (req) => {
             
             if (response.ok) {
               totalRetelled++;
-              logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'retell', status: 'success', message: 'Переказано', timestamp: new Date().toISOString() });
-              console.log(`[Pending] Successfully retold: ${newsId}`);
+              logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'retell', status: 'success', message: `✓ ${llmDisplayName}`, timestamp: new Date().toISOString() });
             } else {
               logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'retell', status: 'error', message: `HTTP ${response.status}`, timestamp: new Date().toISOString() });
-              console.error(`[Pending] Failed to retell ${newsId}:`, response.status);
             }
           } catch (error) {
             logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'retell', status: 'error', message: String(error), timestamp: new Date().toISOString() });
-            console.error(`[Pending] Error retelling ${newsId}:`, error);
           }
-          await new Promise(r => setTimeout(r, 200));
         }
         
         // Step 2: Generate dialogue
@@ -1157,7 +1162,6 @@ serve(async (req) => {
               .single();
             
             if (article) {
-              console.log(`[Pending] Generating dialogue for: ${newsId}`);
               const detectLang = () => {
                 if (itemCountryCode === 'ua') return 'uk';
                 if (itemCountryCode === 'pl') return 'pl';
@@ -1194,7 +1198,7 @@ serve(async (req) => {
                   
                   totalDialogues++;
                   if (result.tweets) totalTweets++;
-                  logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'dialogue', status: 'success', message: `Діалог + ${result.tweets ? 'твіти' : 'без твітів'}`, timestamp: new Date().toISOString() });
+                  logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'dialogue', status: 'success', message: `✓ ${result.tweets ? '+твіти' : ''}`, timestamp: new Date().toISOString() });
                 }
               } else {
                 logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'dialogue', status: 'error', message: `HTTP ${response.status}`, timestamp: new Date().toISOString() });
@@ -1202,13 +1206,26 @@ serve(async (req) => {
             }
           } catch (error) {
             logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'dialogue', status: 'error', message: String(error), timestamp: new Date().toISOString() });
-            console.error(`[Pending] Error generating dialogue for ${newsId}:`, error);
           }
-          await new Promise(r => setTimeout(r, 200));
         }
       }
       
-      console.log(`[Pending] Completed: ${pendingItems.length} items, ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets`);
+      // Process items in batches with concurrency
+      const effectiveBatchSize = Math.min(batchSize, 5); // Cap at 5 concurrent
+      for (let i = 0; i < pendingItems.length; i += effectiveBatchSize) {
+        const batch = pendingItems.slice(i, i + effectiveBatchSize);
+        console.log(`[Pending] Processing batch ${Math.floor(i / effectiveBatchSize) + 1}/${Math.ceil(pendingItems.length / effectiveBatchSize)} (${batch.length} items)`);
+        
+        // Process batch items in parallel
+        await Promise.all(batch.map(item => processItem(item)));
+        
+        // Small delay between batches to avoid rate limiting
+        if (i + effectiveBatchSize < pendingItems.length) {
+          await new Promise(r => setTimeout(r, 300));
+        }
+      }
+      
+      console.log(`[Pending] Completed: ${pendingItems.length} items, ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets using ${llmDisplayName}`);
       
       return new Response(
         JSON.stringify({
@@ -1218,7 +1235,9 @@ serve(async (req) => {
           retelled: totalRetelled,
           dialogues: totalDialogues,
           tweets: totalTweets,
-          logs
+          logs,
+          llmModel: llmDisplayName,
+          batchSize: effectiveBatchSize
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

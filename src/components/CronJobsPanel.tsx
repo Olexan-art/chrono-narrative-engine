@@ -71,6 +71,17 @@ interface PendingLog {
   timestamp: string;
 }
 
+interface PendingProcessResult {
+  success: boolean;
+  processed: number;
+  retelled: number;
+  dialogues?: number;
+  tweets?: number;
+  logs?: PendingLog[];
+  llmModel?: string;
+  batchSize?: number;
+}
+
 interface Props {
   password: string;
 }
@@ -133,6 +144,7 @@ export function CronJobsPanel({ password }: Props) {
   const [pendingLogs, setPendingLogs] = useState<PendingLog[]>([]);
   const [processingStartTime, setProcessingStartTime] = useState<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [currentLlmModel, setCurrentLlmModel] = useState<string | null>(null);
 
   // Fetch current RSS schedule
   const { data: rssSchedule, isLoading: scheduleLoading } = useQuery({
@@ -412,22 +424,19 @@ export function CronJobsPanel({ password }: Props) {
     mutationFn: async () => {
       setPendingLogs([]);
       setProcessingStartTime(new Date());
-      return callEdgeFunction<{ 
-        success: boolean; 
-        processed: number; 
-        retelled: number;
-        dialogues?: number;
-        tweets?: number;
-        logs?: PendingLog[];
-      }>(
+      setCurrentLlmModel(null);
+      return callEdgeFunction<PendingProcessResult>(
         'fetch-rss',
-        { action: 'process_pending', limit: 20 }
+        { action: 'process_pending', limit: 20, batchSize: 5 }
       );
     },
     onSuccess: (result) => {
       setProcessingStartTime(null);
       if (result.logs) {
         setPendingLogs(result.logs);
+      }
+      if (result.llmModel) {
+        setCurrentLlmModel(result.llmModel);
       }
       queryClient.invalidateQueries({ queryKey: ['news-rss-items-count'] });
       queryClient.invalidateQueries({ queryKey: ['auto-gen-stats'] });
@@ -441,7 +450,7 @@ export function CronJobsPanel({ password }: Props) {
       
       toast({ 
         title: 'Пропущені новини оброблено',
-        description: `Оброблено: ${parts.join(', ')}`
+        description: `Оброблено: ${parts.join(', ')}${result.llmModel ? ` (${result.llmModel})` : ''}`
       });
     },
     onError: (error) => {
@@ -866,15 +875,22 @@ export function CronJobsPanel({ password }: Props) {
             </div>
           )}
 
-          {/* Real-time logs */}
+          {/* Real-time logs with LLM model info */}
           {pendingLogs.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Лог обробки</Label>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-medium">Лог обробки</Label>
+                  {currentLlmModel && (
+                    <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
+                      🤖 {currentLlmModel}
+                    </Badge>
+                  )}
+                </div>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => setPendingLogs([])}
+                  onClick={() => { setPendingLogs([]); setCurrentLlmModel(null); }}
                   className="h-6 text-xs"
                 >
                   Очистити
@@ -895,7 +911,7 @@ export function CronJobsPanel({ password }: Props) {
                         <AlertCircle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span>{log.flag}</span>
                           <Badge variant="outline" className="text-[10px] h-4 px-1">
                             {log.step}
@@ -919,7 +935,7 @@ export function CronJobsPanel({ password }: Props) {
             <div className="flex items-center gap-2 text-muted-foreground">
               <Zap className="w-4 h-4 text-orange-500" />
               <span>
-                Обробляє до 20 новин за раз для країн з 100% ratio (US, UA), які не отримали контент
+                Пакетна обробка: 5 новин паралельно, до 20 за раз (100% ratio країни)
               </span>
             </div>
           </div>
