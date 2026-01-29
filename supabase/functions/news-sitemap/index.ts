@@ -177,21 +177,70 @@ async function generateSitemapIndex(supabase: any, startTime: number): Promise<R
   });
 }
 
+// Helper to fetch all rows with pagination (bypasses 1000 row limit)
+async function fetchAllRows<T>(
+  supabase: any,
+  tableName: string,
+  selectQuery: string,
+  filters: { column: string; op: string; value: any }[] = [],
+  orderBy?: { column: string; ascending: boolean }
+): Promise<T[]> {
+  const PAGE_SIZE = 1000;
+  let allRows: T[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = supabase.from(tableName).select(selectQuery);
+    
+    for (const filter of filters) {
+      if (filter.op === 'eq') query = query.eq(filter.column, filter.value);
+      else if (filter.op === 'not.is.null') query = query.not(filter.column, 'is', null);
+    }
+    
+    if (orderBy) {
+      query = query.order(orderBy.column, { ascending: orderBy.ascending });
+    }
+    
+    query = query.range(offset, offset + PAGE_SIZE - 1);
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error(`Error fetching ${tableName}:`, error);
+      break;
+    }
+    
+    if (!data || data.length === 0) {
+      hasMore = false;
+    } else {
+      allRows = allRows.concat(data);
+      offset += PAGE_SIZE;
+      hasMore = data.length === PAGE_SIZE;
+    }
+  }
+  
+  console.log(`Fetched ${allRows.length} rows from ${tableName}`);
+  return allRows;
+}
+
 async function generateCountrySitemap(
   supabase: any, 
   country: { id: string; code: string; name: string },
   startTime: number
 ): Promise<{ xml: string; urlCount: number }> {
-  // Fetch all non-archived news items with slugs for this country
-  const { data: newsItems, error } = await supabase
-    .from("news_rss_items")
-    .select("id, slug, published_at, fetched_at")
-    .eq("country_id", country.id)
-    .eq("is_archived", false)
-    .not("slug", "is", null)
-    .order("published_at", { ascending: false });
-
-  if (error) throw error;
+  // Fetch ALL non-archived news items with slugs for this country (with pagination)
+  const newsItems = await fetchAllRows<{ id: string; slug: string; published_at: string; fetched_at: string }>(
+    supabase,
+    'news_rss_items',
+    'id, slug, published_at, fetched_at',
+    [
+      { column: 'country_id', op: 'eq', value: country.id },
+      { column: 'is_archived', op: 'eq', value: false },
+      { column: 'slug', op: 'not.is.null', value: null },
+    ],
+    { column: 'published_at', ascending: false }
+  );
 
   const now = new Date().toISOString();
   const countryCodeLower = country.code.toLowerCase();

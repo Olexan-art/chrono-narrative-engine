@@ -8,6 +8,102 @@ const corsHeaders = {
 const BASE_URL = 'https://echoes2.com';
 const SSR_ENDPOINT = Deno.env.get('SUPABASE_URL') + '/functions/v1/ssr-render';
 
+// Helper to fetch all rows with pagination (bypasses 1000 row limit)
+async function fetchAllRows<T>(
+  supabase: any,
+  tableName: string,
+  selectQuery: string,
+  filters: { column: string; op: string; value: any }[] = [],
+  orderBy?: { column: string; ascending: boolean }
+): Promise<T[]> {
+  const PAGE_SIZE = 1000;
+  let allRows: T[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = supabase.from(tableName).select(selectQuery);
+    
+    for (const filter of filters) {
+      if (filter.op === 'eq') query = query.eq(filter.column, filter.value);
+      else if (filter.op === 'neq') query = query.neq(filter.column, filter.value);
+      else if (filter.op === 'gte') query = query.gte(filter.column, filter.value);
+      else if (filter.op === 'is.null') query = query.is(filter.column, null);
+      else if (filter.op === 'not.is.null') query = query.not(filter.column, 'is', null);
+    }
+    
+    if (orderBy) {
+      query = query.order(orderBy.column, { ascending: orderBy.ascending });
+    }
+    
+    query = query.range(offset, offset + PAGE_SIZE - 1);
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error(`Error fetching ${tableName}:`, error);
+      break;
+    }
+    
+    if (!data || data.length === 0) {
+      hasMore = false;
+    } else {
+      allRows = allRows.concat(data);
+      offset += PAGE_SIZE;
+      hasMore = data.length === PAGE_SIZE;
+    }
+  }
+  
+  console.log(`Fetched ${allRows.length} rows from ${tableName}`);
+  return allRows;
+}
+
+// Fetch all news items with country codes using pagination
+async function fetchAllNewsWithCountry(supabase: any): Promise<{ slug: string; countryCode: string }[]> {
+  const PAGE_SIZE = 1000;
+  const results: { slug: string; countryCode: string }[] = [];
+  
+  // First get country mapping
+  const { data: countries } = await supabase
+    .from('news_countries')
+    .select('id, code')
+    .eq('is_active', true);
+  
+  const countryMap = new Map<string, string>();
+  for (const c of countries || []) {
+    countryMap.set(c.id, c.code);
+  }
+  
+  // Fetch all news with pagination
+  let offset = 0;
+  let hasMore = true;
+  
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('news_rss_items')
+      .select('slug, country_id')
+      .eq('is_archived', false)
+      .not('slug', 'is', null)
+      .order('published_at', { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1);
+    
+    if (error || !data || data.length === 0) {
+      hasMore = false;
+    } else {
+      for (const item of data) {
+        const countryCode = countryMap.get(item.country_id);
+        if (countryCode && item.slug) {
+          results.push({ slug: item.slug, countryCode });
+        }
+      }
+      offset += PAGE_SIZE;
+      hasMore = data.length === PAGE_SIZE;
+    }
+  }
+  
+  return results;
+}
+
 // Get all pages based on filter type
 async function getAllPagesToCache(
   supabase: any, 
@@ -38,7 +134,7 @@ async function getAllPagesToCache(
   // Add news articles based on filter
   if (filter === 'news-7d') {
     // Only news from last 7 days
-    const { data: newsItems } = await supabase
+    const { data: newsItems7d } = await supabase
       .from('news_rss_items')
       .select('slug, country_id, news_countries!inner(code)')
       .eq('is_archived', false)
@@ -46,8 +142,8 @@ async function getAllPagesToCache(
       .gte('published_at', sevenDaysAgo.toISOString())
       .order('published_at', { ascending: false });
 
-    if (newsItems) {
-      for (const item of newsItems) {
+    if (newsItems7d) {
+      for (const item of newsItems7d) {
         if (item.slug && item.news_countries?.code) {
           pages.push(`/news/${item.news_countries.code}/${item.slug}`);
         }
@@ -59,7 +155,7 @@ async function getAllPagesToCache(
     // After a full refresh it would include almost everything and make this action time out.
 
     // Add news from last 24 hours
-    const { data: newsItems } = await supabase
+    const { data: newsItems24h } = await supabase
       .from('news_rss_items')
       .select('slug, country_id, news_countries!inner(code)')
       .eq('is_archived', false)
@@ -67,8 +163,8 @@ async function getAllPagesToCache(
       .gte('published_at', oneDayAgo.toISOString())
       .order('published_at', { ascending: false });
 
-    if (newsItems) {
-      for (const item of newsItems) {
+    if (newsItems24h) {
+      for (const item of newsItems24h) {
         if (item.slug && item.news_countries?.code) {
           const path = `/news/${item.news_countries.code}/${item.slug}`;
           if (!pages.includes(path)) {
@@ -101,20 +197,13 @@ async function getAllPagesToCache(
       }
     }
   } else {
-    // ALL news articles (not archived, with slug) - no limit!
-    const { data: newsItems } = await supabase
-      .from('news_rss_items')
-      .select('slug, country_id, news_countries!inner(code)')
-      .eq('is_archived', false)
-      .not('slug', 'is', null)
-      .order('published_at', { ascending: false });
+    // ALL news articles (not archived, with slug) - with pagination to get ALL
+    const allNewsItems = await fetchAllNewsWithCountry(supabase);
 
-    if (newsItems) {
-      console.log(`Found ${newsItems.length} news articles to cache`);
-      for (const item of newsItems) {
-        if (item.slug && item.news_countries?.code) {
-          pages.push(`/news/${item.news_countries.code}/${item.slug}`);
-        }
+    console.log(`Found ${allNewsItems.length} news articles to cache`);
+    for (const item of allNewsItems) {
+      if (item.slug && item.countryCode) {
+        pages.push(`/news/${item.countryCode}/${item.slug}`);
       }
     }
   }
