@@ -86,6 +86,8 @@ function BatchRetellPanelComponent() {
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<BatchStats>({ total: 0, processed: 0, success: 0, failed: 0, skipped: 0 });
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [avgTimePerItem, setAvgTimePerItem] = useState<number>(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
@@ -155,6 +157,8 @@ function BatchRetellPanelComponent() {
 
     setIsRunning(true);
     setLogs([]);
+    setStartTime(Date.now());
+    setAvgTimePerItem(0);
     abortControllerRef.current = new AbortController();
 
     // Filter news based on mode - use config for proper field checking
@@ -207,7 +211,15 @@ function BatchRetellPanelComponent() {
 
         if (result.success) {
           addLog('success', `✅ Успішно переказано: ${news.title.slice(0, 50)}...`, news.id, news.title);
-          setStats(prev => ({ ...prev, processed: prev.processed + 1, success: prev.success + 1 }));
+          setStats(prev => {
+            const newProcessed = prev.processed + 1;
+            // Update average time per item
+            if (startTime) {
+              const elapsed = Date.now() - startTime;
+              setAvgTimePerItem(elapsed / newProcessed);
+            }
+            return { ...prev, processed: newProcessed, success: prev.success + 1 };
+          });
           
           // Step 2: Generate dialogue if enabled
           if (generateDialogues && !abortControllerRef.current?.signal.aborted) {
@@ -224,20 +236,48 @@ function BatchRetellPanelComponent() {
                   .update({ chat_dialogue: JSON.parse(JSON.stringify(dialogueResult.dialogue)) })
                   .eq('id', news.id);
                 addLog('success', `💬 Діалог створено: ${news.title.slice(0, 50)}...`, news.id, news.title);
-                setStats(prev => ({ ...prev, processed: prev.processed + 1, success: prev.success + 1 }));
+                setStats(prev => {
+                  const newProcessed = prev.processed + 1;
+                  if (startTime) {
+                    const elapsed = Date.now() - startTime;
+                    setAvgTimePerItem(elapsed / newProcessed);
+                  }
+                  return { ...prev, processed: newProcessed, success: prev.success + 1 };
+                });
               } else {
                 addLog('error', `💬 Помилка діалогу: ${dialogueResult.error || 'Unknown'}`, news.id, news.title);
-                setStats(prev => ({ ...prev, processed: prev.processed + 1, failed: prev.failed + 1 }));
+                setStats(prev => {
+                  const newProcessed = prev.processed + 1;
+                  if (startTime) {
+                    const elapsed = Date.now() - startTime;
+                    setAvgTimePerItem(elapsed / newProcessed);
+                  }
+                  return { ...prev, processed: newProcessed, failed: prev.failed + 1 };
+                });
               }
             } catch (dialogueError) {
               const errorMsg = dialogueError instanceof Error ? dialogueError.message : 'Unknown error';
               addLog('error', `💬 Виняток діалогу: ${errorMsg}`, news.id, news.title);
-              setStats(prev => ({ ...prev, processed: prev.processed + 1, failed: prev.failed + 1 }));
+              setStats(prev => {
+                const newProcessed = prev.processed + 1;
+                if (startTime) {
+                  const elapsed = Date.now() - startTime;
+                  setAvgTimePerItem(elapsed / newProcessed);
+                }
+                return { ...prev, processed: newProcessed, failed: prev.failed + 1 };
+              });
             }
           }
         } else {
           addLog('error', `❌ Помилка: ${result.error || 'Unknown error'}`, news.id, news.title);
-          setStats(prev => ({ ...prev, processed: prev.processed + 1, failed: prev.failed + 1 }));
+          setStats(prev => {
+            const newProcessed = prev.processed + 1;
+            if (startTime) {
+              const elapsed = Date.now() - startTime;
+              setAvgTimePerItem(elapsed / newProcessed);
+            }
+            return { ...prev, processed: newProcessed, failed: prev.failed + 1 };
+          });
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -267,6 +307,8 @@ function BatchRetellPanelComponent() {
 
     setIsRunning(true);
     setLogs([]);
+    setStartTime(Date.now());
+    setAvgTimePerItem(0);
     abortControllerRef.current = new AbortController();
 
     // Filter news that are retold but don't have dialogues
@@ -322,15 +364,36 @@ function BatchRetellPanelComponent() {
             .update({ chat_dialogue: JSON.parse(JSON.stringify(result.dialogue)) })
             .eq('id', news.id);
           addLog('success', `✅ Діалог створено: ${news.title.slice(0, 50)}...`, news.id, news.title);
-          setStats(prev => ({ ...prev, processed: prev.processed + 1, success: prev.success + 1 }));
+          setStats(prev => {
+            const newProcessed = prev.processed + 1;
+            if (startTime) {
+              const elapsed = Date.now() - startTime;
+              setAvgTimePerItem(elapsed / newProcessed);
+            }
+            return { ...prev, processed: newProcessed, success: prev.success + 1 };
+          });
         } else {
           addLog('error', `❌ Помилка: ${result.error || 'Unknown error'}`, news.id, news.title);
-          setStats(prev => ({ ...prev, processed: prev.processed + 1, failed: prev.failed + 1 }));
+          setStats(prev => {
+            const newProcessed = prev.processed + 1;
+            if (startTime) {
+              const elapsed = Date.now() - startTime;
+              setAvgTimePerItem(elapsed / newProcessed);
+            }
+            return { ...prev, processed: newProcessed, failed: prev.failed + 1 };
+          });
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         addLog('error', `❌ Виняток: ${errorMessage}`, news.id, news.title);
-        setStats(prev => ({ ...prev, processed: prev.processed + 1, failed: prev.failed + 1 }));
+        setStats(prev => {
+          const newProcessed = prev.processed + 1;
+          if (startTime) {
+            const elapsed = Date.now() - startTime;
+            setAvgTimePerItem(elapsed / newProcessed);
+          }
+          return { ...prev, processed: newProcessed, failed: prev.failed + 1 };
+        });
       }
 
       // Small delay between requests to avoid rate limiting
@@ -353,6 +416,21 @@ function BatchRetellPanelComponent() {
     setIsRunning(false);
     addLog('warning', '⏹️ Переказ зупинено');
   }, [addLog]);
+
+  // Format duration from milliseconds to human readable
+  const formatDuration = (ms: number): string => {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) {
+      return `${hours}г ${minutes % 60}хв`;
+    } else if (minutes > 0) {
+      return `${minutes}хв ${seconds % 60}с`;
+    } else {
+      return `${seconds}с`;
+    }
+  };
 
   const getLogIcon = (type: LogEntry['type']) => {
     switch (type) {
@@ -663,7 +741,7 @@ function BatchRetellPanelComponent() {
 
         {/* Progress */}
         {(isRunning || stats.processed > 0) && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span>Прогрес: {stats.processed} / {stats.total}</span>
               <span className="flex items-center gap-3">
@@ -673,6 +751,30 @@ function BatchRetellPanelComponent() {
               </span>
             </div>
             <Progress value={stats.total > 0 ? (stats.processed / stats.total) * 100 : 0} />
+            
+            {/* Time estimation */}
+            {isRunning && stats.processed > 0 && avgTimePerItem > 0 && (
+              <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-2">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Середній час: {Math.round(avgTimePerItem / 1000)}с / елемент
+                  </span>
+                  <span>
+                    Пройшло: {formatDuration(Date.now() - (startTime || Date.now()))}
+                  </span>
+                </div>
+                <span className="font-medium text-primary">
+                  ⏱ Залишилось: ~{formatDuration((stats.total - stats.processed) * avgTimePerItem)}
+                </span>
+              </div>
+            )}
+            
+            {!isRunning && stats.processed > 0 && startTime && (
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-2">
+                ✅ Виконано за {formatDuration(Date.now() - startTime)}
+              </div>
+            )}
           </div>
         )}
 
