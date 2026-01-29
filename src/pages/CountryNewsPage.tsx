@@ -339,7 +339,7 @@ export default function CountryNewsPage() {
                       ? 'border-primary/30 hover:border-primary/60 bg-primary/5' 
                       : 'hover:border-primary/50'
                   }`}>
-                    {item.image_url && (
+                    {item.image_url ? (
                       <div className="aspect-video overflow-hidden relative">
                         <img
                           src={item.image_url}
@@ -358,6 +358,13 @@ export default function CountryNewsPage() {
                             </Badge>
                           </div>
                         )}
+                      </div>
+                    ) : isRetold && (
+                      <div className="px-4 pt-4">
+                        <Badge className="bg-primary/90 text-primary-foreground gap-1">
+                          <Sparkles className="w-3 h-3" />
+                          Full retelling
+                        </Badge>
                       </div>
                     )}
                     <CardHeader className="pb-2">
