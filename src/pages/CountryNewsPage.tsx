@@ -258,9 +258,6 @@ export default function CountryNewsPage() {
               <span className="text-3xl">{country.flag}</span>
               {countryName}
             </h1>
-            <p className="text-muted-foreground mt-1">
-              {newsItems.length} {language === 'en' ? 'articles' : language === 'pl' ? 'artykułów' : 'статей'}
-            </p>
           </div>
 
           {/* Country Navigation */}
