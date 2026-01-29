@@ -82,6 +82,7 @@ function BatchRetellPanelComponent() {
   const [retellMode, setRetellMode] = useState<'all' | 'every2nd'>('all');
   const [maxCount, setMaxCount] = useState<number>(0); // 0 means unlimited
   const [generateDialogues, setGenerateDialogues] = useState(false);
+  const [onlyWithoutRetell, setOnlyWithoutRetell] = useState(true); // Default: only news without retell
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<BatchStats>({ total: 0, processed: 0, success: 0, failed: 0, skipped: 0 });
@@ -157,7 +158,9 @@ function BatchRetellPanelComponent() {
     abortControllerRef.current = new AbortController();
 
     // Filter news based on mode - use config for proper field checking
-    let newsToProcess = newsForDate.filter(n => !isNewsRetold(n, selectedCountryCode));
+    let newsToProcess = onlyWithoutRetell 
+      ? newsForDate.filter(n => !isNewsRetold(n, selectedCountryCode))
+      : [...newsForDate]; // All news (including already retold for re-processing)
     
     if (retellMode === 'every2nd') {
       newsToProcess = newsToProcess.filter((_, idx) => idx % 2 === 0);
@@ -256,7 +259,7 @@ function BatchRetellPanelComponent() {
     queryClient.invalidateQueries({ queryKey: ['latest-usa-retold-news'] });
     queryClient.invalidateQueries({ queryKey: ['country-news'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-  }, [selectedCountry, newsForDate, retellMode, selectedModel, countries, selectedDate, addLog, queryClient, maxCount, generateDialogues, selectedCountryCode]);
+  }, [selectedCountry, newsForDate, retellMode, selectedModel, countries, selectedDate, addLog, queryClient, maxCount, generateDialogues, selectedCountryCode, onlyWithoutRetell]);
 
   // Batch dialogue generation only
   const startBatchDialogue = useCallback(async () => {
@@ -370,7 +373,9 @@ function BatchRetellPanelComponent() {
   
   // Calculate actual count to process for retell
   const getRetellProcessCount = () => {
-    let count = retellMode === 'every2nd' ? Math.ceil(notRetoldCount / 2) : notRetoldCount;
+    // If onlyWithoutRetell is off, count all news; otherwise only not retold
+    const baseCount = onlyWithoutRetell ? notRetoldCount : newsForDate.length;
+    let count = retellMode === 'every2nd' ? Math.ceil(baseCount / 2) : baseCount;
     if (maxCount > 0 && count > maxCount) {
       count = maxCount;
     }
@@ -536,29 +541,70 @@ function BatchRetellPanelComponent() {
             </TabsList>
 
             <TabsContent value="retell" className="space-y-4 mt-4">
-              {/* Checkbox for generating dialogues */}
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="generateDialogues"
-                  checked={generateDialogues}
-                  onCheckedChange={(checked) => setGenerateDialogues(checked === true)}
-                  disabled={isRunning}
-                />
-                <Label htmlFor="generateDialogues" className="text-sm cursor-pointer">
-                  💬 Генерувати діалоги після переказу
-                </Label>
+              {/* Toggle: only without retell */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="onlyWithoutRetell"
+                    checked={onlyWithoutRetell}
+                    onCheckedChange={(checked) => setOnlyWithoutRetell(checked === true)}
+                    disabled={isRunning}
+                  />
+                  <Label htmlFor="onlyWithoutRetell" className="text-sm cursor-pointer">
+                    🔄 Тільки новини без переказу
+                  </Label>
+                </div>
+                
+                {/* Checkbox for generating dialogues */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="generateDialogues"
+                    checked={generateDialogues}
+                    onCheckedChange={(checked) => setGenerateDialogues(checked === true)}
+                    disabled={isRunning}
+                  />
+                  <Label htmlFor="generateDialogues" className="text-sm cursor-pointer">
+                    💬 Генерувати діалоги після переказу
+                  </Label>
+                </div>
               </div>
+
+              {/* Hint about what will be processed */}
+              <Card className="border-muted bg-muted/30">
+                <CardContent className="py-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <span className="text-lg">💡</span>
+                    <div className="space-y-1">
+                      <p className="font-medium">
+                        {onlyWithoutRetell 
+                          ? `Буде оброблено: ${retellProcessCount} новин без переказу`
+                          : `Буде оброблено: ${retellProcessCount} новин (включно з уже переказаними — буде оновлено)`
+                        }
+                      </p>
+                      <p className="text-muted-foreground">
+                        {onlyWithoutRetell 
+                          ? `Пропущено: ${retoldCount} вже переказаних`
+                          : `⚠️ Увага: переказ буде перезаписано для всіх вибраних новин!`
+                        }
+                        {retellMode === 'every2nd' && ' • Режим: кожна 2-га новина'}
+                        {maxCount > 0 && ` • Ліміт: ${maxCount}`}
+                        {generateDialogues && ' • + діалоги'}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Action buttons for retell */}
               <div className="flex gap-2">
                 {!isRunning ? (
                   <Button
                     onClick={startBatchRetell}
-                    disabled={notRetoldCount === 0}
+                    disabled={retellProcessCount === 0}
                     className="gap-2"
                   >
                     <Play className="w-4 h-4" />
-                    Почати переказ ({retellProcessCount})
+                    {onlyWithoutRetell ? 'Почати переказ' : 'Оновити переказ'} ({retellProcessCount})
                     {generateDialogues && " + діалоги"}
                   </Button>
                 ) : (
@@ -569,7 +615,7 @@ function BatchRetellPanelComponent() {
                 )}
               </div>
 
-              {notRetoldCount === 0 && (
+              {retellProcessCount === 0 && onlyWithoutRetell && (
                 <p className="text-sm text-muted-foreground">
                   ✅ Всі новини за цю дату вже переказані
                 </p>
