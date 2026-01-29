@@ -532,31 +532,37 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'stats') {
-      // Get cache statistics
-      const { data: pages, error } = await supabase
-        .from('cached_pages')
-        .select('path, title, updated_at, expires_at, generation_time_ms, html_size_bytes')
-        .order('updated_at', { ascending: false });
+      // Get cache statistics with pagination to bypass 1000 row limit
+      const allPages = await fetchAllRows<{
+        path: string;
+        title: string | null;
+        updated_at: string;
+        expires_at: string;
+        generation_time_ms: number | null;
+        html_size_bytes: number | null;
+      }>(
+        supabase,
+        'cached_pages',
+        'path, title, updated_at, expires_at, generation_time_ms, html_size_bytes',
+        [],
+        { column: 'updated_at', ascending: false }
+      );
 
-      if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      const totalSize = pages?.reduce((sum, p) => sum + (p.html_size_bytes || 0), 0) || 0;
-      const avgTime = pages?.length 
-        ? pages.reduce((sum, p) => sum + (p.generation_time_ms || 0), 0) / pages.length 
+      const totalSize = allPages.reduce((sum, p) => sum + (p.html_size_bytes || 0), 0);
+      const avgTime = allPages.length 
+        ? allPages.reduce((sum, p) => sum + (p.generation_time_ms || 0), 0) / allPages.length 
         : 0;
+
+      // Return only recent 1000 pages for the list to avoid huge response, but show accurate totals
+      const recentPages = allPages.slice(0, 1000);
 
       return new Response(JSON.stringify({
         action: 'stats',
-        totalPages: pages?.length || 0,
+        totalPages: allPages.length,
         totalSizeBytes: totalSize,
         totalSizeMB: (totalSize / 1024 / 1024).toFixed(2),
         avgGenerationTimeMs: Math.round(avgTime),
-        pages: pages?.map(p => ({
+        pages: recentPages.map(p => ({
           path: p.path,
           title: p.title,
           updatedAt: p.updated_at,
