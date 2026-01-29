@@ -1,4 +1,4 @@
-import { ExternalLink, Building2, User, Globe } from "lucide-react";
+import { ExternalLink, Building2, User, Globe, TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -48,49 +48,77 @@ export function WikiEntityCard({ entity, compact = false }: WikiEntityCardProps)
     }
   };
 
+  // Extract key facts from the extract text
+  const getKeyFacts = (): string[] => {
+    if (!extract) return [];
+    
+    // Split by sentences and take first 2-3 meaningful ones
+    const sentences = extract
+      .split(/(?<=[.!?])\s+/)
+      .filter(s => s.length > 20 && s.length < 200)
+      .slice(0, 2);
+    
+    return sentences;
+  };
+
   if (compact) {
     return (
       <a 
         href={wikiUrl} 
         target="_blank" 
         rel="noopener noreferrer"
-        className="flex items-center gap-2 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+        className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
       >
         {entity.image_url ? (
           <img 
             src={entity.image_url} 
             alt={name}
-            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+            className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
           />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
             {getEntityIcon()}
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium truncate">{name}</p>
-          <p className="text-xs text-muted-foreground truncate">{description}</p>
+          <div className="flex items-center gap-2 mb-0.5">
+            <p className="text-sm font-medium truncate">{name}</p>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 gap-0.5 flex-shrink-0">
+              {getEntityIcon()}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground line-clamp-2">{description || extract?.slice(0, 100)}</p>
         </div>
-        <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+        <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
       </a>
     );
   }
 
+  const keyFacts = getKeyFacts();
+
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-4">
-        <div className="flex gap-3">
+        <div className="flex gap-4">
+          {/* Larger image */}
           {entity.image_url ? (
             <img 
               src={entity.image_url} 
               alt={name}
-              className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+              className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
             />
           ) : (
-            <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-              {getEntityIcon()}
+            <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+              {entity.entity_type === 'person' ? (
+                <User className="w-10 h-10 text-muted-foreground" />
+              ) : entity.entity_type === 'company' ? (
+                <Building2 className="w-10 h-10 text-muted-foreground" />
+              ) : (
+                <Globe className="w-10 h-10 text-muted-foreground" />
+              )}
             </div>
           )}
+          
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1">
               <Badge variant="outline" className="text-[10px] gap-1">
@@ -98,9 +126,9 @@ export function WikiEntityCard({ entity, compact = false }: WikiEntityCardProps)
                 {getEntityLabel()}
               </Badge>
             </div>
-            <h4 className="font-semibold text-sm mb-1 truncate">{name}</h4>
+            <h4 className="font-semibold text-base mb-1">{name}</h4>
             {description && (
-              <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{description}</p>
+              <p className="text-sm text-muted-foreground mb-2">{description}</p>
             )}
             <a 
               href={wikiUrl}
@@ -112,7 +140,27 @@ export function WikiEntityCard({ entity, compact = false }: WikiEntityCardProps)
             </a>
           </div>
         </div>
-        {extract && !compact && (
+
+        {/* Key Facts Section */}
+        {keyFacts.length > 0 && (
+          <div className="mt-4 pt-3 border-t space-y-2">
+            <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" />
+              {language === 'uk' ? 'Ключові факти' : language === 'pl' ? 'Kluczowe fakty' : 'Key Facts'}
+            </h5>
+            <ul className="space-y-1.5">
+              {keyFacts.map((fact, i) => (
+                <li key={i} className="text-xs text-muted-foreground leading-relaxed flex gap-2">
+                  <span className="text-primary">•</span>
+                  <span>{fact}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Full extract as fallback if no key facts parsed */}
+        {keyFacts.length === 0 && extract && (
           <p className="text-xs text-muted-foreground mt-3 line-clamp-3 border-t pt-3">
             {extract}
           </p>

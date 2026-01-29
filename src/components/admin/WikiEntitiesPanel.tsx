@@ -1,15 +1,23 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Trash2, ExternalLink, Building2, User, Globe, Loader2, RefreshCw } from "lucide-react";
+import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface WikiEntity {
   id: string;
@@ -18,19 +26,158 @@ interface WikiEntity {
   name: string;
   name_en: string | null;
   description: string | null;
+  description_en: string | null;
   image_url: string | null;
   wiki_url: string;
+  wiki_url_en: string | null;
+  extract: string | null;
+  extract_en: string | null;
   search_count: number;
-  last_searched_at: string | null;
   created_at: string;
+  last_searched_at: string | null;
+}
+
+interface NewsLink {
+  id: string;
+  slug: string | null;
+  title: string;
+  title_en: string | null;
+  country_id: string;
+  published_at: string | null;
+}
+
+interface NewsLinkWithCountry extends NewsLink {
+  country: {
+    code: string;
+    flag: string;
+    name: string;
+  };
+}
+
+// Component to show linked news for an entity
+function EntityNewsDialog({ entity }: { entity: WikiEntity }) {
+  const { data: linkedNews, isLoading } = useQuery({
+    queryKey: ['entity-news-links', entity.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('news_wiki_entities')
+        .select(`
+          id,
+          news_item:news_rss_items(
+            id, slug, title, title_en, country_id, published_at,
+            country:news_countries(code, flag, name)
+          )
+        `)
+        .eq('wiki_entity_id', entity.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+
+      return data
+        .filter(d => d.news_item)
+        .map(d => {
+          const item = d.news_item as any;
+          return {
+            ...item,
+            country: item.country
+          } as NewsLinkWithCountry;
+        });
+    },
+  });
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" title="Переглянути згадки в новинах">
+          <Newspaper className="w-4 h-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            {entity.image_url ? (
+              <img src={entity.image_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+                {entity.entity_type === 'person' ? <User className="w-6 h-6" /> : <Building2 className="w-6 h-6" />}
+              </div>
+            )}
+            <div>
+              <span>{entity.name}</span>
+              <p className="text-sm font-normal text-muted-foreground">{entity.description}</p>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="mt-4">
+          <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+            <Newspaper className="w-4 h-4" />
+            Згадки в новинах ({linkedNews?.length || 0})
+          </h4>
+          
+          <ScrollArea className="h-[300px]">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin" />
+              </div>
+            ) : linkedNews && linkedNews.length > 0 ? (
+              <div className="space-y-2">
+                {linkedNews.map((news) => (
+                  <Link
+                    key={news.id}
+                    to={news.slug ? `/news/${news.country?.code?.toLowerCase()}/${news.slug}` : '#'}
+                    className="block p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className="text-lg">{news.country?.flag}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium line-clamp-2">{news.title_en || news.title}</p>
+                        {news.published_at && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(news.published_at), 'dd.MM.yyyy HH:mm')}
+                          </p>
+                        )}
+                      </div>
+                      <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Ця сутність ще не згадується в новинах
+              </p>
+            )}
+          </ScrollArea>
+        </div>
+
+        {/* Entity Details */}
+        {entity.extract && (
+          <div className="mt-4 pt-4 border-t">
+            <h4 className="text-sm font-medium mb-2">Про сутність (Wikipedia)</h4>
+            <p className="text-sm text-muted-foreground line-clamp-4">{entity.extract_en || entity.extract}</p>
+            <a 
+              href={entity.wiki_url_en || entity.wiki_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
+            >
+              Читати на Wikipedia <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export function WikiEntitiesPanel() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch all entities
+  // Fetch entities with search and filter
   const { data: entities, isLoading } = useQuery({
     queryKey: ['admin-wiki-entities', searchTerm, filterType],
     queryFn: async () => {
@@ -222,7 +369,7 @@ export function WikiEntitiesPanel() {
                     <TableHead>Тип</TableHead>
                     <TableHead className="text-center">Згадок</TableHead>
                     <TableHead>Останній пошук</TableHead>
-                    <TableHead className="w-24"></TableHead>
+                    <TableHead className="w-32"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -267,6 +414,7 @@ export function WikiEntitiesPanel() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
+                          <EntityNewsDialog entity={entity} />
                           <Button
                             variant="ghost"
                             size="icon"
