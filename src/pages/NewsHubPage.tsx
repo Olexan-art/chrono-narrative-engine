@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
+import { NewsHubSeoContent } from "@/components/NewsHubSeoContent";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -112,16 +113,16 @@ export default function NewsHubPage() {
   };
 
   const pageTitle = language === 'en' 
-    ? 'Wormhole - World News Digest' 
+    ? 'World News & Events Digest: USA, Ukraine, Poland, India' 
     : language === 'pl'
-    ? 'Krotowina - Przegląd Wiadomości Światowych'
-    : 'Кротовиина - Світовий Дайджест Новин';
+    ? 'Przegląd Wiadomości Światowych: USA, Ukraina, Polska, Indie'
+    : 'Дайджест Світових Новин: США, Україна, Польща, Індія';
 
   const pageDescription = language === 'en'
-    ? 'AI-powered news digest from around the world with retelling and character dialogues'
+    ? 'Read the latest world news on Synchronization Point. A daily digest of events from the USA, Ukraine, Poland, and India. Real facts and structured updates serving as the foundation for the AI Archive of Human History.'
     : language === 'pl'
-    ? 'Przegląd wiadomości ze świata z AI-streszczeniami i dialogami postaci'
-    : 'AI-дайджест новин з усього світу з переказом та діалогами персонажів';
+    ? 'Przegląd wiadomości ze świata z AI-streszczeniami i dialogami postaci z USA, Ukrainy, Polski i Indii.'
+    : 'AI-дайджест новин з усього світу з переказом та діалогами персонажів зі США, України, Польщі та Індії.';
 
   if (isLoading) {
     return (
@@ -264,6 +265,9 @@ export default function NewsHubPage() {
             );
           })}
         </div>
+
+        {/* SEO Content Section */}
+        <NewsHubSeoContent />
       </main>
     </div>
   );
