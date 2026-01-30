@@ -285,6 +285,31 @@ function SettingsPanel({ password }: { password: string }) {
                   </p>
                 </div>
               )}
+
+              {(textProvider === 'geminiV22' || imageProvider === 'geminiV22') && (
+                <div className="space-y-2">
+                  <Label>Google AI API Key (V22)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type={showApiKeys.geminiV22 ? 'text' : 'password'}
+                      value={settings.gemini_v22_api_key || ''}
+                      onChange={(e) => updateMutation.mutate({ gemini_v22_api_key: e.target.value })}
+                      placeholder="AIza..."
+                      className="font-mono"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => toggleApiKeyVisibility('geminiV22')}
+                    >
+                      {showApiKeys.geminiV22 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Версія 22 API ключа для Gemini
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -337,6 +362,12 @@ function SettingsPanel({ password }: { password: string }) {
                       <div className="flex items-center gap-2">
                         <span>🇨🇳</span>
                         Z.AI (GLM)
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="geminiV22">
+                      <div className="flex items-center gap-2">
+                        <span>💎</span>
+                        Gemini V22
                       </div>
                     </SelectItem>
                   </SelectContent>

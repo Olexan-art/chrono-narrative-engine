@@ -40,6 +40,7 @@ interface LLMSettings {
   llm_text_model: string;
   openai_api_key: string | null;
   gemini_api_key: string | null;
+  gemini_v22_api_key: string | null;
   anthropic_api_key: string | null;
   zai_api_key: string | null;
 }
@@ -162,6 +163,32 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
       const errorText = await response.text();
       console.error('Gemini error:', response.status, errorText);
       throw new Error(`Gemini error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+
+  // Gemini V22 provider - direct Google AI API with v22 key
+  if (provider === 'geminiV22') {
+    const apiKey = settings.gemini_v22_api_key || Deno.env.get('GEMINI_V22_API_KEY');
+    if (!apiKey) throw new Error('Gemini V22 API key not configured');
+
+    const modelName = model || 'gemini-2.5-flash';
+    console.log('Using Gemini V22 with model:', modelName);
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini V22 error:', response.status, errorText);
+      throw new Error(`Gemini V22 error: ${response.status}`);
     }
 
     const data = await response.json();

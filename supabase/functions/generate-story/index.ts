@@ -30,6 +30,7 @@ interface LLMSettings {
   llm_text_model: string;
   openai_api_key: string | null;
   gemini_api_key: string | null;
+  gemini_v22_api_key: string | null;
   anthropic_api_key: string | null;
   zai_api_key: string | null;
 }
@@ -183,6 +184,35 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
     return data.choices?.[0]?.message?.content || '';
   }
 
+  // Gemini V22 provider - direct Google AI API with v22 key
+  if (provider === 'geminiV22') {
+    const apiKey = settings.gemini_v22_api_key || Deno.env.get('GEMINI_V22_API_KEY');
+    if (!apiKey) throw new Error('Gemini V22 API key not configured');
+
+    const modelName = settings.llm_text_model || 'gemini-2.5-flash';
+    console.log('Using Gemini V22 with model:', modelName);
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini V22 error:', response.status, errorText);
+      throw new Error(`Gemini V22 error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+
   throw new Error(`Unknown LLM provider: ${provider}`);
 }
 
@@ -213,7 +243,7 @@ serve(async (req) => {
 
     const { data: settingsData } = await supabase
       .from('settings')
-      .select('llm_provider, llm_text_provider, llm_text_model, openai_api_key, gemini_api_key, anthropic_api_key, zai_api_key')
+      .select('llm_provider, llm_text_provider, llm_text_model, openai_api_key, gemini_api_key, gemini_v22_api_key, anthropic_api_key, zai_api_key')
       .limit(1)
       .single();
 
@@ -223,6 +253,7 @@ serve(async (req) => {
       llm_text_model: 'google/gemini-3-flash-preview',
       openai_api_key: null,
       gemini_api_key: null,
+      gemini_v22_api_key: null,
       anthropic_api_key: null,
       zai_api_key: null
     };
