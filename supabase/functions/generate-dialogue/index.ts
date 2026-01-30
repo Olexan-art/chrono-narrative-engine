@@ -15,6 +15,7 @@ interface LLMSettings {
   gemini_v22_api_key: string | null;
   anthropic_api_key: string | null;
   zai_api_key: string | null;
+  mistral_api_key: string | null;
 }
 
 interface Character {
@@ -259,6 +260,40 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   }
 
+  // Mistral provider
+  if (provider === 'mistral') {
+    const apiKey = settings.mistral_api_key;
+    if (!apiKey) throw new Error('Mistral API key not configured');
+
+    const modelName = settings.llm_text_model || 'mistral-large-latest';
+    console.log('Using Mistral with model:', modelName);
+
+    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: modelName,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Mistral error:', response.status, errorText);
+      throw new Error(`Mistral error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  }
+
   throw new Error(`Unknown LLM provider: ${provider}`);
 }
 
@@ -304,7 +339,7 @@ serve(async (req) => {
     // Get LLM settings
     const { data: settingsData } = await supabase
       .from('settings')
-      .select('llm_provider, llm_text_provider, llm_text_model, openai_api_key, gemini_api_key, gemini_v22_api_key, anthropic_api_key, zai_api_key')
+      .select('llm_provider, llm_text_provider, llm_text_model, openai_api_key, gemini_api_key, gemini_v22_api_key, anthropic_api_key, zai_api_key, mistral_api_key')
       .limit(1)
       .single();
 
@@ -316,7 +351,8 @@ serve(async (req) => {
       gemini_api_key: settingsData?.gemini_api_key || null,
       gemini_v22_api_key: settingsData?.gemini_v22_api_key || null,
       anthropic_api_key: settingsData?.anthropic_api_key || null,
-      zai_api_key: settingsData?.zai_api_key || null
+      zai_api_key: settingsData?.zai_api_key || null,
+      mistral_api_key: settingsData?.mistral_api_key || null
     };
 
     // Determine provider from model if specified
