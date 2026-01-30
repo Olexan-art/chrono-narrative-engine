@@ -33,16 +33,30 @@ export default function NewsArticlePage() {
   const queryClient = useQueryClient();
   const { isAuthenticated: isAdminAuthenticated } = useAdminStore();
 
-  // Fetch LLM settings to get available providers
+  // Fetch LLM settings to check which providers are configured
   const { data: settings } = useQuery({
-    queryKey: ['llm-settings'],
+    queryKey: ['llm-settings-available'],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('settings')
         .select('openai_api_key, gemini_api_key, gemini_v22_api_key, anthropic_api_key, zai_api_key, mistral_api_key')
         .limit(1)
         .single();
-      return data;
+      
+      if (error) {
+        console.error('Error fetching LLM settings:', error);
+        return null;
+      }
+      
+      // Return just boolean flags for which providers have keys configured
+      return {
+        hasOpenai: !!data?.openai_api_key,
+        hasGemini: !!data?.gemini_api_key,
+        hasGeminiV22: !!data?.gemini_v22_api_key,
+        hasAnthropic: !!data?.anthropic_api_key,
+        hasZai: !!data?.zai_api_key,
+        hasMistral: !!data?.mistral_api_key,
+      };
     },
     enabled: isAdminAuthenticated,
     staleTime: 1000 * 60 * 5,
@@ -55,22 +69,22 @@ export default function NewsArticlePage() {
     // Lovable AI models are always available
     LOVABLE_MODELS.forEach(m => models.push({ ...m, provider: 'lovable' }));
     
-    if (settings?.zai_api_key) {
+    if (settings?.hasZai) {
       LLM_MODELS.zai.text.forEach(m => models.push({ ...m, provider: 'zai' }));
     }
-    if (settings?.mistral_api_key) {
+    if (settings?.hasMistral) {
       LLM_MODELS.mistral.text.forEach(m => models.push({ ...m, provider: 'mistral' }));
     }
-    if (settings?.openai_api_key) {
+    if (settings?.hasOpenai) {
       LLM_MODELS.openai.text.forEach(m => models.push({ ...m, provider: 'openai' }));
     }
-    if (settings?.gemini_api_key) {
+    if (settings?.hasGemini) {
       LLM_MODELS.gemini.text.forEach(m => models.push({ ...m, provider: 'gemini' }));
     }
-    if (settings?.gemini_v22_api_key) {
+    if (settings?.hasGeminiV22) {
       LLM_MODELS.geminiV22.text.forEach(m => models.push({ ...m, provider: 'geminiV22' }));
     }
-    if (settings?.anthropic_api_key) {
+    if (settings?.hasAnthropic) {
       LLM_MODELS.anthropic.text.forEach(m => models.push({ ...m, provider: 'anthropic' }));
     }
     
