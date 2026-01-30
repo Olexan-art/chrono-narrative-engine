@@ -6,7 +6,7 @@ export type NarrativeSpecial = 'conspiratorial' | 'transmedia' | 'personal' | 'c
 export type StoryStatus = 'draft' | 'scheduled' | 'published';
 export type PartCategory = 'story' | 'just_business';
 
-export type LLMProvider = 'lovable' | 'openai' | 'gemini' | 'anthropic' | 'zai';
+export type LLMProvider = 'lovable' | 'openai' | 'gemini' | 'geminiV22' | 'anthropic' | 'zai';
 
 export interface Settings {
   id: string;
@@ -29,6 +29,7 @@ export interface Settings {
   llm_image_model: string;
   openai_api_key: string | null;
   gemini_api_key: string | null;
+  gemini_v22_api_key: string | null;
   anthropic_api_key: string | null;
   zai_api_key: string | null;
   created_at: string;
@@ -68,6 +69,16 @@ export const LLM_MODELS = {
       { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
       { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
       { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+    ],
+    image: [
+      { value: 'imagen-3', label: 'Imagen 3' },
+    ]
+  },
+  geminiV22: {
+    text: [
+      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (V22)' },
+      { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (V22)' },
+      { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (V22)' },
     ],
     image: [
       { value: 'imagen-3', label: 'Imagen 3' },
