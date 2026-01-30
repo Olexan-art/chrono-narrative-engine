@@ -394,15 +394,25 @@ Deno.serve(async (req) => {
         description = (newsItem.content_en || newsItem.content || newsItem.description_en || newsItem.description)?.substring(0, 160) + "...";
         image = newsItem.image_url || image;
         
-        // Fetch "More from country" links (6 articles)
-        const { data: moreFromCountry } = await supabase
-          .from("news_rss_items")
-          .select("slug, title, title_en, published_at, country:news_countries(code, name_en, flag)")
-          .eq("country_id", newsItem.country_id)
-          .eq("is_archived", false)
-          .neq("id", newsItem.id)
-          .order("published_at", { ascending: false })
-          .limit(6);
+        // Fetch "More from country" links (6 articles), and wiki entities
+        const [{ data: moreFromCountry }, { data: wikiLinks }] = await Promise.all([
+          supabase
+            .from("news_rss_items")
+            .select("slug, title, title_en, published_at, country:news_countries(code, name_en, flag)")
+            .eq("country_id", newsItem.country_id)
+            .eq("is_archived", false)
+            .neq("id", newsItem.id)
+            .order("published_at", { ascending: false })
+            .limit(6),
+          supabase
+            .from("news_wiki_entities")
+            .select("wiki_entity:wiki_entities(id, name, name_en, description, description_en, extract, extract_en, image_url, wiki_url, wiki_url_en, entity_type)")
+            .eq("news_item_id", newsItem.id)
+            .limit(10)
+        ]);
+        
+        // Extract wiki entities from response
+        const wikiEntities = (wikiLinks || []).map((link: any) => link.wiki_entity).filter(Boolean);
         
         // Fetch "Other countries" news (3 per country)
         const otherCountries = (allCountries || []).filter((c: any) => c.id !== newsItem.country_id);
@@ -418,7 +428,7 @@ Deno.serve(async (req) => {
         const otherCountriesResults = await Promise.all(otherCountriesNewsPromises);
         const otherCountriesNews = otherCountriesResults.flatMap(r => r.data || []);
         
-        html = generateNewsHTML(newsItem, lang, canonicalUrl, moreFromCountry || [], otherCountriesNews);
+        html = generateNewsHTML(newsItem, lang, canonicalUrl, moreFromCountry || [], otherCountriesNews, wikiEntities);
       }
     } else if (newsCountryMatch) {
       // News country listing page: /news/us - include cross-country links
@@ -745,11 +755,19 @@ function generateChapterHTML(chapter: any, lang: string, canonicalUrl: string) {
   `;
 }
 
-function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, moreFromCountry: any[] = [], otherCountriesNews: any[] = []) {
+function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, moreFromCountry: any[] = [], otherCountriesNews: any[] = [], wikiEntities: any[] = []) {
   const title = newsItem.title_en || newsItem.title;
   const content = newsItem.content_en || newsItem.content || newsItem.description_en || newsItem.description || "";
   const countryName = newsItem.country?.name_en || newsItem.country?.name || "";
   const countryCode = newsItem.country?.code || "us";
+
+  // Parse key_points from JSON field
+  const keyPoints = newsItem.key_points_en || newsItem.key_points || [];
+  const parsedKeyPoints = Array.isArray(keyPoints) ? keyPoints : (typeof keyPoints === 'string' ? JSON.parse(keyPoints) : []);
+
+  // Parse themes
+  const themes = newsItem.themes_en || newsItem.themes || [];
+  const parsedThemes = Array.isArray(themes) ? themes : (typeof themes === 'string' ? JSON.parse(themes) : []);
 
   // Group other countries news by country
   const otherByCountry: Record<string, any[]> = {};
@@ -773,9 +791,51 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
       
       <h2 itemprop="headline">${escapeHtml(title)}</h2>
       
+      ${parsedKeyPoints.length > 0 ? `
+        <section>
+          <h3>📌 Key Takeaways</h3>
+          <ul>
+            ${parsedKeyPoints.map((point: string) => `<li>${escapeHtml(point)}</li>`).join("")}
+          </ul>
+        </section>
+      ` : ""}
+      
       <div class="story-content" itemprop="articleBody">
         ${escapeHtml(content)}
       </div>
+      
+      ${parsedThemes.length > 0 ? `
+        <section>
+          <h3>🏷️ Themes</h3>
+          <p>${parsedThemes.map((theme: string) => escapeHtml(theme)).join(", ")}</p>
+        </section>
+      ` : ""}
+      
+      ${wikiEntities.length > 0 ? `
+        <section itemscope itemtype="https://schema.org/ItemList">
+          <h3>📚 Related People & Topics</h3>
+          ${wikiEntities.map((entity: any, index: number) => {
+            const name = entity.name_en || entity.name;
+            const description = entity.description_en || entity.description || "";
+            const extract = entity.extract_en || entity.extract || "";
+            const wikiUrl = entity.wiki_url_en || entity.wiki_url || "";
+            const imageUrl = entity.image_url || "";
+            const entityType = entity.entity_type || "topic";
+            
+            return `
+              <div itemprop="itemListElement" itemscope itemtype="https://schema.org/${entityType === 'person' ? 'Person' : 'Thing'}">
+                <meta itemprop="position" content="${index + 1}">
+                ${imageUrl ? `<img src="${imageUrl}" alt="${escapeHtml(name)}" itemprop="image" style="width:64px;height:64px;border-radius:50%;float:left;margin-right:12px;">` : ""}
+                <h4 itemprop="name">${escapeHtml(name)}</h4>
+                ${description ? `<p itemprop="description">${escapeHtml(description)}</p>` : ""}
+                ${extract ? `<p><em>${escapeHtml(extract.substring(0, 300))}${extract.length > 300 ? "..." : ""}</em></p>` : ""}
+                ${wikiUrl ? `<p><a href="${escapeHtml(wikiUrl)}" rel="noopener" target="_blank" itemprop="sameAs">Wikipedia →</a></p>` : ""}
+                <div style="clear:both;"></div>
+              </div>
+            `;
+          }).join("")}
+        </section>
+      ` : ""}
       
       ${newsItem.url ? `<p><a href="${escapeHtml(newsItem.url)}" rel="nofollow noopener" target="_blank">Original source</a></p>` : ""}
     </article>
