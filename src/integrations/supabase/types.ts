@@ -892,6 +892,7 @@ export type Database = {
           created_at: string | null
           gaiman_weight: number | null
           gemini_api_key: string | null
+          gemini_v22_api_key: string | null
           generation_interval_hours: number | null
           id: string
           last_auto_generation: string | null
@@ -933,6 +934,7 @@ export type Database = {
           created_at?: string | null
           gaiman_weight?: number | null
           gemini_api_key?: string | null
+          gemini_v22_api_key?: string | null
           generation_interval_hours?: number | null
           id?: string
           last_auto_generation?: string | null
@@ -974,6 +976,7 @@ export type Database = {
           created_at?: string | null
           gaiman_weight?: number | null
           gemini_api_key?: string | null
+          gemini_v22_api_key?: string | null
           generation_interval_hours?: number | null
           id?: string
           last_auto_generation?: string | null
