@@ -901,6 +901,7 @@ export type Database = {
           llm_provider: string | null
           llm_text_model: string | null
           llm_text_provider: string | null
+          mistral_api_key: string | null
           narrative_plot: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose:
             | Database["public"]["Enums"]["narrative_purpose"]
@@ -943,6 +944,7 @@ export type Database = {
           llm_provider?: string | null
           llm_text_model?: string | null
           llm_text_provider?: string | null
+          mistral_api_key?: string | null
           narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose?:
             | Database["public"]["Enums"]["narrative_purpose"]
@@ -985,6 +987,7 @@ export type Database = {
           llm_provider?: string | null
           llm_text_model?: string | null
           llm_text_provider?: string | null
+          mistral_api_key?: string | null
           narrative_plot?: Database["public"]["Enums"]["narrative_plot"] | null
           narrative_purpose?:
             | Database["public"]["Enums"]["narrative_purpose"]
