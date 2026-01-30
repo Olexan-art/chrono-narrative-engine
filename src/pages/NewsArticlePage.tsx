@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -21,26 +21,64 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { callEdgeFunction } from "@/lib/api";
 import { toast } from "sonner";
 import { useAdminStore } from "@/stores/adminStore";
+import { LLM_MODELS, LLMProvider } from "@/types/database";
 
-const AI_MODELS = [
-  { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (швидкий)' },
-  { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-  { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (точний)' },
-  { value: 'google/gemini-3-pro-preview', label: 'Gemini 3 Pro' },
-  { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini' },
-  { value: 'openai/gpt-5', label: 'GPT-5 (потужний)' },
-  { value: 'GLM-4.7', label: 'Z.AI GLM-4.7 (найпотужніший)', provider: 'zai' },
-  { value: 'GLM-4.7-Flash', label: 'Z.AI GLM-4.7-Flash (швидкий)', provider: 'zai' },
-  { value: 'GLM-4.5-Air', label: 'Z.AI GLM-4.5-Air (легкий)', provider: 'zai' },
-];
+// Default Lovable AI models (always available)
+const LOVABLE_MODELS = LLM_MODELS.lovable.text;
+
 export default function NewsArticlePage() {
   const { country, slug } = useParams<{ country: string; slug: string }>();
   const { t, language } = useLanguage();
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
   const queryClient = useQueryClient();
   const { isAuthenticated: isAdminAuthenticated } = useAdminStore();
-  const [selectedModel, setSelectedModel] = useState(AI_MODELS[0].value);
-  const [selectedTweetModel, setSelectedTweetModel] = useState(AI_MODELS[0].value);
+
+  // Fetch LLM settings to get available providers
+  const { data: settings } = useQuery({
+    queryKey: ['llm-settings'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('settings')
+        .select('openai_api_key, gemini_api_key, gemini_v22_api_key, anthropic_api_key, zai_api_key, mistral_api_key')
+        .limit(1)
+        .single();
+      return data;
+    },
+    enabled: isAdminAuthenticated,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Build available models list based on configured API keys
+  const availableModels = useMemo(() => {
+    const models: { value: string; label: string; provider?: LLMProvider }[] = [];
+    
+    // Lovable AI models are always available
+    LOVABLE_MODELS.forEach(m => models.push({ ...m, provider: 'lovable' }));
+    
+    if (settings?.zai_api_key) {
+      LLM_MODELS.zai.text.forEach(m => models.push({ ...m, provider: 'zai' }));
+    }
+    if (settings?.mistral_api_key) {
+      LLM_MODELS.mistral.text.forEach(m => models.push({ ...m, provider: 'mistral' }));
+    }
+    if (settings?.openai_api_key) {
+      LLM_MODELS.openai.text.forEach(m => models.push({ ...m, provider: 'openai' }));
+    }
+    if (settings?.gemini_api_key) {
+      LLM_MODELS.gemini.text.forEach(m => models.push({ ...m, provider: 'gemini' }));
+    }
+    if (settings?.gemini_v22_api_key) {
+      LLM_MODELS.geminiV22.text.forEach(m => models.push({ ...m, provider: 'geminiV22' }));
+    }
+    if (settings?.anthropic_api_key) {
+      LLM_MODELS.anthropic.text.forEach(m => models.push({ ...m, provider: 'anthropic' }));
+    }
+    
+    return models;
+  }, [settings]);
+
+  const [selectedModel, setSelectedModel] = useState(LOVABLE_MODELS[0]?.value || '');
+  const [selectedTweetModel, setSelectedTweetModel] = useState(LOVABLE_MODELS[0]?.value || '');
 
   // Helper to get localized field - defined early so can be used in mutations
   const getLocalizedField = (field: string, articleData?: any) => {
@@ -645,9 +683,9 @@ export default function NewsArticlePage() {
                         <SelectValue placeholder={t('news.select_model')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {AI_MODELS.map(model => (
+                        {availableModels.map(model => (
                           <SelectItem key={model.value} value={model.value}>
-                            {model.label}
+                            {model.provider && model.provider !== 'lovable' ? `[${model.provider.toUpperCase()}] ` : ''}{model.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -689,9 +727,9 @@ export default function NewsArticlePage() {
                         <SelectValue placeholder={t('news.select_model')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {AI_MODELS.map(model => (
+                        {availableModels.map(model => (
                           <SelectItem key={model.value} value={model.value}>
-                            {model.label}
+                            {model.provider && model.provider !== 'lovable' ? `[${model.provider.toUpperCase()}] ` : ''}{model.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
