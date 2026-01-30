@@ -63,6 +63,31 @@ serve(async (req) => {
         );
       }
 
+      // Safe helper: expose ONLY which LLM providers are configured (no keys returned).
+      case 'getLLMAvailability': {
+        const { data: settings, error } = await supabase
+          .from('settings')
+          .select('openai_api_key, gemini_api_key, gemini_v22_api_key, anthropic_api_key, zai_api_key, mistral_api_key')
+          .limit(1)
+          .single();
+
+        if (error) throw error;
+
+        const availability = {
+          hasOpenai: !!settings?.openai_api_key,
+          hasGemini: !!settings?.gemini_api_key,
+          hasGeminiV22: !!settings?.gemini_v22_api_key,
+          hasAnthropic: !!settings?.anthropic_api_key,
+          hasZai: !!settings?.zai_api_key,
+          hasMistral: !!settings?.mistral_api_key,
+        };
+
+        return new Response(
+          JSON.stringify({ success: true, availability }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       case 'updateSettings': {
         const { error } = await supabase
           .from('settings')

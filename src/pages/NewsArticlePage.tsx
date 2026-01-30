@@ -18,7 +18,7 @@ import { NewsKeyPoints, NewsKeywords } from "@/components/NewsKeyPoints";
 import { NewsWikiEntities } from "@/components/NewsWikiEntities";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { callEdgeFunction } from "@/lib/api";
+import { adminAction, callEdgeFunction } from "@/lib/api";
 import { toast } from "sonner";
 import { useAdminStore } from "@/stores/adminStore";
 import { LLM_MODELS, LLMProvider } from "@/types/database";
@@ -31,34 +31,33 @@ export default function NewsArticlePage() {
   const { t, language } = useLanguage();
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
   const queryClient = useQueryClient();
-  const { isAuthenticated: isAdminAuthenticated } = useAdminStore();
+  const { isAuthenticated: isAdminAuthenticated, password: adminPassword } = useAdminStore();
 
-  // Fetch LLM settings to check which providers are configured
+  // Fetch ONLY availability flags via admin backend (no secret keys exposed to the client)
   const { data: settings } = useQuery({
     queryKey: ['llm-settings-available'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('openai_api_key, gemini_api_key, gemini_v22_api_key, anthropic_api_key, zai_api_key, mistral_api_key')
-        .limit(1)
-        .single();
-      
-      if (error) {
-        console.error('Error fetching LLM settings:', error);
+      try {
+        if (!adminPassword) return null;
+        const result = await adminAction<{
+          success: boolean;
+          availability: {
+            hasOpenai: boolean;
+            hasGemini: boolean;
+            hasGeminiV22: boolean;
+            hasAnthropic: boolean;
+            hasZai: boolean;
+            hasMistral: boolean;
+          };
+        }>('getLLMAvailability', adminPassword);
+
+        return result.availability;
+      } catch (e) {
+        console.error('Error fetching LLM availability:', e);
         return null;
       }
-      
-      // Return just boolean flags for which providers have keys configured
-      return {
-        hasOpenai: !!data?.openai_api_key,
-        hasGemini: !!data?.gemini_api_key,
-        hasGeminiV22: !!data?.gemini_v22_api_key,
-        hasAnthropic: !!data?.anthropic_api_key,
-        hasZai: !!data?.zai_api_key,
-        hasMistral: !!data?.mistral_api_key,
-      };
     },
-    enabled: isAdminAuthenticated,
+    enabled: isAdminAuthenticated && !!adminPassword,
     staleTime: 1000 * 60 * 5,
   });
 
