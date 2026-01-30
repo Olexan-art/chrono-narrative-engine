@@ -310,6 +310,31 @@ function SettingsPanel({ password }: { password: string }) {
                   </p>
                 </div>
               )}
+
+              {textProvider === 'mistral' && (
+                <div className="space-y-2">
+                  <Label>Mistral API Key</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type={showApiKeys.mistral ? 'text' : 'password'}
+                      value={(settings as any).mistral_api_key || ''}
+                      onChange={(e) => updateMutation.mutate({ mistral_api_key: e.target.value } as any)}
+                      placeholder="..."
+                      className="font-mono"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => toggleApiKeyVisibility('mistral')}
+                    >
+                      {showApiKeys.mistral ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Отримати ключ: <a href="https://console.mistral.ai/api-keys" target="_blank" rel="noopener" className="text-primary hover:underline">console.mistral.ai</a>
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -368,6 +393,12 @@ function SettingsPanel({ password }: { password: string }) {
                       <div className="flex items-center gap-2">
                         <span>💎</span>
                         Gemini V22
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="mistral">
+                      <div className="flex items-center gap-2">
+                        <span>🇫🇷</span>
+                        Mistral AI
                       </div>
                     </SelectItem>
                   </SelectContent>

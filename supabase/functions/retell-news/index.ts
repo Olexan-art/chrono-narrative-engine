@@ -43,6 +43,7 @@ interface LLMSettings {
   gemini_v22_api_key: string | null;
   anthropic_api_key: string | null;
   zai_api_key: string | null;
+  mistral_api_key: string | null;
 }
 
 async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: string, overrideModel?: string): Promise<string> {
@@ -193,6 +194,39 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
 
     const data = await response.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+
+  // Mistral provider
+  if (provider === 'mistral') {
+    const apiKey = settings.mistral_api_key;
+    if (!apiKey) throw new Error('Mistral API key not configured');
+
+    const modelName = model || 'mistral-large-latest';
+    console.log('Using Mistral with model:', modelName);
+
+    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: modelName,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Mistral error:', response.status, errorText);
+      throw new Error(`Mistral error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
   }
 
   throw new Error(`Unknown provider: ${provider}`);

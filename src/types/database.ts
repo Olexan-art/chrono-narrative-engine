@@ -6,7 +6,7 @@ export type NarrativeSpecial = 'conspiratorial' | 'transmedia' | 'personal' | 'c
 export type StoryStatus = 'draft' | 'scheduled' | 'published';
 export type PartCategory = 'story' | 'just_business';
 
-export type LLMProvider = 'lovable' | 'openai' | 'gemini' | 'geminiV22' | 'anthropic' | 'zai';
+export type LLMProvider = 'lovable' | 'openai' | 'gemini' | 'geminiV22' | 'anthropic' | 'zai' | 'mistral';
 
 export interface Settings {
   id: string;
@@ -32,6 +32,7 @@ export interface Settings {
   gemini_v22_api_key: string | null;
   anthropic_api_key: string | null;
   zai_api_key: string | null;
+  mistral_api_key: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -97,6 +98,15 @@ export const LLM_MODELS = {
       { value: 'GLM-4.7', label: 'GLM-4.7 (найпотужніший)' },
       { value: 'GLM-4.7-Flash', label: 'GLM-4.7-Flash (швидкий)' },
       { value: 'GLM-4.5-Air', label: 'GLM-4.5-Air (легкий)' },
+    ],
+    image: []
+  },
+  mistral: {
+    text: [
+      { value: 'mistral-large-latest', label: 'Mistral Large (найпотужніший)' },
+      { value: 'mistral-medium-latest', label: 'Mistral Medium' },
+      { value: 'mistral-small-latest', label: 'Mistral Small (швидкий)' },
+      { value: 'codestral-latest', label: 'Codestral (код)' },
     ],
     image: []
   }
