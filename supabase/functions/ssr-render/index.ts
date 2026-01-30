@@ -182,6 +182,7 @@ Deno.serve(async (req) => {
     let description = "AI-генерована наукова фантастика на основі реальних новин";
     let image = `${BASE_URL}/favicon.png`;
     let canonicalUrl = BASE_URL + path;
+    let faqItems: { question: string; answer: string }[] = [];
 
     if (path === "/sitemap") {
       // HTML sitemap page (critical for crawlers like Screaming Frog)
@@ -428,6 +429,17 @@ Deno.serve(async (req) => {
         const otherCountriesResults = await Promise.all(otherCountriesNewsPromises);
         const otherCountriesNews = otherCountriesResults.flatMap(r => r.data || []);
         
+        // Generate FAQ items from key_points for FAQPage schema
+        const keyPoints = newsItem.key_points_en || newsItem.key_points || [];
+        const parsedKeyPoints = Array.isArray(keyPoints) ? keyPoints : (typeof keyPoints === 'string' ? JSON.parse(keyPoints) : []);
+        if (parsedKeyPoints.length > 0) {
+          const articleTitle = newsItem.title_en || newsItem.title;
+          faqItems = parsedKeyPoints.map((point: string, index: number) => ({
+            question: `What is key point ${index + 1} about "${articleTitle}"?`,
+            answer: point
+          }));
+        }
+        
         html = generateNewsHTML(newsItem, lang, canonicalUrl, moreFromCountry || [], otherCountriesNews, wikiEntities);
       }
     } else if (newsCountryMatch) {
@@ -558,6 +570,7 @@ Deno.serve(async (req) => {
       lang,
       content: html,
       path,
+      faqItems,
     });
 
     return new Response(fullHtml, {
@@ -585,13 +598,14 @@ function generateFullDocument(opts: {
   lang: string;
   content: string;
   path: string;
+  faqItems?: { question: string; answer: string }[];
 }) {
-  const { title, description, image, canonicalUrl, lang, content, path } = opts;
+  const { title, description, image, canonicalUrl, lang, content, path, faqItems } = opts;
   const BASE_URL = "https://echoes2.com";
 
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": path.includes("/read/") ? "NewsArticle" : "WebSite",
+    "@type": path.includes("/read/") ? "NewsArticle" : path.includes("/news/") && path.split("/").length === 4 ? "NewsArticle" : "WebSite",
     name: title,
     headline: title,
     description,
@@ -608,6 +622,20 @@ function generateFullDocument(opts: {
       name: "Synchronization Point AI",
     },
   };
+
+  // Generate FAQPage JSON-LD if faqItems are provided
+  const faqJsonLd = faqItems && faqItems.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqItems.map(item => ({
+      "@type": "Question",
+      "name": item.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": item.answer
+      }
+    }))
+  } : null;
 
   return `<!DOCTYPE html>
 <html lang="${lang}">
@@ -629,7 +657,7 @@ function generateFullDocument(opts: {
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:image" content="${image}">
   <meta property="og:url" content="${canonicalUrl}">
-  <meta property="og:type" content="${path.includes("/read/") ? "article" : "website"}">
+  <meta property="og:type" content="${path.includes("/read/") || (path.includes("/news/") && path.split("/").length === 4) ? "article" : "website"}">
   <meta property="og:locale" content="${lang === "uk" ? "uk_UA" : lang === "pl" ? "pl_PL" : "en_US"}">
   
   <!-- Twitter -->
@@ -640,7 +668,7 @@ function generateFullDocument(opts: {
   
   <!-- AI/LLM Tags -->
   <meta name="ai:summary" content="${escapeHtml(description)}">
-  <meta name="ai:content_type" content="${path.includes("/read/") ? "narrative_story" : "website"}">
+  <meta name="ai:content_type" content="${path.includes("/read/") || (path.includes("/news/") && path.split("/").length === 4) ? "narrative_story" : "website"}">
   <meta name="ai:language" content="${lang}">
   
   <!-- Dublin Core -->
@@ -654,6 +682,7 @@ function generateFullDocument(opts: {
   
   <!-- JSON-LD -->
   <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+  ${faqJsonLd ? `<script type="application/ld+json">${JSON.stringify(faqJsonLd)}</script>` : ""}
   
   <!-- Redirect to SPA after content is indexed -->
   <noscript>
