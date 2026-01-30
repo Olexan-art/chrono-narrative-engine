@@ -460,14 +460,14 @@ Deno.serve(async (req) => {
           .order("sort_order", { ascending: true })
       ]);
       
-      // Fetch recent news for this country
+      // Fetch recent news for this country (99 items for full listing)
       const { data: newsItems } = await supabase
         .from("news_rss_items")
         .select("*, country:news_countries(*)")
         .eq("country_id", country?.id)
         .eq("is_archived", false)
         .order("published_at", { ascending: false })
-        .limit(30);
+        .limit(99);
       
       // Fetch news from other countries for cross-linking
       const otherCountries = (allCountries || []).filter((c: any) => c.id !== country?.id);
