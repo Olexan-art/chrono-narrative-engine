@@ -67,7 +67,7 @@ export function RelatedEntitiesNews({ newsId, countryCode, className }: RelatedE
         .in('wiki_entity_id', entityIds)
         .neq('news_item_id', newsId)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(30);
 
       if (!otherNewsLinks) return [];
 
@@ -77,7 +77,7 @@ export function RelatedEntitiesNews({ newsId, countryCode, className }: RelatedE
       for (const link of otherNewsLinks) {
         const item = link.news_item as any;
         if (!item || item.is_archived || !item.slug || newsMap.has(item.id)) continue;
-        if (newsMap.size >= 2) break;
+        if (newsMap.size >= 5) break;
         
         // Find matching entity
         const entity = entityLinks.find(e => e.wiki_entity_id === link.wiki_entity_id)?.wiki_entity as WikiEntity;
