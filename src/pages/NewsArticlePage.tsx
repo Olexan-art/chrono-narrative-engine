@@ -409,10 +409,12 @@ export default function NewsArticlePage() {
   // Canonical URL
   const canonicalUrl = `https://echoes2.com/news/${article.country.code.toLowerCase()}/${slug}`;
 
-  // Breadcrumbs for SEO
+  // Breadcrumbs for SEO - structured path: News Digest > All Countries > Country > Article
+  const allCountriesLabel = language === 'en' ? 'All Countries' : language === 'pl' ? 'Wszystkie kraje' : 'Усі країни';
   const breadcrumbs = [
-    { name: t('newsdigest.title'), url: 'https://echoes2.com/news-digest' },
-    { name: countryName, url: `https://echoes2.com/news-digest?country=${article.country.code}` },
+    { name: language === 'en' ? 'News Digest' : language === 'pl' ? 'Przegląd wiadomości' : 'Дайджест новин', url: 'https://echoes2.com/news' },
+    { name: allCountriesLabel, url: 'https://echoes2.com/news' },
+    { name: countryName, url: `https://echoes2.com/news/${article.country.code.toLowerCase()}` },
     { name: getLocalizedField('title')?.slice(0, 50) || 'Article', url: canonicalUrl }
   ];
 
@@ -432,20 +434,24 @@ export default function NewsArticlePage() {
       <Header />
       
       <main className="container mx-auto px-4 py-6 md:py-10">
-        {/* Breadcrumb - Clickable */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
-          <Link to="/news-digest" className="hover:text-primary transition-colors">
-            {t('newsdigest.title')}
+        {/* Breadcrumb - Clickable: News Digest > All Countries > Country > Article */}
+        <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
+          <Link to="/news" className="hover:text-primary transition-colors whitespace-nowrap">
+            {language === 'en' ? 'News Digest' : language === 'pl' ? 'Przegląd' : 'Дайджест'}
           </Link>
-          <span>/</span>
+          <span className="text-muted-foreground/50">/</span>
+          <Link to="/news" className="hover:text-primary transition-colors whitespace-nowrap">
+            {language === 'en' ? 'All Countries' : language === 'pl' ? 'Wszystkie kraje' : 'Усі країни'}
+          </Link>
+          <span className="text-muted-foreground/50">/</span>
           <Link 
-            to={`/news-digest?country=${article.country.id}`} 
-            className="hover:text-primary transition-colors flex items-center gap-1"
+            to={`/news/${article.country.code.toLowerCase()}`} 
+            className="hover:text-primary transition-colors flex items-center gap-1 whitespace-nowrap"
           >
             <span>{article.country.flag}</span>
             <span>{countryName}</span>
           </Link>
-          <span>/</span>
+          <span className="text-muted-foreground/50">/</span>
           <span className="text-foreground truncate max-w-[200px]" title={getLocalizedField('title')}>
             {getLocalizedField('title')}
           </span>
@@ -532,9 +538,9 @@ export default function NewsArticlePage() {
                   
                   return (
                     <>
-                      {/* Lead paragraph - highlighted with accent border */}
+                      {/* Lead paragraph - highlighted with accent border only (no background) */}
                       {leadParagraph && (
-                        <div className="mt-4 pl-4 border-l-4 border-accent bg-accent/5 py-3 pr-3 rounded-r-lg">
+                        <div className="mt-4 pl-4 border-l-4 border-accent">
                           <EntityHighlightedContent
                             newsId={article.id}
                             content={leadParagraph}
@@ -753,7 +759,7 @@ export default function NewsArticlePage() {
                   </CardContent>
                 </Card>
 
-                {/* Full Retelling Card - runs retell + dialogue + tweets */}
+                {/* Full Retelling Card - runs retell + tweets + dialogue with progress indicator */}
                 <Card className="border-primary/30 bg-primary/5">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
@@ -769,6 +775,49 @@ export default function NewsArticlePage() {
                         ? 'Wygeneruj pełny przekaz z kluczowymi punktami, tweetami i dialogiem'
                         : 'Згенерувати повний переказ з тезами, твітами та діалогом'}
                     </p>
+                    
+                    {/* Progress indicator showing current step */}
+                    {(retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending) && (
+                      <div className="space-y-2 py-2">
+                        <div className="flex items-center gap-2 text-xs">
+                          {retellNewsMutation.isPending ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                          ) : retellNewsMutation.isSuccess ? (
+                            <span className="w-3 h-3 rounded-full bg-green-500" />
+                          ) : (
+                            <span className="w-3 h-3 rounded-full bg-muted" />
+                          )}
+                          <span className={retellNewsMutation.isPending ? 'text-primary font-medium' : retellNewsMutation.isSuccess ? 'text-green-500' : 'text-muted-foreground'}>
+                            1. {language === 'en' ? 'Retelling' : language === 'pl' ? 'Przekaz' : 'Переказ'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          {generateTweetsMutation.isPending ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                          ) : generateTweetsMutation.isSuccess ? (
+                            <span className="w-3 h-3 rounded-full bg-green-500" />
+                          ) : (
+                            <span className="w-3 h-3 rounded-full bg-muted" />
+                          )}
+                          <span className={generateTweetsMutation.isPending ? 'text-primary font-medium' : generateTweetsMutation.isSuccess ? 'text-green-500' : 'text-muted-foreground'}>
+                            2. {language === 'en' ? 'Tweets' : language === 'pl' ? 'Tweety' : 'Твіти'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          {generateDialogueMutation.isPending ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                          ) : generateDialogueMutation.isSuccess ? (
+                            <span className="w-3 h-3 rounded-full bg-green-500" />
+                          ) : (
+                            <span className="w-3 h-3 rounded-full bg-muted" />
+                          )}
+                          <span className={generateDialogueMutation.isPending ? 'text-primary font-medium' : generateDialogueMutation.isSuccess ? 'text-green-500' : 'text-muted-foreground'}>
+                            3. {language === 'en' ? 'Dialogue' : language === 'pl' ? 'Dialog' : 'Діалог'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
                     <Select value={selectedTweetModel} onValueChange={setSelectedTweetModel}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder={t('news.select_model')} />
