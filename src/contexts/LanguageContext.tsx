@@ -178,6 +178,29 @@ const translations: Record<Language, Record<string, string>> = {
     'install.benefit_notifications_desc': 'Отримуйте оновлення про нові записи.',
     'install.benefit_native': 'Нативний досвід',
     'install.benefit_native_desc': 'Працює як звичайний застосунок.',
+
+    // GDPR
+    'gdpr.message': 'Ми використовуємо cookies для покращення вашого досвіду. Продовжуючи, ви погоджуєтесь з нашою',
+    'gdpr.privacy_link': 'політикою конфіденційності',
+    'gdpr.accept': 'Прийняти',
+    'gdpr.decline': 'Відхилити',
+
+    // Privacy Policy
+    'privacy.title': 'Політика конфіденційності',
+    'privacy.last_updated': 'Останнє оновлення',
+    'privacy.intro': 'Ця політика конфіденційності описує, як Точка Синхронізації збирає, використовує та захищає вашу інформацію.',
+    'privacy.data_collection': 'Збір даних',
+    'privacy.data_collection_text': 'Ми збираємо мінімальну кількість даних для забезпечення роботи сервісу: аналітику відвідувань, налаштування мови та cookie-згоду.',
+    'privacy.cookies': 'Cookies',
+    'privacy.cookies_text': 'Ми використовуємо cookies для аналітики (Google Analytics), збереження мовних налаштувань та покращення користувацького досвіду.',
+    'privacy.third_party': 'Сторонні сервіси',
+    'privacy.third_party_text': 'Ми використовуємо Google Analytics для аналізу трафіку. Ці сервіси мають власні політики конфіденційності.',
+    'privacy.data_security': 'Безпека даних',
+    'privacy.data_security_text': 'Ми вживаємо заходів для захисту вашої інформації, але жоден метод передачі через інтернет не є на 100% безпечним.',
+    'privacy.your_rights': 'Ваші права',
+    'privacy.your_rights_text': 'Ви маєте право відмовитись від cookies через банер згоди або налаштування браузера.',
+    'privacy.contact': 'Контакт',
+    'privacy.contact_text': 'Якщо у вас є питання щодо цієї політики, зверніться до нас через сайт.',
   },
   en: {
     // Header
@@ -348,6 +371,29 @@ const translations: Record<Language, Record<string, string>> = {
     'install.benefit_notifications_desc': 'Get updates about new entries.',
     'install.benefit_native': 'Native Experience',
     'install.benefit_native_desc': 'Works like a regular app.',
+
+    // GDPR
+    'gdpr.message': 'We use cookies to improve your experience. By continuing, you agree to our',
+    'gdpr.privacy_link': 'privacy policy',
+    'gdpr.accept': 'Accept',
+    'gdpr.decline': 'Decline',
+
+    // Privacy Policy
+    'privacy.title': 'Privacy Policy',
+    'privacy.last_updated': 'Last updated',
+    'privacy.intro': 'This privacy policy describes how Synchronization Point collects, uses, and protects your information.',
+    'privacy.data_collection': 'Data Collection',
+    'privacy.data_collection_text': 'We collect minimal data to provide our service: visit analytics, language preferences, and cookie consent.',
+    'privacy.cookies': 'Cookies',
+    'privacy.cookies_text': 'We use cookies for analytics (Google Analytics), storing language settings, and improving user experience.',
+    'privacy.third_party': 'Third-Party Services',
+    'privacy.third_party_text': 'We use Google Analytics to analyze traffic. These services have their own privacy policies.',
+    'privacy.data_security': 'Data Security',
+    'privacy.data_security_text': 'We take measures to protect your information, but no method of transmission over the internet is 100% secure.',
+    'privacy.your_rights': 'Your Rights',
+    'privacy.your_rights_text': 'You have the right to decline cookies through the consent banner or browser settings.',
+    'privacy.contact': 'Contact',
+    'privacy.contact_text': 'If you have questions about this policy, contact us through the website.',
   },
   pl: {
     // Header
@@ -518,6 +564,29 @@ const translations: Record<Language, Record<string, string>> = {
     'install.benefit_notifications_desc': 'Otrzymuj aktualizacje o nowych wpisach.',
     'install.benefit_native': 'Natywne doświadczenie',
     'install.benefit_native_desc': 'Działa jak zwykła aplikacja.',
+
+    // GDPR
+    'gdpr.message': 'Używamy plików cookie, aby poprawić Twoje doświadczenie. Kontynuując, zgadzasz się z naszą',
+    'gdpr.privacy_link': 'polityką prywatności',
+    'gdpr.accept': 'Akceptuję',
+    'gdpr.decline': 'Odrzuć',
+
+    // Privacy Policy
+    'privacy.title': 'Polityka prywatności',
+    'privacy.last_updated': 'Ostatnia aktualizacja',
+    'privacy.intro': 'Ta polityka prywatności opisuje, jak Punkt Synchronizacji zbiera, wykorzystuje i chroni Twoje informacje.',
+    'privacy.data_collection': 'Zbieranie danych',
+    'privacy.data_collection_text': 'Zbieramy minimalne dane do świadczenia usługi: analitykę odwiedzin, preferencje językowe i zgodę na cookies.',
+    'privacy.cookies': 'Cookies',
+    'privacy.cookies_text': 'Używamy plików cookie do analityki (Google Analytics), przechowywania ustawień językowych i poprawy doświadczenia użytkownika.',
+    'privacy.third_party': 'Usługi stron trzecich',
+    'privacy.third_party_text': 'Używamy Google Analytics do analizy ruchu. Te usługi mają własne polityki prywatności.',
+    'privacy.data_security': 'Bezpieczeństwo danych',
+    'privacy.data_security_text': 'Podejmujemy środki w celu ochrony Twoich informacji, ale żadna metoda transmisji przez internet nie jest w 100% bezpieczna.',
+    'privacy.your_rights': 'Twoje prawa',
+    'privacy.your_rights_text': 'Masz prawo odmówić cookies poprzez baner zgody lub ustawienia przeglądarki.',
+    'privacy.contact': 'Kontakt',
+    'privacy.contact_text': 'Jeśli masz pytania dotyczące tej polityki, skontaktuj się z nami przez stronę.',
   }
 };
 

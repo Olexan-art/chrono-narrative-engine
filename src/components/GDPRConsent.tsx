@@ -1,16 +1,17 @@
 import { useState, useEffect } from "react";
 import { X, Cookie } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const CONSENT_KEY = "gdpr_consent";
 
 export function GDPRConsent() {
+  const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const consent = localStorage.getItem(CONSENT_KEY);
     if (!consent) {
-      // Small delay to not block initial render
       const timer = setTimeout(() => setVisible(true), 1000);
       return () => clearTimeout(timer);
     }
@@ -34,8 +35,8 @@ export function GDPRConsent() {
         <div className="flex items-start gap-2">
           <Cookie className="w-4 h-4 text-primary mt-0.5 shrink-0" />
           <p className="text-xs text-muted-foreground leading-relaxed">
-            We use cookies to improve your experience. By continuing, you agree to our{" "}
-            <a href="/privacy" className="text-primary hover:underline">privacy policy</a>.
+            {t('gdpr.message')}{" "}
+            <a href="/privacy" className="text-primary hover:underline">{t('gdpr.privacy_link')}</a>.
           </p>
           <button
             onClick={handleDecline}
@@ -52,14 +53,14 @@ export function GDPRConsent() {
             onClick={handleDecline}
             className="h-7 text-xs px-2"
           >
-            Decline
+            {t('gdpr.decline')}
           </Button>
           <Button
             size="sm"
             onClick={handleAccept}
             className="h-7 text-xs px-3"
           >
-            Accept
+            {t('gdpr.accept')}
           </Button>
         </div>
       </div>
