@@ -886,12 +886,28 @@ export default function NewsArticlePage() {
             )}
 
             {/* Source Info */}
-            <Card>
-              <CardHeader className="pb-3">
+            <Card className="relative overflow-hidden">
+              {/* Background logo watermark */}
+              {article.url && (() => {
+                try {
+                  const domain = new URL(article.url).hostname;
+                  return (
+                    <img 
+                      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`}
+                      alt=""
+                      className="absolute -top-2 -right-2 w-[35%] h-auto opacity-[0.08] pointer-events-none select-none"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  );
+                } catch {
+                  return null;
+                }
+              })()}
+              <CardHeader className="pb-3 relative z-10">
                 <CardTitle className="text-base">{t('news.source_info')}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                {/* Source logo attempt - favicon from domain */}
+              <CardContent className="space-y-3 text-sm relative z-10">
+                {/* Source logo with domain info */}
                 {article.url && (() => {
                   try {
                     const domain = new URL(article.url).hostname;
