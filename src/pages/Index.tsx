@@ -7,6 +7,8 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { StructureSection } from "@/components/home/StructureSection";
 import { LatestStoriesSection } from "@/components/home/LatestStoriesSection";
 import { LatestUsaNews } from "@/components/home/LatestUsaNews";
+import { LatestUsaNewsSimple } from "@/components/home/LatestUsaNewsSimple";
+import { TrendingWikiEntities } from "@/components/home/TrendingWikiEntities";
 import { CountryNewsSection } from "@/components/home/CountryNewsSection";
 import { ChaptersSection } from "@/components/home/ChaptersSection";
 import { InfiniteNewsFeed } from "@/components/home/InfiniteNewsFeed";
@@ -102,6 +104,12 @@ export default function Index() {
       
       {/* Latest USA Retold News */}
       <LatestUsaNews />
+      
+      {/* Latest USA News (simple, no retelling) */}
+      <LatestUsaNewsSimple />
+      
+      {/* Trending Wiki Entities (12h) */}
+      <TrendingWikiEntities />
       
       {/* Latest Stories - Grid layout */}
       <LatestStoriesSection parts={latestParts} />
