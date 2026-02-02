@@ -481,6 +481,28 @@ export default function NewsArticlePage() {
                   {getLocalizedField('title')}
                 </h1>
 
+                {/* Verified source badge - after title */}
+                {article.feed?.name && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                    <Badge variant="outline" className="gap-1.5 bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400">
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round"/>
+                        <polyline points="22,4 12,14.01 9,11.01" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      {language === 'en' ? 'Verified' : language === 'pl' ? 'Zweryfikowane' : 'Перевірено'}
+                    </Badge>
+                    <span className="text-muted-foreground">—</span>
+                    <a 
+                      href={article.url} 
+                      target="_blank" 
+                      rel="nofollow noopener noreferrer"
+                      className="hover:text-primary transition-colors underline-offset-2 hover:underline"
+                    >
+                      {article.feed.name}
+                    </a>
+                  </div>
+                )}
+
                 {/* Keywords - under title */}
                 <NewsKeywords keywords={articleKeywords} />
                 
@@ -868,7 +890,37 @@ export default function NewsArticlePage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">{t('news.source_info')}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="space-y-3 text-sm">
+                {/* Source logo attempt - favicon from domain */}
+                {article.url && (() => {
+                  try {
+                    const domain = new URL(article.url).hostname;
+                    return (
+                      <div className="flex items-center gap-3 pb-2 border-b border-border">
+                        <img 
+                          src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+                          alt=""
+                          className="w-6 h-6 rounded"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-medium truncate">{article.feed?.name || domain}</span>
+                          <a 
+                            href={article.url}
+                            target="_blank"
+                            rel="nofollow noopener noreferrer"
+                            className="text-xs text-muted-foreground hover:text-primary truncate"
+                          >
+                            {domain}
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  } catch {
+                    return null;
+                  }
+                })()}
+                
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ID</span>
                   <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono select-all">
@@ -887,6 +939,61 @@ export default function NewsArticlePage() {
                   <span className="text-muted-foreground">{t('news.fetched')}</span>
                   <span>{format(new Date(article.fetched_at), 'd MMM yyyy', { locale: dateLocale })}</span>
                 </div>
+
+                {/* Admin controls */}
+                {isAdminAuthenticated && (
+                  <div className="pt-3 border-t border-border space-y-2">
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      {language === 'en' ? 'Admin' : language === 'pl' ? 'Admin' : 'Адмін'}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs h-7"
+                        onClick={() => {
+                          queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] });
+                          toast.success(language === 'en' ? 'Refreshed' : language === 'pl' ? 'Odświeżono' : 'Оновлено');
+                        }}
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        {language === 'en' ? 'Refresh' : language === 'pl' ? 'Odśwież' : 'Оновити'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs h-7"
+                        onClick={() => {
+                          window.open(`/admin?tab=news-archive&newsId=${article.id}`, '_blank');
+                        }}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        {language === 'en' ? 'Edit' : language === 'pl' ? 'Edytuj' : 'Редагувати'}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="gap-1.5 text-xs h-7"
+                        onClick={async () => {
+                          if (!confirm(language === 'en' ? 'Delete this news?' : language === 'pl' ? 'Usunąć tę wiadomość?' : 'Видалити цю новину?')) return;
+                          try {
+                            await supabase.from('news_rss_items').delete().eq('id', article.id);
+                            toast.success(language === 'en' ? 'Deleted' : language === 'pl' ? 'Usunięto' : 'Видалено');
+                            window.location.href = `/news/${country}`;
+                          } catch (e) {
+                            toast.error('Error deleting');
+                          }
+                        }}
+                      >
+                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3,6 5,6 21,6" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        {language === 'en' ? 'Delete' : language === 'pl' ? 'Usuń' : 'Видалити'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
