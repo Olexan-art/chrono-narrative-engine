@@ -561,6 +561,13 @@ export default function NewsArticlePage() {
                 })()}
               </div>
 
+              {/* Related Entities News - before original link */}
+              <RelatedEntitiesNews 
+                newsId={article.id}
+                countryCode={article.country.code}
+                className="mt-6"
+              />
+
               {/* Original link, share, and translate button */}
               <div className="pt-4 border-t border-border flex flex-wrap items-center gap-3">
                 <a 
@@ -611,6 +618,47 @@ export default function NewsArticlePage() {
                 )}
               </div>
 
+              {/* Navigation - Previous / Next - moved above tweets */}
+              <nav className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+                {adjacentNews?.prev ? (
+                  <Link to={`/news/${article.country.code.toLowerCase()}/${adjacentNews.prev.slug}`}>
+                    <Button variant="outline" className="gap-2">
+                      <ChevronLeft className="w-4 h-4" />
+                      <span className="hidden sm:inline max-w-[150px] truncate">
+                        {language === 'en' ? (adjacentNews.prev.title_en || adjacentNews.prev.title) : adjacentNews.prev.title}
+                      </span>
+                      <span className="sm:hidden">
+                        {language === 'en' ? 'Previous' : language === 'pl' ? 'Poprzedni' : 'Попередня'}
+                      </span>
+                    </Button>
+                  </Link>
+                ) : (
+                  <div />
+                )}
+                
+                <Link to={`/news/${article.country.code.toLowerCase()}`}>
+                  <Button variant="ghost" size="sm" className="text-xs">
+                    {article.country.flag} {language === 'en' ? 'All news' : language === 'pl' ? 'Wszystkie' : 'Всі новини'}
+                  </Button>
+                </Link>
+                
+                {adjacentNews?.next ? (
+                  <Link to={`/news/${article.country.code.toLowerCase()}/${adjacentNews.next.slug}`}>
+                    <Button variant="outline" className="gap-2">
+                      <span className="hidden sm:inline max-w-[150px] truncate">
+                        {language === 'en' ? (adjacentNews.next.title_en || adjacentNews.next.title) : adjacentNews.next.title}
+                      </span>
+                      <span className="sm:hidden">
+                        {language === 'en' ? 'Next' : language === 'pl' ? 'Następny' : 'Наступна'}
+                      </span>
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                ) : (
+                  <div />
+                )}
+              </nav>
+
               {/* Tweets Section */}
               {tweets.length > 0 && (
                 <NewsTweetCard tweets={tweets} />
@@ -640,12 +688,6 @@ export default function NewsArticlePage() {
               )}
             </article>
 
-            {/* Related Entities News - MOBILE ONLY (below article) */}
-            <RelatedEntitiesNews 
-              newsId={article.id}
-              countryCode={article.country.code}
-              className="mt-8 lg:hidden"
-            />
 
             {/* Character Dialogue Section - MOBILE ONLY (below article) */}
             <NewsDialogueSection
@@ -655,47 +697,6 @@ export default function NewsArticlePage() {
               onGenerateDialogue={() => generateDialogueMutation.mutate()}
               className="mt-8 lg:hidden"
             />
-
-            {/* Navigation - Previous / Next */}
-            <nav className="flex items-center justify-between mt-8 pt-6 border-t border-border">
-              {adjacentNews?.prev ? (
-                <Link to={`/news/${article.country.code.toLowerCase()}/${adjacentNews.prev.slug}`}>
-                  <Button variant="outline" className="gap-2">
-                    <ChevronLeft className="w-4 h-4" />
-                    <span className="hidden sm:inline max-w-[150px] truncate">
-                      {language === 'en' ? (adjacentNews.prev.title_en || adjacentNews.prev.title) : adjacentNews.prev.title}
-                    </span>
-                    <span className="sm:hidden">
-                      {language === 'en' ? 'Previous' : language === 'pl' ? 'Poprzedni' : 'Попередня'}
-                    </span>
-                  </Button>
-                </Link>
-              ) : (
-                <div />
-              )}
-              
-              <Link to={`/news/${article.country.code.toLowerCase()}`}>
-                <Button variant="ghost" size="sm" className="text-xs">
-                  {article.country.flag} {language === 'en' ? 'All news' : language === 'pl' ? 'Wszystkie' : 'Всі новини'}
-                </Button>
-              </Link>
-              
-              {adjacentNews?.next ? (
-                <Link to={`/news/${article.country.code.toLowerCase()}/${adjacentNews.next.slug}`}>
-                  <Button variant="outline" className="gap-2">
-                    <span className="hidden sm:inline max-w-[150px] truncate">
-                      {language === 'en' ? (adjacentNews.next.title_en || adjacentNews.next.title) : adjacentNews.next.title}
-                    </span>
-                    <span className="sm:hidden">
-                      {language === 'en' ? 'Next' : language === 'pl' ? 'Następny' : 'Наступна'}
-                    </span>
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-              ) : (
-                <div />
-              )}
-            </nav>
 
             {/* Other Countries News - After navigation */}
             <OtherCountriesNews
@@ -895,12 +896,6 @@ export default function NewsArticlePage() {
               title={getLocalizedField('title')}
               keywords={articleKeywords}
               showSearchButton
-            />
-
-            {/* Related news by same entities */}
-            <RelatedEntitiesNews 
-              newsId={article.id}
-              countryCode={article.country.code}
             />
 
             {/* Character Dialogue Section - DESKTOP ONLY (in sidebar) */}
