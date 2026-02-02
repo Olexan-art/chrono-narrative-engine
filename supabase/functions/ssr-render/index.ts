@@ -509,15 +509,17 @@ Deno.serve(async (req) => {
       }
     } else if (path === "/" || path === "") {
       // Home page - fetch all sections for full content
-      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       
       const [
         { data: latestParts },
         { data: latestUsNews },
-        { data: latestUsNewsSimple },
+        { data: latestNewsAll },
         { data: latestChapters },
         { data: countries },
-        { data: trendingEntityMentions }
+        { data: trendingEntityMentions24h },
+        { data: trendingEntityMentionsWeek }
       ] = await Promise.all([
         supabase
           .from("parts")
@@ -534,14 +536,14 @@ Deno.serve(async (req) => {
           .not("content_en", "is", null)
           .order("published_at", { ascending: false })
           .limit(6),
-        // Latest USA simple news (without content_en) - 20 items to filter
+        // Latest news for proportional distribution (100 items to work with)
         supabase
           .from("news_rss_items")
           .select("id, slug, title, title_en, content_en, published_at, category, country:news_countries(id, code)")
           .eq("is_archived", false)
           .not("slug", "is", null)
           .order("published_at", { ascending: false })
-          .limit(30),
+          .limit(100),
         supabase
           .from("chapters")
           .select("number, title, title_en, title_pl, description, description_en")
@@ -553,7 +555,7 @@ Deno.serve(async (req) => {
           .select("id, code, name, name_en, flag")
           .eq("is_active", true)
           .order("sort_order", { ascending: true }),
-        // Trending wiki entities from last 12 hours
+        // Trending wiki entities from last 24 hours
         supabase
           .from("news_wiki_entities")
           .select(`
@@ -562,32 +564,60 @@ Deno.serve(async (req) => {
             wiki_entity:wiki_entities(id, name, name_en, description, description_en, image_url, wiki_url, wiki_url_en),
             news_item:news_rss_items(id, title, title_en, slug, country_id)
           `)
-          .gte("created_at", twelveHoursAgo)
+          .gte("created_at", twentyFourHoursAgo)
+          .order("created_at", { ascending: false }),
+        // Trending wiki entities from last week
+        supabase
+          .from("news_wiki_entities")
+          .select(`
+            wiki_entity_id,
+            news_item_id,
+            wiki_entity:wiki_entities(id, name, name_en, description, description_en, image_url, wiki_url, wiki_url_en),
+            news_item:news_rss_items(id, title, title_en, slug, country_id)
+          `)
+          .gte("created_at", oneWeekAgo)
           .order("created_at", { ascending: false })
       ]);
       
-      // Process USA simple news (filter out retold ones)
+      // Process proportional news feed (50% USA, 20% PL, 20% UA, 10% IN)
       const retoldIds = new Set((latestUsNews || []).map((n: any) => n.id));
-      const usaCountry = (countries || []).find((c: any) => c.code === 'US');
-      const usaSimpleNews = (latestUsNewsSimple || [])
-        .filter((item: any) => item.country?.code === 'US')
-        .filter((item: any) => !item.content_en || item.content_en.length < 300)
-        .filter((item: any) => !retoldIds.has(item.id))
-        .slice(0, 10);
+      const countryIdToCode = new Map((countries || []).map((c: any) => [c.id, c.code.toUpperCase()]));
       
-      // Process trending entities
-      const entityMap = new Map<string, { entity: any; mentionCount: number; news: any[] }>();
-      const countryIdToCode = new Map((countries || []).map((c: any) => [c.id, c.code.toLowerCase()]));
+      // Group by country
+      const byCountry: Record<string, any[]> = { US: [], PL: [], UA: [], IN: [], OTHER: [] };
+      for (const item of (latestNewsAll || []) as any[]) {
+        if (retoldIds.has(item.id)) continue; // Skip retold items
+        const code = (item.country as any)?.code?.toUpperCase() || 'OTHER';
+        if (['US', 'PL', 'UA', 'IN'].includes(code)) {
+          byCountry[code].push(item);
+        } else {
+          byCountry.OTHER.push(item);
+        }
+      }
       
-      for (const mention of (trendingEntityMentions || [])) {
+      // Take proportional amounts: 50% USA (10), 20% PL (4), 20% UA (4), 10% IN (2)
+      const latestNewsProportional = [
+        ...byCountry.US.slice(0, 10),
+        ...byCountry.PL.slice(0, 4),
+        ...byCountry.UA.slice(0, 4),
+        ...byCountry.IN.slice(0, 2),
+      ].sort((a: any, b: any) => 
+        new Date(b.published_at || 0).getTime() - new Date(a.published_at || 0).getTime()
+      ).slice(0, 20);
+      
+      // Process trending entities - 24 hours
+      const entityMap24h = new Map<string, { entity: any; mentionCount: number; news: any[] }>();
+      const countryIdToCodeLower = new Map((countries || []).map((c: any) => [c.id, c.code.toLowerCase()]));
+      
+      for (const mention of (trendingEntityMentions24h || [])) {
         if (!mention.wiki_entity || !mention.news_item) continue;
         const entity = mention.wiki_entity as any;
         const newsItem = mention.news_item as any;
         
-        if (!entityMap.has(entity.id)) {
-          entityMap.set(entity.id, { entity, mentionCount: 0, news: [] });
+        if (!entityMap24h.has(entity.id)) {
+          entityMap24h.set(entity.id, { entity, mentionCount: 0, news: [] });
         }
-        const existing = entityMap.get(entity.id)!;
+        const existing = entityMap24h.get(entity.id)!;
         existing.mentionCount++;
         
         if (existing.news.length < 4 && !existing.news.some(n => n.id === newsItem.id) && newsItem.slug) {
@@ -596,11 +626,40 @@ Deno.serve(async (req) => {
             title: newsItem.title,
             title_en: newsItem.title_en,
             slug: newsItem.slug,
-            countryCode: countryIdToCode.get(newsItem.country_id) || 'us'
+            countryCode: countryIdToCodeLower.get(newsItem.country_id) || 'us'
           });
         }
       }
-      const trendingEntities = Array.from(entityMap.values())
+      const trendingEntities24h = Array.from(entityMap24h.values())
+        .filter(e => e.entity.image_url)
+        .sort((a, b) => b.mentionCount - a.mentionCount)
+        .slice(0, 5);
+      
+      // Process trending entities - Week
+      const entityMapWeek = new Map<string, { entity: any; mentionCount: number; news: any[] }>();
+      
+      for (const mention of (trendingEntityMentionsWeek || [])) {
+        if (!mention.wiki_entity || !mention.news_item) continue;
+        const entity = mention.wiki_entity as any;
+        const newsItem = mention.news_item as any;
+        
+        if (!entityMapWeek.has(entity.id)) {
+          entityMapWeek.set(entity.id, { entity, mentionCount: 0, news: [] });
+        }
+        const existing = entityMapWeek.get(entity.id)!;
+        existing.mentionCount++;
+        
+        if (existing.news.length < 4 && !existing.news.some(n => n.id === newsItem.id) && newsItem.slug) {
+          existing.news.push({
+            id: newsItem.id,
+            title: newsItem.title,
+            title_en: newsItem.title_en,
+            slug: newsItem.slug,
+            countryCode: countryIdToCodeLower.get(newsItem.country_id) || 'us'
+          });
+        }
+      }
+      const trendingEntitiesWeek = Array.from(entityMapWeek.values())
         .filter(e => e.entity.image_url)
         .sort((a, b) => b.mentionCount - a.mentionCount)
         .slice(0, 5);
@@ -621,7 +680,7 @@ Deno.serve(async (req) => {
         news: countryNewsResults[i]?.data || []
       }));
 
-      html = generateHomeHTML(latestParts || [], lang, canonicalUrl, latestUsNews || [], latestChapters || [], countryNewsMap, usaSimpleNews, trendingEntities);
+      html = generateHomeHTML(latestParts || [], lang, canonicalUrl, latestUsNews || [], latestChapters || [], countryNewsMap, latestNewsProportional, trendingEntities24h, trendingEntitiesWeek);
     }
 
     // Generate full HTML document
@@ -1042,8 +1101,9 @@ function generateHomeHTML(
   latestUsNews: any[] = [],
   latestChapters: any[] = [],
   countryNewsMap: { country: any; news: any[] }[] = [],
-  usaSimpleNews: any[] = [],
-  trendingEntities: { entity: any; mentionCount: number; news: any[] }[] = []
+  latestNewsProportional: any[] = [],
+  trendingEntities24h: { entity: any; mentionCount: number; news: any[] }[] = [],
+  trendingEntitiesWeek: { entity: any; mentionCount: number; news: any[] }[] = []
 ) {
   const titleField = lang === "en" ? "title_en" : lang === "pl" ? "title_pl" : "title";
 
@@ -1078,27 +1138,57 @@ function generateHomeHTML(
       </section>
     ` : ""}
     
-    ${usaSimpleNews.length > 0 ? `
+    ${latestNewsProportional.length > 0 ? `
       <section>
-        <h2>🇺🇸 Latest USA News</h2>
+        <h2>📰 Latest News (50% USA, 20% PL, 20% UA, 10% IN)</h2>
         <ul>
-          ${usaSimpleNews.map((item: any) => `
+          ${latestNewsProportional.map((item: any) => {
+            const countryCode = (item.country as any)?.code?.toLowerCase() || 'us';
+            return `
             <li>
-              <a href="https://echoes2.com/news/us/${item.slug}">
+              <a href="https://echoes2.com/news/${countryCode}/${item.slug}">
                 ${escapeHtml(item.title_en || item.title)}
               </a>
               ${item.category ? ` <span class="category">[${escapeHtml(item.category)}]</span>` : ""}
             </li>
-          `).join("")}
+          `}).join("")}
         </ul>
-        <p><a href="https://echoes2.com/news/us">→ View all USA news</a></p>
+        <p><a href="https://echoes2.com/news">→ View all news</a></p>
       </section>
     ` : ""}
     
-    ${trendingEntities.length > 0 ? `
+    ${trendingEntities24h.length > 0 ? `
       <section>
-        <h2>🔥 Trending People & Companies (12h)</h2>
-        ${trendingEntities.map((item: any) => {
+        <h2>🔥 Trending People & Companies (24h)</h2>
+        ${trendingEntities24h.map((item: any) => {
+          const name = item.entity.name_en || item.entity.name;
+          const description = item.entity.description_en || item.entity.description || "";
+          const wikiUrl = item.entity.wiki_url_en || item.entity.wiki_url;
+          return `
+            <div style="margin-bottom: 1rem; padding: 0.5rem; border: 1px solid #eee; border-radius: 4px;">
+              ${item.entity.image_url ? `<img src="${item.entity.image_url}" alt="${escapeHtml(name)}" style="width:48px;height:48px;border-radius:50%;float:left;margin-right:12px;">` : ""}
+              <h4 style="margin:0;">${escapeHtml(name)} <small>(${item.mentionCount} mentions)</small></h4>
+              ${description ? `<p style="margin:0.25rem 0;font-size:0.9rem;">${escapeHtml(description)}</p>` : ""}
+              ${wikiUrl ? `<a href="${escapeHtml(wikiUrl)}" rel="noopener" target="_blank" style="font-size:0.8rem;">Wikipedia</a>` : ""}
+              ${item.news.length > 0 ? `
+                <p style="font-size:0.8rem;margin:0.25rem 0;">Related news:</p>
+                <ul style="font-size:0.8rem;margin:0;">
+                  ${item.news.map((n: any) => `
+                    <li><a href="https://echoes2.com/news/${n.countryCode}/${n.slug}">${escapeHtml(n.title_en || n.title)}</a></li>
+                  `).join("")}
+                </ul>
+              ` : ""}
+              <div style="clear:both;"></div>
+            </div>
+          `;
+        }).join("")}
+      </section>
+    ` : ""}
+    
+    ${trendingEntitiesWeek.length > 0 ? `
+      <section>
+        <h2>📅 Trending This Week (7 days)</h2>
+        ${trendingEntitiesWeek.map((item: any) => {
           const name = item.entity.name_en || item.entity.name;
           const description = item.entity.description_en || item.entity.description || "";
           const wikiUrl = item.entity.wiki_url_en || item.entity.wiki_url;

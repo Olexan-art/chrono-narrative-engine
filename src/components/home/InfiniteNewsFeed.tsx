@@ -46,8 +46,11 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
   } = useInfiniteQuery({
     queryKey: ['infinite-news-feed', language],
     queryFn: async ({ pageParam = 0 }) => {
-      const from = pageParam * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
+      // Fetch more items to allow weighted distribution
+      // Target distribution: 50% USA, 20% PL, 20% UA, 10% IN
+      const fetchSize = PAGE_SIZE * 5; // Fetch more to select from
+      const from = pageParam * fetchSize;
+      const to = from + fetchSize - 1;
 
       const { data: items, count } = await supabase
         .from('news_rss_items')
@@ -67,10 +70,55 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
         .order('published_at', { ascending: false })
         .range(from, to);
 
+      // Group by country
+      const byCountry: Record<string, NewsItem[]> = { US: [], PL: [], UA: [], IN: [], OTHER: [] };
+      for (const item of (items || []) as NewsItem[]) {
+        const code = item.country?.code?.toUpperCase() || 'OTHER';
+        if (['US', 'PL', 'UA', 'IN'].includes(code)) {
+          byCountry[code].push(item);
+        } else {
+          byCountry.OTHER.push(item);
+        }
+      }
+
+      // Calculate target counts: 50% USA, 20% PL, 20% UA, 10% IN
+      const targetUs = Math.ceil(PAGE_SIZE * 0.5);  // 10
+      const targetPl = Math.ceil(PAGE_SIZE * 0.2);  // 4
+      const targetUa = Math.ceil(PAGE_SIZE * 0.2);  // 4
+      const targetIn = Math.ceil(PAGE_SIZE * 0.1);  // 2
+
+      // Take proportional amounts from each country
+      const selected: NewsItem[] = [
+        ...byCountry.US.slice(0, targetUs),
+        ...byCountry.PL.slice(0, targetPl),
+        ...byCountry.UA.slice(0, targetUa),
+        ...byCountry.IN.slice(0, targetIn),
+      ];
+
+      // Fill remaining slots if some countries don't have enough
+      const remaining = PAGE_SIZE - selected.length;
+      if (remaining > 0) {
+        const allRemaining = [
+          ...byCountry.US.slice(targetUs),
+          ...byCountry.PL.slice(targetPl),
+          ...byCountry.UA.slice(targetUa),
+          ...byCountry.IN.slice(targetIn),
+          ...byCountry.OTHER,
+        ].slice(0, remaining);
+        selected.push(...allRemaining);
+      }
+
+      // Sort by published_at to maintain chronological order
+      selected.sort((a, b) => {
+        const dateA = new Date(a.published_at || 0).getTime();
+        const dateB = new Date(b.published_at || 0).getTime();
+        return dateB - dateA;
+      });
+
       return {
-        items: (items || []) as NewsItem[],
+        items: selected.slice(0, PAGE_SIZE),
         totalCount: count || 0,
-        nextPage: (items?.length || 0) === PAGE_SIZE ? pageParam + 1 : undefined,
+        nextPage: (items?.length || 0) === fetchSize ? pageParam + 1 : undefined,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
