@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { GDPRConsent } from "@/components/GDPRConsent";
 import Index from "./pages/Index";
 import CalendarPage from "./pages/CalendarPage";
 import DateStoriesPage from "./pages/DateStoriesPage";
@@ -33,6 +34,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <GDPRConsent />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
