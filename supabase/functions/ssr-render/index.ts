@@ -851,7 +851,7 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
   const title = newsItem.title_en || newsItem.title;
   const content = newsItem.content_en || newsItem.content || newsItem.description_en || newsItem.description || "";
   const countryName = newsItem.country?.name_en || newsItem.country?.name || "";
-  const countryCode = newsItem.country?.code || "us";
+  const countryCode = newsItem.country?.code?.toLowerCase() || "us";
 
   // Parse key_points from JSON field
   const keyPoints = newsItem.key_points_en || newsItem.key_points || [];
@@ -861,10 +861,22 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
   const themes = newsItem.themes_en || newsItem.themes || [];
   const parsedThemes = Array.isArray(themes) ? themes : (typeof themes === 'string' ? JSON.parse(themes) : []);
 
+  // Parse keywords
+  const keywords = newsItem.keywords || [];
+  const parsedKeywords = Array.isArray(keywords) ? keywords : (typeof keywords === 'string' ? JSON.parse(keywords) : []);
+
+  // Parse tweets
+  const tweets = newsItem.tweets || [];
+  const parsedTweets = Array.isArray(tweets) ? tweets : (typeof tweets === 'string' ? JSON.parse(tweets) : []);
+
+  // Parse dialogue
+  const dialogue = newsItem.chat_dialogue || [];
+  const parsedDialogue = Array.isArray(dialogue) ? dialogue : (typeof dialogue === 'string' ? JSON.parse(dialogue) : []);
+
   // Group other countries news by country
   const otherByCountry: Record<string, any[]> = {};
   for (const item of otherCountriesNews) {
-    const code = item.country?.code || "unknown";
+    const code = item.country?.code?.toLowerCase() || "unknown";
     if (!otherByCountry[code]) otherByCountry[code] = [];
     otherByCountry[code].push(item);
   }
@@ -882,6 +894,12 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
       </div>
       
       <h2 itemprop="headline">${escapeHtml(title)}</h2>
+      
+      ${parsedKeywords.length > 0 ? `
+        <p class="keywords" itemprop="keywords">
+          ${parsedKeywords.map((kw: string) => `<span class="keyword">#${escapeHtml(kw)}</span>`).join(" ")}
+        </p>
+      ` : ""}
       
       ${parsedKeyPoints.length > 0 ? `
         <section>
@@ -931,6 +949,34 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
       
       ${newsItem.url ? `<p><a href="${escapeHtml(newsItem.url)}" rel="nofollow noopener" target="_blank">Original source</a></p>` : ""}
     </article>
+    
+    ${parsedTweets.length > 0 ? `
+      <section>
+        <h3>🐦 What People Say</h3>
+        ${parsedTweets.map((tweet: any) => `
+          <div style="border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:8px;">
+            <p style="margin:0;font-weight:bold;">${escapeHtml(tweet.author || 'Anonymous')} <span style="color:#666;font-weight:normal;">@${escapeHtml(tweet.handle || 'user')}</span></p>
+            <p style="margin:8px 0;">${escapeHtml(tweet.content || '')}</p>
+            <p style="margin:0;font-size:0.8rem;color:#666;">❤️ ${tweet.likes || 0} · 🔄 ${tweet.retweets || 0}</p>
+          </div>
+        `).join("")}
+      </section>
+    ` : ""}
+    
+    ${parsedDialogue.length > 0 ? `
+      <section>
+        <h3>💬 Character Dialogue</h3>
+        ${parsedDialogue.map((msg: any) => `
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            ${msg.avatar ? `<img src="${msg.avatar}" alt="${escapeHtml(msg.name || msg.character || '')}" style="width:32px;height:32px;border-radius:50%;">` : ""}
+            <div>
+              <p style="margin:0;font-weight:bold;">${escapeHtml(msg.name || msg.character || 'Character')}</p>
+              <p style="margin:4px 0;">${escapeHtml(msg.message || '')}</p>
+            </div>
+          </div>
+        `).join("")}
+      </section>
+    ` : ""}
     
     ${moreFromCountry.length > 0 ? `
       <section>
