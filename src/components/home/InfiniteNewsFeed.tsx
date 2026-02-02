@@ -70,29 +70,27 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
         .order('published_at', { ascending: false })
         .range(from, to);
 
-      // Group by country
-      const byCountry: Record<string, NewsItem[]> = { US: [], PL: [], UA: [], IN: [], OTHER: [] };
+      // Group by country (USA, PL, UA only)
+      const byCountry: Record<string, NewsItem[]> = { US: [], PL: [], UA: [], OTHER: [] };
       for (const item of (items || []) as NewsItem[]) {
         const code = item.country?.code?.toUpperCase() || 'OTHER';
-        if (['US', 'PL', 'UA', 'IN'].includes(code)) {
+        if (['US', 'PL', 'UA'].includes(code)) {
           byCountry[code].push(item);
         } else {
           byCountry.OTHER.push(item);
         }
       }
 
-      // Calculate target counts: 50% USA, 20% PL, 20% UA, 10% IN
+      // Calculate target counts: 50% USA, 25% PL, 25% UA
       const targetUs = Math.ceil(PAGE_SIZE * 0.5);  // 10
-      const targetPl = Math.ceil(PAGE_SIZE * 0.2);  // 4
-      const targetUa = Math.ceil(PAGE_SIZE * 0.2);  // 4
-      const targetIn = Math.ceil(PAGE_SIZE * 0.1);  // 2
+      const targetPl = Math.ceil(PAGE_SIZE * 0.25); // 5
+      const targetUa = Math.ceil(PAGE_SIZE * 0.25); // 5
 
       // Take proportional amounts from each country
       const selected: NewsItem[] = [
         ...byCountry.US.slice(0, targetUs),
         ...byCountry.PL.slice(0, targetPl),
         ...byCountry.UA.slice(0, targetUa),
-        ...byCountry.IN.slice(0, targetIn),
       ];
 
       // Fill remaining slots if some countries don't have enough
@@ -102,8 +100,6 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
           ...byCountry.US.slice(targetUs),
           ...byCountry.PL.slice(targetPl),
           ...byCountry.UA.slice(targetUa),
-          ...byCountry.IN.slice(targetIn),
-          ...byCountry.OTHER,
         ].slice(0, remaining);
         selected.push(...allRemaining);
       }

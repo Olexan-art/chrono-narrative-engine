@@ -579,28 +579,27 @@ Deno.serve(async (req) => {
           .order("created_at", { ascending: false })
       ]);
       
-      // Process proportional news feed (50% USA, 20% PL, 20% UA, 10% IN)
+      // Process proportional news feed (50% USA, 25% PL, 25% UA - NO India)
       const retoldIds = new Set((latestUsNews || []).map((n: any) => n.id));
       const countryIdToCode = new Map((countries || []).map((c: any) => [c.id, c.code.toUpperCase()]));
       
-      // Group by country
-      const byCountry: Record<string, any[]> = { US: [], PL: [], UA: [], IN: [], OTHER: [] };
+      // Group by country (USA, PL, UA only)
+      const byCountry: Record<string, any[]> = { US: [], PL: [], UA: [], OTHER: [] };
       for (const item of (latestNewsAll || []) as any[]) {
         if (retoldIds.has(item.id)) continue; // Skip retold items
         const code = (item.country as any)?.code?.toUpperCase() || 'OTHER';
-        if (['US', 'PL', 'UA', 'IN'].includes(code)) {
+        if (['US', 'PL', 'UA'].includes(code)) {
           byCountry[code].push(item);
         } else {
           byCountry.OTHER.push(item);
         }
       }
       
-      // Take proportional amounts: 50% USA (10), 20% PL (4), 20% UA (4), 10% IN (2)
+      // Take proportional amounts: 50% USA (10), 25% PL (5), 25% UA (5)
       const latestNewsProportional = [
         ...byCountry.US.slice(0, 10),
-        ...byCountry.PL.slice(0, 4),
-        ...byCountry.UA.slice(0, 4),
-        ...byCountry.IN.slice(0, 2),
+        ...byCountry.PL.slice(0, 5),
+        ...byCountry.UA.slice(0, 5),
       ].sort((a: any, b: any) => 
         new Date(b.published_at || 0).getTime() - new Date(a.published_at || 0).getTime()
       ).slice(0, 20);
@@ -1140,7 +1139,7 @@ function generateHomeHTML(
     
     ${latestNewsProportional.length > 0 ? `
       <section>
-        <h2>📰 Latest News (50% USA, 20% PL, 20% UA, 10% IN)</h2>
+        <h2>📰 Latest News (USA, PL, UA)</h2>
         <ul>
           ${latestNewsProportional.map((item: any) => {
             const countryCode = (item.country as any)?.code?.toLowerCase() || 'us';
