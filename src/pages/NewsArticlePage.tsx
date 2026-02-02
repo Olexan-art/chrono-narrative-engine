@@ -16,6 +16,8 @@ import { OtherCountriesNews } from "@/components/OtherCountriesNews";
 import { NewsTweetCard } from "@/components/NewsTweetCard";
 import { NewsKeyPoints, NewsKeywords } from "@/components/NewsKeyPoints";
 import { NewsWikiEntities } from "@/components/NewsWikiEntities";
+import { RelatedEntitiesNews } from "@/components/RelatedEntitiesNews";
+import { EntityHighlightedContent } from "@/components/EntityHighlightedContent";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { adminAction, callEdgeFunction } from "@/lib/api";
@@ -522,9 +524,11 @@ export default function NewsArticlePage() {
                 )}
                 
                 {getLocalizedField('content') && (
-                  <div className="mt-4 text-foreground/90 font-serif leading-relaxed whitespace-pre-wrap">
-                    {getLocalizedField('content')}
-                  </div>
+                  <EntityHighlightedContent
+                    newsId={article.id}
+                    content={getLocalizedField('content')}
+                    className="mt-4 text-foreground/90 font-serif leading-relaxed whitespace-pre-wrap"
+                  />
                 )}
               </div>
 
@@ -800,6 +804,12 @@ export default function NewsArticlePage() {
               title={getLocalizedField('title')}
               keywords={articleKeywords}
               showSearchButton
+            />
+
+            {/* Related news by same entities */}
+            <RelatedEntitiesNews 
+              newsId={article.id}
+              countryCode={article.country.code}
             />
 
             {/* Character Dialogue Section - DESKTOP ONLY (in sidebar) */}

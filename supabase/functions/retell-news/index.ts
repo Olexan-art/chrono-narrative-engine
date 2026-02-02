@@ -294,6 +294,7 @@ serve(async (req) => {
     console.log('Retelling news in language:', language.name, '| Title:', news.title);
 
     // Language-specific prompts for retelling with key points, themes, and keywords
+    // First paragraph MUST answer: Who, What, Where, When, Why (5W)
     const prompts: Record<string, { system: string; user: string }> = {
       'uk': {
         system: `Ти — професійний журналіст та редактор новин. Твоє завдання — переказати новину детально, розширено та інформативно українською мовою.
@@ -306,15 +307,26 @@ serve(async (req) => {
   "keywords": ["ключове слово 1", "ключове слово 2", "ключове слово 3", "ключове слово 4", "ключове слово 5"]
 }
 
+КРИТИЧНО ВАЖЛИВО - СТРУКТУРА ПЕРШОГО АБЗАЦУ:
+Перший абзац ОБОВ'ЯЗКОВО має відповідати на 5 питань (5W):
+- ХТО? (Who) — головні дійові особи, організації, країни
+- ЩО? (What) — що саме сталося, яка подія
+- ДЕ? (Where) — місце, локація, країна
+- КОЛИ? (When) — дата, час, період
+- ЧОМУ? (Why) — причина, контекст
+
+Приклад правильного першого абзацу:
+"Президент США Джо Байден (ХТО) оголосив про новий пакет військової допомоги Україні (ЩО) у Вашингтоні (ДЕ) 15 січня 2025 року (КОЛИ) у відповідь на посилення російської агресії (ЧОМУ)."
+
 Правила:
-1. Зберігай всі ключові факти з оригіналу
-2. Розширюй контекст та пояснюй важливі деталі
-3. key_points — 4-5 найважливіших тез/висновків з новини (короткі речення)
-4. themes — 2-4 основні категорії/тематики які затрагує новина (одне-два слова кожна)
-5. keywords — 5-8 пошукових ключових слів по яким можна знайти цю новину
-6. Пиши чітко, без повторів, журналістським стилем
-7. НЕ вигадуй нові факти, лише розширюй наявні`,
-        user: `Перекажи цю новину детально українською мовою та видай JSON з ключовими тезами, темами та пошуковими словами:`
+1. ПЕРШИЙ АБЗАЦ — суто факти, жодної води, лише 5W
+2. Наступні абзаци — деталі, контекст, пояснення
+3. key_points — 4-5 найважливіших тез (короткі речення)
+4. themes — 2-4 основні тематики (одне-два слова)
+5. keywords — 5-8 пошукових слів
+6. Пиши журналістським стилем без повторів
+7. НЕ вигадуй нові факти`,
+        user: `Перекажи цю новину українською. ОБОВ'ЯЗКОВО: перший абзац має містити ХТО, ЩО, ДЕ, КОЛИ, ЧОМУ. Видай JSON:`
       },
       'en': {
         system: `You are a professional journalist and news editor. Your task is to retell the news in detail, expanded and informatively in English.
@@ -327,15 +339,26 @@ RESPONSE FORMAT (JSON):
   "keywords": ["keyword 1", "keyword 2", "keyword 3", "keyword 4", "keyword 5"]
 }
 
+CRITICAL - FIRST PARAGRAPH STRUCTURE (Inverted Pyramid / 5W):
+The FIRST paragraph MUST answer ALL 5 questions:
+- WHO? — main actors, organizations, countries involved
+- WHAT? — what happened, the main event
+- WHERE? — location, place, country
+- WHEN? — date, time, period
+- WHY? — reason, context, cause
+
+Example of a proper first paragraph:
+"US President Joe Biden (WHO) announced a new military aid package for Ukraine (WHAT) in Washington (WHERE) on January 15, 2025 (WHEN) in response to escalating Russian aggression (WHY)."
+
 Rules:
-1. Preserve all key facts from the original
-2. Expand context and explain important details
-3. key_points — 4-5 most important takeaways/conclusions from the news (short sentences)
-4. themes — 2-4 main categories/topics the news covers (one-two words each)
-5. keywords — 5-8 search keywords to find this news
-6. Write clearly, without repetition, journalistic style
-7. DO NOT invent new facts, only expand existing ones`,
-        user: `Retell this news in detail in English and output JSON with key points, themes, and search keywords:`
+1. FIRST PARAGRAPH — pure facts only, no filler, just 5W
+2. Following paragraphs — details, context, explanations
+3. key_points — 4-5 most important takeaways (short sentences)
+4. themes — 2-4 main topics (one-two words each)
+5. keywords — 5-8 search keywords
+6. Write in journalistic style without repetition
+7. DO NOT invent new facts`,
+        user: `Retell this news in English. MANDATORY: first paragraph must contain WHO, WHAT, WHERE, WHEN, WHY. Output JSON:`
       },
       'pl': {
         system: `Jesteś profesjonalnym dziennikarzem i redaktorem wiadomości. Twoim zadaniem jest szczegółowe, rozszerzone i informacyjne opowiedzenie wiadomości po polsku.
@@ -348,15 +371,26 @@ FORMAT ODPOWIEDZI (JSON):
   "keywords": ["słowo kluczowe 1", "słowo kluczowe 2", "słowo kluczowe 3", "słowo kluczowe 4", "słowo kluczowe 5"]
 }
 
+KRYTYCZNE - STRUKTURA PIERWSZEGO AKAPITU (5W):
+Pierwszy akapit MUSI odpowiadać na 5 pytań:
+- KTO? (Who) — główni aktorzy, organizacje, kraje
+- CO? (What) — co się stało, główne wydarzenie
+- GDZIE? (Where) — lokalizacja, miejsce, kraj
+- KIEDY? (When) — data, czas, okres
+- DLACZEGO? (Why) — przyczyna, kontekst
+
+Przykład prawidłowego pierwszego akapitu:
+"Prezydent USA Joe Biden (KTO) ogłosił nowy pakiet pomocy wojskowej dla Ukrainy (CO) w Waszyngtonie (GDZIE) 15 stycznia 2025 roku (KIEDY) w odpowiedzi na eskalację rosyjskiej agresji (DLACZEGO)."
+
 Zasady:
-1. Zachowaj wszystkie kluczowe fakty z oryginału
-2. Rozszerzaj kontekst i wyjaśniaj ważne szczegóły
-3. key_points — 4-5 najważniejszych tez/wniosków z wiadomości (krótkie zdania)
-4. themes — 2-4 główne kategorie/tematy, które porusza wiadomość (jedno-dwa słowa każdy)
-5. keywords — 5-8 słów kluczowych do wyszukania tej wiadomości
-6. Pisz jasno, bez powtórzeń, stylem dziennikarskim
-7. NIE wymyślaj nowych faktów, tylko rozszerzaj istniejące`,
-        user: `Opowiedz szczegółowo tę wiadomość po polsku i podaj JSON z głównymi tezami, tematami i słowami kluczowymi:`
+1. PIERWSZY AKAPIT — same fakty, bez wody, tylko 5W
+2. Kolejne akapity — szczegóły, kontekst, wyjaśnienia
+3. key_points — 4-5 najważniejszych tez (krótkie zdania)
+4. themes — 2-4 główne tematy (jedno-dwa słowa)
+5. keywords — 5-8 słów kluczowych
+6. Pisz stylem dziennikarskim bez powtórzeń
+7. NIE wymyślaj nowych faktów`,
+        user: `Opowiedz tę wiadomość po polsku. OBOWIĄZKOWO: pierwszy akapit musi zawierać KTO, CO, GDZIE, KIEDY, DLACZEGO. Podaj JSON:`
       },
       'hi': {
         system: `आप एक पेशेवर पत्रकार और समाचार संपादक हैं। आपका कार्य समाचार को विस्तार से, विस्तारित और सूचनात्मक रूप से हिंदी में पुनः बताना है।
