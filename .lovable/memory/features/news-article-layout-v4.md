@@ -1,18 +1,16 @@
 # Memory: features/news-article-layout-v4
 Updated: now
 
-News articles now feature an enhanced layout with three major improvements:
+News articles now feature an enhanced layout with these improvements:
 
-1. **Factual Lead Paragraph (5W)**: The retell-news edge function prompts have been updated to require the FIRST paragraph to answer the 5 journalism questions: WHO, WHAT, WHERE, WHEN, WHY. No filler text - pure facts only in the lead paragraph. This applies to all languages (UK, EN, PL).
+1. **Factual Lead Paragraph (5W)**: The first paragraph follows the 5W journalism rule (WHO, WHAT, WHERE, WHEN, WHY) - generated via LLM prompts. Visually highlighted with accent border and subtle background (no visible 5W labels).
 
-2. **Related News by Entities**: A new `RelatedEntitiesNews` component displays up to 2 most recent news articles that share the same Wikipedia entities (people/companies) with the current article. Located in the sidebar below Wikipedia Entities section. Shows entity avatar badge and publication date.
+2. **Related News by Entities**: The `RelatedEntitiesNews` component displays up to 2 most recent news articles sharing same Wikipedia entities. Shown in sidebar on desktop AND below article content on mobile.
 
-3. **Entity Highlighted Content**: The `EntityHighlightedContent` component scans the news content text and highlights mentions of Wikipedia entities with:
-   - Dotted underline in primary color
-   - Hover tooltip showing entity image, name, description, extract preview
-   - Direct Wikipedia link in tooltip
-   - Supports multiple name variations (native name, English name, match term)
+3. **Entity Highlighted Content**: The `EntityHighlightedContent` component highlights mentions of Wikipedia entities with dotted underline and hover tooltips showing entity metadata.
 
-Components created:
+4. **Full Retelling Admin Block**: Replaced "Hype Tweet" with "Full Retelling" button that runs the complete pipeline: retell → tweets → dialogue in sequence.
+
+Components:
 - `src/components/RelatedEntitiesNews.tsx`
 - `src/components/EntityHighlightedContent.tsx`
