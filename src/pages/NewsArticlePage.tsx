@@ -523,13 +523,36 @@ export default function NewsArticlePage() {
                   </p>
                 )}
                 
-                {getLocalizedField('content') && (
-                  <EntityHighlightedContent
-                    newsId={article.id}
-                    content={getLocalizedField('content')}
-                    className="mt-4 text-foreground/90 font-serif leading-relaxed whitespace-pre-wrap"
-                  />
-                )}
+                {getLocalizedField('content') && (() => {
+                  const fullContent = getLocalizedField('content');
+                  // Split content into lead paragraph and rest
+                  const paragraphs = fullContent.split(/\n\n+/);
+                  const leadParagraph = paragraphs[0] || '';
+                  const restContent = paragraphs.slice(1).join('\n\n');
+                  
+                  return (
+                    <>
+                      {/* Lead paragraph - highlighted with accent border */}
+                      {leadParagraph && (
+                        <div className="mt-4 pl-4 border-l-4 border-accent bg-accent/5 py-3 pr-3 rounded-r-lg">
+                          <EntityHighlightedContent
+                            newsId={article.id}
+                            content={leadParagraph}
+                            className="text-foreground font-serif leading-relaxed text-lg"
+                          />
+                        </div>
+                      )}
+                      {/* Rest of content */}
+                      {restContent && (
+                        <EntityHighlightedContent
+                          newsId={article.id}
+                          content={restContent}
+                          className="mt-4 text-foreground/90 font-serif leading-relaxed whitespace-pre-wrap"
+                        />
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Original link, share, and translate button */}
@@ -610,6 +633,13 @@ export default function NewsArticlePage() {
                 </div>
               )}
             </article>
+
+            {/* Related Entities News - MOBILE ONLY (below article) */}
+            <RelatedEntitiesNews 
+              newsId={article.id}
+              countryCode={article.country.code}
+              className="mt-8 lg:hidden"
+            />
 
             {/* Character Dialogue Section - MOBILE ONLY (below article) */}
             <NewsDialogueSection
@@ -723,21 +753,21 @@ export default function NewsArticlePage() {
                   </CardContent>
                 </Card>
 
-                {/* Generate Hype Tweet Card */}
-                <Card className="border-orange-500/30 bg-orange-500/5">
+                {/* Full Retelling Card - runs retell + dialogue + tweets */}
+                <Card className="border-primary/30 bg-primary/5">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Flame className="w-4 h-4 text-orange-500" />
-                      {language === 'en' ? 'Hype Tweet' : language === 'pl' ? 'Hype Tweet' : 'Хайповий твіт'}
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      {language === 'en' ? 'Full Retelling' : language === 'pl' ? 'Pełny przekaz' : 'Повний переказ'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">
                       {language === 'en' 
-                        ? 'Generate a viral tweet based on this news' 
+                        ? 'Generate full retelling with key points, tweets, and dialogue' 
                         : language === 'pl' 
-                        ? 'Wygeneruj wiralowego tweeta na podstawie tej wiadomości'
-                        : 'Згенерувати вірусний твіт на основі цієї новини'}
+                        ? 'Wygeneruj pełny przekaz z kluczowymi punktami, tweetami i dialogiem'
+                        : 'Згенерувати повний переказ з тезами, твітами та діалогом'}
                     </p>
                     <Select value={selectedTweetModel} onValueChange={setSelectedTweetModel}>
                       <SelectTrigger className="w-full">
@@ -753,18 +783,30 @@ export default function NewsArticlePage() {
                     </Select>
                     <Button 
                       className="w-full gap-2"
-                      variant="secondary"
-                      onClick={() => generateTweetsMutation.mutate()}
-                      disabled={generateTweetsMutation.isPending}
+                      onClick={async () => {
+                        try {
+                          toast.info(language === 'en' ? 'Starting full retelling...' : language === 'pl' ? 'Rozpoczynam pełny przekaz...' : 'Запускаю повний переказ...');
+                          // Run retell first
+                          await retellNewsMutation.mutateAsync();
+                          // Then generate tweets
+                          await generateTweetsMutation.mutateAsync();
+                          // Then generate dialogue
+                          await generateDialogueMutation.mutateAsync();
+                          toast.success(language === 'en' ? 'Full retelling complete!' : language === 'pl' ? 'Pełny przekaz zakończony!' : 'Повний переказ завершено!');
+                        } catch (error) {
+                          console.error('Full retelling failed:', error);
+                        }
+                      }}
+                      disabled={retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending}
                     >
-                      {generateTweetsMutation.isPending ? (
+                      {(retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending) ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <Flame className="w-4 h-4" />
+                        <Sparkles className="w-4 h-4" />
                       )}
-                      {generateTweetsMutation.isPending 
-                        ? (language === 'en' ? 'Generating...' : language === 'pl' ? 'Generowanie...' : 'Генерація...')
-                        : (language === 'en' ? 'Generate Hype Tweet' : language === 'pl' ? 'Generuj Hype Tweet' : 'Генерувати хайповий твіт')}
+                      {(retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending)
+                        ? (language === 'en' ? 'Processing...' : language === 'pl' ? 'Przetwarzanie...' : 'Обробка...')
+                        : (language === 'en' ? 'Run Full Retelling' : language === 'pl' ? 'Uruchom pełny przekaz' : 'Запустити повний переказ')}
                     </Button>
                   </CardContent>
                 </Card>
