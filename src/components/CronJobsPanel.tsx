@@ -28,6 +28,7 @@ interface AutoGenSettings {
   news_retell_ratio: number;
   news_dialogue_count: number;
   news_tweet_count: number;
+  news_feed_page_size: number;
 }
 
 interface PeriodStats {
@@ -116,6 +117,14 @@ const TWEET_COUNT_OPTIONS = [
   { value: 6, label: '6 твітів' },
 ];
 
+const PAGE_SIZE_OPTIONS = [
+  { value: 20, label: '20 новин' },
+  { value: 40, label: '40 новин' },
+  { value: 60, label: '60 новин' },
+  { value: 80, label: '80 новин' },
+  { value: 100, label: '100 новин' },
+];
+
 function formatSchedule(schedule: string): string {
   if (schedule === '*/30 * * * *') return 'Кожні 30 хв';
   if (schedule === '0 * * * *') return 'Кожну годину';
@@ -138,6 +147,7 @@ export function CronJobsPanel({ password }: Props) {
     news_retell_ratio: 1,
     news_dialogue_count: 7,
     news_tweet_count: 4,
+    news_feed_page_size: 40,
   });
   const [pendingCronEnabled, setPendingCronEnabled] = useState(false);
   const [pendingCronFrequency, setPendingCronFrequency] = useState('30min');
@@ -208,6 +218,7 @@ export function CronJobsPanel({ password }: Props) {
         news_retell_ratio: settings.news_retell_ratio ?? 1,
         news_dialogue_count: settings.news_dialogue_count ?? 7,
         news_tweet_count: settings.news_tweet_count ?? 4,
+        news_feed_page_size: settings.news_feed_page_size ?? 40,
       });
     }
   }, [settings]);
@@ -507,6 +518,13 @@ export function CronJobsPanel({ password }: Props) {
     updateSettingsMutation.mutate({ news_tweet_count: count });
   };
 
+  const handlePageSizeChange = (value: string) => {
+    const size = parseInt(value, 10);
+    setAutoGenSettings(prev => ({ ...prev, news_feed_page_size: size }));
+    updateSettingsMutation.mutate({ news_feed_page_size: size });
+    queryClient.invalidateQueries({ queryKey: ['news-feed-page-size'] });
+  };
+
   return (
     <div className="space-y-6">
       {/* Auto-generation Settings */}
@@ -623,6 +641,33 @@ export function CronJobsPanel({ password }: Props) {
               </Select>
               <p className="text-xs text-muted-foreground">
                 Скільки твітів генерувати (3-6)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Кількість новин на сторінці</Label>
+              <Select
+                value={autoGenSettings.news_feed_page_size.toString()}
+                onValueChange={handlePageSizeChange}
+                disabled={settingsLoading || updateSettingsMutation.isPending}
+              >
+                <SelectTrigger className="w-full">
+                  {settingsLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <SelectValue />
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value.toString()}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Скільки новин показувати в стрічці (20-100)
               </p>
             </div>
           </div>
