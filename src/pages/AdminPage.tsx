@@ -32,6 +32,7 @@ import { StatisticsPanel } from "@/components/StatisticsPanel";
 import { WikiEntitiesPanel } from "@/components/admin/WikiEntitiesPanel";
 import { NewsSearchPanel } from "@/components/admin/NewsSearchPanel";
 import { NewsCalendarPanel } from "@/components/admin/NewsCalendarPanel";
+import { ImagesManagementPanel } from "@/components/admin/ImagesManagementPanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -850,6 +851,10 @@ export default function AdminPage() {
               <Calendar className="w-4 h-4 text-teal-500" />
               Календар
             </TabsTrigger>
+            <TabsTrigger value="images" className="gap-2">
+              <Image className="w-4 h-4 text-rose-500" />
+              Картинки
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               Налаштування
@@ -942,6 +947,10 @@ export default function AdminPage() {
 
           <TabsContent value="news-calendar" className="mt-6">
             <NewsCalendarPanel />
+          </TabsContent>
+
+          <TabsContent value="images" className="mt-6">
+            <ImagesManagementPanel />
           </TabsContent>
         </Tabs>
       </main>
