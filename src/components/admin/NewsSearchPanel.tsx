@@ -128,11 +128,21 @@ export function NewsSearchPanel() {
         if (partialError) throw partialError;
         return (partialMatch || []) as unknown as NewsItem[];
       } else if (activeSearch.type === 'url') {
-        // Search by URL
+        // Search by URL - also check slug for internal URLs
+        const slugMatch = searchValue.match(/\/news\/[^/]+\/([^/?#]+)/);
+        const slug = slugMatch ? slugMatch[1] : null;
+
         let query = supabase
           .from('news_rss_items')
-          .select(baseSelect)
-          .ilike('url', `%${searchValue}%`);
+          .select(baseSelect);
+
+        if (slug) {
+          // If URL contains a slug, search by slug (exact match)
+          query = query.eq('slug', slug);
+        } else {
+          // Otherwise search by URL pattern
+          query = query.ilike('url', `%${searchValue}%`);
+        }
 
         if (selectedCountry !== 'all') {
           query = query.eq('country_id', selectedCountry);
@@ -148,45 +158,90 @@ export function NewsSearchPanel() {
         if (error) throw error;
         return (data || []) as unknown as NewsItem[];
       } else if (activeSearch.type === 'external_id') {
-        // Search by external_id (Source ID)
-        let query = supabase
+        // Search by external_id (Source ID) - try exact match first, then partial
+        let exactQuery = supabase
+          .from('news_rss_items')
+          .select(baseSelect)
+          .eq('external_id', searchValue);
+
+        if (selectedCountry !== 'all') {
+          exactQuery = exactQuery.eq('country_id', selectedCountry);
+        }
+        if (selectedCategory !== 'all') {
+          exactQuery = exactQuery.eq('category', selectedCategory);
+        }
+
+        const { data: exactData, error: exactError } = await exactQuery.limit(50);
+
+        if (!exactError && exactData && exactData.length > 0) {
+          return exactData as unknown as NewsItem[];
+        }
+
+        // Try partial match
+        let partialQuery = supabase
           .from('news_rss_items')
           .select(baseSelect)
           .ilike('external_id', `%${searchValue}%`);
 
         if (selectedCountry !== 'all') {
-          query = query.eq('country_id', selectedCountry);
+          partialQuery = partialQuery.eq('country_id', selectedCountry);
         }
         if (selectedCategory !== 'all') {
-          query = query.eq('category', selectedCategory);
+          partialQuery = partialQuery.eq('category', selectedCategory);
         }
 
-        const { data, error } = await query
+        const { data, error } = await partialQuery
           .order('created_at', { ascending: false })
           .limit(50);
 
         if (error) throw error;
         return (data || []) as unknown as NewsItem[];
       } else {
-        // Text search in title
-        let query = supabase
+        // Text search in title - use separate ilike queries instead of .or() to avoid comma issues
+        let queryTitle = supabase
           .from('news_rss_items')
           .select(baseSelect)
-          .or(`title.ilike.%${searchValue}%,title_en.ilike.%${searchValue}%`);
+          .ilike('title', `%${searchValue}%`);
 
         if (selectedCountry !== 'all') {
-          query = query.eq('country_id', selectedCountry);
+          queryTitle = queryTitle.eq('country_id', selectedCountry);
         }
         if (selectedCategory !== 'all') {
-          query = query.eq('category', selectedCategory);
+          queryTitle = queryTitle.eq('category', selectedCategory);
         }
 
-        const { data, error } = await query
+        const { data: titleResults, error: titleError } = await queryTitle
           .order('created_at', { ascending: false })
           .limit(50);
 
-        if (error) throw error;
-        return (data || []) as unknown as NewsItem[];
+        if (titleError) throw titleError;
+
+        // Also search in title_en
+        let queryTitleEn = supabase
+          .from('news_rss_items')
+          .select(baseSelect)
+          .ilike('title_en', `%${searchValue}%`);
+
+        if (selectedCountry !== 'all') {
+          queryTitleEn = queryTitleEn.eq('country_id', selectedCountry);
+        }
+        if (selectedCategory !== 'all') {
+          queryTitleEn = queryTitleEn.eq('category', selectedCategory);
+        }
+
+        const { data: titleEnResults, error: titleEnError } = await queryTitleEn
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (titleEnError) throw titleEnError;
+
+        // Merge results and remove duplicates
+        const allResults = [...(titleResults || []), ...(titleEnResults || [])];
+        const uniqueResults = allResults.filter((item, index, self) => 
+          index === self.findIndex(t => t.id === item.id)
+        );
+
+        return uniqueResults.slice(0, 50) as unknown as NewsItem[];
       }
     },
     enabled: !!activeSearch?.value.trim(),
