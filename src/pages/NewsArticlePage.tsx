@@ -19,6 +19,7 @@ import { NewsWikiEntities } from "@/components/NewsWikiEntities";
 import { RelatedEntitiesNews } from "@/components/RelatedEntitiesNews";
 import { EntityHighlightedContent } from "@/components/EntityHighlightedContent";
 import { OutrageInkBlock } from "@/components/OutrageInkBlock";
+import { OriginalSourceBlock } from "@/components/OriginalSourceBlock";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { adminAction, callEdgeFunction } from "@/lib/api";
@@ -583,6 +584,14 @@ export default function NewsArticlePage() {
                   );
                 })()}
               </div>
+
+              {/* Original Source Block */}
+              <OriginalSourceBlock 
+                originalContent={article.original_content}
+                sourceUrl={article.url}
+                sourceName={article.feed?.name}
+                className="mt-6"
+              />
 
               {/* Related Entities News - before original link */}
               <RelatedEntitiesNews 
