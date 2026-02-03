@@ -25,6 +25,8 @@ interface NewsItem {
   slug: string | null;
   published_at: string | null;
   created_at: string;
+  url?: string;
+  external_id?: string | null;
   country: {
     code: string;
     name: string;
@@ -37,9 +39,11 @@ export function NewsSearchPanel() {
   const queryClient = useQueryClient();
   const [searchId, setSearchId] = useState("");
   const [searchText, setSearchText] = useState("");
+  const [searchUrl, setSearchUrl] = useState("");
+  const [searchExternalId, setSearchExternalId] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [activeSearch, setActiveSearch] = useState<{ type: 'id' | 'text'; value: string } | null>(null);
+  const [activeSearch, setActiveSearch] = useState<{ type: 'id' | 'text' | 'url' | 'external_id'; value: string } | null>(null);
   const [editingItem, setEditingItem] = useState<NewsItem | null>(null);
   const [deleteItem, setDeleteItem] = useState<NewsItem | null>(null);
   const [editForm, setEditForm] = useState({
@@ -85,15 +89,16 @@ export function NewsSearchPanel() {
       if (!activeSearch || !activeSearch.value.trim()) return [];
 
       const searchValue = activeSearch.value.trim();
+      const baseSelect = `
+        id, title, title_en, description, description_en, keywords, slug, published_at, created_at, category, url, external_id,
+        country:news_countries(code, name, flag)
+      `;
 
       if (activeSearch.type === 'id') {
         // Try exact ID match first (works for UUID)
         let query = supabase
           .from('news_rss_items')
-          .select(`
-            id, title, title_en, description, description_en, keywords, slug, published_at, created_at, category,
-            country:news_countries(code, name, flag)
-          `)
+          .select(baseSelect)
           .eq('id', searchValue)
           .limit(1);
 
@@ -103,13 +108,10 @@ export function NewsSearchPanel() {
           return exactMatch as unknown as NewsItem[];
         }
 
-        // If no exact match, try partial ID search using text search
+        // If no exact match, try partial ID search
         let partialQuery = supabase
           .from('news_rss_items')
-          .select(`
-            id, title, title_en, description, description_en, keywords, slug, published_at, created_at, category,
-            country:news_countries(code, name, flag)
-          `)
+          .select(baseSelect)
           .ilike('id', `%${searchValue}%`);
 
         if (selectedCountry !== 'all') {
@@ -125,14 +127,51 @@ export function NewsSearchPanel() {
 
         if (partialError) throw partialError;
         return (partialMatch || []) as unknown as NewsItem[];
+      } else if (activeSearch.type === 'url') {
+        // Search by URL
+        let query = supabase
+          .from('news_rss_items')
+          .select(baseSelect)
+          .ilike('url', `%${searchValue}%`);
+
+        if (selectedCountry !== 'all') {
+          query = query.eq('country_id', selectedCountry);
+        }
+        if (selectedCategory !== 'all') {
+          query = query.eq('category', selectedCategory);
+        }
+
+        const { data, error } = await query
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (error) throw error;
+        return (data || []) as unknown as NewsItem[];
+      } else if (activeSearch.type === 'external_id') {
+        // Search by external_id (Source ID)
+        let query = supabase
+          .from('news_rss_items')
+          .select(baseSelect)
+          .ilike('external_id', `%${searchValue}%`);
+
+        if (selectedCountry !== 'all') {
+          query = query.eq('country_id', selectedCountry);
+        }
+        if (selectedCategory !== 'all') {
+          query = query.eq('category', selectedCategory);
+        }
+
+        const { data, error } = await query
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (error) throw error;
+        return (data || []) as unknown as NewsItem[];
       } else {
         // Text search in title
         let query = supabase
           .from('news_rss_items')
-          .select(`
-            id, title, title_en, description, description_en, keywords, slug, published_at, created_at, category,
-            country:news_countries(code, name, flag)
-          `)
+          .select(baseSelect)
           .or(`title.ilike.%${searchValue}%,title_en.ilike.%${searchValue}%`);
 
         if (selectedCountry !== 'all') {
@@ -226,6 +265,18 @@ export function NewsSearchPanel() {
     }
   };
 
+  const handleSearchByUrl = () => {
+    if (searchUrl.trim()) {
+      setActiveSearch({ type: 'url', value: searchUrl.trim() });
+    }
+  };
+
+  const handleSearchByExternalId = () => {
+    if (searchExternalId.trim()) {
+      setActiveSearch({ type: 'external_id', value: searchExternalId.trim() });
+    }
+  };
+
   const openEditDialog = (item: NewsItem) => {
     setEditingItem(item);
     setEditForm({
@@ -299,6 +350,48 @@ export function NewsSearchPanel() {
             />
             <Button onClick={handleSearchByText} disabled={isLoading}>
               {isLoading && activeSearch?.type === 'text' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Search className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Search by URL */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Пошук по URL</label>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Посилання на новину..."
+              value={searchUrl}
+              onChange={(e) => setSearchUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearchByUrl()}
+              className="text-sm"
+            />
+            <Button onClick={handleSearchByUrl} disabled={isLoading}>
+              {isLoading && activeSearch?.type === 'url' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Search className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Search by External ID (Source ID) */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Пошук по Source ID (external_id)</label>
+          <div className="flex gap-2">
+            <Input
+              placeholder="ID з блоку Source..."
+              value={searchExternalId}
+              onChange={(e) => setSearchExternalId(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearchByExternalId()}
+              className="font-mono text-sm"
+            />
+            <Button onClick={handleSearchByExternalId} disabled={isLoading}>
+              {isLoading && activeSearch?.type === 'external_id' ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Search className="w-4 h-4" />
