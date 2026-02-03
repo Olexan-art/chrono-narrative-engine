@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Palette, Upload, Trash2, Wand2, Loader2, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Palette, Upload, Trash2, Wand2, Loader2, ThumbsUp, ThumbsDown, ChevronDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +36,32 @@ export function OutrageInkBlock({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState<string>('standard');
+
+  const styleOptions = [
+    { value: 'standard', label: language === 'en' ? 'Standard' : language === 'pl' ? 'Standardowy' : 'Стандарт' },
+    { value: 'anime90s', label: language === 'en' ? '90s Anime' : language === 'pl' ? 'Anime lat 90' : 'Аніме 90-х' },
+    { value: 'horror', label: language === 'en' ? 'Horror' : language === 'pl' ? 'Horror' : 'Жахи' },
+    { value: 'action90s', label: language === 'en' ? '90s Action' : language === 'pl' ? 'Akcja lat 90' : 'Бойовики 90-х' },
+    { value: 'disco80s', label: language === 'en' ? '80s Disco' : language === 'pl' ? 'Disco lat 80' : 'Діско 80-х' },
+  ];
+
+  const getStylePrompt = (style: string, title: string): string => {
+    const basePrompt = `Create a satirical political caricature/cartoon about this news without any text or labels: "${title}".`;
+    
+    switch (style) {
+      case 'anime90s':
+        return `${basePrompt} Style: 90s anime aesthetic with cel-shading, dramatic speed lines, exaggerated expressions, vibrant colors, retro anime character designs like Akira or Ghost in the Shell.`;
+      case 'horror':
+        return `${basePrompt} Style: dark horror aesthetic, grotesque exaggerated features, eerie shadows, unsettling atmosphere, macabre imagery, twisted and distorted forms like Junji Ito manga.`;
+      case 'action90s':
+        return `${basePrompt} Style: 90s action movie poster aesthetic, explosive dynamic poses, dramatic lighting, muscular exaggerated characters, bold colors, lens flares, cinematic composition like Stallone or Schwarzenegger movies.`;
+      case 'disco80s':
+        return `${basePrompt} Style: 80s disco aesthetic, neon colors, chrome and grid patterns, synth-wave vibes, glittery glamorous characters, retro-futuristic elements, vibrant pink and cyan color palette.`;
+      default:
+        return `${basePrompt} Style: sharp editorial cartoon, exaggerated features, stark contrast, minimalist background.`;
+    }
+  };
 
   const t = {
     title: language === 'en' ? 'Outrage Ink' : language === 'pl' ? 'Outrage Ink' : 'Outrage Ink',
@@ -150,11 +177,13 @@ export function OutrageInkBlock({
     mutationFn: async () => {
       setIsGenerating(true);
       try {
+        const prompt = getStylePrompt(selectedStyle, newsTitle);
+        
         // Call edge function to generate satire image
         const result = await callEdgeFunction<{ success: boolean; imageUrl?: string; error?: string }>(
           'generate-image',
           {
-            prompt: `Create a satirical political caricature/cartoon about this news without any text or labels: "${newsTitle}". Style: sharp editorial cartoon, exaggerated features, stark contrast, minimalist background.`,
+            prompt,
             type: 'satire'
           }
         );
@@ -165,11 +194,11 @@ export function OutrageInkBlock({
 
         const imageUrl = result.imageUrl;
 
-        // Save to outrage_ink
+        // Save to outrage_ink with style-adjusted prompt
         if (ink) {
           const { error: updateError } = await supabase
             .from('outrage_ink')
-            .update({ image_url: imageUrl, title: newsTitle, image_prompt: newsTitle })
+            .update({ image_url: imageUrl, title: newsTitle, image_prompt: prompt })
             .eq('id', ink.id);
           
           if (updateError) throw updateError;
@@ -180,7 +209,7 @@ export function OutrageInkBlock({
               news_item_id: newsItemId, 
               image_url: imageUrl, 
               title: newsTitle,
-              image_prompt: newsTitle
+              image_prompt: prompt
             })
             .select()
             .single();
@@ -327,46 +356,65 @@ export function OutrageInkBlock({
 
         {/* Admin controls */}
         {isAdmin && (
-          <div className="flex flex-wrap gap-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/*"
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="gap-1"
-            >
-              {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-              {t.upload}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => generateMutation.mutate()}
-              disabled={isGenerating}
-              className="gap-1"
-            >
-              {isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
-              {isGenerating ? t.generating : t.generate}
-            </Button>
-            {ink && (
+          <div className="space-y-3">
+            {/* Style selector */}
+            <div className="flex items-center gap-2">
+              <Select value={selectedStyle} onValueChange={setSelectedStyle}>
+                <SelectTrigger className="w-[180px] h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {styleOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
               <Button
-                variant="destructive"
+                variant="outline"
                 size="sm"
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
                 className="gap-1"
               >
-                <Trash2 className="w-3 h-3" />
-                {t.delete}
+                {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                {t.upload}
               </Button>
-            )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => generateMutation.mutate()}
+                disabled={isGenerating}
+                className="gap-1"
+              >
+                {isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                {isGenerating ? t.generating : t.generate}
+              </Button>
+              {ink && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="gap-1"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  {t.delete}
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </CardContent>
