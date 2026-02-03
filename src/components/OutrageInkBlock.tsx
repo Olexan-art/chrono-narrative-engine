@@ -342,6 +342,11 @@ export function OutrageInkBlock({
     );
   }
 
+  // Hide block for non-admins if there's no image
+  if (!isAdmin && !ink?.image_url) {
+    return null;
+  }
+
   return (
     <Card className="bg-gradient-to-br from-rose-500/5 to-orange-500/5 border-rose-500/20 overflow-hidden">
       <CardHeader className="pb-3">

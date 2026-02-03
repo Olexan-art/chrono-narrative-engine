@@ -30,6 +30,8 @@ import { BotCacheAnalyticsPanel } from "@/components/BotCacheAnalyticsPanel";
 import { BotErrorsPanel } from "@/components/BotErrorsPanel";
 import { StatisticsPanel } from "@/components/StatisticsPanel";
 import { WikiEntitiesPanel } from "@/components/admin/WikiEntitiesPanel";
+import { NewsSearchPanel } from "@/components/admin/NewsSearchPanel";
+import { NewsCalendarPanel } from "@/components/admin/NewsCalendarPanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -840,6 +842,14 @@ export default function AdminPage() {
               <Building2 className="w-4 h-4 text-violet-500" />
               Wiki
             </TabsTrigger>
+            <TabsTrigger value="news-search" className="gap-2">
+              <Search className="w-4 h-4 text-amber-500" />
+              Пошук новин
+            </TabsTrigger>
+            <TabsTrigger value="news-calendar" className="gap-2">
+              <Calendar className="w-4 h-4 text-teal-500" />
+              Календар
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               Налаштування
@@ -924,6 +934,14 @@ export default function AdminPage() {
 
           <TabsContent value="wiki-entities" className="mt-6">
             <WikiEntitiesPanel />
+          </TabsContent>
+
+          <TabsContent value="news-search" className="mt-6">
+            <NewsSearchPanel />
+          </TabsContent>
+
+          <TabsContent value="news-calendar" className="mt-6">
+            <NewsCalendarPanel />
           </TabsContent>
         </Tabs>
       </main>
