@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, Calendar, Clock, Sparkles, Library, Menu, X, Globe } from "lucide-react";
+import { BookOpen, Clock, Menu, X, Globe, Palette } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -34,22 +34,16 @@ export function Header() {
               <span>{t("nav.read")}</span>
             </Button>
           </Link>
-          <Link to="/volumes">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Library className="w-4 h-4" />
-              <span>{t("nav.volumes")}</span>
-            </Button>
-          </Link>
-          <Link to="/calendar">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Calendar className="w-4 h-4" />
-              <span>{t("nav.calendar")}</span>
-            </Button>
-          </Link>
           <Link to="/news-digest">
             <Button variant="ghost" size="sm" className="gap-2">
               <Globe className="w-4 h-4" />
               <span>{t("nav.newsdigest")}</span>
+            </Button>
+          </Link>
+          <Link to="/ink-abyss">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <Palette className="w-4 h-4" />
+              <span>Ink Abyss</span>
             </Button>
           </Link>
           <LanguageSwitcher />
@@ -80,22 +74,16 @@ export function Header() {
                 {t("nav.read")}
               </Button>
             </Link>
-            <Link to="/volumes" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start gap-3">
-                <Library className="w-4 h-4" />
-                {t("nav.volumes")}
-              </Button>
-            </Link>
-            <Link to="/calendar" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start gap-3">
-                <Calendar className="w-4 h-4" />
-                {t("nav.calendar")}
-              </Button>
-            </Link>
             <Link to="/news-digest" onClick={() => setMobileMenuOpen(false)}>
               <Button variant="ghost" className="w-full justify-start gap-3">
                 <Globe className="w-4 h-4" />
                 {t("nav.newsdigest")}
+              </Button>
+            </Link>
+            <Link to="/ink-abyss" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start gap-3">
+                <Palette className="w-4 h-4" />
+                Ink Abyss
               </Button>
             </Link>
             <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>

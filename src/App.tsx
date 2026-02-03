@@ -19,6 +19,7 @@ import NewsHubPage from "./pages/NewsHubPage";
 import CountryNewsPage from "./pages/CountryNewsPage";
 import NewsArticlePage from "./pages/NewsArticlePage";
 import NewsDigestRedirect from "./pages/NewsDigestRedirect";
+import InkAbyssPage from "./pages/InkAbyssPage";
 import SitemapPage from "./pages/SitemapPage";
 import AdminPage from "./pages/AdminPage";
 import EditPartPage from "./pages/EditPartPage";
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/news-digest" element={<NewsDigestRedirect />} />
             <Route path="/news/:countryCode" element={<CountryNewsPage />} />
             <Route path="/news/:country/:slug" element={<NewsArticlePage />} />
+            <Route path="/ink-abyss" element={<InkAbyssPage />} />
             <Route path="/read/:date" element={<ReadPage />} />
             <Route path="/read/:date/:storyNumber" element={<ReadPage />} />
             <Route path="/chapter/:number" element={<ChapterPage />} />

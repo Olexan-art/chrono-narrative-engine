@@ -9,6 +9,7 @@ import { LatestStoriesSection } from "@/components/home/LatestStoriesSection";
 import { LatestUsaNews } from "@/components/home/LatestUsaNews";
 import { LatestUsaNewsSimple } from "@/components/home/LatestUsaNewsSimple";
 import { TrendingWikiEntities } from "@/components/home/TrendingWikiEntities";
+import { OutrageInkSection } from "@/components/home/OutrageInkSection";
 import { CountryNewsSection } from "@/components/home/CountryNewsSection";
 import { ChaptersSection } from "@/components/home/ChaptersSection";
 import { InfiniteNewsFeed } from "@/components/home/InfiniteNewsFeed";
@@ -107,6 +108,9 @@ export default function Index() {
       
       {/* Latest USA News (simple, no retelling) */}
       <LatestUsaNewsSimple />
+      
+      {/* Outrage Ink Section - above Trending */}
+      <OutrageInkSection />
       
       {/* Trending Wiki Entities (12h) */}
       <TrendingWikiEntities />
