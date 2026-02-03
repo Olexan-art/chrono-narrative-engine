@@ -431,6 +431,10 @@ serve(async (req) => {
           const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
           const slug = generateSlug(item.title);
           
+          // Store original RSS content for AI retelling
+          const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
+          const originalContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
+          
           const { error: insertError } = await supabase
             .from('news_rss_items')
             .insert({
@@ -439,10 +443,11 @@ serve(async (req) => {
               external_id: item.link,
               title: decodeHTMLEntities(item.title).slice(0, 500),
               title_en: decodeHTMLEntities(item.title).slice(0, 500),
-              description: item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null,
-              description_en: item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null,
-              content: item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null,
-              content_en: item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null,
+              description: originalDescription,
+              description_en: originalDescription,
+              content: originalContent,
+              content_en: originalContent,
+              original_content: originalContent || originalDescription, // Store original for AI retelling
               url: item.link,
               slug: slug,
               image_url: item.enclosure?.url || null,
@@ -554,6 +559,10 @@ serve(async (req) => {
           // Generate slug from title
           const slug = generateSlug(item.title);
           
+          // Store original RSS content for AI retelling
+          const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
+          const originalContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
+          
           const { error: insertError } = await supabase
             .from('news_rss_items')
             .insert({
@@ -562,10 +571,11 @@ serve(async (req) => {
               external_id: item.link,
               title: decodeHTMLEntities(item.title).slice(0, 500),
               title_en: decodeHTMLEntities(item.title).slice(0, 500), // English is the default
-              description: item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null,
-              description_en: item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null,
-              content: item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null,
-              content_en: item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null,
+              description: originalDescription,
+              description_en: originalDescription,
+              content: originalContent,
+              content_en: originalContent,
+              original_content: originalContent || originalDescription, // Store original for AI retelling
               url: item.link,
               image_url: item.enclosure?.url || null,
               category: feed.category,
@@ -762,6 +772,10 @@ serve(async (req) => {
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
             const slug = generateSlug(item.title);
             
+            // Store original RSS content for AI retelling
+            const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
+            const originalContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
+            
             // Insert new item
             const { data: insertedData, error: insertError } = await supabase
               .from('news_rss_items')
@@ -771,10 +785,11 @@ serve(async (req) => {
                 external_id: item.link,
                 title: decodeHTMLEntities(item.title).slice(0, 500),
                 title_en: decodeHTMLEntities(item.title).slice(0, 500),
-                description: item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null,
-                description_en: item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null,
-                content: item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null,
-                content_en: item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null,
+                description: originalDescription,
+                description_en: originalDescription,
+                content: originalContent,
+                content_en: originalContent,
+                original_content: originalContent || originalDescription, // Store original for AI retelling
                 url: item.link,
                 slug: slug,
                 image_url: item.enclosure?.url || null,
@@ -1318,6 +1333,10 @@ serve(async (req) => {
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
             const slug = generateSlug(item.title);
             
+            // Store original RSS content for AI retelling
+            const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
+            const originalContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
+            
             const { data: insertedData, error: insertError } = await supabase
               .from('news_rss_items')
               .insert({
@@ -1326,10 +1345,11 @@ serve(async (req) => {
                 external_id: item.link,
                 title: decodeHTMLEntities(item.title).slice(0, 500),
                 title_en: decodeHTMLEntities(item.title).slice(0, 500),
-                description: item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null,
-                description_en: item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null,
-                content: item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null,
-                content_en: item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null,
+                description: originalDescription,
+                description_en: originalDescription,
+                content: originalContent,
+                content_en: originalContent,
+                original_content: originalContent || originalDescription, // Store original for AI retelling
                 url: item.link,
                 slug: slug,
                 image_url: item.enclosure?.url || null,
@@ -1468,6 +1488,10 @@ serve(async (req) => {
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
             const slug = generateSlug(item.title);
             
+            // Store original RSS content for AI retelling
+            const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
+            const originalContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
+            
             const { data: insertedData, error: insertError } = await supabase
               .from('news_rss_items')
               .insert({
@@ -1476,10 +1500,11 @@ serve(async (req) => {
                 external_id: item.link,
                 title: decodeHTMLEntities(item.title).slice(0, 500),
                 title_en: decodeHTMLEntities(item.title).slice(0, 500),
-                description: item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null,
-                description_en: item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null,
-                content: item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null,
-                content_en: item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null,
+                description: originalDescription,
+                description_en: originalDescription,
+                content: originalContent,
+                content_en: originalContent,
+                original_content: originalContent || originalDescription, // Store original for AI retelling
                 url: item.link,
                 slug: slug,
                 image_url: item.enclosure?.url || null,
