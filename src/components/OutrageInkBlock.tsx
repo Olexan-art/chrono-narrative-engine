@@ -1,9 +1,10 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Palette, Upload, Trash2, Wand2, Loader2, ThumbsUp, ThumbsDown, ChevronDown } from "lucide-react";
+import { Palette, Upload, Trash2, Wand2, Loader2, ThumbsUp, ThumbsDown, Download, Share2, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
@@ -37,6 +38,7 @@ export function OutrageInkBlock({
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<string>('standard');
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const styleOptions = [
     { value: 'standard', label: language === 'en' ? 'Standard' : language === 'pl' ? 'Standardowy' : 'Стандарт' },
@@ -71,6 +73,41 @@ export function OutrageInkBlock({
     confirmDelete: language === 'en' ? 'Delete this caricature?' : language === 'pl' ? 'Usunąć tę karykaturę?' : 'Видалити цю карикатуру?',
     noImage: language === 'en' ? 'No satirical image yet' : language === 'pl' ? 'Brak satyry' : 'Сатиричного зображення ще немає',
     generating: language === 'en' ? 'Generating...' : language === 'pl' ? 'Generowanie...' : 'Генерація...',
+    download: language === 'en' ? 'Download' : language === 'pl' ? 'Pobierz' : 'Завантажити',
+    share: language === 'en' ? 'Share' : language === 'pl' ? 'Udostępnij' : 'Поширити',
+  };
+
+  // Handle image download
+  const handleDownload = async () => {
+    if (!ink?.image_url) return;
+    try {
+      const response = await fetch(ink.image_url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `outrage-ink-${ink.id}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(language === 'en' ? 'Download failed' : 'Помилка завантаження');
+    }
+  };
+
+  // Handle share to X
+  const handleShareToX = () => {
+    if (!ink?.image_url) return;
+    const shareText = language === 'en' 
+      ? `Check out this satirical caricature: ${newsTitle}`
+      : language === 'pl'
+      ? `Zobacz tę satyryczną karykaturę: ${newsTitle}`
+      : `Дивіться цю сатиричну карикатуру: ${newsTitle}`;
+    
+    const currentUrl = window.location.href;
+    const xUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(currentUrl)}`;
+    window.open(xUrl, '_blank', 'noopener,noreferrer');
   };
 
   // Get visitor ID for voting
@@ -320,9 +357,32 @@ export function OutrageInkBlock({
               src={ink.image_url} 
               alt={newsTitle}
               title={newsTitle}
-              className="w-full rounded-lg"
+              className="w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
               loading="lazy"
+              onClick={() => setIsLightboxOpen(true)}
             />
+            
+            {/* Action buttons overlay */}
+            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+                onClick={(e) => { e.stopPropagation(); handleDownload(); }}
+                title={t.download}
+              >
+                <Download className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+                onClick={(e) => { e.stopPropagation(); handleShareToX(); }}
+                title={t.share}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
             
             {/* Like/Dislike overlay */}
             <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2">
@@ -330,7 +390,7 @@ export function OutrageInkBlock({
                 variant="ghost"
                 size="sm"
                 className={`gap-1 ${userVote === 'like' ? 'text-green-500' : ''}`}
-                onClick={() => voteMutation.mutate('like')}
+                onClick={(e) => { e.stopPropagation(); voteMutation.mutate('like'); }}
                 disabled={voteMutation.isPending}
               >
                 <ThumbsUp className="w-4 h-4" />
@@ -340,7 +400,7 @@ export function OutrageInkBlock({
                 variant="ghost"
                 size="sm"
                 className={`gap-1 ${userVote === 'dislike' ? 'text-red-500' : ''}`}
-                onClick={() => voteMutation.mutate('dislike')}
+                onClick={(e) => { e.stopPropagation(); voteMutation.mutate('dislike'); }}
                 disabled={voteMutation.isPending}
               >
                 <ThumbsDown className="w-4 h-4" />
@@ -418,6 +478,42 @@ export function OutrageInkBlock({
           </div>
         )}
       </CardContent>
+
+      {/* Lightbox Dialog */}
+      <Dialog open={isLightboxOpen} onOpenChange={setIsLightboxOpen}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 bg-background/95 backdrop-blur-sm border-none">
+          <div className="relative flex items-center justify-center p-4">
+            {ink?.image_url && (
+              <img 
+                src={ink.image_url} 
+                alt={newsTitle}
+                className="max-w-full max-h-[85vh] object-contain rounded-lg"
+              />
+            )}
+            {/* Lightbox action buttons */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="gap-2 bg-background/90 backdrop-blur-sm"
+                onClick={handleDownload}
+              >
+                <Download className="w-4 h-4" />
+                {t.download}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="gap-2 bg-background/90 backdrop-blur-sm"
+                onClick={handleShareToX}
+              >
+                <X className="w-4 h-4" />
+                {t.share}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
