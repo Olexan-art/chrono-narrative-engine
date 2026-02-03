@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Image, Trash2, ExternalLink, Search, RefreshCw, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Image, Trash2, ExternalLink, Search, RefreshCw, ThumbsUp, ThumbsDown, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
@@ -39,6 +41,7 @@ export function ImagesManagementPanel() {
   const [sortBy, setSortBy] = useState<'created_at' | 'likes' | 'dislikes'>('created_at');
   const [deleteDialog, setDeleteDialog] = useState<OutrageInkItem | null>(null);
   const [viewImage, setViewImage] = useState<OutrageInkItem | null>(null);
+  const [editPrompt, setEditPrompt] = useState<{ item: OutrageInkItem; prompt: string } | null>(null);
 
   const { data: images = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-outrage-ink', sortBy],
@@ -75,6 +78,28 @@ export function ImagesManagementPanel() {
     onError: (error) => {
       toast({ 
         title: "Помилка видалення", 
+        description: (error as Error).message,
+        variant: "destructive" 
+      });
+    }
+  });
+
+  const updatePromptMutation = useMutation({
+    mutationFn: async ({ id, prompt }: { id: string; prompt: string }) => {
+      const { error } = await supabase
+        .from('outrage_ink')
+        .update({ image_prompt: prompt })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Промпт оновлено" });
+      queryClient.invalidateQueries({ queryKey: ['admin-outrage-ink'] });
+      setEditPrompt(null);
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Помилка оновлення", 
         description: (error as Error).message,
         variant: "destructive" 
       });
@@ -172,6 +197,13 @@ export function ImagesManagementPanel() {
                     )}
                     <Button 
                       size="sm" 
+                      variant="secondary"
+                      onClick={() => setEditPrompt({ item: img, prompt: img.image_prompt || '' })}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
                       variant="destructive"
                       onClick={() => setDeleteDialog(img)}
                     >
@@ -226,7 +258,20 @@ export function ImagesManagementPanel() {
 
               {viewImage.image_prompt && (
                 <div>
-                  <p className="text-muted-foreground text-sm">Промпт</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-muted-foreground text-sm">Промпт</p>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => {
+                        setEditPrompt({ item: viewImage, prompt: viewImage.image_prompt || '' });
+                        setViewImage(null);
+                      }}
+                    >
+                      <Pencil className="w-3 h-3 mr-1" />
+                      Редагувати
+                    </Button>
+                  </div>
                   <p className="text-sm bg-muted p-2 rounded">{viewImage.image_prompt}</p>
                 </div>
               )}
@@ -241,6 +286,50 @@ export function ImagesManagementPanel() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Prompt Dialog */}
+      <Dialog open={!!editPrompt} onOpenChange={() => setEditPrompt(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Редагувати промпт</DialogTitle>
+          </DialogHeader>
+          {editPrompt && (
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <img 
+                  src={editPrompt.item.image_url} 
+                  alt="Preview"
+                  className="max-h-48 object-contain rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="prompt">Промпт для генерації</Label>
+                <Textarea
+                  id="prompt"
+                  value={editPrompt.prompt}
+                  onChange={(e) => setEditPrompt({ ...editPrompt, prompt: e.target.value })}
+                  rows={6}
+                  placeholder="Опишіть промпт для генерації зображення..."
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPrompt(null)}>
+              Скасувати
+            </Button>
+            <Button 
+              onClick={() => editPrompt && updatePromptMutation.mutate({ 
+                id: editPrompt.item.id, 
+                prompt: editPrompt.prompt 
+              })}
+              disabled={updatePromptMutation.isPending}
+            >
+              {updatePromptMutation.isPending ? "Збереження..." : "Зберегти"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
