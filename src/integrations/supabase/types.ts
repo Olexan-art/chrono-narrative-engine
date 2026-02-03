@@ -568,6 +568,7 @@ export type Database = {
           key_points: Json | null
           key_points_en: Json | null
           keywords: string[] | null
+          original_content: string | null
           published_at: string | null
           slug: string | null
           themes: string[] | null
@@ -609,6 +610,7 @@ export type Database = {
           key_points?: Json | null
           key_points_en?: Json | null
           keywords?: string[] | null
+          original_content?: string | null
           published_at?: string | null
           slug?: string | null
           themes?: string[] | null
@@ -650,6 +652,7 @@ export type Database = {
           key_points?: Json | null
           key_points_en?: Json | null
           keywords?: string[] | null
+          original_content?: string | null
           published_at?: string | null
           slug?: string | null
           themes?: string[] | null

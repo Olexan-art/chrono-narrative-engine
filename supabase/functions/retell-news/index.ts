@@ -261,10 +261,10 @@ serve(async (req) => {
       throw new Error('Settings not found');
     }
 
-    // Get news article with country info
+    // Get news article with country info and original content
     const { data: news, error: newsError } = await supabase
       .from('news_rss_items')
-      .select('*, country:news_countries(code)')
+      .select('*, country:news_countries(code), original_content')
       .eq('id', newsId)
       .single();
 
@@ -463,13 +463,21 @@ Zasady:
     const prompt = prompts[language.code] || prompts['en'];
     
     // Get the appropriate content based on language
+    // IMPORTANT: Use original_content for retelling if available (not the AI-generated content)
     const getContent = () => {
+      // Prefer original RSS content (before any AI processing)
+      if (news.original_content && news.original_content.length > 50) {
+        console.log('Using original_content for retelling:', news.original_content.length, 'chars');
+        return news.original_content;
+      }
+      
+      // Fallback to localized content fields (legacy items without original_content)
       if (language.code === 'hi') return news.content_hi || news.content_en || news.content;
       if (language.code === 'ta') return news.content_ta || news.content_en || news.content;
       if (language.code === 'te') return news.content_te || news.content_en || news.content;
       if (language.code === 'bn') return news.content_bn || news.content_en || news.content;
-      if (language.code === 'en') return news.content_en || news.content;
-      return news.content;
+      // For English/other: prefer description over content_en (which might be AI-generated)
+      return news.description || news.content || '';
     };
 
     const getTitle = () => {
