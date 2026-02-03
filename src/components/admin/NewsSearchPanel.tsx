@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, ExternalLink, Calendar, Loader2, FileText, Edit, Save, X, Tag } from "lucide-react";
+import { Search, ExternalLink, Calendar, Loader2, FileText, Edit, Save, X, Tag, Trash2, Filter } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -35,8 +37,11 @@ export function NewsSearchPanel() {
   const queryClient = useQueryClient();
   const [searchId, setSearchId] = useState("");
   const [searchText, setSearchText] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [activeSearch, setActiveSearch] = useState<{ type: 'id' | 'text'; value: string } | null>(null);
   const [editingItem, setEditingItem] = useState<NewsItem | null>(null);
+  const [deleteItem, setDeleteItem] = useState<NewsItem | null>(null);
   const [editForm, setEditForm] = useState({
     title: "",
     title_en: "",
@@ -45,8 +50,37 @@ export function NewsSearchPanel() {
     keywords: ""
   });
 
+  // Fetch countries for filter
+  const { data: countries } = useQuery({
+    queryKey: ['admin-news-countries'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('news_countries')
+        .select('id, code, name, flag')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Get unique categories
+  const { data: categories } = useQuery({
+    queryKey: ['admin-news-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('news_rss_items')
+        .select('category')
+        .not('category', 'is', null)
+        .limit(1000);
+      if (error) throw error;
+      const uniqueCategories = [...new Set(data.map(d => d.category).filter(Boolean))];
+      return uniqueCategories.sort();
+    }
+  });
+
   const { data: results, isLoading, error } = useQuery({
-    queryKey: ['admin-news-search', activeSearch],
+    queryKey: ['admin-news-search', activeSearch, selectedCountry, selectedCategory],
     queryFn: async () => {
       if (!activeSearch || !activeSearch.value.trim()) return [];
 
@@ -54,27 +88,38 @@ export function NewsSearchPanel() {
 
       if (activeSearch.type === 'id') {
         // Try exact ID match first (works for UUID)
-        const { data: exactMatch, error: exactError } = await supabase
+        let query = supabase
           .from('news_rss_items')
           .select(`
-            id, title, title_en, description, description_en, keywords, slug, published_at, created_at,
+            id, title, title_en, description, description_en, keywords, slug, published_at, created_at, category,
             country:news_countries(code, name, flag)
           `)
           .eq('id', searchValue)
           .limit(1);
+
+        const { data: exactMatch, error: exactError } = await query;
 
         if (!exactError && exactMatch && exactMatch.length > 0) {
           return exactMatch as unknown as NewsItem[];
         }
 
         // If no exact match, try partial ID search using text search
-        const { data: partialMatch, error: partialError } = await supabase
+        let partialQuery = supabase
           .from('news_rss_items')
           .select(`
-            id, title, title_en, description, description_en, keywords, slug, published_at, created_at,
+            id, title, title_en, description, description_en, keywords, slug, published_at, created_at, category,
             country:news_countries(code, name, flag)
           `)
-          .ilike('id', `%${searchValue}%`)
+          .ilike('id', `%${searchValue}%`);
+
+        if (selectedCountry !== 'all') {
+          partialQuery = partialQuery.eq('country_id', selectedCountry);
+        }
+        if (selectedCategory !== 'all') {
+          partialQuery = partialQuery.eq('category', selectedCategory);
+        }
+
+        const { data: partialMatch, error: partialError } = await partialQuery
           .order('created_at', { ascending: false })
           .limit(50);
 
@@ -82,13 +127,22 @@ export function NewsSearchPanel() {
         return (partialMatch || []) as unknown as NewsItem[];
       } else {
         // Text search in title
-        const { data, error } = await supabase
+        let query = supabase
           .from('news_rss_items')
           .select(`
-            id, title, title_en, description, description_en, keywords, slug, published_at, created_at,
+            id, title, title_en, description, description_en, keywords, slug, published_at, created_at, category,
             country:news_countries(code, name, flag)
           `)
-          .or(`title.ilike.%${searchValue}%,title_en.ilike.%${searchValue}%`)
+          .or(`title.ilike.%${searchValue}%,title_en.ilike.%${searchValue}%`);
+
+        if (selectedCountry !== 'all') {
+          query = query.eq('country_id', selectedCountry);
+        }
+        if (selectedCategory !== 'all') {
+          query = query.eq('category', selectedCategory);
+        }
+
+        const { data, error } = await query
           .order('created_at', { ascending: false })
           .limit(50);
 
@@ -115,6 +169,45 @@ export function NewsSearchPanel() {
     onError: (error) => {
       toast({ 
         title: "Помилка", 
+        description: (error as Error).message,
+        variant: "destructive" 
+      });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Delete related records first
+      await supabase.from('news_wiki_entities').delete().eq('news_item_id', id);
+      
+      // Check if there are outrage_ink records
+      const { data: outrageInk } = await supabase
+        .from('outrage_ink')
+        .select('id')
+        .eq('news_item_id', id);
+      
+      if (outrageInk && outrageInk.length > 0) {
+        const inkIds = outrageInk.map(i => i.id);
+        await supabase.from('outrage_ink_votes').delete().in('outrage_ink_id', inkIds);
+        await supabase.from('outrage_ink_entities').delete().in('outrage_ink_id', inkIds);
+        await supabase.from('outrage_ink').delete().eq('news_item_id', id);
+      }
+      
+      // Delete the news item
+      const { error } = await supabase
+        .from('news_rss_items')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Новину видалено" });
+      queryClient.invalidateQueries({ queryKey: ['admin-news-search'] });
+      setDeleteItem(null);
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Помилка видалення", 
         description: (error as Error).message,
         variant: "destructive" 
       });
@@ -214,6 +307,48 @@ export function NewsSearchPanel() {
           </div>
         </div>
 
+        {/* Filters */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              Країна
+            </label>
+            <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+              <SelectTrigger>
+                <SelectValue placeholder="Всі країни" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Всі країни</SelectItem>
+                {countries?.map((country) => (
+                  <SelectItem key={country.id} value={country.id}>
+                    {country.flag} {country.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Tag className="w-4 h-4" />
+              Категорія
+            </label>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Всі категорії" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Всі категорії</SelectItem>
+                {categories?.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         {/* Error */}
         {error && (
           <p className="text-sm text-destructive">
@@ -272,7 +407,7 @@ export function NewsSearchPanel() {
                       </code>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button 
                         variant="default" 
                         size="sm"
@@ -299,6 +434,14 @@ export function NewsSearchPanel() {
                       >
                         <FileText className="w-3 h-3 mr-1" />
                         ID
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => setDeleteItem(item)}
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Видалити
                       </Button>
                     </div>
                   </div>
@@ -400,6 +543,35 @@ export function NewsSearchPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteItem} onOpenChange={() => setDeleteItem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Видалити новину?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ця дія незворотна. Новину та всі пов'язані дані (картинки, голоси) буде видалено назавжди.
+              <div className="mt-2 p-2 bg-muted rounded text-sm">
+                <strong>{deleteItem?.title}</strong>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteItem && deleteMutation.mutate(deleteItem.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Видалити
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
