@@ -43,7 +43,7 @@ interface OutrageInkItem {
   } | null;
 }
 
-async function fetchAllNews(monthStart: Date, monthEnd: Date): Promise<NewsItem[]> {
+async function fetchAllNews(startDateStr: string, endDateStr: string): Promise<NewsItem[]> {
   const allRows: NewsItem[] = [];
   const pageSize = 1000;
   let offset = 0;
@@ -54,8 +54,8 @@ async function fetchAllNews(monthStart: Date, monthEnd: Date): Promise<NewsItem[
       .from('news_rss_items')
       .select(`id, title, title_en, slug, published_at, created_at, image_url,
                country:news_countries(code, name, flag)`)
-      .gte('created_at', format(monthStart, 'yyyy-MM-dd'))
-      .lte('created_at', format(monthEnd, 'yyyy-MM-dd') + 'T23:59:59')
+      .gte('created_at', `${startDateStr}T00:00:00`)
+      .lte('created_at', `${endDateStr}T23:59:59`)
       .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1);
 
@@ -73,7 +73,7 @@ async function fetchAllNews(monthStart: Date, monthEnd: Date): Promise<NewsItem[
   return allRows;
 }
 
-async function fetchAllInk(monthStart: Date, monthEnd: Date): Promise<OutrageInkItem[]> {
+async function fetchAllInk(startDateStr: string, endDateStr: string): Promise<OutrageInkItem[]> {
   const allRows: OutrageInkItem[] = [];
   const pageSize = 1000;
   let offset = 0;
@@ -84,8 +84,8 @@ async function fetchAllInk(monthStart: Date, monthEnd: Date): Promise<OutrageInk
       .from('outrage_ink')
       .select(`id, image_url, title, likes, created_at,
                news_item:news_rss_items(id, slug, country:news_countries(code))`)
-      .gte('created_at', format(monthStart, 'yyyy-MM-dd'))
-      .lte('created_at', format(monthEnd, 'yyyy-MM-dd') + 'T23:59:59')
+      .gte('created_at', `${startDateStr}T00:00:00`)
+      .lte('created_at', `${endDateStr}T23:59:59`)
       .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1);
 
@@ -118,14 +118,17 @@ export default function PublicCalendarPage() {
   const monthEnd = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
+  const startDateStr = format(monthStart, 'yyyy-MM-dd');
+  const endDateStr = format(monthEnd, 'yyyy-MM-dd');
+
   const { data: newsItems = [], isLoading: newsLoading } = useQuery({
-    queryKey: ['calendar-news', format(currentDate, 'yyyy-MM')],
-    queryFn: () => fetchAllNews(monthStart, monthEnd)
+    queryKey: ['calendar-news', startDateStr, endDateStr],
+    queryFn: () => fetchAllNews(startDateStr, endDateStr)
   });
 
   const { data: inkItems = [], isLoading: inkLoading } = useQuery({
-    queryKey: ['calendar-ink', format(currentDate, 'yyyy-MM')],
-    queryFn: () => fetchAllInk(monthStart, monthEnd)
+    queryKey: ['calendar-ink', startDateStr, endDateStr],
+    queryFn: () => fetchAllInk(startDateStr, endDateStr)
   });
 
   const getNewsForDate = (date: Date) => newsItems.filter(n => isSameDay(new Date(n.created_at), date));
