@@ -74,7 +74,7 @@ export default function InkAbyssPage() {
         .select(`
           id, image_url, title, likes, dislikes, created_at,
           news_item:news_rss_items(
-            id, slug, title, title_en, keywords,
+            id, slug, title, title_en, keywords, published_at,
             country:news_countries(code, name, name_en, flag)
           ),
           entities:outrage_ink_entities(
@@ -86,17 +86,22 @@ export default function InkAbyssPage() {
 
       if (!data) return [];
 
-      // Group by date
+      // Group by news publication date (fallback to created_at)
       const grouped = new Map<string, InkItem[]>();
       for (const item of data as InkItem[]) {
-        const date = format(new Date(item.created_at), 'yyyy-MM-dd');
+        const newsDate = (item.news_item as any)?.published_at;
+        const dateToUse = newsDate ? new Date(newsDate) : new Date(item.created_at);
+        const date = format(dateToUse, 'yyyy-MM-dd');
         if (!grouped.has(date)) {
           grouped.set(date, []);
         }
         grouped.get(date)!.push(item);
       }
 
-      return Array.from(grouped.entries()).map(([date, items]) => ({
+      // Sort groups by date descending
+      const sortedEntries = Array.from(grouped.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+
+      return sortedEntries.map(([date, items]) => ({
         date,
         items
       })) as GroupedByDate[];
