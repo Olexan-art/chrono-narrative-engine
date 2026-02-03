@@ -18,6 +18,7 @@ import { NewsKeyPoints, NewsKeywords } from "@/components/NewsKeyPoints";
 import { NewsWikiEntities } from "@/components/NewsWikiEntities";
 import { RelatedEntitiesNews } from "@/components/RelatedEntitiesNews";
 import { EntityHighlightedContent } from "@/components/EntityHighlightedContent";
+import { OutrageInkBlock } from "@/components/OutrageInkBlock";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { adminAction, callEdgeFunction } from "@/lib/api";
@@ -1012,6 +1013,13 @@ export default function NewsArticlePage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Outrage Ink Block - below Source */}
+            <OutrageInkBlock
+              newsItemId={article.id}
+              newsTitle={getLocalizedField('title') || article.title}
+              isAdmin={isAdminAuthenticated}
+            />
 
             {/* Wikipedia Entities */}
             <NewsWikiEntities 

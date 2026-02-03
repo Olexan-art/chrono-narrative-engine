@@ -268,6 +268,21 @@ Deno.serve(async (req) => {
         .limit(1000);
 
       html = generateVolumesIndexHTML(volumes || [], lang);
+    } else if (path === "/ink-abyss") {
+      // Ink Abyss gallery page
+      title = "The Ink Abyss | Satirical Art Gallery";
+      description = "A timeline gallery of satirical political artwork and caricatures inspired by world news.";
+      
+      const { data: inkItems } = await supabase
+        .from("outrage_ink")
+        .select(`
+          id, image_url, title, likes, dislikes, created_at,
+          news_item:news_rss_items(slug, title, title_en, country:news_countries(code))
+        `)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      
+      html = generateInkAbyssHTML(inkItems || [], lang);
     } else if (path === "/calendar" || path === "/read") {
       // Lightweight crawler-friendly index of recent dates
       title = "Archive | Точка Синхронізації";
@@ -1506,6 +1521,51 @@ function generateSitemapHTML(
         return `<li><a href="https://echoes2.com/read/${escapeHtml(p.date)}/${p.number}">${escapeHtml(t)}</a></li>`;
       }).join("")}
     </ul>
+  `;
+}
+
+function generateInkAbyssHTML(items: any[], lang: string) {
+  const titleField = lang === "en" ? "title_en" : "title";
+  
+  // Group by date
+  const grouped = new Map<string, any[]>();
+  for (const item of items) {
+    const date = item.created_at ? item.created_at.split('T')[0] : 'unknown';
+    if (!grouped.has(date)) grouped.set(date, []);
+    grouped.get(date)!.push(item);
+  }
+
+  return `
+    <h2>The Ink Abyss - Satirical Art Gallery</h2>
+    <p>A timeline of satirical political artwork inspired by world news.</p>
+    
+    ${Array.from(grouped.entries()).map(([date, dateItems]) => `
+      <section>
+        <h3>${escapeHtml(date)}</h3>
+        <ul>
+          ${dateItems.map(item => {
+            const newsTitle = item.news_item?.[titleField] || item.news_item?.title || item.title || 'Satirical artwork';
+            const countryCode = item.news_item?.country?.code?.toLowerCase() || 'us';
+            const newsLink = item.news_item?.slug 
+              ? `https://echoes2.com/news/${countryCode}/${item.news_item.slug}`
+              : null;
+            return `
+              <li>
+                <img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(newsTitle)}" title="${escapeHtml(newsTitle)}" width="300">
+                <p>👍 ${item.likes} | 👎 ${item.dislikes}</p>
+                ${newsLink ? `<a href="${newsLink}">${escapeHtml(newsTitle)}</a>` : `<span>${escapeHtml(newsTitle)}</span>`}
+              </li>
+            `;
+          }).join("")}
+        </ul>
+      </section>
+    `).join("")}
+    
+    <nav>
+      <a href="https://echoes2.com/">← Home</a> |
+      <a href="https://echoes2.com/news">📰 News</a> |
+      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+    </nav>
   `;
 }
 

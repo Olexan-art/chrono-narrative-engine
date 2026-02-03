@@ -725,6 +725,121 @@ export type Database = {
           },
         ]
       }
+      outrage_ink: {
+        Row: {
+          created_at: string
+          dislikes: number
+          id: string
+          image_prompt: string | null
+          image_url: string
+          last_random_update: string | null
+          likes: number
+          news_item_id: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dislikes?: number
+          id?: string
+          image_prompt?: string | null
+          image_url: string
+          last_random_update?: string | null
+          likes?: number
+          news_item_id?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dislikes?: number
+          id?: string
+          image_prompt?: string | null
+          image_url?: string
+          last_random_update?: string | null
+          likes?: number
+          news_item_id?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outrage_ink_news_item_id_fkey"
+            columns: ["news_item_id"]
+            isOneToOne: false
+            referencedRelation: "news_rss_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outrage_ink_entities: {
+        Row: {
+          created_at: string
+          id: string
+          outrage_ink_id: string
+          wiki_entity_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          outrage_ink_id: string
+          wiki_entity_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          outrage_ink_id?: string
+          wiki_entity_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outrage_ink_entities_outrage_ink_id_fkey"
+            columns: ["outrage_ink_id"]
+            isOneToOne: false
+            referencedRelation: "outrage_ink"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outrage_ink_entities_wiki_entity_id_fkey"
+            columns: ["wiki_entity_id"]
+            isOneToOne: false
+            referencedRelation: "wiki_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outrage_ink_votes: {
+        Row: {
+          created_at: string
+          id: string
+          outrage_ink_id: string
+          visitor_id: string
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          outrage_ink_id: string
+          visitor_id: string
+          vote_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          outrage_ink_id?: string
+          visitor_id?: string
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outrage_ink_votes_outrage_ink_id_fkey"
+            columns: ["outrage_ink_id"]
+            isOneToOne: false
+            referencedRelation: "outrage_ink"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parts: {
         Row: {
           category: string | null
