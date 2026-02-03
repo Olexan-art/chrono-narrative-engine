@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Image, Trash2, ExternalLink, Search, RefreshCw, ThumbsUp, ThumbsDown, Pencil } from "lucide-react";
+import { Image, Trash2, ExternalLink, Search, RefreshCw, ThumbsUp, ThumbsDown, Pencil, Wand2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { callEdgeFunction } from "@/lib/api";
 
 interface OutrageInkItem {
   id: string;
@@ -42,6 +43,7 @@ export function ImagesManagementPanel() {
   const [deleteDialog, setDeleteDialog] = useState<OutrageInkItem | null>(null);
   const [viewImage, setViewImage] = useState<OutrageInkItem | null>(null);
   const [editPrompt, setEditPrompt] = useState<{ item: OutrageInkItem; prompt: string } | null>(null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const { data: images = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-outrage-ink', sortBy],
@@ -105,6 +107,48 @@ export function ImagesManagementPanel() {
       });
     }
   });
+
+  const handleRegenerate = async () => {
+    if (!editPrompt?.prompt.trim()) {
+      toast({ title: "Введіть промпт", variant: "destructive" });
+      return;
+    }
+
+    setIsRegenerating(true);
+    try {
+      // Generate new image using the edge function
+      const result = await callEdgeFunction<{ success: boolean; imageUrl: string }>('generate-image', {
+        prompt: editPrompt.prompt
+      });
+
+      if (!result.success || !result.imageUrl) {
+        throw new Error('Не вдалося згенерувати зображення');
+      }
+
+      // Update the outrage_ink record with new image
+      const { error } = await supabase
+        .from('outrage_ink')
+        .update({ 
+          image_url: result.imageUrl,
+          image_prompt: editPrompt.prompt 
+        })
+        .eq('id', editPrompt.item.id);
+
+      if (error) throw error;
+
+      toast({ title: "Картинку успішно регенеровано!" });
+      queryClient.invalidateQueries({ queryKey: ['admin-outrage-ink'] });
+      setEditPrompt(null);
+    } catch (error) {
+      toast({ 
+        title: "Помилка регенерації", 
+        description: (error as Error).message,
+        variant: "destructive" 
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
 
   const filteredImages = images.filter(img => {
     if (!search) return true;
@@ -316,8 +360,8 @@ export function ImagesManagementPanel() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditPrompt(null)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setEditPrompt(null)} disabled={isRegenerating}>
               Скасувати
             </Button>
             <Button 
@@ -325,9 +369,27 @@ export function ImagesManagementPanel() {
                 id: editPrompt.item.id, 
                 prompt: editPrompt.prompt 
               })}
-              disabled={updatePromptMutation.isPending}
+              disabled={updatePromptMutation.isPending || isRegenerating}
             >
-              {updatePromptMutation.isPending ? "Збереження..." : "Зберегти"}
+              {updatePromptMutation.isPending ? "Збереження..." : "Зберегти промпт"}
+            </Button>
+            <Button 
+              variant="secondary"
+              onClick={handleRegenerate}
+              disabled={isRegenerating || updatePromptMutation.isPending}
+              className="gap-2"
+            >
+              {isRegenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Генерація...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4" />
+                  Регенерувати картинку
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
