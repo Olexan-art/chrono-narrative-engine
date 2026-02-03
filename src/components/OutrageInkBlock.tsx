@@ -163,35 +163,43 @@ export function OutrageInkBlock({
           throw new Error(result.error || 'Failed to generate image');
         }
 
+        const imageUrl = result.imageUrl;
+
         // Save to outrage_ink
         if (ink) {
-          await supabase
+          const { error: updateError } = await supabase
             .from('outrage_ink')
-            .update({ image_url: result.imageUrl, title: newsTitle })
+            .update({ image_url: imageUrl, title: newsTitle, image_prompt: newsTitle })
             .eq('id', ink.id);
+          
+          if (updateError) throw updateError;
         } else {
-          const { data: newInk } = await supabase
+          const { data: newInk, error: insertError } = await supabase
             .from('outrage_ink')
             .insert({ 
               news_item_id: newsItemId, 
-              image_url: result.imageUrl, 
-              title: newsTitle 
+              image_url: imageUrl, 
+              title: newsTitle,
+              image_prompt: newsTitle
             })
             .select()
             .single();
 
+          if (insertError) throw insertError;
+
           // Link to wiki entities
           if (wikiEntityIds.length > 0 && newInk) {
-            await supabase.from('outrage_ink_entities').insert(
+            const { error: linkError } = await supabase.from('outrage_ink_entities').insert(
               wikiEntityIds.map(entityId => ({
                 outrage_ink_id: newInk.id,
                 wiki_entity_id: entityId
               }))
             );
+            if (linkError) console.error('Failed to link entities:', linkError);
           }
         }
 
-        return result.imageUrl;
+        return imageUrl;
       } finally {
         setIsGenerating(false);
       }
@@ -201,6 +209,7 @@ export function OutrageInkBlock({
       queryClient.invalidateQueries({ queryKey: ['outrage-ink', newsItemId] });
     },
     onError: (e) => {
+      console.error('Generate mutation error:', e);
       toast.error(e instanceof Error ? e.message : 'Generation failed');
     }
   });
