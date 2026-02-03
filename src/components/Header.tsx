@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, Clock, Menu, X, Globe, Palette } from "lucide-react";
+import { BookOpen, Clock, Menu, X, Globe, Palette, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -46,6 +46,12 @@ export function Header() {
               <span>Ink Abyss</span>
             </Button>
           </Link>
+          <Link to="/media-calendar">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <Calendar className="w-4 h-4" />
+              <span>{t('nav.calendar')}</span>
+            </Button>
+          </Link>
           <LanguageSwitcher />
           {/*    <Link to="/admin">
             <Button variant="outline" size="sm" className="gap-2">
@@ -84,6 +90,12 @@ export function Header() {
               <Button variant="ghost" className="w-full justify-start gap-3">
                 <Palette className="w-4 h-4" />
                 Ink Abyss
+              </Button>
+            </Link>
+            <Link to="/media-calendar" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start gap-3">
+                <Calendar className="w-4 h-4" />
+                {t('nav.calendar')}
               </Button>
             </Link>
             <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>

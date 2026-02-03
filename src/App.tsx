@@ -7,6 +7,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { GDPRConsent } from "@/components/GDPRConsent";
 import Index from "./pages/Index";
 import CalendarPage from "./pages/CalendarPage";
+import PublicCalendarPage from "./pages/PublicCalendarPage";
 import DateStoriesPage from "./pages/DateStoriesPage";
 import ReadPage from "./pages/ReadPage";
 import ChapterPage from "./pages/ChapterPage";
@@ -41,6 +42,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/media-calendar" element={<PublicCalendarPage />} />
             <Route path="/date/:date" element={<DateStoriesPage />} />
             <Route path="/chapters" element={<ChaptersPage />} />
             <Route path="/volumes" element={<VolumesPage />} />
