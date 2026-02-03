@@ -1036,6 +1036,7 @@ export type Database = {
           news_auto_retell_enabled: boolean | null
           news_auto_tweets_enabled: boolean | null
           news_dialogue_count: number | null
+          news_feed_page_size: number | null
           news_retell_ratio: number | null
           news_tweet_count: number | null
           openai_api_key: string | null
@@ -1079,6 +1080,7 @@ export type Database = {
           news_auto_retell_enabled?: boolean | null
           news_auto_tweets_enabled?: boolean | null
           news_dialogue_count?: number | null
+          news_feed_page_size?: number | null
           news_retell_ratio?: number | null
           news_tweet_count?: number | null
           openai_api_key?: string | null
@@ -1122,6 +1124,7 @@ export type Database = {
           news_auto_retell_enabled?: boolean | null
           news_auto_tweets_enabled?: boolean | null
           news_dialogue_count?: number | null
+          news_feed_page_size?: number | null
           news_retell_ratio?: number | null
           news_tweet_count?: number | null
           openai_api_key?: string | null

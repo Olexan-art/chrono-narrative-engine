@@ -1,5 +1,5 @@
-import { memo, useCallback, useEffect, useRef } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 40;
 
 interface NewsItem {
   id: string;
@@ -35,6 +35,19 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
   const { t, language } = useLanguage();
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  
+  // Fetch page size from settings
+  const { data: pageSize = DEFAULT_PAGE_SIZE } = useQuery({
+    queryKey: ['news-feed-page-size'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('settings')
+        .select('news_feed_page_size')
+        .single();
+      return data?.news_feed_page_size || DEFAULT_PAGE_SIZE;
+    },
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  });
 
   const {
     data,
@@ -44,11 +57,11 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
     isLoading,
     isError,
   } = useInfiniteQuery({
-    queryKey: ['infinite-news-feed', language],
+    queryKey: ['infinite-news-feed', language, pageSize],
     queryFn: async ({ pageParam = 0 }) => {
       // Fetch more items to allow weighted distribution
       // Target distribution: 50% USA, 20% PL, 20% UA, 10% IN
-      const fetchSize = PAGE_SIZE * 5; // Fetch more to select from
+      const fetchSize = pageSize * 5; // Fetch more to select from
       const from = pageParam * fetchSize;
       const to = from + fetchSize - 1;
 
@@ -82,9 +95,9 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
       }
 
       // Calculate target counts: 50% USA, 25% PL, 25% UA
-      const targetUs = Math.ceil(PAGE_SIZE * 0.5);  // 10
-      const targetPl = Math.ceil(PAGE_SIZE * 0.25); // 5
-      const targetUa = Math.ceil(PAGE_SIZE * 0.25); // 5
+      const targetUs = Math.ceil(pageSize * 0.5);
+      const targetPl = Math.ceil(pageSize * 0.25);
+      const targetUa = Math.ceil(pageSize * 0.25);
 
       // Take proportional amounts from each country
       const selected: NewsItem[] = [
@@ -94,7 +107,7 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
       ];
 
       // Fill remaining slots if some countries don't have enough
-      const remaining = PAGE_SIZE - selected.length;
+      const remaining = pageSize - selected.length;
       if (remaining > 0) {
         const allRemaining = [
           ...byCountry.US.slice(targetUs),
@@ -112,7 +125,7 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
       });
 
       return {
-        items: selected.slice(0, PAGE_SIZE),
+        items: selected.slice(0, pageSize),
         totalCount: count || 0,
         nextPage: (items?.length || 0) === fetchSize ? pageParam + 1 : undefined,
       };
