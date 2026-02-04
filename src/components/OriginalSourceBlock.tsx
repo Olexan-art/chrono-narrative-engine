@@ -86,9 +86,23 @@ export function OriginalSourceBlock({
     : (language === 'en' ? 'Show' : language === 'pl' ? 'Pokaż' : 'Показати');
 
   return (
-    <Card className={`bg-muted/30 border-dashed ${className}`}>
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader className="pb-2">
+    <Card className={`bg-muted/30 border-dashed relative overflow-hidden ${className}`}>
+      {/* Watermark logo */}
+      {logoUrl && (
+        <div 
+          className="absolute top-4 right-4 pointer-events-none z-0"
+          style={{ width: '35%', opacity: 0.15 }}
+        >
+          <img 
+            src={logoUrl} 
+            alt=""
+            className="w-full h-auto object-contain"
+            loading="lazy"
+          />
+        </div>
+      )}
+      <Collapsible defaultOpen={true}>
+        <CardHeader className="pb-2 relative z-10">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
               <FileText className="w-4 h-4" />
