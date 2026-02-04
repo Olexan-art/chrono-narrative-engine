@@ -670,6 +670,9 @@ export default function NewsArticlePage() {
                 sourceUrl={article.url}
                 sourceName={article.feed?.name}
                 className="mt-6"
+                isAdmin={isAdminAuthenticated}
+                newsId={article.id}
+                onContentUpdate={() => queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] })}
               />
 
               {/* Related Entities News - before original link */}
