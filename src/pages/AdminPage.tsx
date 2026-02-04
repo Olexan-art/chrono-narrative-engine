@@ -33,6 +33,7 @@ import { WikiEntitiesPanel } from "@/components/admin/WikiEntitiesPanel";
 import { NewsSearchPanel } from "@/components/admin/NewsSearchPanel";
 import { NewsCalendarPanel } from "@/components/admin/NewsCalendarPanel";
 import { ImagesManagementPanel } from "@/components/admin/ImagesManagementPanel";
+import { BulkScrapePanel } from "@/components/admin/BulkScrapePanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -855,6 +856,10 @@ export default function AdminPage() {
               <Image className="w-4 h-4 text-rose-500" />
               Картинки
             </TabsTrigger>
+            <TabsTrigger value="bulk-scrape" className="gap-2">
+              <FileText className="w-4 h-4 text-cyan-500" />
+              Парсинг
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               Налаштування
@@ -951,6 +956,10 @@ export default function AdminPage() {
 
           <TabsContent value="images" className="mt-6">
             <ImagesManagementPanel />
+          </TabsContent>
+
+          <TabsContent value="bulk-scrape" className="mt-6">
+            <BulkScrapePanel password={password} />
           </TabsContent>
         </Tabs>
       </main>
