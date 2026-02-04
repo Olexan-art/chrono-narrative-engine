@@ -856,6 +856,10 @@ export default function AdminPage() {
               <Image className="w-4 h-4 text-rose-500" />
               Картинки
             </TabsTrigger>
+            <TabsTrigger value="bulk-scrape" className="gap-2">
+              <FileText className="w-4 h-4 text-cyan-500" />
+              Парсинг
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               Налаштування
