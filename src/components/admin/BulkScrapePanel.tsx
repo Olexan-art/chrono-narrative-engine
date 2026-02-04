@@ -296,8 +296,8 @@ export function BulkScrapePanel({ password }: Props) {
             </div>
             <Progress value={progressPercent} className="h-2" />
             <div className="flex items-center justify-between text-sm">
-              <span className="text-green-500">✓ {progress.succeeded} успішно</span>
-              <span className="text-red-500">✗ {progress.failed} помилок</span>
+              <span className="text-primary">✓ {progress.succeeded} успішно</span>
+              <span className="text-destructive">✗ {progress.failed} помилок</span>
             </div>
             {progress.currentUrl && (
               <p className="text-xs text-muted-foreground truncate">
