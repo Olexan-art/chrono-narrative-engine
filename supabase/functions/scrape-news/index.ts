@@ -244,15 +244,48 @@ serve(async (req) => {
     console.log('Domain:', domain);
     console.log('Has source config:', !!sourceConfig);
 
-    // Fetch the page
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9,uk;q=0.8',
-        'Cache-Control': 'no-cache',
+    // User-Agent rotation for 403 bypass
+    const USER_AGENTS = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+    ];
+    const randomUA = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+
+    // Fetch with retries for 403
+    const fetchWithRetry = async (retries = 2): Promise<Response> => {
+      for (let i = 0; i <= retries; i++) {
+        const ua = i === 0 ? randomUA : USER_AGENTS[i % USER_AGENTS.length];
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': ua,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9,uk;q=0.8,pl;q=0.7',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1',
+            'Referer': 'https://www.google.com/',
+          }
+        });
+        
+        if (response.ok) return response;
+        if (response.status === 403 && i < retries) {
+          console.log(`Retry ${i + 1}/${retries} for 403 with different UA`);
+          await new Promise(r => setTimeout(r, 500 * (i + 1)));
+          continue;
+        }
+        return response;
       }
-    });
+      throw new Error('All retries exhausted');
+    };
+    
+    const response = await fetchWithRetry();
 
     if (!response.ok) {
       throw new Error(`Failed to fetch URL: ${response.status}`);
