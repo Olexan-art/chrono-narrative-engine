@@ -120,7 +120,7 @@ export function OriginalSourceBlock({
           </div>
         </CardHeader>
         <CollapsibleContent>
-          <CardContent className="pt-0 space-y-3">
+          <CardContent className="pt-0 space-y-3 relative z-10">
             {paragraphs.map((p, i) => (
               <p key={i} className="text-sm text-muted-foreground leading-relaxed">
                 {p}
