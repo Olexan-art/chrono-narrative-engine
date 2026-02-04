@@ -204,12 +204,12 @@ export function BulkScrapePanel({ password }: Props) {
           </CardContent>
         </Card>
         
-        <Card className="cosmic-card border-green-500/30">
+        <Card className="cosmic-card border-primary/30">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-green-500" />
+              <CheckCircle2 className="w-5 h-5 text-primary" />
               <div>
-                <p className="text-2xl font-bold text-green-500">{stats?.withContent || 0}</p>
+                <p className="text-2xl font-bold text-primary">{stats?.withContent || 0}</p>
                 <p className="text-xs text-muted-foreground">З original_content</p>
               </div>
             </div>
