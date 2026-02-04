@@ -60,6 +60,34 @@ async function autoRetellNews(newsId: string, supabaseUrl: string): Promise<void
   }
 }
 
+// Helper to scrape full article content
+async function scrapeArticleContent(url: string, supabaseUrl: string): Promise<string | null> {
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/scrape-news`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+      },
+      body: JSON.stringify({ url })
+    });
+    
+    if (!response.ok) {
+      console.error(`Scrape failed for ${url}: ${response.status}`);
+      return null;
+    }
+    
+    const result = await response.json();
+    if (result.success && result.data?.content) {
+      return result.data.content.slice(0, 10000);
+    }
+    return null;
+  } catch (error) {
+    console.error(`Scrape error for ${url}:`, error);
+    return null;
+  }
+}
+
 interface RSSItem {
   title: string;
   link: string;
