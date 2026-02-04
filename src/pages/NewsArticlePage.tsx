@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
-import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages, Share2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages, Share2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +35,7 @@ export default function NewsArticlePage() {
   const { t, language } = useLanguage();
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { isAuthenticated: isAdminAuthenticated, password: adminPassword } = useAdminStore();
 
   // Fetch ONLY availability flags via admin backend (no secret keys exposed to the client)
@@ -342,6 +343,37 @@ export default function NewsArticlePage() {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Error translating');
+    }
+  });
+
+  // Delete news mutation - Admin only
+  const deleteNewsMutation = useMutation({
+    mutationFn: async () => {
+      if (!article) throw new Error('No article');
+      
+      // First delete related entities
+      await supabase
+        .from('news_wiki_entities')
+        .delete()
+        .eq('news_item_id', article.id);
+      
+      // Delete the news item itself
+      const { error } = await supabase
+        .from('news_rss_items')
+        .delete()
+        .eq('id', article.id);
+      
+      if (error) throw error;
+      
+      return article.id;
+    },
+    onSuccess: () => {
+      toast.success(language === 'en' ? 'Article deleted' : language === 'pl' ? 'Artykuł usunięty' : 'Новину видалено');
+      // Navigate back to country news page
+      navigate(`/news/${country}`);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Error deleting article');
     }
   });
 
@@ -889,6 +921,49 @@ export default function NewsArticlePage() {
                       {(retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending)
                         ? (language === 'en' ? 'Processing...' : language === 'pl' ? 'Przetwarzanie...' : 'Обробка...')
                         : (language === 'en' ? 'Run Full Retelling' : language === 'pl' ? 'Uruchom pełny przekaz' : 'Запустити повний переказ')}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Delete Article Card - Admin only, danger zone */}
+                <Card className="border-destructive/30 bg-destructive/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2 text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                      {language === 'en' ? 'Delete Article' : language === 'pl' ? 'Usuń artykuł' : 'Видалити новину'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'en' 
+                        ? 'Permanently delete this article and all related data' 
+                        : language === 'pl' 
+                        ? 'Trwale usuń ten artykuł i wszystkie powiązane dane'
+                        : 'Назавжди видалити цю новину та всі пов\'язані дані'}
+                    </p>
+                    <Button 
+                      className="w-full gap-2"
+                      variant="destructive"
+                      onClick={() => {
+                        const confirmMsg = language === 'en' 
+                          ? 'Are you sure you want to delete this article? This cannot be undone.' 
+                          : language === 'pl' 
+                          ? 'Czy na pewno chcesz usunąć ten artykuł? Tej operacji nie można cofnąć.'
+                          : 'Ви впевнені, що хочете видалити цю новину? Цю дію неможливо скасувати.';
+                        if (window.confirm(confirmMsg)) {
+                          deleteNewsMutation.mutate();
+                        }
+                      }}
+                      disabled={deleteNewsMutation.isPending}
+                    >
+                      {deleteNewsMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                      {deleteNewsMutation.isPending 
+                        ? (language === 'en' ? 'Deleting...' : language === 'pl' ? 'Usuwanie...' : 'Видалення...') 
+                        : (language === 'en' ? 'Delete Forever' : language === 'pl' ? 'Usuń na zawsze' : 'Видалити назавжди')}
                     </Button>
                   </CardContent>
                 </Card>
