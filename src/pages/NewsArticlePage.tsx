@@ -972,6 +972,47 @@ export default function NewsArticlePage() {
                   </CardContent>
                 </Card>
 
+                {/* Scrape Full Article Card - Admin only */}
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Download className="w-4 h-4 text-primary" />
+                      {language === 'en' ? 'Scrape Full Article' : language === 'pl' ? 'Pobierz pełny artykuł' : 'Спарсити повний текст'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'en' 
+                        ? 'Fetch full content from source URL and save to original_content' 
+                        : language === 'pl' 
+                        ? 'Pobierz pełną treść z URL źródła i zapisz do original_content'
+                        : 'Завантажити повний текст з URL джерела та зберегти в original_content'}
+                    </p>
+                    {article.original_content && (
+                      <Badge variant="outline" className="text-xs">
+                        {language === 'en' ? 'Has content' : language === 'pl' ? 'Ma treść' : 'Є контент'}: {article.original_content.length} {language === 'en' ? 'chars' : language === 'pl' ? 'znaków' : 'символів'}
+                      </Badge>
+                    )}
+                    <Button 
+                      className="w-full gap-2"
+                      variant="outline"
+                      onClick={() => scrapeNewsMutation.mutate()}
+                      disabled={scrapeNewsMutation.isPending}
+                    >
+                      {scrapeNewsMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                      {scrapeNewsMutation.isPending 
+                        ? (language === 'en' ? 'Scraping...' : language === 'pl' ? 'Pobieranie...' : 'Парсинг...') 
+                        : article.original_content 
+                          ? (language === 'en' ? 'Re-scrape Article' : language === 'pl' ? 'Ponownie pobierz' : 'Перепарсити')
+                          : (language === 'en' ? 'Scrape Now' : language === 'pl' ? 'Pobierz teraz' : 'Спарсити зараз')}
+                    </Button>
+                  </CardContent>
+                </Card>
+
                 {/* Delete Article Card - Admin only, danger zone */}
                 <Card className="border-destructive/30 bg-destructive/5">
                   <CardHeader className="pb-3">
