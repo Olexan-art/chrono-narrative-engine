@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
-import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages, Share2, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages, Share2, Trash2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -343,6 +343,53 @@ export default function NewsArticlePage() {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Error translating');
+    }
+  });
+
+  // Scrape full article content - Admin only
+  const scrapeNewsMutation = useMutation({
+    mutationFn: async () => {
+      if (!article) throw new Error('No article');
+      
+      // Call scrape-news edge function
+      const result = await callEdgeFunction<{
+        success: boolean;
+        data?: {
+          title: string;
+          description: string;
+          content: string;
+          imageUrl: string;
+          sourceUrl: string;
+        };
+        error?: string;
+      }>('scrape-news', { url: article.url });
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to scrape article');
+      }
+      
+      // Save scraped content to original_content
+      const { error } = await supabase
+        .from('news_rss_items')
+        .update({ original_content: result.data.content })
+        .eq('id', article.id);
+      
+      if (error) throw error;
+      
+      return result.data;
+    },
+    onSuccess: (data) => {
+      toast.success(
+        language === 'en' 
+          ? `Scraped ${data.content.length} characters` 
+          : language === 'pl' 
+          ? `Pobrano ${data.content.length} znaków`
+          : `Спарсено ${data.content.length} символів`
+      );
+      queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Error scraping article');
     }
   });
 
@@ -921,6 +968,47 @@ export default function NewsArticlePage() {
                       {(retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending)
                         ? (language === 'en' ? 'Processing...' : language === 'pl' ? 'Przetwarzanie...' : 'Обробка...')
                         : (language === 'en' ? 'Run Full Retelling' : language === 'pl' ? 'Uruchom pełny przekaz' : 'Запустити повний переказ')}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Scrape Full Article Card - Admin only */}
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Download className="w-4 h-4 text-primary" />
+                      {language === 'en' ? 'Scrape Full Article' : language === 'pl' ? 'Pobierz pełny artykuł' : 'Спарсити повний текст'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'en' 
+                        ? 'Fetch full content from source URL and save to original_content' 
+                        : language === 'pl' 
+                        ? 'Pobierz pełną treść z URL źródła i zapisz do original_content'
+                        : 'Завантажити повний текст з URL джерела та зберегти в original_content'}
+                    </p>
+                    {article.original_content && (
+                      <Badge variant="outline" className="text-xs">
+                        {language === 'en' ? 'Has content' : language === 'pl' ? 'Ma treść' : 'Є контент'}: {article.original_content.length} {language === 'en' ? 'chars' : language === 'pl' ? 'znaków' : 'символів'}
+                      </Badge>
+                    )}
+                    <Button 
+                      className="w-full gap-2"
+                      variant="outline"
+                      onClick={() => scrapeNewsMutation.mutate()}
+                      disabled={scrapeNewsMutation.isPending}
+                    >
+                      {scrapeNewsMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                      {scrapeNewsMutation.isPending 
+                        ? (language === 'en' ? 'Scraping...' : language === 'pl' ? 'Pobieranie...' : 'Парсинг...') 
+                        : article.original_content 
+                          ? (language === 'en' ? 'Re-scrape Article' : language === 'pl' ? 'Ponownie pobierz' : 'Перепарсити')
+                          : (language === 'en' ? 'Scrape Now' : language === 'pl' ? 'Pobierz teraz' : 'Спарсити зараз')}
                     </Button>
                   </CardContent>
                 </Card>
