@@ -35,6 +35,7 @@ export default function NewsArticlePage() {
   const { t, language } = useLanguage();
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { isAuthenticated: isAdminAuthenticated, password: adminPassword } = useAdminStore();
 
   // Fetch ONLY availability flags via admin backend (no secret keys exposed to the client)
