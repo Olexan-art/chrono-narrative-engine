@@ -19,9 +19,20 @@ export function OriginalSourceBlock({
   className = "" 
 }: OriginalSourceBlockProps) {
   const { language } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
   
   if (!originalContent || originalContent.length < 50) return null;
+  
+  // Extract domain for logo
+  const getDomain = (url: string): string => {
+    try {
+      return new URL(url).hostname.replace(/^www\./, '');
+    } catch {
+      return '';
+    }
+  };
+  
+  const domain = getDomain(sourceUrl);
+  const logoUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : null;
   
   // Truncate to 2000 characters (doubled)
   const truncatedContent = originalContent.length > 2000 
