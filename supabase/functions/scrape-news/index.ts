@@ -198,9 +198,78 @@ function removeElements(html: string, selectors: string[]): string {
   return result;
 }
 
+// Decode ALL HTML entities (numeric and named)
+function decodeHtmlEntities(text: string): string {
+  // Decode numeric entities (&#322; &#261; &#380; etc.)
+  let decoded = text.replace(/&#(\d+);/g, (_, code) => {
+    return String.fromCharCode(parseInt(code, 10));
+  });
+  
+  // Decode hex entities (&#x142; etc.)
+  decoded = decoded.replace(/&#x([0-9A-Fa-f]+);/g, (_, code) => {
+    return String.fromCharCode(parseInt(code, 16));
+  });
+  
+  // Named entities map
+  const namedEntities: Record<string, string> = {
+    'nbsp': ' ',
+    'amp': '&',
+    'lt': '<',
+    'gt': '>',
+    'quot': '"',
+    'apos': "'",
+    'ndash': '\u2013',
+    'mdash': '\u2014',
+    'lsquo': '\u2018',
+    'rsquo': '\u2019',
+    'ldquo': '\u201C',
+    'rdquo': '\u201D',
+    'hellip': '…',
+    'copy': '©',
+    'reg': '®',
+    'trade': '™',
+    'euro': '€',
+    'pound': '£',
+    'yen': '¥',
+    'cent': '¢',
+    'deg': '°',
+    'plusmn': '±',
+    'times': '×',
+    'divide': '÷',
+    'frac12': '½',
+    'frac14': '¼',
+    'frac34': '¾',
+    'para': '¶',
+    'sect': '§',
+    'bull': '•',
+    'middot': '·',
+    'iexcl': '¡',
+    'iquest': '¿',
+    'agrave': 'à', 'aacute': 'á', 'acirc': 'â', 'atilde': 'ã', 'auml': 'ä', 'aring': 'å',
+    'egrave': 'è', 'eacute': 'é', 'ecirc': 'ê', 'euml': 'ë',
+    'igrave': 'ì', 'iacute': 'í', 'icirc': 'î', 'iuml': 'ï',
+    'ograve': 'ò', 'oacute': 'ó', 'ocirc': 'ô', 'otilde': 'õ', 'ouml': 'ö',
+    'ugrave': 'ù', 'uacute': 'ú', 'ucirc': 'û', 'uuml': 'ü',
+    'ntilde': 'ñ', 'ccedil': 'ç', 'szlig': 'ß',
+    'Agrave': 'À', 'Aacute': 'Á', 'Acirc': 'Â', 'Atilde': 'Ã', 'Auml': 'Ä', 'Aring': 'Å',
+    'Egrave': 'È', 'Eacute': 'É', 'Ecirc': 'Ê', 'Euml': 'Ë',
+    'Igrave': 'Ì', 'Iacute': 'Í', 'Icirc': 'Î', 'Iuml': 'Ï',
+    'Ograve': 'Ò', 'Oacute': 'Ó', 'Ocirc': 'Ô', 'Otilde': 'Õ', 'Ouml': 'Ö',
+    'Ugrave': 'Ù', 'Uacute': 'Ú', 'Ucirc': 'Û', 'Uuml': 'Ü',
+    'Ntilde': 'Ñ', 'Ccedil': 'Ç',
+  };
+  
+  // Decode named entities
+  decoded = decoded.replace(/&([a-zA-Z]+);/g, (match, name) => {
+    return namedEntities[name] || match;
+  });
+  
+  return decoded;
+}
+
 // Clean HTML to plain text
 function htmlToText(html: string): string {
-  return html
+  let text = html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
@@ -210,16 +279,11 @@ function htmlToText(html: string): string {
     .replace(/<nav[\s\S]*?<\/nav>/gi, '')
     .replace(/<footer[\s\S]*?<\/footer>/gi, '')
     .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, '/')
     .replace(/\s+/g, ' ')
     .trim();
+  
+  // Decode all HTML entities
+  return decodeHtmlEntities(text);
 }
 
 serve(async (req) => {
