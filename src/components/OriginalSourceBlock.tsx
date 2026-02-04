@@ -87,8 +87,8 @@ export function OriginalSourceBlock({
       {/* Watermark logo */}
       {logoUrl && (
         <div 
-          className="absolute top-4 right-4 pointer-events-none z-0"
-          style={{ width: '35%', opacity: 0.15 }}
+          className="absolute bottom-4 right-4 pointer-events-none z-0"
+          style={{ width: '30%', opacity: 0.12 }}
         >
           <img 
             src={logoUrl} 
