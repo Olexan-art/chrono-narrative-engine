@@ -346,6 +346,40 @@ export default function NewsArticlePage() {
     }
   });
 
+  // Navigate hook for redirect after delete
+  const navigate = useNavigate();
+
+  // Delete news mutation - Admin only
+  const deleteNewsMutation = useMutation({
+    mutationFn: async () => {
+      if (!article) throw new Error('No article');
+      
+      // First delete related entities
+      await supabase
+        .from('news_wiki_entities')
+        .delete()
+        .eq('news_item_id', article.id);
+      
+      // Delete the news item itself
+      const { error } = await supabase
+        .from('news_rss_items')
+        .delete()
+        .eq('id', article.id);
+      
+      if (error) throw error;
+      
+      return article.id;
+    },
+    onSuccess: () => {
+      toast.success(language === 'en' ? 'Article deleted' : language === 'pl' ? 'Artykuł usunięty' : 'Новину видалено');
+      // Navigate back to country news page
+      navigate(`/news/${country}`);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Error deleting article');
+    }
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
