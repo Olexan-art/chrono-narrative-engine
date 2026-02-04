@@ -346,9 +346,6 @@ export default function NewsArticlePage() {
     }
   });
 
-  // Navigate hook for redirect after delete
-  const navigate = useNavigate();
-
   // Delete news mutation - Admin only
   const deleteNewsMutation = useMutation({
     mutationFn: async () => {
