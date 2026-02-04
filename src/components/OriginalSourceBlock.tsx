@@ -23,10 +23,40 @@ export function OriginalSourceBlock({
   
   if (!originalContent || originalContent.length < 50) return null;
   
-  // Truncate to 1000 characters
-  const truncatedContent = originalContent.length > 1000 
-    ? originalContent.slice(0, 1000) + '...' 
+  // Truncate to 2000 characters (doubled)
+  const truncatedContent = originalContent.length > 2000 
+    ? originalContent.slice(0, 2000) + '...' 
     : originalContent;
+  
+  // Format content for readability: split into paragraphs
+  const formatContent = (text: string) => {
+    // Split by double newlines or long sentences
+    const paragraphs = text
+      .split(/\n\n+/)
+      .flatMap(p => {
+        // If paragraph is too long, split by sentences
+        if (p.length > 400) {
+          const sentences = p.split(/(?<=[.!?])\s+/);
+          const chunks: string[] = [];
+          let current = '';
+          for (const s of sentences) {
+            if ((current + ' ' + s).length > 350 && current) {
+              chunks.push(current.trim());
+              current = s;
+            } else {
+              current = current ? current + ' ' + s : s;
+            }
+          }
+          if (current) chunks.push(current.trim());
+          return chunks;
+        }
+        return [p];
+      })
+      .filter(p => p.trim().length > 0);
+    return paragraphs;
+  };
+  
+  const paragraphs = formatContent(truncatedContent);
   
   const title = language === 'en' 
     ? 'Original Source' 
