@@ -60,6 +60,34 @@ async function autoRetellNews(newsId: string, supabaseUrl: string): Promise<void
   }
 }
 
+// Helper to scrape full article content
+async function scrapeArticleContent(url: string, supabaseUrl: string): Promise<string | null> {
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/scrape-news`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+      },
+      body: JSON.stringify({ url })
+    });
+    
+    if (!response.ok) {
+      console.error(`Scrape failed for ${url}: ${response.status}`);
+      return null;
+    }
+    
+    const result = await response.json();
+    if (result.success && result.data?.content) {
+      return result.data.content.slice(0, 10000);
+    }
+    return null;
+  } catch (error) {
+    console.error(`Scrape error for ${url}:`, error);
+    return null;
+  }
+}
+
 interface RSSItem {
   title: string;
   link: string;
@@ -433,7 +461,15 @@ serve(async (req) => {
           
           // Store original RSS content for AI retelling
           const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
-          const originalContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
+          const rssContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
+          
+          // Priority scraping: fetch full article content first
+          let originalContent = rssContent || originalDescription;
+          const scrapedContent = await scrapeArticleContent(item.link, supabaseUrl);
+          if (scrapedContent && scrapedContent.length > (originalContent?.length || 0)) {
+            originalContent = scrapedContent;
+            console.log(`Scraped full content for ${item.link}: ${scrapedContent.length} chars`);
+          }
           
           const { error: insertError } = await supabase
             .from('news_rss_items')
@@ -445,9 +481,9 @@ serve(async (req) => {
               title_en: decodeHTMLEntities(item.title).slice(0, 500),
               description: originalDescription,
               description_en: originalDescription,
-              content: originalContent,
-              content_en: originalContent,
-              original_content: originalContent || originalDescription, // Store original for AI retelling
+              content: rssContent,
+              content_en: rssContent,
+              original_content: originalContent, // Store scraped/original for AI retelling
               url: item.link,
               slug: slug,
               image_url: item.enclosure?.url || null,
@@ -561,7 +597,15 @@ serve(async (req) => {
           
           // Store original RSS content for AI retelling
           const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
-          const originalContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
+          const rssContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
+          
+          // Priority scraping: fetch full article content first
+          let originalContent = rssContent || originalDescription;
+          const scrapedContent = await scrapeArticleContent(item.link, supabaseUrl);
+          if (scrapedContent && scrapedContent.length > (originalContent?.length || 0)) {
+            originalContent = scrapedContent;
+            console.log(`Scraped full content for ${item.link}: ${scrapedContent.length} chars`);
+          }
           
           const { error: insertError } = await supabase
             .from('news_rss_items')
@@ -573,9 +617,9 @@ serve(async (req) => {
               title_en: decodeHTMLEntities(item.title).slice(0, 500), // English is the default
               description: originalDescription,
               description_en: originalDescription,
-              content: originalContent,
-              content_en: originalContent,
-              original_content: originalContent || originalDescription, // Store original for AI retelling
+              content: rssContent,
+              content_en: rssContent,
+              original_content: originalContent, // Store scraped/original for AI retelling
               url: item.link,
               image_url: item.enclosure?.url || null,
               category: feed.category,

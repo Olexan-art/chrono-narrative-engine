@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { FileText, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -19,9 +18,20 @@ export function OriginalSourceBlock({
   className = "" 
 }: OriginalSourceBlockProps) {
   const { language } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
   
   if (!originalContent || originalContent.length < 50) return null;
+  
+  // Extract domain for logo
+  const getDomain = (url: string): string => {
+    try {
+      return new URL(url).hostname.replace(/^www\./, '');
+    } catch {
+      return '';
+    }
+  };
+  
+  const domain = getDomain(sourceUrl);
+  const logoUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : null;
   
   // Truncate to 2000 characters (doubled)
   const truncatedContent = originalContent.length > 2000 
@@ -70,14 +80,26 @@ export function OriginalSourceBlock({
     ? 'Przeczytaj pełny artykuł' 
     : 'Читати повністю на джерелі';
 
-  const toggleLabel = isOpen 
-    ? (language === 'en' ? 'Hide' : language === 'pl' ? 'Ukryj' : 'Сховати')
-    : (language === 'en' ? 'Show' : language === 'pl' ? 'Pokaż' : 'Показати');
+  const toggleLabel = language === 'en' ? 'Toggle' : language === 'pl' ? 'Przełącz' : 'Згорнути';
 
   return (
-    <Card className={`bg-muted/30 border-dashed ${className}`}>
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader className="pb-2">
+    <Card className={`bg-muted/30 border-dashed relative overflow-hidden ${className}`}>
+      {/* Watermark logo */}
+      {logoUrl && (
+        <div 
+          className="absolute top-4 right-4 pointer-events-none z-0"
+          style={{ width: '35%', opacity: 0.15 }}
+        >
+          <img 
+            src={logoUrl} 
+            alt=""
+            className="w-full h-auto object-contain"
+            loading="lazy"
+          />
+        </div>
+      )}
+      <Collapsible defaultOpen={true}>
+        <CardHeader className="pb-2 relative z-10">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
               <FileText className="w-4 h-4" />
@@ -89,13 +111,12 @@ export function OriginalSourceBlock({
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
                 {toggleLabel}
-                {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </Button>
             </CollapsibleTrigger>
           </div>
         </CardHeader>
         <CollapsibleContent>
-          <CardContent className="pt-0 space-y-3">
+          <CardContent className="pt-0 space-y-3 relative z-10">
             {paragraphs.map((p, i) => (
               <p key={i} className="text-sm text-muted-foreground leading-relaxed">
                 {p}
