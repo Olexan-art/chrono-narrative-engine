@@ -927,6 +927,49 @@ export default function NewsArticlePage() {
                     </Button>
                   </CardContent>
                 </Card>
+
+                {/* Delete Article Card - Admin only, danger zone */}
+                <Card className="border-destructive/30 bg-destructive/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2 text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                      {language === 'en' ? 'Delete Article' : language === 'pl' ? 'Usuń artykuł' : 'Видалити новину'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'en' 
+                        ? 'Permanently delete this article and all related data' 
+                        : language === 'pl' 
+                        ? 'Trwale usuń ten artykuł i wszystkie powiązane dane'
+                        : 'Назавжди видалити цю новину та всі пов\'язані дані'}
+                    </p>
+                    <Button 
+                      className="w-full gap-2"
+                      variant="destructive"
+                      onClick={() => {
+                        const confirmMsg = language === 'en' 
+                          ? 'Are you sure you want to delete this article? This cannot be undone.' 
+                          : language === 'pl' 
+                          ? 'Czy na pewno chcesz usunąć ten artykuł? Tej operacji nie można cofnąć.'
+                          : 'Ви впевнені, що хочете видалити цю новину? Цю дію неможливо скасувати.';
+                        if (window.confirm(confirmMsg)) {
+                          deleteNewsMutation.mutate();
+                        }
+                      }}
+                      disabled={deleteNewsMutation.isPending}
+                    >
+                      {deleteNewsMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                      {deleteNewsMutation.isPending 
+                        ? (language === 'en' ? 'Deleting...' : language === 'pl' ? 'Usuwanie...' : 'Видалення...') 
+                        : (language === 'en' ? 'Delete Forever' : language === 'pl' ? 'Usuń na zawsze' : 'Видалити назавжди')}
+                    </Button>
+                  </CardContent>
+                </Card>
               </>
             )}
 
