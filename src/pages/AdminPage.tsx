@@ -957,6 +957,10 @@ export default function AdminPage() {
           <TabsContent value="images" className="mt-6">
             <ImagesManagementPanel />
           </TabsContent>
+
+          <TabsContent value="bulk-scrape" className="mt-6">
+            <BulkScrapePanel password={password} />
+          </TabsContent>
         </Tabs>
       </main>
     </div>
