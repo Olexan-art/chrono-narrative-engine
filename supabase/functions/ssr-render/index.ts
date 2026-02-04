@@ -391,11 +391,11 @@ Deno.serve(async (req) => {
       // News article page: /news/us/slug - include "More from country" and "Other countries" links
       const [, countryCode, slug] = newsArticleMatch;
       
-      // Fetch article and all countries for cross-linking
+      // Fetch article and all countries for cross-linking (include original_content for SSR)
       const [{ data: newsItem }, { data: allCountries }] = await Promise.all([
         supabase
           .from("news_rss_items")
-          .select("*, country:news_countries(*)")
+          .select("*, original_content, country:news_countries(*)")
           .eq("slug", slug)
           .maybeSingle(),
         supabase
@@ -1018,6 +1018,15 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
             `;
           }).join("")}
         </section>
+      ` : ""}
+      
+      ${newsItem.original_content && newsItem.original_content.length > 100 ? `
+        <details>
+          <summary style="cursor:pointer;font-weight:bold;padding:8px 0;">📄 Original Source Content</summary>
+          <blockquote style="background:#f5f5f5;border-left:4px solid #ccc;padding:12px;margin:8px 0;font-size:0.9rem;color:#555;white-space:pre-wrap;">
+            ${escapeHtml(newsItem.original_content.substring(0, 2000))}${newsItem.original_content.length > 2000 ? '...' : ''}
+          </blockquote>
+        </details>
       ` : ""}
       
       ${newsItem.url ? `<p><a href="${escapeHtml(newsItem.url)}" rel="nofollow noopener" target="_blank">Original source</a></p>` : ""}

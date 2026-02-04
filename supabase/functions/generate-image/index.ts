@@ -154,7 +154,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, partId, chapterId, volumeId, imageIndex = 1 } = await req.json();
+    const { prompt, partId, chapterId, volumeId, imageIndex = 1, originalContent } = await req.json();
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -176,7 +176,11 @@ serve(async (req) => {
       gemini_api_key: null
     };
 
-    const enhancedPrompt = `${prompt}. Ultra high resolution, 16:9 aspect ratio, sci-fi digital art style, cosmic atmosphere with deep space blues and cyan glows, cinematic lighting, detailed futuristic elements.`;
+    // Use original_content context if provided for better image generation
+    const contextHint = originalContent 
+      ? ` Context from article: ${originalContent.substring(0, 500)}.`
+      : '';
+    const enhancedPrompt = `${prompt}${contextHint} Ultra high resolution, 16:9 aspect ratio, sci-fi digital art style, cosmic atmosphere with deep space blues and cyan glows, cinematic lighting, detailed futuristic elements.`;
 
     const effectiveProvider = llmSettings.llm_image_provider || llmSettings.llm_provider || 'lovable';
     console.log('Generating image with provider:', effectiveProvider, 'prompt:', prompt.slice(0, 50));
