@@ -112,7 +112,6 @@ export function OriginalSourceBlock({
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
                 {toggleLabel}
-                {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </Button>
             </CollapsibleTrigger>
           </div>
