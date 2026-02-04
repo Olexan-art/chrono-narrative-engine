@@ -391,11 +391,11 @@ Deno.serve(async (req) => {
       // News article page: /news/us/slug - include "More from country" and "Other countries" links
       const [, countryCode, slug] = newsArticleMatch;
       
-      // Fetch article and all countries for cross-linking
+      // Fetch article and all countries for cross-linking (include original_content for SSR)
       const [{ data: newsItem }, { data: allCountries }] = await Promise.all([
         supabase
           .from("news_rss_items")
-          .select("*, country:news_countries(*)")
+          .select("*, original_content, country:news_countries(*)")
           .eq("slug", slug)
           .maybeSingle(),
         supabase

@@ -95,10 +95,12 @@ export function OriginalSourceBlock({
           </div>
         </CardHeader>
         <CollapsibleContent>
-          <CardContent className="pt-0">
-            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-              {truncatedContent}
-            </p>
+          <CardContent className="pt-0 space-y-3">
+            {paragraphs.map((p, i) => (
+              <p key={i} className="text-sm text-muted-foreground leading-relaxed">
+                {p}
+              </p>
+            ))}
             <a 
               href={sourceUrl} 
               target="_blank" 

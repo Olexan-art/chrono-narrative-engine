@@ -384,7 +384,7 @@ serve(async (req) => {
     }
     
     // Final cleanup and limit
-    content = content.slice(0, 5000);
+    content = content.slice(0, 10000);
 
     console.log('Scraped successfully:', { 
       title: title?.slice(0, 50), 
