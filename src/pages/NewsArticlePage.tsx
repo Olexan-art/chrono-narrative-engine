@@ -346,6 +346,53 @@ export default function NewsArticlePage() {
     }
   });
 
+  // Scrape full article content - Admin only
+  const scrapeNewsMutation = useMutation({
+    mutationFn: async () => {
+      if (!article) throw new Error('No article');
+      
+      // Call scrape-news edge function
+      const result = await callEdgeFunction<{
+        success: boolean;
+        data?: {
+          title: string;
+          description: string;
+          content: string;
+          imageUrl: string;
+          sourceUrl: string;
+        };
+        error?: string;
+      }>('scrape-news', { url: article.url });
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to scrape article');
+      }
+      
+      // Save scraped content to original_content
+      const { error } = await supabase
+        .from('news_rss_items')
+        .update({ original_content: result.data.content })
+        .eq('id', article.id);
+      
+      if (error) throw error;
+      
+      return result.data;
+    },
+    onSuccess: (data) => {
+      toast.success(
+        language === 'en' 
+          ? `Scraped ${data.content.length} characters` 
+          : language === 'pl' 
+          ? `Pobrano ${data.content.length} znaków`
+          : `Спарсено ${data.content.length} символів`
+      );
+      queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Error scraping article');
+    }
+  });
+
   // Delete news mutation - Admin only
   const deleteNewsMutation = useMutation({
     mutationFn: async () => {
