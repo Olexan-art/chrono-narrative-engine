@@ -81,9 +81,7 @@ export function OriginalSourceBlock({
     ? 'Przeczytaj pełny artykuł' 
     : 'Читати повністю на джерелі';
 
-  const toggleLabel = isOpen 
-    ? (language === 'en' ? 'Hide' : language === 'pl' ? 'Ukryj' : 'Сховати')
-    : (language === 'en' ? 'Show' : language === 'pl' ? 'Pokaż' : 'Показати');
+  const toggleLabel = language === 'en' ? 'Toggle' : language === 'pl' ? 'Przełącz' : 'Згорнути';
 
   return (
     <Card className={`bg-muted/30 border-dashed relative overflow-hidden ${className}`}>
