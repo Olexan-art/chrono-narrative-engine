@@ -320,14 +320,29 @@ function removeJavaScriptPatterns(text: string): string {
     /=>\s*\{[\s\S]*?\}/gi,
     /\([^)]*\)\s*=>\s*[^;]+;/gi,
     
+    // Variable declarations with localStorage, JSON, etc.
+    /(?:var|let|const)\s+\w+\s*=\s*localStorage\.[^;]+;?/gi,
+    /(?:var|let|const)\s+\w+\s*=\s*JSON\.parse[^;]+;?/gi,
+    /(?:var|let|const)\s+\w+\s*=\s*sessionStorage\.[^;]+;?/gi,
+    /localStorage\.(?:getItem|setItem|removeItem)\s*\([^)]+\)/gi,
+    /sessionStorage\.(?:getItem|setItem|removeItem)\s*\([^)]+\)/gi,
+    /JSON\.(?:parse|stringify)\s*\([^)]+\)/gi,
+    
+    // If statements with JS code
+    /if\s*\([^)]*(?:localStorage|sessionStorage|JSON|window|document)[^)]*\)[^{]*\{?/gi,
+    /if\s*\(\s*(?:var|let|const)/gi,
+    
     // Object/array patterns with JS code
     /\{[^{}]*(?:const|let|var|function|return|if|for|while)[^{}]*\}/gi,
     
     // Common ad/tracking patterns
     /window\.__\w+__/gi,
+    /window\.\w+\s*=\s*\{[^}]+\}/gi,
     /document\.(?:createElement|getElementById|querySelector|head|body)[^;]*;/gi,
     /PUBX_\w+/gi,
+    /pubx[:\w]*/gi,
     /bidder|bidRequest|adSlot|adUnit/gi,
+    /\.pubx\w*/gi,
     
     // Event listeners
     /addEventListener\s*\([^)]+\)/gi,
@@ -345,6 +360,13 @@ function removeJavaScriptPatterns(text: string): string {
     
     // Inline event handlers
     /on\w+\s*=\s*["'][^"']+["']/gi,
+    
+    // Ternary with object access
+    /\?\s*\w+\[["'][^"']+["']\]\s*:/gi,
+    /\w+\s*\?\s*\w+\s*:\s*\w+/gi,
+    
+    // Property access chains that look like code
+    /\w+\.\w+\.\w+\s*[=!<>]+/gi,
   ];
   
   for (const pattern of jsPatterns) {
@@ -356,6 +378,26 @@ function removeJavaScriptPatterns(text: string): string {
   
   // Remove long strings without spaces (likely code)
   cleaned = cleaned.replace(/\S{100,}/g, ' ');
+  
+  // Remove common navigation/UI spam patterns
+  const uiSpamPatterns = [
+    /Open in App/gi,
+    /Popular Searches/gi,
+    /Please try another search/gi,
+    /Popular News More/gi,
+    /Get \d+% Off/gi,
+    /Sign In Free Sign Up/gi,
+    /Free Sign Up/gi,
+    /View all comments?\s*\(\d+\)/gi,
+    // Language selector spam
+    /(?:English\s*){3,}/gi,
+    /(?:English\s*\([^)]+\)\s*)+/gi,
+    /Deutsch\s+Español[^א]+עברית\s+日本語[^ไ]+ไทย[^ह]+हिंदी/gi,
+  ];
+  
+  for (const pattern of uiSpamPatterns) {
+    cleaned = cleaned.replace(pattern, ' ');
+  }
   
   // Clean up multiple spaces
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
