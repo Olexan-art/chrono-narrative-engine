@@ -278,12 +278,77 @@ function htmlToText(html: string): string {
     .replace(/<aside[\s\S]*?<\/aside>/gi, '')
     .replace(/<nav[\s\S]*?<\/nav>/gi, '')
     .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+    .replace(/<svg[\s\S]*?<\/svg>/gi, '')
+    .replace(/<template[\s\S]*?<\/template>/gi, '')
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   
-  // Decode all HTML entities
-  return decodeHtmlEntities(text);
+  // Decode HTML entities first
+  text = decodeHtmlEntities(text);
+  
+  // Remove JavaScript code patterns (ad scripts, tracking code, etc.)
+  text = removeJavaScriptPatterns(text);
+  
+  return text;
+}
+
+// Remove JavaScript code patterns from text
+function removeJavaScriptPatterns(text: string): string {
+  let cleaned = text;
+  
+  // Remove common JS patterns and ad code
+  const jsPatterns = [
+    // Function declarations and calls
+    /\{(?:const|let|var)\s+\w+\s*=[\s\S]*?\}/gi,
+    /function\s*\([^)]*\)\s*\{[\s\S]*?\}/gi,
+    /\(\s*function\s*\([^)]*\)\s*\{[\s\S]*?\}\s*\)/gi,
+    
+    // Arrow functions
+    /=>\s*\{[\s\S]*?\}/gi,
+    /\([^)]*\)\s*=>\s*[^;]+;/gi,
+    
+    // Object/array patterns with JS code
+    /\{[^{}]*(?:const|let|var|function|return|if|for|while)[^{}]*\}/gi,
+    
+    // Common ad/tracking patterns
+    /window\.__\w+__/gi,
+    /document\.(?:createElement|getElementById|querySelector|head|body)[^;]*;/gi,
+    /PUBX_\w+/gi,
+    /bidder|bidRequest|adSlot|adUnit/gi,
+    
+    // Event listeners
+    /addEventListener\s*\([^)]+\)/gi,
+    
+    // JSON-like structures with code
+    /\[\s*\{[^[\]]*(?:function|const|let|var)[^[\]]*\}\s*\]/gi,
+    
+    // Minified JS patterns (long strings of code without spaces)
+    /[a-zA-Z_$][a-zA-Z0-9_$]*\.[a-zA-Z_$][a-zA-Z0-9_$]*\s*=\s*[^.;]{50,}/gi,
+    
+    // Common tracking/analytics code
+    /gtag\s*\([^)]+\)/gi,
+    /fbq\s*\([^)]+\)/gi,
+    /_ga\s*\([^)]+\)/gi,
+    
+    // Inline event handlers
+    /on\w+\s*=\s*["'][^"']+["']/gi,
+  ];
+  
+  for (const pattern of jsPatterns) {
+    cleaned = cleaned.replace(pattern, ' ');
+  }
+  
+  // Remove sequences that look like minified code (many special chars in a row)
+  cleaned = cleaned.replace(/[{}\[\]();=><]+\s*[a-zA-Z_$]+\s*[{}\[\]();=><]+/g, ' ');
+  
+  // Remove long strings without spaces (likely code)
+  cleaned = cleaned.replace(/\S{100,}/g, ' ');
+  
+  // Clean up multiple spaces
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
 }
 
 serve(async (req) => {
