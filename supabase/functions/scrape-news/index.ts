@@ -100,6 +100,18 @@ const SOURCE_CONFIGS: Record<string, {
     contentSelectors: ['.article-section', '.RichText', '.article-body'],
     removeSelectors: ['.article-footer', '.related-articles', '.ad-container'],
   },
+  // Financial sources
+  'investing.com': {
+    contentSelectors: ['.WYSIWYG', '.articlePage', '.article_container', '[data-test="article-body"]', '.article-content'],
+    removeSelectors: [
+      '.related-articles', '.article-footer', '.social-share', '.comments',
+      '.ad-container', '.dfp-ad', '.advertisement', '.sponsored',
+      '.js-article-tools', '.article-tools', '.article-banner',
+      '[class*="pubx"]', '[class*="bidding"]', '[id*="taboola"]', '[id*="outbrain"]',
+      '.instrumentsData', '.relatedInstruments', '.sideBlock',
+      'script', 'noscript', 'iframe', '.disclaimer'
+    ],
+  },
 };
 
 // Get domain from URL
