@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ImagePlus, RefreshCw, Loader2, Sparkles, Palette } from "lucide-react";
+import { useState, useRef } from "react";
+import { ImagePlus, RefreshCw, Loader2, Sparkles, Palette, Upload, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +15,7 @@ interface NewsImageBlockProps {
   keywords?: string[];
   themes?: string[];
   keyPoints?: any[];
+  entities?: Array<{ name: string; entity_type: string; description?: string }>;
   hasRetelling: boolean;
   isAdmin: boolean;
   onImageUpdate?: () => void;
@@ -27,6 +28,15 @@ const IMAGE_STYLES = [
   { value: 'caricature', label: 'Карикатура', labelEn: 'Caricature', labelPl: 'Karykatura', prompt: 'satirical caricature, exaggerated features, political cartoon style, expressive' },
   { value: 'anime', label: 'Аніме', labelEn: 'Anime', labelPl: 'Anime', prompt: '90s anime style, cel-shaded, vibrant colors, dynamic composition' },
   { value: 'noir', label: 'Нуар', labelEn: 'Noir', labelPl: 'Noir', prompt: 'film noir style, dramatic shadows, black and white with high contrast, mysterious atmosphere' },
+  { value: 'pixel', label: 'Піксель-арт', labelEn: 'Pixel Art', labelPl: 'Pixel Art', prompt: 'pixel art style, retro 16-bit graphics, vibrant limited color palette, nostalgic gaming aesthetic' },
+  { value: 'cyberpunk', label: 'Кіберпанк', labelEn: 'Cyberpunk', labelPl: 'Cyberpunk', prompt: 'cyberpunk style, neon lights, futuristic dystopia, high-tech low-life, glowing elements, dark urban' },
+  { value: 'watercolor', label: 'Акварель', labelEn: 'Watercolor', labelPl: 'Akwarela', prompt: 'watercolor painting style, soft flowing colors, artistic brush strokes, delicate washes, artistic impression' },
+  { value: 'impressionism', label: 'Імпресіонізм', labelEn: 'Impressionism', labelPl: 'Impresjonizm', prompt: 'impressionist painting style, visible brush strokes, light and color emphasis, Monet-inspired, soft dreamy' },
+  { value: 'surrealism', label: 'Сюрреалізм', labelEn: 'Surrealism', labelPl: 'Surrealizm', prompt: 'surrealist art style, dreamlike imagery, unexpected juxtapositions, Salvador Dali inspired, bizarre elements' },
+  { value: 'vector', label: 'Vector art', labelEn: 'Vector Art', labelPl: 'Vector Art', prompt: 'clean vector art, flat design, minimal gradients, sharp edges, modern graphic design, geometric shapes' },
+  { value: 'comic', label: 'Комікс', labelEn: 'Comic', labelPl: 'Komiks', prompt: 'comic book style, bold outlines, halftone dots, dynamic action panels, vibrant pop colors, superhero aesthetic' },
+  { value: 'gothic', label: 'Готичний', labelEn: 'Gothic', labelPl: 'Gotycki', prompt: 'gothic art style, dark romantic atmosphere, ornate details, medieval influences, dramatic and moody' },
+  { value: 'vintage', label: 'Вінтаж', labelEn: 'Vintage', labelPl: 'Vintage', prompt: 'vintage retro style, aged paper texture, faded colors, 1950s-1960s aesthetic, nostalgic warm tones' },
 ];
 
 export function NewsImageBlock({
