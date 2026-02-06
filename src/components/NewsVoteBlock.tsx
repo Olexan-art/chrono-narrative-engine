@@ -10,6 +10,7 @@ interface NewsVoteBlockProps {
   dislikes: number;
   className?: string;
   showLabel?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 type VoteStatus = 'majority_likes' | 'majority_dislikes' | 'balanced';
