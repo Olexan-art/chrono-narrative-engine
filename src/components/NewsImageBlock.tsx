@@ -46,13 +46,17 @@ export function NewsImageBlock({
   keywords = [],
   themes = [],
   keyPoints = [],
+  entities = [],
   hasRetelling,
   isAdmin,
   onImageUpdate
 }: NewsImageBlockProps) {
   const { language } = useLanguage();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState('realistic');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getStyleLabel = (style: typeof IMAGE_STYLES[0]) => {
     return language === 'en' ? style.labelEn : language === 'pl' ? style.labelPl : style.label;
