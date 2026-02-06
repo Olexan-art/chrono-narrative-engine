@@ -1,12 +1,13 @@
 import { memo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Palette, ThumbsUp, ArrowRight } from "lucide-react";
+import { Palette, ThumbsUp, ThumbsDown, ArrowRight, Sparkles, Scale } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { cn } from "@/lib/utils";
 
 interface OutrageInkItem {
   id: string;
