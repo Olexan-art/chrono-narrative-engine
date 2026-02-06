@@ -24,6 +24,8 @@ interface NewsItem {
   published_at: string | null;
   slug: string | null;
   category: string | null;
+  likes: number;
+  dislikes: number;
   country: {
     id: string;
     code: string;
