@@ -171,7 +171,7 @@ serve(async (req) => {
     const llmSettings: LLMSettings = settingsData || {
       llm_provider: 'lovable',
       llm_image_provider: null,
-      llm_image_model: 'google/gemini-2.5-flash-image-preview',
+      llm_image_model: 'google/gemini-2.5-flash-image',
       openai_api_key: null,
       gemini_api_key: null
     };
