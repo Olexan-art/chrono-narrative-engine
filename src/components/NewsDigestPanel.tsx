@@ -61,6 +61,12 @@ const CATEGORIES = [
   { value: 'world', label: 'Світ' },
 ];
 
+const SAMPLE_RATIO_OPTIONS = [
+  { value: 1, label: 'Усі новини' },
+  { value: 2, label: 'Кожна 2-а новина' },
+  { value: 3, label: 'Кожна 3-я новина' },
+];
+
 interface Props {
   password: string;
 }
