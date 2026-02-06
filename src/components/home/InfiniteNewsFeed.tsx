@@ -81,6 +81,8 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
           published_at, 
           slug,
           category,
+          likes,
+          dislikes,
           country:news_countries(id, code, name, name_en, flag)
         `, { count: 'exact' })
         .not('slug', 'is', null)
