@@ -317,6 +317,15 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
           <StyleSelector />
           <Button
             variant="secondary"
+            size="icon"
+            className="h-8 w-8 shadow-lg"
+            onClick={onImageUpdate}
+            title={language === 'en' ? 'Refresh' : language === 'pl' ? 'Odśwież' : 'Оновити'}
+          >
+            <RotateCcw className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="secondary"
             size="sm"
             className="gap-2 shadow-lg"
             onClick={handleGenerate}
