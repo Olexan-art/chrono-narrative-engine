@@ -243,6 +243,13 @@ serve(async (req) => {
         cover_image_url: finalImageUrl, 
         cover_image_prompt: prompt 
       }).eq('id', volumeId);
+    } else if (newsId) {
+      // News article image
+      storagePath = `news/${newsId}/cover.png`;
+      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath);
+      
+      // Note: news_rss_items table update is handled by the caller
+      console.log('Generated news image for:', newsId);
     } else {
       // No ID provided, just return the storage URL
       storagePath = `temp/${crypto.randomUUID()}.png`;
