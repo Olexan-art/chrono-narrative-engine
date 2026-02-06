@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ImagePlus, RefreshCw, Loader2, Sparkles } from "lucide-react";
+import { ImagePlus, RefreshCw, Loader2, Sparkles, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { callEdgeFunction } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -19,6 +20,15 @@ interface NewsImageBlockProps {
   onImageUpdate?: () => void;
 }
 
+// Image styles
+const IMAGE_STYLES = [
+  { value: 'realistic', label: 'Реалістичний', labelEn: 'Realistic', labelPl: 'Realistyczny', prompt: 'photorealistic, editorial photography, professional journalism style' },
+  { value: 'illustration', label: 'Ілюстрація', labelEn: 'Illustration', labelPl: 'Ilustracja', prompt: 'digital illustration, editorial art, clean vector-like style, modern design' },
+  { value: 'caricature', label: 'Карикатура', labelEn: 'Caricature', labelPl: 'Karykatura', prompt: 'satirical caricature, exaggerated features, political cartoon style, expressive' },
+  { value: 'anime', label: 'Аніме', labelEn: 'Anime', labelPl: 'Anime', prompt: '90s anime style, cel-shaded, vibrant colors, dynamic composition' },
+  { value: 'noir', label: 'Нуар', labelEn: 'Noir', labelPl: 'Noir', prompt: 'film noir style, dramatic shadows, black and white with high contrast, mysterious atmosphere' },
+];
+
 export function NewsImageBlock({
   imageUrl,
   newsId,
@@ -32,6 +42,11 @@ export function NewsImageBlock({
 }: NewsImageBlockProps) {
   const { language } = useLanguage();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState('realistic');
+
+  const getStyleLabel = (style: typeof IMAGE_STYLES[0]) => {
+    return language === 'en' ? style.labelEn : language === 'pl' ? style.labelPl : style.label;
+  };
 
   const buildPrompt = () => {
     const parts: string[] = [];
@@ -59,8 +74,11 @@ export function NewsImageBlock({
       }
     }
 
-    return `Create a professional news article illustration based on: ${parts.join('. ')}. 
-Style: Modern journalistic photography style, realistic, high quality, editorial photo composition.`;
+    // Get style prompt
+    const styleConfig = IMAGE_STYLES.find(s => s.value === selectedStyle) || IMAGE_STYLES[0];
+
+    return `Create a news article illustration based on: ${parts.join('. ')}. 
+Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
   };
 
   const handleGenerate = async () => {
@@ -75,7 +93,7 @@ Style: Modern journalistic photography style, realistic, high quality, editorial
         error?: string;
       }>('generate-image', {
         prompt,
-        newsId // Pass newsId for tracking
+        newsId
       });
       
       if (!result.success || !result.imageUrl) {
@@ -104,6 +122,23 @@ Style: Modern journalistic photography style, realistic, high quality, editorial
     }
   };
 
+  // Style selector component
+  const StyleSelector = () => (
+    <Select value={selectedStyle} onValueChange={setSelectedStyle}>
+      <SelectTrigger className="w-[140px] h-8 text-xs">
+        <Palette className="w-3 h-3 mr-1" />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {IMAGE_STYLES.map(style => (
+          <SelectItem key={style.value} value={style.value}>
+            {getStyleLabel(style)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
   // No image - show generate button for admin
   if (!imageUrl) {
     if (!isAdmin) return null;
@@ -116,22 +151,25 @@ Style: Modern journalistic photography style, realistic, high quality, editorial
            language === 'pl' ? 'Brak obrazu' : 
            'Зображення відсутнє'}
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={handleGenerate}
-          disabled={isGenerating}
-        >
-          {isGenerating ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <ImagePlus className="w-4 h-4" />
-          )}
-          {language === 'en' ? 'Generate Image' : 
-           language === 'pl' ? 'Generuj obraz' : 
-           'Згенерувати зображення'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <StyleSelector />
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleGenerate}
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <ImagePlus className="w-4 h-4" />
+            )}
+            {language === 'en' ? 'Generate' : 
+             language === 'pl' ? 'Generuj' : 
+             'Згенерувати'}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -154,9 +192,10 @@ Style: Modern journalistic photography style, realistic, high quality, editorial
         </div>
       )}
       
-      {/* Admin regenerate button */}
+      {/* Admin regenerate controls */}
       {isAdmin && (
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3 flex items-center gap-2">
+          <StyleSelector />
           <Button
             variant="secondary"
             size="sm"

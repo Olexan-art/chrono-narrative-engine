@@ -165,8 +165,9 @@ function SettingsPanel({ password }: { password: string }) {
 
   const textProvider = (settings.llm_text_provider || settings.llm_provider || 'lovable') as LLMProvider;
   const imageProvider = (settings.llm_image_provider || settings.llm_provider || 'lovable') as LLMProvider;
-  const availableTextModels = LLM_MODELS[textProvider]?.text || [];
-  const availableImageModels = LLM_MODELS[imageProvider]?.image || [];
+  // Safe access to LLM_MODELS - fall back to empty arrays if provider not found
+  const availableTextModels = (LLM_MODELS as Record<string, { text?: { value: string; label: string }[]; image?: { value: string; label: string }[] }>)[textProvider]?.text || LLM_MODELS.lovable?.text || [];
+  const availableImageModels = (LLM_MODELS as Record<string, { text?: { value: string; label: string }[]; image?: { value: string; label: string }[] }>)[imageProvider]?.image || LLM_MODELS.lovable?.image || [];
 
   return (
     <div className="space-y-6">

@@ -14,12 +14,14 @@ export async function callEdgeFunction<T>(
     body: JSON.stringify(body),
   });
 
+  const data = await response.json().catch(() => ({ error: 'Failed to parse response' }));
+
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    console.error(`Edge function ${functionName} error:`, response.status, data);
+    throw new Error(data.error || `HTTP ${response.status}`);
   }
 
-  return response.json();
+  return data;
 }
 
 export async function fetchNews(date?: string) {
