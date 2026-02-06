@@ -43,7 +43,9 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
           published_at, 
           slug,
           category,
-          content_en
+          content_en,
+          likes,
+          dislikes
         `)
         .eq('country_id', usaCountry.id)
         .not('slug', 'is', null)
