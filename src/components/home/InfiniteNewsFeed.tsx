@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { NewsVoteCompact } from "@/components/NewsVoteBlock";
 
 const DEFAULT_PAGE_SIZE = 40;
 
