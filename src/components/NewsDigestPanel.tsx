@@ -254,14 +254,15 @@ export function NewsDigestPanel({ password }: Props) {
           country_id: selectedCountry,
           name: newFeed.name,
           url: newFeed.url,
-          category: newFeed.category
+          category: newFeed.category,
+          sample_ratio: newFeed.sample_ratio
         });
       
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['news-rss-feeds'] });
-      setNewFeed({ name: '', url: '', category: 'general' });
+      setNewFeed({ name: '', url: '', category: 'general', sample_ratio: 1 });
       setValidationResult(null);
       toast({ title: 'RSS канал додано' });
     },
