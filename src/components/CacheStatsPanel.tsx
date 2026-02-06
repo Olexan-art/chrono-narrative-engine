@@ -252,6 +252,8 @@ export function CacheStatsPanel({ password }: Props) {
       if (!response.ok) throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
 
       const labels: Record<string, string> = {
+        '1hour': '1 годину',
+        '3hours': '3 години',
         '6hours': '6 годин',
         '12hours': '12 годин',
         '24hours': '24 години',
@@ -534,6 +536,8 @@ export function CacheStatsPanel({ password }: Props) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="off">Вимкнено</SelectItem>
+                        <SelectItem value="1hour">1 година</SelectItem>
+                        <SelectItem value="3hours">3 години</SelectItem>
                         <SelectItem value="6hours">6 годин</SelectItem>
                         <SelectItem value="12hours">12 годин</SelectItem>
                         <SelectItem value="24hours">24 години</SelectItem>

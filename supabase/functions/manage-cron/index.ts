@@ -16,6 +16,8 @@ const RSS_SCHEDULES = {
 };
 
 const CACHE_SCHEDULES: Record<string, string> = {
+  '1hour': '0 * * * *',
+  '3hours': '0 */3 * * *',
   '6hours': '0 */6 * * *',
   '12hours': '0 */12 * * *',
   '24hours': '0 0 * * *',
@@ -289,9 +291,11 @@ serve(async (req) => {
           if (jobs && jobs.length > 0) {
             const schedule = jobs[0].schedule;
             let frequency = '6hours';
-            if (schedule === '0 */12 * * *') frequency = '12hours';
-            else if (schedule === '0 0 * * *') frequency = '24hours';
+            if (schedule === '0 * * * *') frequency = '1hour';
+            else if (schedule === '0 */3 * * *') frequency = '3hours';
             else if (schedule === '0 */6 * * *') frequency = '6hours';
+            else if (schedule === '0 */12 * * *') frequency = '12hours';
+            else if (schedule === '0 0 * * *') frequency = '24hours';
             
             return new Response(
               JSON.stringify({ enabled: true, frequency, schedule }),
