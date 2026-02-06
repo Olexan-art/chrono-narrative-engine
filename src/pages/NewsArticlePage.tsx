@@ -608,6 +608,18 @@ export default function NewsArticlePage() {
                   isAdmin={isAdminAuthenticated}
                   onImageUpdate={() => queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] })}
                 />
+
+                {/* Voting block - prominent placement under image */}
+                <div className="mt-4 p-4 rounded-lg bg-card/50 border border-border/50">
+                  <NewsVoteBlock 
+                    newsId={article.id} 
+                    likes={(article as any).likes || 0} 
+                    dislikes={(article as any).dislikes || 0}
+                    className="justify-center"
+                    showLabel={true}
+                    size="lg"
+                  />
+                </div>
               </header>
 
               {/* Key Points Block - before content */}
