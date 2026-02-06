@@ -175,6 +175,47 @@ export function OriginalSourceBlock({
     setIsEditing(false);
   };
 
+  const handleStructureText = async () => {
+    if (!newsId) return;
+    
+    setIsStructuring(true);
+    try {
+      const result = await callEdgeFunction<{
+        success: boolean;
+        content: string;
+        error?: string;
+      }>('structure-text', {
+        newsId,
+        content: editedContent || decodedContent
+      });
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to structure text');
+      }
+      
+      // Update in database
+      const { error } = await supabase
+        .from('news_rss_items')
+        .update({ original_content: result.content })
+        .eq('id', newsId);
+      
+      if (error) throw error;
+      
+      toast.success(
+        language === 'en' ? 'Text structured and cleaned' : 
+        language === 'pl' ? 'Tekst uporządkowany' : 
+        'Текст структуровано та очищено'
+      );
+      setIsEditing(false);
+      onContentUpdate?.();
+    } catch (error) {
+      console.error('Error structuring text:', error);
+      toast.error(error instanceof Error ? error.message : 'Error structuring text');
+    } finally {
+      setIsStructuring(false);
+    }
+  };
+
   return (
     <Card className={`bg-muted/30 border-dashed relative overflow-hidden ${className}`}>
       {/* Watermark logo */}
