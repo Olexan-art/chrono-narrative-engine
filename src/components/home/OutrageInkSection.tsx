@@ -61,7 +61,7 @@ export const OutrageInkSection = memo(function OutrageInkSection() {
       const { data: topLiked } = await supabase
         .from('outrage_ink')
         .select(`
-          id, image_url, title, likes, created_at,
+          id, image_url, title, likes, dislikes, created_at,
           news_item:news_rss_items(id, slug, country:news_countries(code)),
           entities:outrage_ink_entities(wiki_entity:wiki_entities(id, name, name_en))
         `)
@@ -73,7 +73,7 @@ export const OutrageInkSection = memo(function OutrageInkSection() {
       const { data: recent } = await supabase
         .from('outrage_ink')
         .select(`
-          id, image_url, title, likes, created_at,
+          id, image_url, title, likes, dislikes, created_at,
           news_item:news_rss_items(id, slug, country:news_countries(code)),
           entities:outrage_ink_entities(wiki_entity:wiki_entities(id, name, name_en))
         `)
