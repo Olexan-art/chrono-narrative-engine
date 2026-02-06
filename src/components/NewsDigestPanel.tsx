@@ -37,6 +37,7 @@ interface RSSFeed {
   last_fetched_at: string | null;
   fetch_error: string | null;
   items_count?: number;
+  sample_ratio: number;
 }
 
 interface FeedCheckResult {
