@@ -14,6 +14,7 @@ interface OutrageInkItem {
   image_url: string;
   title: string | null;
   likes: number;
+  dislikes: number;
   created_at: string;
   news_item: {
     id: string;
@@ -30,6 +31,17 @@ interface OutrageInkItem {
     };
   }>;
 }
+
+type VoteStatus = 'majority_likes' | 'majority_dislikes' | 'balanced';
+
+const getVoteStatus = (likes: number, dislikes: number): VoteStatus => {
+  const total = likes + dislikes;
+  if (total === 0) return 'balanced';
+  const likeRatio = likes / total;
+  if (likeRatio >= 0.6) return 'majority_likes';
+  if (likeRatio <= 0.4) return 'majority_dislikes';
+  return 'balanced';
+};
 
 export const OutrageInkSection = memo(function OutrageInkSection() {
   const { language } = useLanguage();
