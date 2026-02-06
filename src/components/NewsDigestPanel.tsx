@@ -1047,11 +1047,24 @@ export function NewsDigestPanel({ password }: Props) {
                                   <Download className="w-3 h-3 mr-1" />
                                   {feed.items_count || 0} новин
                                 </Badge>
-                                {feed.sample_ratio > 1 && (
-                                  <Badge variant="outline" className="text-xs text-primary border-primary/50">
-                                    ↓{feed.sample_ratio}
-                                  </Badge>
-                                )}
+                                <Select
+                                  value={(feed.sample_ratio || 1).toString()}
+                                  onValueChange={(v) => updateFeedSampleRatioMutation.mutate({ 
+                                    feedId: feed.id, 
+                                    sampleRatio: parseInt(v) 
+                                  })}
+                                >
+                                  <SelectTrigger className="h-6 w-auto text-xs gap-1 px-2">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {SAMPLE_RATIO_OPTIONS.map(opt => (
+                                      <SelectItem key={opt.value} value={opt.value.toString()}>
+                                        {opt.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                                 {feed.fetch_error && (
                                   <Badge variant="destructive" className="text-xs">
                                     <AlertCircle className="w-3 h-3 mr-1" />
