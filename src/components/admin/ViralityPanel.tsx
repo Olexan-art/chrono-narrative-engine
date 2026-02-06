@@ -490,7 +490,7 @@ export function ViralityPanel({ password }: ViralityPanelProps) {
                   </p>
                 </div>
                 <Button
-                  onClick={() => runSimulationMutation.mutate()}
+                  onClick={() => runSimulationMutation.mutate(undefined)}
                   disabled={runSimulationMutation.isPending}
                 >
                   {runSimulationMutation.isPending ? (

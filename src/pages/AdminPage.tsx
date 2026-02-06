@@ -862,6 +862,10 @@ export default function AdminPage() {
               <FileText className="w-4 h-4 text-cyan-500" />
               Парсинг
             </TabsTrigger>
+            <TabsTrigger value="virality" className="gap-2">
+              <Flame className="w-4 h-4 text-orange-500" />
+              Віральність
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               Налаштування
