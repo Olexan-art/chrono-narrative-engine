@@ -186,6 +186,36 @@ serve(async (req) => {
       gemini_api_key: null
     };
 
+    // Handle image enhancement action
+    if (action === 'enhance' && imageUrl) {
+      console.log('Enhancing image:', imageUrl.slice(0, 80));
+      const enhancePrompt = 'Enhance this image: improve quality, sharpen details, fix any artifacts, improve colors and contrast. Keep the same composition and subject. Output ultra high resolution version.';
+      
+      const enhancedBase64 = await generateWithLovable(enhancePrompt, imageUrl);
+      
+      if (!enhancedBase64) {
+        throw new Error('Failed to enhance image');
+      }
+
+      // Upload enhanced image
+      const storagePath = newsId 
+        ? `news/${newsId}/cover_enhanced.png`
+        : `temp/${crypto.randomUUID()}_enhanced.png`;
+      
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+      
+      const finalImageUrl = await uploadBase64ToStorage(supabase, enhancedBase64, storagePath);
+      console.log('Enhanced image uploaded to:', storagePath);
+
+      return new Response(
+        JSON.stringify({ success: true, imageUrl: finalImageUrl }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Use original_content context if provided for better image generation
     const contextHint = originalContent 
       ? ` Context from article: ${originalContent.substring(0, 500)}.`

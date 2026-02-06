@@ -422,7 +422,7 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
             size="sm"
             className="gap-2 shadow-lg"
             onClick={handleDelete}
-            disabled={isGenerating || isUploading || isDeleting}
+            disabled={isGenerating || isUploading || isDeleting || isEnhancing}
           >
             {isDeleting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
