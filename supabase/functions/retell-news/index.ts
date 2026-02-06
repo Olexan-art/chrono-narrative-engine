@@ -47,8 +47,25 @@ interface LLMSettings {
 }
 
 async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: string, overrideModel?: string): Promise<string> {
-  const provider = settings.llm_text_provider || settings.llm_provider || 'lovable';
   const model = overrideModel || settings.llm_text_model || 'google/gemini-3-flash-preview';
+  
+  // Determine provider from model name if override model is passed
+  let provider = settings.llm_text_provider || settings.llm_provider || 'lovable';
+  
+  // Auto-detect provider from model prefix to prevent mismatches
+  if (overrideModel) {
+    if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
+      provider = 'lovable'; // Use Lovable AI gateway for Google models
+    } else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) {
+      provider = 'lovable'; // Use Lovable AI gateway for OpenAI models
+    } else if (overrideModel.startsWith('mistral-') || overrideModel.startsWith('codestral')) {
+      provider = 'mistral';
+    } else if (overrideModel.startsWith('GLM-') || overrideModel.startsWith('glm-')) {
+      provider = 'zai';
+    } else if (overrideModel.startsWith('claude')) {
+      provider = 'anthropic';
+    }
+  }
   
   // Z.AI provider - OpenAI-compatible API
   if (provider === 'zai') {
