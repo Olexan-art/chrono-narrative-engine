@@ -7,6 +7,7 @@ import { ArrowRight, Clock, Newspaper } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 interface LatestUsaNewsSimpleProps {
   excludeIds?: string[];
