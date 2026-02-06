@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { FileText, ExternalLink, Edit3, Save, X, Loader2 } from "lucide-react";
+import { FileText, ExternalLink, Edit3, Save, X, Loader2, Wand2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { callEdgeFunction } from "@/lib/api";
 import { toast } from "sonner";
 
 interface OriginalSourceBlockProps {
@@ -71,6 +72,7 @@ export function OriginalSourceBlock({
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(originalContent || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [isStructuring, setIsStructuring] = useState(false);
   
   if (!originalContent || originalContent.length < 50) return null;
   
@@ -173,6 +175,47 @@ export function OriginalSourceBlock({
     setIsEditing(false);
   };
 
+  const handleStructureText = async () => {
+    if (!newsId) return;
+    
+    setIsStructuring(true);
+    try {
+      const result = await callEdgeFunction<{
+        success: boolean;
+        content: string;
+        error?: string;
+      }>('structure-text', {
+        newsId,
+        content: editedContent || decodedContent
+      });
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to structure text');
+      }
+      
+      // Update in database
+      const { error } = await supabase
+        .from('news_rss_items')
+        .update({ original_content: result.content })
+        .eq('id', newsId);
+      
+      if (error) throw error;
+      
+      toast.success(
+        language === 'en' ? 'Text structured and cleaned' : 
+        language === 'pl' ? 'Tekst uporządkowany' : 
+        'Текст структуровано та очищено'
+      );
+      setIsEditing(false);
+      onContentUpdate?.();
+    } catch (error) {
+      console.error('Error structuring text:', error);
+      toast.error(error instanceof Error ? error.message : 'Error structuring text');
+    } finally {
+      setIsStructuring(false);
+    }
+  };
+
   return (
     <Card className={`bg-muted/30 border-dashed relative overflow-hidden ${className}`}>
       {/* Watermark logo */}
@@ -201,18 +244,34 @@ export function OriginalSourceBlock({
             </CardTitle>
             <div className="flex items-center gap-2">
               {isAdmin && newsId && !isEditing && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-7 px-2 text-xs gap-1"
-                  onClick={() => {
-                    setEditedContent(decodedContent);
-                    setIsEditing(true);
-                  }}
-                >
-                  <Edit3 className="w-3 h-3" />
-                  {language === 'en' ? 'Edit' : language === 'pl' ? 'Edytuj' : 'Редагувати'}
-                </Button>
+                <>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={handleStructureText}
+                    disabled={isStructuring}
+                  >
+                    {isStructuring ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-3 h-3" />
+                    )}
+                    {language === 'en' ? 'Structure' : language === 'pl' ? 'Uporządkuj' : 'Структурувати'}
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={() => {
+                      setEditedContent(decodedContent);
+                      setIsEditing(true);
+                    }}
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    {language === 'en' ? 'Edit' : language === 'pl' ? 'Edytuj' : 'Редагувати'}
+                  </Button>
+                </>
               )}
               {!isEditing && (
                 <CollapsibleTrigger asChild>
