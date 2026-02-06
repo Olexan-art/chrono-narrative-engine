@@ -536,6 +536,8 @@ export function CacheStatsPanel({ password }: Props) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="off">Вимкнено</SelectItem>
+                        <SelectItem value="1hour">1 година</SelectItem>
+                        <SelectItem value="3hours">3 години</SelectItem>
                         <SelectItem value="6hours">6 годин</SelectItem>
                         <SelectItem value="12hours">12 годин</SelectItem>
                         <SelectItem value="24hours">24 години</SelectItem>

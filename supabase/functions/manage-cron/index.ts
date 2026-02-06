@@ -16,6 +16,8 @@ const RSS_SCHEDULES = {
 };
 
 const CACHE_SCHEDULES: Record<string, string> = {
+  '1hour': '0 * * * *',
+  '3hours': '0 */3 * * *',
   '6hours': '0 */6 * * *',
   '12hours': '0 */12 * * *',
   '24hours': '0 0 * * *',
