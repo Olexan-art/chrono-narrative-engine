@@ -172,54 +172,57 @@ export function NewsVoteBlock({ newsId, likes, dislikes, className, showLabel = 
   const StatusIcon = config.icon;
 
   return (
-    <div className={cn("flex items-center gap-3", className)}>
+    <div className={cn("flex items-center gap-4 flex-wrap", className)}>
       {/* Vote buttons */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <button
           onClick={() => handleVote('like')}
           disabled={isLoading}
           className={cn(
-            "p-1.5 rounded-full transition-all duration-200 hover:scale-110",
+            sizes.button,
+            "rounded-full transition-all duration-200 hover:scale-110 flex items-center justify-center",
             currentVote === 'like' 
-              ? "bg-emerald-500 text-white" 
-              : "hover:bg-emerald-500/20 text-muted-foreground hover:text-emerald-500"
+              ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30" 
+              : "hover:bg-emerald-500/20 text-muted-foreground hover:text-emerald-500 border border-border/50"
           )}
           aria-label="Like"
         >
-          <ThumbsUp className="w-4 h-4" />
+          <ThumbsUp className={sizes.icon} />
         </button>
         
         <button
           onClick={() => handleVote('dislike')}
           disabled={isLoading}
           className={cn(
-            "p-1.5 rounded-full transition-all duration-200 hover:scale-110",
+            sizes.button,
+            "rounded-full transition-all duration-200 hover:scale-110 flex items-center justify-center",
             currentVote === 'dislike' 
-              ? "bg-rose-500 text-white" 
-              : "hover:bg-rose-500/20 text-muted-foreground hover:text-rose-500"
+              ? "bg-rose-500 text-white shadow-lg shadow-rose-500/30" 
+              : "hover:bg-rose-500/20 text-muted-foreground hover:text-rose-500 border border-border/50"
           )}
           aria-label="Dislike"
         >
-          <ThumbsDown className="w-4 h-4" />
+          <ThumbsDown className={sizes.icon} />
         </button>
       </div>
 
       {/* Status indicator */}
       {showLabel && (localLikes > 0 || localDislikes > 0) && (
         <div className={cn(
-          "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium",
+          "flex items-center gap-2 rounded-full font-medium",
+          sizes.label,
           config.bgClass,
           config.colorClass
         )}>
           <StatusIcon 
             className={cn(
-              "w-3.5 h-3.5",
+              sizes.statusIcon,
               config.animated && "animate-pulse"
             )} 
           />
           <span>{config.label}</span>
           {config.animated && (
-            <Sparkles className="w-3 h-3 animate-bounce" />
+            <Sparkles className={cn(sizes.sparkle, "animate-bounce")} />
           )}
         </div>
       )}
