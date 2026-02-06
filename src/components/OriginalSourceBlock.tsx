@@ -72,6 +72,7 @@ export function OriginalSourceBlock({
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(originalContent || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [isStructuring, setIsStructuring] = useState(false);
   
   if (!originalContent || originalContent.length < 50) return null;
   
