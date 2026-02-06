@@ -99,11 +99,11 @@ export const LatestUsaNews = memo(function LatestUsaNews() {
                 <article className="cosmic-card h-full border border-primary/20 bg-primary/5 hover:border-primary/50 hover:bg-primary/10 transition-all duration-300 overflow-hidden flex">
                   {item.image_url && (
                     <div className="relative w-24 md:w-32 shrink-0 overflow-hidden">
-                      <img 
+                      <OptimizedImage 
                         src={item.image_url} 
                         alt="" 
+                        priority={idx < 2}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
                       />
                     </div>
                   )}
