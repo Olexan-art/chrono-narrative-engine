@@ -718,7 +718,7 @@ serve(async (req) => {
     if (action === 'fetch_all') {
       const { data: feeds, error: feedsError } = await supabase
         .from('news_rss_feeds')
-        .select('id, name, country_id, url, category')
+        .select('id, name, country_id, url, category, sample_ratio')
         .eq('is_active', true);
       
       if (feedsError) {
