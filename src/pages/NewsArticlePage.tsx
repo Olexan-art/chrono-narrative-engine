@@ -688,13 +688,6 @@ export default function NewsArticlePage() {
                 className="mt-6"
               />
 
-              {/* Voting block */}
-              <NewsVoteBlock 
-                newsId={article.id} 
-                likes={(article as any).likes || 0} 
-                dislikes={(article as any).dislikes || 0}
-                className="mt-6 mb-4"
-              />
 
               {/* Original link, share, and translate button */}
               <div className="pt-4 border-t border-border flex flex-wrap items-center gap-3">

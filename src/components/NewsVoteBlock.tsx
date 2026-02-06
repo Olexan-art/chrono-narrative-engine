@@ -231,6 +231,6 @@ export function NewsVoteBlock({ newsId, likes, dislikes, className, showLabel = 
 }
 
 // Compact variant for news cards in feed
-export function NewsVoteCompact({ newsId, likes, dislikes }: Omit<NewsVoteBlockProps, 'showLabel'>) {
-  return <NewsVoteBlock newsId={newsId} likes={likes} dislikes={dislikes} showLabel={false} />;
+export function NewsVoteCompact({ newsId, likes, dislikes }: Omit<NewsVoteBlockProps, 'showLabel' | 'size'>) {
+  return <NewsVoteBlock newsId={newsId} likes={likes} dislikes={dislikes} showLabel={false} size="sm" />;
 }
