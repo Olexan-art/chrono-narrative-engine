@@ -240,26 +240,27 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
     </Select>
   );
 
-  // No image - show generate button for admin
+  // No image - show generate/upload buttons for admin
   if (!imageUrl) {
     if (!isAdmin) return null;
     
     return (
       <div className="relative border-2 border-dashed border-border rounded-lg p-8 mb-4 flex flex-col items-center justify-center gap-3 bg-muted/20">
+        <FileInput />
         <ImagePlus className="w-12 h-12 text-muted-foreground" />
         <p className="text-sm text-muted-foreground text-center">
           {language === 'en' ? 'No image available' : 
            language === 'pl' ? 'Brak obrazu' : 
            'Зображення відсутнє'}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <StyleSelector />
           <Button
             variant="outline"
             size="sm"
             className="gap-2"
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || isUploading}
           >
             {isGenerating ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -269,6 +270,22 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
             {language === 'en' ? 'Generate' : 
              language === 'pl' ? 'Generuj' : 
              'Згенерувати'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-2"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isGenerating || isUploading}
+          >
+            {isUploading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4" />
+            )}
+            {language === 'en' ? 'Upload' : 
+             language === 'pl' ? 'Prześlij' : 
+             'Завантажити'}
           </Button>
         </div>
       </div>
