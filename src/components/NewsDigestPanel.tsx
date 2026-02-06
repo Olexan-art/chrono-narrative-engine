@@ -959,6 +959,24 @@ export function NewsDigestPanel({ password }: Props) {
                           </SelectContent>
                         </Select>
                       </div>
+                      <div className="space-y-2">
+                        <Label>Вибірка новин</Label>
+                        <Select
+                          value={newFeed.sample_ratio.toString()}
+                          onValueChange={(v) => setNewFeed(prev => ({ ...prev, sample_ratio: parseInt(v) }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SAMPLE_RATIO_OPTIONS.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value.toString()}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <Button
