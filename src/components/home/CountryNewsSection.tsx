@@ -185,11 +185,11 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
                           style={{ animationDelay: `${idx * 50}ms` }}
                         >
                           {item.image_url && (
-                            <img 
+                            <OptimizedImage 
                               src={item.image_url} 
                               alt="" 
                               className="w-16 h-16 object-cover rounded shrink-0"
-                              loading="lazy"
+                              containerClassName="w-16 h-16 shrink-0 rounded"
                             />
                           )}
                           <div className="flex-1 min-w-0">
