@@ -372,8 +372,25 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
             variant="secondary"
             size="sm"
             className="gap-2 shadow-lg"
+            onClick={handleEnhance}
+            disabled={isGenerating || isUploading || isDeleting || isEnhancing}
+            title={language === 'en' ? 'Enhance with AI' : language === 'pl' ? 'Ulepsz z AI' : 'Покращити з ШІ'}
+          >
+            {isEnhancing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Wand2 className="w-4 h-4" />
+            )}
+            {language === 'en' ? 'Enhance' : 
+             language === 'pl' ? 'Ulepsz' : 
+             'Покращити'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-2 shadow-lg"
             onClick={handleGenerate}
-            disabled={isGenerating || isUploading || isDeleting}
+            disabled={isGenerating || isUploading || isDeleting || isEnhancing}
           >
             {isGenerating ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -389,7 +406,7 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
             size="sm"
             className="gap-2 shadow-lg"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isGenerating || isUploading || isDeleting}
+            disabled={isGenerating || isUploading || isDeleting || isEnhancing}
           >
             {isUploading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
