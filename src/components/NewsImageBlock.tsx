@@ -213,6 +213,49 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
     }
   };
 
+  const handleEnhance = async () => {
+    if (!imageUrl) return;
+    
+    setIsEnhancing(true);
+    try {
+      console.log('Enhancing image:', imageUrl);
+      
+      const result = await callEdgeFunction<{
+        success: boolean;
+        imageUrl: string;
+        error?: string;
+      }>('generate-image', {
+        action: 'enhance',
+        imageUrl,
+        newsId
+      });
+      
+      if (!result.success || !result.imageUrl) {
+        throw new Error(result.error || 'Failed to enhance image');
+      }
+      
+      // Update news item with enhanced image
+      const { error } = await supabase
+        .from('news_rss_items')
+        .update({ image_url: result.imageUrl })
+        .eq('id', newsId);
+      
+      if (error) throw error;
+      
+      toast.success(
+        language === 'en' ? 'Image enhanced!' : 
+        language === 'pl' ? 'Obraz ulepszony!' : 
+        'Зображення покращено!'
+      );
+      onImageUpdate?.();
+    } catch (error) {
+      console.error('Error enhancing image:', error);
+      toast.error(error instanceof Error ? error.message : 'Error enhancing image');
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
   // Hidden file input
   const FileInput = () => (
     <input
