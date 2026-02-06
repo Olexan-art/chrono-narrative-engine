@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 const NEWS_PER_COUNTRY = 6;
 
