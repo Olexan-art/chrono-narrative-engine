@@ -561,6 +561,7 @@ export type Database = {
           description_hi: string | null
           description_ta: string | null
           description_te: string | null
+          dislikes: number
           external_id: string | null
           feed_id: string
           fetched_at: string
@@ -571,6 +572,7 @@ export type Database = {
           key_points: Json | null
           key_points_en: Json | null
           keywords: string[] | null
+          likes: number
           original_content: string | null
           published_at: string | null
           slug: string | null
@@ -584,6 +586,8 @@ export type Database = {
           title_te: string | null
           tweets: Json | null
           url: string
+          viral_simulation_completed: boolean | null
+          viral_simulation_started_at: string | null
         }
         Insert: {
           archived_at?: string | null
@@ -603,6 +607,7 @@ export type Database = {
           description_hi?: string | null
           description_ta?: string | null
           description_te?: string | null
+          dislikes?: number
           external_id?: string | null
           feed_id: string
           fetched_at?: string
@@ -613,6 +618,7 @@ export type Database = {
           key_points?: Json | null
           key_points_en?: Json | null
           keywords?: string[] | null
+          likes?: number
           original_content?: string | null
           published_at?: string | null
           slug?: string | null
@@ -626,6 +632,8 @@ export type Database = {
           title_te?: string | null
           tweets?: Json | null
           url: string
+          viral_simulation_completed?: boolean | null
+          viral_simulation_started_at?: string | null
         }
         Update: {
           archived_at?: string | null
@@ -645,6 +653,7 @@ export type Database = {
           description_hi?: string | null
           description_ta?: string | null
           description_te?: string | null
+          dislikes?: number
           external_id?: string | null
           feed_id?: string
           fetched_at?: string
@@ -655,6 +664,7 @@ export type Database = {
           key_points?: Json | null
           key_points_en?: Json | null
           keywords?: string[] | null
+          likes?: number
           original_content?: string | null
           published_at?: string | null
           slug?: string | null
@@ -668,6 +678,8 @@ export type Database = {
           title_te?: string | null
           tweets?: Json | null
           url?: string
+          viral_simulation_completed?: boolean | null
+          viral_simulation_started_at?: string | null
         }
         Relationships: [
           {
@@ -682,6 +694,38 @@ export type Database = {
             columns: ["feed_id"]
             isOneToOne: false
             referencedRelation: "news_rss_feeds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_votes: {
+        Row: {
+          created_at: string
+          id: string
+          news_item_id: string
+          visitor_id: string
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          news_item_id: string
+          visitor_id: string
+          vote_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          news_item_id?: string
+          visitor_id?: string
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_votes_news_item_id_fkey"
+            columns: ["news_item_id"]
+            isOneToOne: false
+            referencedRelation: "news_rss_items"
             referencedColumns: ["id"]
           },
         ]
@@ -1047,6 +1091,15 @@ export type Database = {
           news_tweet_count: number | null
           openai_api_key: string | null
           updated_at: string | null
+          viral_decay_hours: number | null
+          viral_delay_hours: number | null
+          viral_dislike_ratio: number | null
+          viral_growth_hours: number | null
+          viral_last_run_at: string | null
+          viral_max_interactions: number | null
+          viral_min_interactions: number | null
+          viral_news_per_day: number | null
+          viral_simulation_enabled: boolean | null
           zai_api_key: string | null
         }
         Insert: {
@@ -1091,6 +1144,15 @@ export type Database = {
           news_tweet_count?: number | null
           openai_api_key?: string | null
           updated_at?: string | null
+          viral_decay_hours?: number | null
+          viral_delay_hours?: number | null
+          viral_dislike_ratio?: number | null
+          viral_growth_hours?: number | null
+          viral_last_run_at?: string | null
+          viral_max_interactions?: number | null
+          viral_min_interactions?: number | null
+          viral_news_per_day?: number | null
+          viral_simulation_enabled?: boolean | null
           zai_api_key?: string | null
         }
         Update: {
@@ -1135,6 +1197,15 @@ export type Database = {
           news_tweet_count?: number | null
           openai_api_key?: string | null
           updated_at?: string | null
+          viral_decay_hours?: number | null
+          viral_delay_hours?: number | null
+          viral_dislike_ratio?: number | null
+          viral_growth_hours?: number | null
+          viral_last_run_at?: string | null
+          viral_max_interactions?: number | null
+          viral_min_interactions?: number | null
+          viral_news_per_day?: number | null
+          viral_simulation_enabled?: boolean | null
           zai_api_key?: string | null
         }
         Relationships: []
@@ -1357,6 +1428,22 @@ export type Database = {
       }
     }
     Views: {
+      news_vote_counts: {
+        Row: {
+          dislikes: number | null
+          likes: number | null
+          news_item_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_votes_news_item_id_fkey"
+            columns: ["news_item_id"]
+            isOneToOne: false
+            referencedRelation: "news_rss_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       outrage_ink_vote_counts: {
         Row: {
           dislikes: number | null

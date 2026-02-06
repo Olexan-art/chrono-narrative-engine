@@ -21,6 +21,7 @@ import { EntityHighlightedContent } from "@/components/EntityHighlightedContent"
 import { OutrageInkBlock } from "@/components/OutrageInkBlock";
 import { OriginalSourceBlock } from "@/components/OriginalSourceBlock";
 import { NewsImageBlock } from "@/components/NewsImageBlock";
+import { NewsVoteBlock } from "@/components/NewsVoteBlock";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { adminAction, callEdgeFunction } from "@/lib/api";
@@ -673,6 +674,14 @@ export default function NewsArticlePage() {
                 newsId={article.id}
                 countryCode={article.country.code}
                 className="mt-6"
+              />
+
+              {/* Voting block */}
+              <NewsVoteBlock 
+                newsId={article.id} 
+                likes={(article as any).likes || 0} 
+                dislikes={(article as any).dislikes || 0}
+                className="mt-6 mb-4"
               />
 
               {/* Original link, share, and translate button */}
