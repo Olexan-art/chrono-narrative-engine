@@ -40,29 +40,35 @@ export function OutrageInkBlock({
   const [selectedStyle, setSelectedStyle] = useState<string>('standard');
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
+  // Unified style options matching NewsImageBlock + additional Outrage Ink styles
   const styleOptions = [
-    { value: 'standard', label: language === 'en' ? 'Standard' : language === 'pl' ? 'Standardowy' : 'Стандарт' },
-    { value: 'anime90s', label: language === 'en' ? '90s Anime' : language === 'pl' ? 'Anime lat 90' : 'Аніме 90-х' },
-    { value: 'horror', label: language === 'en' ? 'Horror' : language === 'pl' ? 'Horror' : 'Жахи' },
-    { value: 'action90s', label: language === 'en' ? '90s Action' : language === 'pl' ? 'Akcja lat 90' : 'Бойовики 90-х' },
-    { value: 'disco80s', label: language === 'en' ? '80s Disco' : language === 'pl' ? 'Disco lat 80' : 'Діско 80-х' },
+    // Original styles
+    { value: 'standard', label: language === 'en' ? 'Standard' : language === 'pl' ? 'Standardowy' : 'Стандарт', prompt: 'sharp editorial cartoon, exaggerated features, stark contrast, minimalist background' },
+    { value: 'anime90s', label: language === 'en' ? '90s Anime' : language === 'pl' ? 'Anime lat 90' : 'Аніме 90-х', prompt: '90s anime aesthetic with cel-shading, dramatic speed lines, exaggerated expressions, vibrant colors, retro anime character designs like Akira or Ghost in the Shell' },
+    { value: 'horror', label: language === 'en' ? 'Horror' : language === 'pl' ? 'Horror' : 'Жахи', prompt: 'dark horror aesthetic, grotesque exaggerated features, eerie shadows, unsettling atmosphere, macabre imagery, twisted and distorted forms like Junji Ito manga' },
+    { value: 'action90s', label: language === 'en' ? '90s Action' : language === 'pl' ? 'Akcja lat 90' : 'Бойовики 90-х', prompt: '90s action movie poster aesthetic, explosive dynamic poses, dramatic lighting, muscular exaggerated characters, bold colors, lens flares, cinematic composition' },
+    { value: 'disco80s', label: language === 'en' ? '80s Disco' : language === 'pl' ? 'Disco lat 80' : 'Діско 80-х', prompt: '80s disco aesthetic, neon colors, chrome and grid patterns, synth-wave vibes, glittery glamorous characters, retro-futuristic elements, vibrant pink and cyan color palette' },
+    // Additional styles from NewsImageBlock
+    { value: 'realistic', label: language === 'en' ? 'Realistic' : language === 'pl' ? 'Realistyczny' : 'Реалістичний', prompt: 'photorealistic, editorial photography, professional journalism style' },
+    { value: 'illustration', label: language === 'en' ? 'Illustration' : language === 'pl' ? 'Ilustracja' : 'Ілюстрація', prompt: 'digital illustration, editorial art, clean vector-like style, modern design' },
+    { value: 'caricature', label: language === 'en' ? 'Caricature' : language === 'pl' ? 'Karykatura' : 'Карикатура', prompt: 'satirical caricature, exaggerated features, political cartoon style, expressive' },
+    { value: 'noir', label: language === 'en' ? 'Noir' : language === 'pl' ? 'Noir' : 'Нуар', prompt: 'film noir style, dramatic shadows, black and white with high contrast, mysterious atmosphere' },
+    { value: 'pixel', label: language === 'en' ? 'Pixel Art' : language === 'pl' ? 'Pixel Art' : 'Піксель-арт', prompt: 'pixel art style, retro 16-bit graphics, vibrant limited color palette, nostalgic gaming aesthetic' },
+    { value: 'cyberpunk', label: language === 'en' ? 'Cyberpunk' : language === 'pl' ? 'Cyberpunk' : 'Кіберпанк', prompt: 'cyberpunk style, neon lights, futuristic dystopia, high-tech low-life, glowing elements, dark urban' },
+    { value: 'watercolor', label: language === 'en' ? 'Watercolor' : language === 'pl' ? 'Akwarela' : 'Акварель', prompt: 'watercolor painting style, soft flowing colors, artistic brush strokes, delicate washes, artistic impression' },
+    { value: 'impressionism', label: language === 'en' ? 'Impressionism' : language === 'pl' ? 'Impresjonizm' : 'Імпресіонізм', prompt: 'impressionist painting style, visible brush strokes, light and color emphasis, Monet-inspired, soft dreamy' },
+    { value: 'surrealism', label: language === 'en' ? 'Surrealism' : language === 'pl' ? 'Surrealizm' : 'Сюрреалізм', prompt: 'surrealist art style, dreamlike imagery, unexpected juxtapositions, Salvador Dali inspired, bizarre elements' },
+    { value: 'vector', label: language === 'en' ? 'Vector Art' : language === 'pl' ? 'Vector Art' : 'Vector art', prompt: 'clean vector art, flat design, minimal gradients, sharp edges, modern graphic design, geometric shapes' },
+    { value: 'comic', label: language === 'en' ? 'Comic' : language === 'pl' ? 'Komiks' : 'Комікс', prompt: 'comic book style, bold outlines, halftone dots, dynamic action panels, vibrant pop colors, superhero aesthetic' },
+    { value: 'gothic', label: language === 'en' ? 'Gothic' : language === 'pl' ? 'Gotycki' : 'Готичний', prompt: 'gothic art style, dark romantic atmosphere, ornate details, medieval influences, dramatic and moody' },
+    { value: 'vintage', label: language === 'en' ? 'Vintage' : language === 'pl' ? 'Vintage' : 'Вінтаж', prompt: 'vintage retro style, aged paper texture, faded colors, 1950s-1960s aesthetic, nostalgic warm tones' },
   ];
 
   const getStylePrompt = (style: string, title: string): string => {
     const basePrompt = `Create a satirical political caricature/cartoon about this news without any text or labels: "${title}".`;
-    
-    switch (style) {
-      case 'anime90s':
-        return `${basePrompt} Style: 90s anime aesthetic with cel-shading, dramatic speed lines, exaggerated expressions, vibrant colors, retro anime character designs like Akira or Ghost in the Shell.`;
-      case 'horror':
-        return `${basePrompt} Style: dark horror aesthetic, grotesque exaggerated features, eerie shadows, unsettling atmosphere, macabre imagery, twisted and distorted forms like Junji Ito manga.`;
-      case 'action90s':
-        return `${basePrompt} Style: 90s action movie poster aesthetic, explosive dynamic poses, dramatic lighting, muscular exaggerated characters, bold colors, lens flares, cinematic composition like Stallone or Schwarzenegger movies.`;
-      case 'disco80s':
-        return `${basePrompt} Style: 80s disco aesthetic, neon colors, chrome and grid patterns, synth-wave vibes, glittery glamorous characters, retro-futuristic elements, vibrant pink and cyan color palette.`;
-      default:
-        return `${basePrompt} Style: sharp editorial cartoon, exaggerated features, stark contrast, minimalist background.`;
-    }
+    const styleConfig = styleOptions.find(s => s.value === style);
+    const stylePrompt = styleConfig?.prompt || 'sharp editorial cartoon, exaggerated features, stark contrast, minimalist background';
+    return `${basePrompt} Style: ${stylePrompt}`;
   };
 
   const t = {
