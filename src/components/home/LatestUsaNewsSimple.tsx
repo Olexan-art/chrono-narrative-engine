@@ -29,7 +29,7 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
 
       if (!usaCountry) return [];
 
-      // Fetch latest 20 news WITHOUT content_en (not retold)
+      // Fetch latest 40 news WITHOUT content_en (not retold)
       const { data: news } = await supabase
         .from('news_rss_items')
         .select(`
@@ -47,7 +47,7 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
         .eq('country_id', usaCountry.id)
         .not('slug', 'is', null)
         .order('published_at', { ascending: false })
-        .limit(20);
+        .limit(40);
 
       // Filter out those with content_en (already in Full Retelling) and excluded IDs
       const filtered = (news || [])
