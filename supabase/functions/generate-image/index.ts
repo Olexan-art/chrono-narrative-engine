@@ -164,7 +164,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, partId, chapterId, volumeId, newsId, imageIndex = 1, originalContent } = await req.json();
+    const { prompt, partId, chapterId, volumeId, newsId, imageIndex = 1, originalContent, action, imageUrl } = await req.json();
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
