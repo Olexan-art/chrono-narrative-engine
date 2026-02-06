@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ImagePlus, RefreshCw, Loader2, Sparkles, Palette, Upload, Trash2 } from "lucide-react";
+import { ImagePlus, RefreshCw, Loader2, Sparkles, Palette, Upload, Trash2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -315,6 +315,15 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
       {isAdmin && (
         <div className="absolute top-3 right-3 flex flex-wrap items-center gap-2">
           <StyleSelector />
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-8 w-8 shadow-lg"
+            onClick={onImageUpdate}
+            title={language === 'en' ? 'Refresh' : language === 'pl' ? 'Odśwież' : 'Оновити'}
+          >
+            <RotateCcw className="w-4 h-4" />
+          </Button>
           <Button
             variant="secondary"
             size="sm"
