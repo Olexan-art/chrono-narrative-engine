@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Flame, ThumbsUp, ThumbsDown, Clock, Zap, 
   Settings, Play, RefreshCw, Loader2, Image, Newspaper,
-  BarChart3, Target, Sparkles
+  BarChart3, Target, Sparkles, ExternalLink
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
