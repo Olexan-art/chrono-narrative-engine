@@ -55,6 +55,7 @@ export function NewsImageBlock({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState('realistic');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
