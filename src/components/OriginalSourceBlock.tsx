@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { FileText, ExternalLink, Edit3, Save, X, Loader2 } from "lucide-react";
+import { FileText, ExternalLink, Edit3, Save, X, Loader2, Wand2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { callEdgeFunction } from "@/lib/api";
 import { toast } from "sonner";
 
 interface OriginalSourceBlockProps {
