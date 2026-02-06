@@ -212,6 +212,17 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
     }
   };
 
+  // Hidden file input
+  const FileInput = () => (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="image/*"
+      className="hidden"
+      onChange={handleUpload}
+    />
+  );
+
   // Style selector component
   const StyleSelector = () => (
     <Select value={selectedStyle} onValueChange={setSelectedStyle}>
@@ -219,7 +230,7 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
         <Palette className="w-3 h-3 mr-1" />
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="max-h-[300px]">
         {IMAGE_STYLES.map(style => (
           <SelectItem key={style.value} value={style.value}>
             {getStyleLabel(style)}
