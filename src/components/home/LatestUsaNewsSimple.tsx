@@ -29,7 +29,7 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
 
       if (!usaCountry) return [];
 
-      // Fetch latest 20 news WITHOUT content_en (not retold)
+      // Fetch latest 40 news WITHOUT content_en (not retold)
       const { data: news } = await supabase
         .from('news_rss_items')
         .select(`
@@ -47,13 +47,13 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
         .eq('country_id', usaCountry.id)
         .not('slug', 'is', null)
         .order('published_at', { ascending: false })
-        .limit(20);
+        .limit(40);
 
       // Filter out those with content_en (already in Full Retelling) and excluded IDs
       const filtered = (news || [])
         .filter(item => !item.content_en || item.content_en.length < 300)
         .filter(item => !excludeIds.includes(item.id))
-        .slice(0, 10);
+        .slice(0, 20);
 
       return filtered.map(item => ({
         ...item,
@@ -86,10 +86,15 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <span className="text-xl">🇺🇸</span>
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Newspaper className="w-4 h-4 text-muted-foreground" />
-              {language === 'uk' ? 'Останні новини США' : language === 'pl' ? 'Najnowsze wiadomości USA' : 'Latest USA News'}
-            </h2>
+            <div>
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Newspaper className="w-4 h-4 text-muted-foreground" />
+                {language === 'uk' ? 'Останні новини США' : language === 'pl' ? 'Najnowsze wiadomości USA' : 'Latest USA News'}
+              </h2>
+              <span className="text-xs text-muted-foreground">
+                {usaNews.length} {language === 'uk' ? 'новин' : language === 'pl' ? 'wiadomości' : 'articles'}
+              </span>
+            </div>
           </div>
           <Link 
             to="/news/us" 
