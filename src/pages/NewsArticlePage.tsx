@@ -598,23 +598,18 @@ export default function NewsArticlePage() {
                   </div>
                 )}
 
-                {article.image_url && (
-                  <div className="relative">
-                    <img 
-                      src={article.image_url} 
-                      alt="" 
-                      className="w-full h-auto max-h-96 object-cover rounded-lg border border-border mb-4"
-                    />
-                    {article.content_en && article.content_en.length > 100 && (
-                      <div className="absolute top-3 left-3">
-                        <Badge className="bg-primary/90 text-primary-foreground gap-1">
-                          <Sparkles className="w-3 h-3" />
-                          Full retelling
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* News Image with admin controls */}
+                <NewsImageBlock
+                  imageUrl={article.image_url}
+                  newsId={article.id}
+                  title={getLocalizedField('title')}
+                  keywords={articleKeywords}
+                  themes={themes}
+                  keyPoints={keyPoints}
+                  hasRetelling={!!(article.content_en && article.content_en.length > 100)}
+                  isAdmin={isAdminAuthenticated}
+                  onImageUpdate={() => queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] })}
+                />
               </header>
 
               {/* Key Points Block - before content */}
