@@ -292,6 +292,29 @@ export function NewsDigestPanel({ password }: Props) {
     }
   });
 
+  // Update feed sample_ratio mutation
+  const updateFeedSampleRatioMutation = useMutation({
+    mutationFn: async ({ feedId, sampleRatio }: { feedId: string; sampleRatio: number }) => {
+      const { error } = await supabase
+        .from('news_rss_feeds')
+        .update({ sample_ratio: sampleRatio })
+        .eq('id', feedId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['news-rss-feeds'] });
+      toast({ title: 'Вибірку оновлено' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Помилка',
+        description: error instanceof Error ? error.message : 'Не вдалося оновити',
+        variant: 'destructive'
+      });
+    }
+  });
+
   // Fetch feed mutation
   const fetchFeedMutation = useMutation({
     mutationFn: async (feedId: string) => {
