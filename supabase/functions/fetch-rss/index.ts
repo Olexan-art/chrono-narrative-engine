@@ -586,9 +586,19 @@ serve(async (req) => {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const countryCode = feed.news_countries?.code?.toLowerCase() || 'us';
         
+        // Get feed's sample ratio (1 = all, 2 = every 2nd, 3 = every 3rd)
+        const feedSampleRatio = feed.sample_ratio || 1;
+        let itemIndex = 0;
+        
         for (const item of items.slice(0, 200)) { // Limit to 200 items per feed
           // Skip if already exists
           if (existingUrls.has(item.link)) continue;
+          
+          // Apply sample ratio: only take every Nth item based on feed setting
+          itemIndex++;
+          if (feedSampleRatio > 1 && itemIndex % feedSampleRatio !== 0) {
+            continue;
+          }
           
           const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
           
@@ -718,7 +728,7 @@ serve(async (req) => {
     if (action === 'fetch_all') {
       const { data: feeds, error: feedsError } = await supabase
         .from('news_rss_feeds')
-        .select('id, name, country_id, url, category')
+        .select('id, name, country_id, url, category, sample_ratio')
         .eq('is_active', true);
       
       if (feedsError) {
@@ -809,9 +819,19 @@ serve(async (req) => {
             insertTracker.set(trackerKey, { count: 0, toProcess: [] });
           }
           
+          // Get feed's sample ratio (1 = all, 2 = every 2nd, 3 = every 3rd)
+          const feedSampleRatio = feed.sample_ratio || 1;
+          let itemIndex = 0;
+          
           for (const item of items.slice(0, 200)) {
             // Skip if already exists
             if (existingUrls.has(item.link)) continue;
+            
+            // Apply sample ratio: only take every Nth item based on feed setting
+            itemIndex++;
+            if (feedSampleRatio > 1 && itemIndex % feedSampleRatio !== 0) {
+              continue;
+            }
             
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
             const slug = generateSlug(item.title);
@@ -1466,7 +1486,7 @@ serve(async (req) => {
       
       const { data: feeds, error: feedsError } = await supabase
         .from('news_rss_feeds')
-        .select('id, name, url, category')
+        .select('id, name, url, category, sample_ratio')
         .eq('country_id', countryId)
         .eq('is_active', true);
       
@@ -1525,9 +1545,19 @@ serve(async (req) => {
           let insertedCount = 0;
           const feedNewIds: string[] = [];
           
+          // Get feed's sample ratio (1 = all, 2 = every 2nd, 3 = every 3rd)
+          const feedSampleRatio = feed.sample_ratio || 1;
+          let itemIndex = 0;
+          
           for (const item of items.slice(0, 200)) {
             // Skip if already exists
             if (existingUrls.has(item.link)) continue;
+            
+            // Apply sample ratio: only take every Nth item based on feed setting
+            itemIndex++;
+            if (feedSampleRatio > 1 && itemIndex % feedSampleRatio !== 0) {
+              continue;
+            }
             
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
             const slug = generateSlug(item.title);

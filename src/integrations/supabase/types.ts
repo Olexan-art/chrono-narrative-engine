@@ -502,6 +502,7 @@ export type Database = {
           is_active: boolean
           last_fetched_at: string | null
           name: string
+          sample_ratio: number
           updated_at: string
           url: string
         }
@@ -514,6 +515,7 @@ export type Database = {
           is_active?: boolean
           last_fetched_at?: string | null
           name: string
+          sample_ratio?: number
           updated_at?: string
           url: string
         }
@@ -526,6 +528,7 @@ export type Database = {
           is_active?: boolean
           last_fetched_at?: string | null
           name?: string
+          sample_ratio?: number
           updated_at?: string
           url?: string
         }

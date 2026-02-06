@@ -37,6 +37,7 @@ interface RSSFeed {
   last_fetched_at: string | null;
   fetch_error: string | null;
   items_count?: number;
+  sample_ratio: number;
 }
 
 interface FeedCheckResult {
@@ -60,6 +61,12 @@ const CATEGORIES = [
   { value: 'world', label: 'Світ' },
 ];
 
+const SAMPLE_RATIO_OPTIONS = [
+  { value: 1, label: 'Усі новини' },
+  { value: 2, label: 'Кожна 2-а новина' },
+  { value: 3, label: 'Кожна 3-я новина' },
+];
+
 interface Props {
   password: string;
 }
@@ -68,7 +75,7 @@ export function NewsDigestPanel({ password }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  const [newFeed, setNewFeed] = useState({ name: '', url: '', category: 'general' });
+  const [newFeed, setNewFeed] = useState({ name: '', url: '', category: 'general', sample_ratio: 1 });
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; error?: string; itemCount?: number } | null>(null);
   const [checkingFeedId, setCheckingFeedId] = useState<string | null>(null);
@@ -247,14 +254,15 @@ export function NewsDigestPanel({ password }: Props) {
           country_id: selectedCountry,
           name: newFeed.name,
           url: newFeed.url,
-          category: newFeed.category
+          category: newFeed.category,
+          sample_ratio: newFeed.sample_ratio
         });
       
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['news-rss-feeds'] });
-      setNewFeed({ name: '', url: '', category: 'general' });
+      setNewFeed({ name: '', url: '', category: 'general', sample_ratio: 1 });
       setValidationResult(null);
       toast({ title: 'RSS канал додано' });
     },
@@ -888,7 +896,7 @@ export function NewsDigestPanel({ password }: Props) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="space-y-2">
                         <Label>Назва каналу</Label>
                         <Input
@@ -951,6 +959,24 @@ export function NewsDigestPanel({ password }: Props) {
                           </SelectContent>
                         </Select>
                       </div>
+                      <div className="space-y-2">
+                        <Label>Вибірка новин</Label>
+                        <Select
+                          value={newFeed.sample_ratio.toString()}
+                          onValueChange={(v) => setNewFeed(prev => ({ ...prev, sample_ratio: parseInt(v) }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SAMPLE_RATIO_OPTIONS.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value.toString()}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -998,6 +1024,11 @@ export function NewsDigestPanel({ password }: Props) {
                                   <Download className="w-3 h-3 mr-1" />
                                   {feed.items_count || 0} новин
                                 </Badge>
+                                {feed.sample_ratio > 1 && (
+                                  <Badge variant="outline" className="text-xs text-primary border-primary/50">
+                                    ↓{feed.sample_ratio}
+                                  </Badge>
+                                )}
                                 {feed.fetch_error && (
                                   <Badge variant="destructive" className="text-xs">
                                     <AlertCircle className="w-3 h-3 mr-1" />
