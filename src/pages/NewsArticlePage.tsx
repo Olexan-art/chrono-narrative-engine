@@ -40,31 +40,37 @@ export default function NewsArticlePage() {
   const { isAuthenticated: isAdminAuthenticated, password: adminPassword } = useAdminStore();
 
   // Fetch ONLY availability flags via admin backend (no secret keys exposed to the client)
+  // NOTE: Don't swallow errors here — if we return `null` on a transient backend issue,
+  // React Query will cache it as a successful result (and the model list stays incomplete).
   const { data: settings } = useQuery({
     queryKey: ['llm-settings-available'],
     queryFn: async () => {
-      try {
-        if (!adminPassword) return null;
-        const result = await adminAction<{
-          success: boolean;
-          availability: {
-            hasOpenai: boolean;
-            hasGemini: boolean;
-            hasGeminiV22: boolean;
-            hasAnthropic: boolean;
-            hasZai: boolean;
-            hasMistral: boolean;
-          };
-        }>('getLLMAvailability', adminPassword);
+      if (!adminPassword) return null;
 
-        return result.availability;
-      } catch (e) {
-        console.error('Error fetching LLM availability:', e);
-        return null;
+      const result = await adminAction<{
+        success: boolean;
+        availability: {
+          hasOpenai: boolean;
+          hasGemini: boolean;
+          hasGeminiV22: boolean;
+          hasAnthropic: boolean;
+          hasZai: boolean;
+          hasMistral: boolean;
+        };
+      }>('getLLMAvailability', adminPassword);
+
+      if (!result?.success) {
+        throw new Error('Failed to fetch LLM availability');
       }
+
+      return result.availability;
     },
     enabled: isAdminAuthenticated && !!adminPassword,
-    staleTime: 1000 * 60 * 5,
+    // Make the list self-heal quickly after backend redeploys.
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    retry: 2,
   });
 
   // Build available models list based on configured API keys
