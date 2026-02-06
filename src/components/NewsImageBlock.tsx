@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ImagePlus, RefreshCw, Loader2, Sparkles, Palette, Upload, Trash2, RotateCcw } from "lucide-react";
+import { ImagePlus, RefreshCw, Loader2, Sparkles, Palette, Upload, Trash2, RotateCcw, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
