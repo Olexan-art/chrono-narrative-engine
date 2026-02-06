@@ -294,6 +294,7 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
 
   return (
     <div className="relative mb-4">
+      <FileInput />
       <img 
         src={imageUrl} 
         alt="" 
@@ -310,16 +311,16 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
         </div>
       )}
       
-      {/* Admin regenerate controls */}
+      {/* Admin controls */}
       {isAdmin && (
-        <div className="absolute top-3 right-3 flex items-center gap-2">
+        <div className="absolute top-3 right-3 flex flex-wrap items-center gap-2">
           <StyleSelector />
           <Button
             variant="secondary"
             size="sm"
             className="gap-2 shadow-lg"
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || isUploading || isDeleting}
           >
             {isGenerating ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -329,6 +330,38 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
             {language === 'en' ? 'Regenerate' : 
              language === 'pl' ? 'Regeneruj' : 
              'Перегенерувати'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-2 shadow-lg"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isGenerating || isUploading || isDeleting}
+          >
+            {isUploading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4" />
+            )}
+            {language === 'en' ? 'Upload' : 
+             language === 'pl' ? 'Prześlij' : 
+             'Завантажити'}
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="gap-2 shadow-lg"
+            onClick={handleDelete}
+            disabled={isGenerating || isUploading || isDeleting}
+          >
+            {isDeleting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+            {language === 'en' ? 'Delete' : 
+             language === 'pl' ? 'Usuń' : 
+             'Видалити'}
           </Button>
         </div>
       )}
