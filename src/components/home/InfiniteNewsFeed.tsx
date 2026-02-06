@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 const DEFAULT_PAGE_SIZE = 40;
 
