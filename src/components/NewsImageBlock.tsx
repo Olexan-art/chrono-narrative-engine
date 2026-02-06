@@ -37,6 +37,7 @@ const IMAGE_STYLES = [
   { value: 'comic', label: 'Комікс', labelEn: 'Comic', labelPl: 'Komiks', prompt: 'comic book style, bold outlines, halftone dots, dynamic action panels, vibrant pop colors, superhero aesthetic' },
   { value: 'gothic', label: 'Готичний', labelEn: 'Gothic', labelPl: 'Gotycki', prompt: 'gothic art style, dark romantic atmosphere, ornate details, medieval influences, dramatic and moody' },
   { value: 'vintage', label: 'Вінтаж', labelEn: 'Vintage', labelPl: 'Vintage', prompt: 'vintage retro style, aged paper texture, faded colors, 1950s-1960s aesthetic, nostalgic warm tones' },
+  { value: 'charcoal', label: 'Чорно-білий', labelEn: 'Black & White', labelPl: 'Czarno-biały', prompt: 'black and white charcoal drawing, hand-drawn with charcoal on textured paper, expressive strokes, dramatic shading, artistic sketch, monochrome, raw and emotional, fine art style' },
 ];
 
 export function NewsImageBlock({
