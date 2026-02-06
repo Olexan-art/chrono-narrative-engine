@@ -1024,6 +1024,11 @@ export function NewsDigestPanel({ password }: Props) {
                                   <Download className="w-3 h-3 mr-1" />
                                   {feed.items_count || 0} новин
                                 </Badge>
+                                {feed.sample_ratio > 1 && (
+                                  <Badge variant="outline" className="text-xs text-primary border-primary/50">
+                                    ↓{feed.sample_ratio}
+                                  </Badge>
+                                )}
                                 {feed.fetch_error && (
                                   <Badge variant="destructive" className="text-xs">
                                     <AlertCircle className="w-3 h-3 mr-1" />
