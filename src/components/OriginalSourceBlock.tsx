@@ -244,18 +244,34 @@ export function OriginalSourceBlock({
             </CardTitle>
             <div className="flex items-center gap-2">
               {isAdmin && newsId && !isEditing && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-7 px-2 text-xs gap-1"
-                  onClick={() => {
-                    setEditedContent(decodedContent);
-                    setIsEditing(true);
-                  }}
-                >
-                  <Edit3 className="w-3 h-3" />
-                  {language === 'en' ? 'Edit' : language === 'pl' ? 'Edytuj' : 'Редагувати'}
-                </Button>
+                <>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={handleStructureText}
+                    disabled={isStructuring}
+                  >
+                    {isStructuring ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-3 h-3" />
+                    )}
+                    {language === 'en' ? 'Structure' : language === 'pl' ? 'Uporządkuj' : 'Структурувати'}
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={() => {
+                      setEditedContent(decodedContent);
+                      setIsEditing(true);
+                    }}
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    {language === 'en' ? 'Edit' : language === 'pl' ? 'Edytuj' : 'Редагувати'}
+                  </Button>
+                </>
               )}
               {!isEditing && (
                 <CollapsibleTrigger asChild>
