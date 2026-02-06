@@ -50,7 +50,7 @@ export const LLM_MODELS = {
     ],
     image: [
       { value: 'google/gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (новітній)' },
-      { value: 'google/gemini-2.5-flash-image-preview', label: 'Gemini 2.5 Flash Image' },
+      { value: 'google/gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image' },
     ]
   },
   openai: {
