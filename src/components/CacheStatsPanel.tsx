@@ -252,6 +252,8 @@ export function CacheStatsPanel({ password }: Props) {
       if (!response.ok) throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
 
       const labels: Record<string, string> = {
+        '1hour': '1 годину',
+        '3hours': '3 години',
         '6hours': '6 годин',
         '12hours': '12 годин',
         '24hours': '24 години',
