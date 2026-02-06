@@ -75,7 +75,7 @@ export function NewsDigestPanel({ password }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  const [newFeed, setNewFeed] = useState({ name: '', url: '', category: 'general' });
+  const [newFeed, setNewFeed] = useState({ name: '', url: '', category: 'general', sample_ratio: 1 });
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; error?: string; itemCount?: number } | null>(null);
   const [checkingFeedId, setCheckingFeedId] = useState<string | null>(null);
