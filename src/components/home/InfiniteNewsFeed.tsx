@@ -265,6 +265,15 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
                       )}
                       <ArrowRight className="w-3 h-3 group-hover:translate-x-1 group-hover:text-primary transition-all" />
                     </div>
+                    
+                    {/* Voting buttons */}
+                    <div className="mt-2 pt-2 border-t border-border/30" onClick={(e) => e.preventDefault()}>
+                      <NewsVoteCompact 
+                        newsId={item.id} 
+                        likes={item.likes || 0} 
+                        dislikes={item.dislikes || 0} 
+                      />
+                    </div>
                   </div>
                 </article>
               </Link>

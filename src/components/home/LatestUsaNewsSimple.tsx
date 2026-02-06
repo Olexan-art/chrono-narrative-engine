@@ -146,6 +146,14 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
                       </span>
                     )}
                   </div>
+                  {/* Voting buttons */}
+                  <div className="mt-2" onClick={(e) => e.preventDefault()}>
+                    <NewsVoteCompact 
+                      newsId={item.id} 
+                      likes={item.likes || 0} 
+                      dislikes={item.dislikes || 0} 
+                    />
+                  </div>
                 </div>
               </Link>
             );
