@@ -86,10 +86,15 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <span className="text-xl">🇺🇸</span>
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Newspaper className="w-4 h-4 text-muted-foreground" />
-              {language === 'uk' ? 'Останні новини США' : language === 'pl' ? 'Najnowsze wiadomości USA' : 'Latest USA News'}
-            </h2>
+            <div>
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Newspaper className="w-4 h-4 text-muted-foreground" />
+                {language === 'uk' ? 'Останні новини США' : language === 'pl' ? 'Najnowsze wiadomości USA' : 'Latest USA News'}
+              </h2>
+              <span className="text-xs text-muted-foreground">
+                {usaNews.length} {language === 'uk' ? 'новин' : language === 'pl' ? 'wiadomości' : 'articles'}
+              </span>
+            </div>
           </div>
           <Link 
             to="/news/us" 
