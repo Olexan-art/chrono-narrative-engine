@@ -50,8 +50,8 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
         .limit(40);
 
       // Filter out those with content_en (already in Full Retelling) and excluded IDs
+      // No longer filtering by content_en to include more articles
       const filtered = (news || [])
-        .filter(item => !item.content_en || item.content_en.length < 300)
         .filter(item => !excludeIds.includes(item.id))
         .slice(0, 20);
 

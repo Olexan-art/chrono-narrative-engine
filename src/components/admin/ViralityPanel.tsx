@@ -312,7 +312,19 @@ export function ViralityPanel({ password }: ViralityPanelProps) {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <img src={ink.image_url} alt="" className="w-10 h-10 rounded object-cover" />
-                            <span className="line-clamp-1 text-sm">{ink.title || ink.news_item?.title || 'Без назви'}</span>
+                            {ink.news_item?.slug && ink.news_item?.country?.code ? (
+                              <a 
+                                href={`/news/${ink.news_item.country.code.toLowerCase()}/${ink.news_item.slug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="line-clamp-1 text-sm hover:text-primary hover:underline flex items-center gap-1"
+                              >
+                                {ink.title || ink.news_item?.title || 'Без назви'}
+                                <ExternalLink className="w-3 h-3 shrink-0 opacity-50" />
+                              </a>
+                            ) : (
+                              <span className="line-clamp-1 text-sm">{ink.title || 'Без назви'}</span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-center text-emerald-500 font-medium">{ink.likes || 0}</TableCell>
