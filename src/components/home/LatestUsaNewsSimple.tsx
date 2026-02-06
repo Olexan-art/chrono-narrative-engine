@@ -53,7 +53,7 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
       const filtered = (news || [])
         .filter(item => !item.content_en || item.content_en.length < 300)
         .filter(item => !excludeIds.includes(item.id))
-        .slice(0, 10);
+        .slice(0, 20);
 
       return filtered.map(item => ({
         ...item,
