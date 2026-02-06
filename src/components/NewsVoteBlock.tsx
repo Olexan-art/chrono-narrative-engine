@@ -26,12 +26,20 @@ const getVisitorId = (): string => {
   return visitorId;
 };
 
-export function NewsVoteBlock({ newsId, likes, dislikes, className, showLabel = true }: NewsVoteBlockProps) {
+export function NewsVoteBlock({ newsId, likes, dislikes, className, showLabel = true, size = 'md' }: NewsVoteBlockProps) {
   const { language } = useLanguage();
   const [currentVote, setCurrentVote] = useState<'like' | 'dislike' | null>(null);
   const [localLikes, setLocalLikes] = useState(likes);
   const [localDislikes, setLocalDislikes] = useState(dislikes);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Size configurations
+  const sizeConfig = {
+    sm: { button: 'p-1.5', icon: 'w-4 h-4', label: 'text-xs px-2 py-1', statusIcon: 'w-3.5 h-3.5', sparkle: 'w-3 h-3' },
+    md: { button: 'p-2', icon: 'w-5 h-5', label: 'text-sm px-3 py-1.5', statusIcon: 'w-4 h-4', sparkle: 'w-3.5 h-3.5' },
+    lg: { button: 'p-3', icon: 'w-6 h-6', label: 'text-base px-4 py-2', statusIcon: 'w-5 h-5', sparkle: 'w-4 h-4' },
+  };
+  const sizes = sizeConfig[size];
 
   // Check user's existing vote on mount
   useEffect(() => {
