@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { NewsVoteCompact } from "@/components/NewsVoteBlock";
 
 const DEFAULT_PAGE_SIZE = 40;
 
@@ -23,6 +24,8 @@ interface NewsItem {
   published_at: string | null;
   slug: string | null;
   category: string | null;
+  likes: number;
+  dislikes: number;
   country: {
     id: string;
     code: string;
@@ -78,6 +81,8 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
           published_at, 
           slug,
           category,
+          likes,
+          dislikes,
           country:news_countries(id, code, name, name_en, flag)
         `, { count: 'exact' })
         .not('slug', 'is', null)
@@ -259,6 +264,15 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
                         </span>
                       )}
                       <ArrowRight className="w-3 h-3 group-hover:translate-x-1 group-hover:text-primary transition-all" />
+                    </div>
+                    
+                    {/* Voting buttons */}
+                    <div className="mt-2 pt-2 border-t border-border/30" onClick={(e) => e.preventDefault()}>
+                      <NewsVoteCompact 
+                        newsId={item.id} 
+                        likes={item.likes || 0} 
+                        dislikes={item.dislikes || 0} 
+                      />
                     </div>
                   </div>
                 </article>

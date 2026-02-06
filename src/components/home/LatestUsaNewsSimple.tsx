@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { NewsVoteCompact } from "@/components/NewsVoteBlock";
 
 interface LatestUsaNewsSimpleProps {
   excludeIds?: string[];
@@ -42,7 +43,9 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
           published_at, 
           slug,
           category,
-          content_en
+          content_en,
+          likes,
+          dislikes
         `)
         .eq('country_id', usaCountry.id)
         .not('slug', 'is', null)
@@ -142,6 +145,14 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
                         {format(new Date(item.published_at), 'HH:mm', { locale: dateLocale })}
                       </span>
                     )}
+                  </div>
+                  {/* Voting buttons */}
+                  <div className="mt-2" onClick={(e) => e.preventDefault()}>
+                    <NewsVoteCompact 
+                      newsId={item.id} 
+                      likes={item.likes || 0} 
+                      dislikes={item.dislikes || 0} 
+                    />
                   </div>
                 </div>
               </Link>
