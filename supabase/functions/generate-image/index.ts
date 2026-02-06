@@ -55,7 +55,7 @@ async function generateWithLovable(prompt: string): Promise<string> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash-image-preview',
+      model: 'google/gemini-2.5-flash-image',
       messages: [{ role: 'user', content: prompt }],
       modalities: ['image', 'text']
     }),
@@ -154,7 +154,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, partId, chapterId, volumeId, imageIndex = 1, originalContent } = await req.json();
+    const { prompt, partId, chapterId, volumeId, newsId, imageIndex = 1, originalContent } = await req.json();
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -171,7 +171,7 @@ serve(async (req) => {
     const llmSettings: LLMSettings = settingsData || {
       llm_provider: 'lovable',
       llm_image_provider: null,
-      llm_image_model: 'google/gemini-2.5-flash-image-preview',
+      llm_image_model: 'google/gemini-2.5-flash-image',
       openai_api_key: null,
       gemini_api_key: null
     };
@@ -243,6 +243,13 @@ serve(async (req) => {
         cover_image_url: finalImageUrl, 
         cover_image_prompt: prompt 
       }).eq('id', volumeId);
+    } else if (newsId) {
+      // News article image
+      storagePath = `news/${newsId}/cover.png`;
+      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath);
+      
+      // Note: news_rss_items table update is handled by the caller
+      console.log('Generated news image for:', newsId);
     } else {
       // No ID provided, just return the storage URL
       storagePath = `temp/${crypto.randomUUID()}.png`;
