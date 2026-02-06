@@ -967,6 +967,10 @@ export default function AdminPage() {
           <TabsContent value="bulk-scrape" className="mt-6">
             <BulkScrapePanel password={password} />
           </TabsContent>
+
+          <TabsContent value="virality" className="mt-6">
+            <ViralityPanel password={password} />
+          </TabsContent>
         </Tabs>
       </main>
     </div>
