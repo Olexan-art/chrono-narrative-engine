@@ -44,9 +44,19 @@ async function uploadBase64ToStorage(
   return urlData.publicUrl;
 }
 
-async function generateWithLovable(prompt: string): Promise<string> {
+async function generateWithLovable(prompt: string, inputImageUrl?: string): Promise<string> {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
+
+  // Build content array - text prompt + optional image for enhancement
+  const content: any[] = [{ type: 'text', text: prompt }];
+  
+  if (inputImageUrl) {
+    content.push({
+      type: 'image_url',
+      image_url: { url: inputImageUrl }
+    });
+  }
 
   const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
@@ -56,7 +66,7 @@ async function generateWithLovable(prompt: string): Promise<string> {
     },
     body: JSON.stringify({
       model: 'google/gemini-2.5-flash-image',
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content }],
       modalities: ['image', 'text']
     }),
   });
@@ -154,7 +164,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, partId, chapterId, volumeId, newsId, imageIndex = 1, originalContent } = await req.json();
+    const { prompt, partId, chapterId, volumeId, newsId, imageIndex = 1, originalContent, action, imageUrl } = await req.json();
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -175,6 +185,36 @@ serve(async (req) => {
       openai_api_key: null,
       gemini_api_key: null
     };
+
+    // Handle image enhancement action
+    if (action === 'enhance' && imageUrl) {
+      console.log('Enhancing image:', imageUrl.slice(0, 80));
+      const enhancePrompt = 'Enhance this image: improve quality, sharpen details, fix any artifacts, improve colors and contrast. Keep the same composition and subject. Output ultra high resolution version.';
+      
+      const enhancedBase64 = await generateWithLovable(enhancePrompt, imageUrl);
+      
+      if (!enhancedBase64) {
+        throw new Error('Failed to enhance image');
+      }
+
+      // Upload enhanced image
+      const storagePath = newsId 
+        ? `news/${newsId}/cover_enhanced.png`
+        : `temp/${crypto.randomUUID()}_enhanced.png`;
+      
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+      
+      const finalImageUrl = await uploadBase64ToStorage(supabase, enhancedBase64, storagePath);
+      console.log('Enhanced image uploaded to:', storagePath);
+
+      return new Response(
+        JSON.stringify({ success: true, imageUrl: finalImageUrl }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Use original_content context if provided for better image generation
     const contextHint = originalContent 

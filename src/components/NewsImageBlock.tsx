@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ImagePlus, RefreshCw, Loader2, Sparkles, Palette, Upload, Trash2, RotateCcw } from "lucide-react";
+import { ImagePlus, RefreshCw, Loader2, Sparkles, Palette, Upload, Trash2, RotateCcw, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -55,6 +55,7 @@ export function NewsImageBlock({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState('realistic');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -212,6 +213,49 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
     }
   };
 
+  const handleEnhance = async () => {
+    if (!imageUrl) return;
+    
+    setIsEnhancing(true);
+    try {
+      console.log('Enhancing image:', imageUrl);
+      
+      const result = await callEdgeFunction<{
+        success: boolean;
+        imageUrl: string;
+        error?: string;
+      }>('generate-image', {
+        action: 'enhance',
+        imageUrl,
+        newsId
+      });
+      
+      if (!result.success || !result.imageUrl) {
+        throw new Error(result.error || 'Failed to enhance image');
+      }
+      
+      // Update news item with enhanced image
+      const { error } = await supabase
+        .from('news_rss_items')
+        .update({ image_url: result.imageUrl })
+        .eq('id', newsId);
+      
+      if (error) throw error;
+      
+      toast.success(
+        language === 'en' ? 'Image enhanced!' : 
+        language === 'pl' ? 'Obraz ulepszony!' : 
+        'Зображення покращено!'
+      );
+      onImageUpdate?.();
+    } catch (error) {
+      console.error('Error enhancing image:', error);
+      toast.error(error instanceof Error ? error.message : 'Error enhancing image');
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
   // Hidden file input
   const FileInput = () => (
     <input
@@ -328,8 +372,25 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
             variant="secondary"
             size="sm"
             className="gap-2 shadow-lg"
+            onClick={handleEnhance}
+            disabled={isGenerating || isUploading || isDeleting || isEnhancing}
+            title={language === 'en' ? 'Enhance with AI' : language === 'pl' ? 'Ulepsz z AI' : 'Покращити з ШІ'}
+          >
+            {isEnhancing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Wand2 className="w-4 h-4" />
+            )}
+            {language === 'en' ? 'Enhance' : 
+             language === 'pl' ? 'Ulepsz' : 
+             'Покращити'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-2 shadow-lg"
             onClick={handleGenerate}
-            disabled={isGenerating || isUploading || isDeleting}
+            disabled={isGenerating || isUploading || isDeleting || isEnhancing}
           >
             {isGenerating ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -345,7 +406,7 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
             size="sm"
             className="gap-2 shadow-lg"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isGenerating || isUploading || isDeleting}
+            disabled={isGenerating || isUploading || isDeleting || isEnhancing}
           >
             {isUploading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -361,7 +422,7 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
             size="sm"
             className="gap-2 shadow-lg"
             onClick={handleDelete}
-            disabled={isGenerating || isUploading || isDeleting}
+            disabled={isGenerating || isUploading || isDeleting || isEnhancing}
           >
             {isDeleting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
