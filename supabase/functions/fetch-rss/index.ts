@@ -1535,9 +1535,19 @@ serve(async (req) => {
           let insertedCount = 0;
           const feedNewIds: string[] = [];
           
+          // Get feed's sample ratio (1 = all, 2 = every 2nd, 3 = every 3rd)
+          const feedSampleRatio = feed.sample_ratio || 1;
+          let itemIndex = 0;
+          
           for (const item of items.slice(0, 200)) {
             // Skip if already exists
             if (existingUrls.has(item.link)) continue;
+            
+            // Apply sample ratio: only take every Nth item based on feed setting
+            itemIndex++;
+            if (feedSampleRatio > 1 && itemIndex % feedSampleRatio !== 0) {
+              continue;
+            }
             
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
             const slug = generateSlug(item.title);
