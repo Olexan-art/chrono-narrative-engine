@@ -588,15 +588,6 @@ export default function NewsArticlePage() {
                 {/* Keywords - under title */}
                 <NewsKeywords keywords={articleKeywords} />
                 
-                {/* Full retelling badge - show always if content is retold */}
-                {article.content_en && article.content_en.length > 100 && !article.image_url && (
-                  <div className="mb-4">
-                    <Badge className="bg-primary/90 text-primary-foreground gap-1">
-                      <Sparkles className="w-3 h-3" />
-                      Full retelling
-                    </Badge>
-                  </div>
-                )}
 
                 {/* News Image with admin controls */}
                 <NewsImageBlock
