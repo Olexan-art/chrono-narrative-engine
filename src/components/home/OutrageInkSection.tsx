@@ -1,18 +1,20 @@
 import { memo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Palette, ThumbsUp, ArrowRight } from "lucide-react";
+import { Palette, ThumbsUp, ThumbsDown, ArrowRight, Sparkles, Scale } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { cn } from "@/lib/utils";
 
 interface OutrageInkItem {
   id: string;
   image_url: string;
   title: string | null;
   likes: number;
+  dislikes: number;
   created_at: string;
   news_item: {
     id: string;
@@ -29,6 +31,17 @@ interface OutrageInkItem {
     };
   }>;
 }
+
+type VoteStatus = 'majority_likes' | 'majority_dislikes' | 'balanced';
+
+const getVoteStatus = (likes: number, dislikes: number): VoteStatus => {
+  const total = likes + dislikes;
+  if (total === 0) return 'balanced';
+  const likeRatio = likes / total;
+  if (likeRatio >= 0.6) return 'majority_likes';
+  if (likeRatio <= 0.4) return 'majority_dislikes';
+  return 'balanced';
+};
 
 export const OutrageInkSection = memo(function OutrageInkSection() {
   const { language } = useLanguage();
@@ -48,7 +61,7 @@ export const OutrageInkSection = memo(function OutrageInkSection() {
       const { data: topLiked } = await supabase
         .from('outrage_ink')
         .select(`
-          id, image_url, title, likes, created_at,
+          id, image_url, title, likes, dislikes, created_at,
           news_item:news_rss_items(id, slug, country:news_countries(code)),
           entities:outrage_ink_entities(wiki_entity:wiki_entities(id, name, name_en))
         `)
@@ -60,7 +73,7 @@ export const OutrageInkSection = memo(function OutrageInkSection() {
       const { data: recent } = await supabase
         .from('outrage_ink')
         .select(`
-          id, image_url, title, likes, created_at,
+          id, image_url, title, likes, dislikes, created_at,
           news_item:news_rss_items(id, slug, country:news_countries(code)),
           entities:outrage_ink_entities(wiki_entity:wiki_entities(id, name, name_en))
         `)
@@ -136,13 +149,35 @@ export const OutrageInkSection = memo(function OutrageInkSection() {
                       loading="lazy"
                     />
                     
-                    {/* Likes badge */}
-                    {item.likes > 0 && (
-                      <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
-                        <ThumbsUp className="w-3 h-3 text-green-500" />
-                        <span className="text-xs font-medium">{item.likes}</span>
-                      </div>
-                    )}
+                    {/* Vote status badge - using qualitative labels instead of numbers */}
+                    {(item.likes > 0 || item.dislikes > 0) && (() => {
+                      const status = getVoteStatus(item.likes, item.dislikes);
+                      const statusConfig = {
+                        majority_likes: {
+                          icon: ThumbsUp,
+                          colorClass: 'text-emerald-500',
+                          animated: true,
+                        },
+                        majority_dislikes: {
+                          icon: ThumbsDown,
+                          colorClass: 'text-rose-500',
+                          animated: false,
+                        },
+                        balanced: {
+                          icon: Scale,
+                          colorClass: 'text-amber-500',
+                          animated: false,
+                        },
+                      };
+                      const config = statusConfig[status];
+                      const StatusIcon = config.icon;
+                      return (
+                        <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
+                          <StatusIcon className={cn("w-3 h-3", config.colorClass, config.animated && "animate-pulse")} />
+                          {config.animated && <Sparkles className="w-2.5 h-2.5 text-emerald-500 animate-bounce" />}
+                        </div>
+                      );
+                    })()}
 
                     {/* First item badge (top liked) */}
                     {idx === 0 && (
