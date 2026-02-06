@@ -238,7 +238,15 @@ export function ViralityPanel({ password }: ViralityPanelProps) {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <span>{news.country?.flag}</span>
-                            <span className="line-clamp-1 text-sm">{news.title_en || news.title}</span>
+                            <a 
+                              href={`/news/${news.country?.code?.toLowerCase()}/${news.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="line-clamp-1 text-sm hover:text-primary hover:underline flex items-center gap-1"
+                            >
+                              {news.title_en || news.title}
+                              <ExternalLink className="w-3 h-3 shrink-0 opacity-50" />
+                            </a>
                           </div>
                         </TableCell>
                         <TableCell className="text-center text-emerald-500 font-medium">{news.likes || 0}</TableCell>
