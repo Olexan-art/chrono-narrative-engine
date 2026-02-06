@@ -1357,7 +1357,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      outrage_ink_vote_counts: {
+        Row: {
+          dislikes: number | null
+          likes: number | null
+          outrage_ink_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outrage_ink_votes_outrage_ink_id_fkey"
+            columns: ["outrage_ink_id"]
+            isOneToOne: false
+            referencedRelation: "outrage_ink"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       exec_sql: { Args: { sql: string }; Returns: Json }
