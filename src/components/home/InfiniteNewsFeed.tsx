@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 const DEFAULT_PAGE_SIZE = 40;
 
@@ -216,11 +217,10 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
                 <article className="cosmic-card h-full border border-border/50 hover:border-primary/50 transition-all duration-200 overflow-hidden hover:shadow-lg hover:-translate-y-1">
                   {item.image_url && (
                     <div className="relative h-32 overflow-hidden">
-                      <img 
+                      <OptimizedImage 
                         src={item.image_url} 
                         alt="" 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
                       <div className="absolute top-2 left-2 flex items-center gap-1">

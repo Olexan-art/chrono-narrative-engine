@@ -7,6 +7,7 @@ import { ArrowRight, Clock, Newspaper } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 interface LatestUsaNewsSimpleProps {
   excludeIds?: string[];
@@ -113,11 +114,11 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
                 style={{ animationDelay: `${idx * 50}ms` }}
               >
                 {item.image_url && (
-                  <img 
+                  <OptimizedImage 
                     src={item.image_url} 
                     alt="" 
                     className="w-16 h-16 object-cover rounded shrink-0"
-                    loading="lazy"
+                    containerClassName="w-16 h-16 shrink-0 rounded"
                   />
                 )}
                 <div className="flex-1 min-w-0">
