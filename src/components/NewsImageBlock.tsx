@@ -88,11 +88,87 @@ export function NewsImageBlock({
       }
     }
 
+    // Mentioned entities (people, companies, organizations)
+    if (entities.length > 0) {
+      const entityDescriptions = entities.slice(0, 5).map(e => {
+        const type = e.entity_type === 'person' ? 'Person' : 
+                     e.entity_type === 'company' ? 'Company' : 'Organization';
+        return `${e.name} (${type})`;
+      });
+      parts.push(`Key figures: ${entityDescriptions.join(', ')}`);
+    }
+
     // Get style prompt
     const styleConfig = IMAGE_STYLES.find(s => s.value === selectedStyle) || IMAGE_STYLES[0];
 
     return `Create a news article illustration based on: ${parts.join('. ')}. 
 Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
+  };
+
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const path = `news/${newsId}/cover.${ext}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('covers')
+        .upload(path, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('covers').getPublicUrl(path);
+      
+      const { error: updateError } = await supabase
+        .from('news_rss_items')
+        .update({ image_url: urlData.publicUrl })
+        .eq('id', newsId);
+      
+      if (updateError) throw updateError;
+
+      toast.success(
+        language === 'en' ? 'Image uploaded!' :
+        language === 'pl' ? 'Obraz przesłany!' :
+        'Зображення завантажено!'
+      );
+      onImageUpdate?.();
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(error instanceof Error ? error.message : 'Upload failed');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!imageUrl) return;
+    
+    setIsDeleting(true);
+    try {
+      // Remove from database
+      const { error } = await supabase
+        .from('news_rss_items')
+        .update({ image_url: null })
+        .eq('id', newsId);
+      
+      if (error) throw error;
+
+      toast.success(
+        language === 'en' ? 'Image deleted!' :
+        language === 'pl' ? 'Obraz usunięty!' :
+        'Зображення видалено!'
+      );
+      onImageUpdate?.();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error(error instanceof Error ? error.message : 'Delete failed');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleGenerate = async () => {
