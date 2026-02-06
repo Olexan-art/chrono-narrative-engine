@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
-  TrendingUp, Flame, ThumbsUp, ThumbsDown, Clock, Zap, 
+  Flame, ThumbsUp, ThumbsDown, Clock, Zap, 
   Settings, Play, RefreshCw, Loader2, Image, Newspaper,
   BarChart3, Target, Sparkles
 } from "lucide-react";
