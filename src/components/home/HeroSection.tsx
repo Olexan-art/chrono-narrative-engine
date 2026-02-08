@@ -1,10 +1,9 @@
 import { memo } from "react";
 import { Link } from "react-router-dom";
-import { Sparkles } from "lucide-react";
+import { Sparkles, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HeroTweets } from "@/components/HeroTweets";
+import { HeroTrendingEntities } from "@/components/home/HeroTrendingEntities";
 import { useLanguage } from "@/contexts/LanguageContext";
-import type { Part } from "@/types/database";
 
 interface HeroSectionProps {
   latestParts: Part[];
