@@ -1023,7 +1023,7 @@ export default function WikiEntityPage() {
                         </div>
                       )}
                     </div>
-                  ) (
+                  ) : (
                     <p className="text-muted-foreground text-center py-8">
                       {language === 'uk' ? 'Новин поки немає' : 'No news yet'}
                     </p>
