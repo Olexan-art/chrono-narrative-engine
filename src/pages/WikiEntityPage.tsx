@@ -905,18 +905,47 @@ export default function WikiEntityPage() {
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {caricatures.map((c) => (
-                        <Link key={c.id} to="/ink-abyss" className="group">
-                          <div className="aspect-square rounded-lg overflow-hidden border border-border">
+                        <button 
+                          key={c.id} 
+                          onClick={() => openCaricatureLightbox(c)}
+                          className="group text-left relative"
+                        >
+                          <div className="aspect-square rounded-lg overflow-hidden border border-border relative">
                             <img
                               src={c.image_url}
                               alt={c.title || ''}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                             />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <ZoomIn className="w-8 h-8 text-white drop-shadow-lg" />
+                            </div>
                           </div>
                           {c.title && (
                             <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{c.title}</p>
                           )}
-                        </Link>
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Keywords Block */}
+              {allKeywords.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <FileText className="w-5 h-5 text-primary" />
+                      {language === 'uk' ? 'Ключові слова' : 'Keywords'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {allKeywords.map(([keyword, count]) => (
+                        <Badge key={keyword} variant="secondary" className="text-sm">
+                          {keyword}
+                          <span className="ml-1 text-muted-foreground">({count})</span>
+                        </Badge>
                       ))}
                     </div>
                   </CardContent>
@@ -994,7 +1023,7 @@ export default function WikiEntityPage() {
                         </div>
                       )}
                     </div>
-                  ) : (
+                  ) (
                     <p className="text-muted-foreground text-center py-8">
                       {language === 'uk' ? 'Новин поки немає' : 'No news yet'}
                     </p>
