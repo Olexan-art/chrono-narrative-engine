@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { 
   ArrowLeft, ExternalLink, User, Building2, Globe, Newspaper, 
-  RefreshCw, Trash2, Link as LinkIcon, Quote, TrendingUp,
-  ImageIcon, Sparkles, Network
+  RefreshCw, Trash2, TrendingUp, ImageIcon, Sparkles, Network,
+  Eye, Pencil, Loader2, Tag
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -13,8 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminStore } from "@/stores/adminStore";
@@ -48,6 +47,8 @@ interface NewsItem {
   description_en: string | null;
   image_url: string | null;
   published_at: string | null;
+  themes: string[] | null;
+  themes_en: string[] | null;
   country: {
     code: string;
     flag: string;
@@ -76,6 +77,9 @@ export default function WikiEntityPage() {
   const { entityId } = useParams<{ entityId: string }>();
   const { language } = useLanguage();
   const { isAuthenticated: isAdmin } = useAdminStore();
+  const [isEditingExtract, setIsEditingExtract] = useState(false);
+  const [editedExtract, setEditedExtract] = useState("");
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch entity data
@@ -94,7 +98,7 @@ export default function WikiEntityPage() {
     enabled: !!entityId,
   });
 
-  // Fetch linked news
+  // Fetch linked news with themes
   const { data: linkedNews = [] } = useQuery({
     queryKey: ['entity-news', entityId],
     queryFn: async () => {
@@ -103,7 +107,7 @@ export default function WikiEntityPage() {
         .select(`
           news_item:news_rss_items(
             id, slug, title, title_en, description, description_en,
-            image_url, published_at, country_id,
+            image_url, published_at, themes, themes_en, country_id,
             country:news_countries(code, flag, name)
           )
         `)
@@ -122,6 +126,40 @@ export default function WikiEntityPage() {
     },
     enabled: !!entityId,
   });
+
+  // Aggregate views from all news
+  const { data: aggregatedViews = 0 } = useQuery({
+    queryKey: ['entity-views', entityId],
+    queryFn: async () => {
+      const newsIds = linkedNews.map(n => n.id);
+      if (!newsIds.length) return 0;
+      
+      const { data, error } = await supabase
+        .from('view_counts')
+        .select('views')
+        .eq('entity_type', 'news')
+        .in('entity_id', newsIds);
+      
+      if (error) return 0;
+      return data.reduce((sum, v) => sum + (v.views || 0), 0);
+    },
+    enabled: linkedNews.length > 0,
+  });
+
+  // Extract topics from news
+  const allTopics = linkedNews.reduce((acc, news) => {
+    const themes = language === 'en' && news.themes_en ? news.themes_en : news.themes;
+    if (themes) {
+      themes.forEach(t => {
+        acc[t] = (acc[t] || 0) + 1;
+      });
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  const sortedTopics = Object.entries(allTopics)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12);
 
   // Fetch related entities (entities that appear in the same news)
   const { data: relatedEntities = [] } = useQuery({
@@ -179,11 +217,15 @@ export default function WikiEntityPage() {
       const { data, error } = await supabase
         .from('outrage_ink_entities')
         .select(`
+          outrage_ink_id,
           outrage_ink:outrage_ink(id, image_url, title, likes, dislikes)
         `)
         .eq('wiki_entity_id', entityId);
 
-      if (error) return [];
+      if (error) {
+        console.error('Caricatures error:', error);
+        return [];
+      }
 
       return data
         .filter(d => d.outrage_ink)
@@ -226,6 +268,47 @@ export default function WikiEntityPage() {
       toast.error(err.message);
     },
   });
+
+  // Save extract mutation
+  const saveExtractMutation = useMutation({
+    mutationFn: async (newExtract: string) => {
+      const field = language === 'en' ? 'extract_en' : 'extract';
+      const { error } = await supabase
+        .from('wiki_entities')
+        .update({ [field]: newExtract })
+        .eq('id', entityId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Збережено');
+      setIsEditingExtract(false);
+      queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] });
+    },
+  });
+
+  // AI format extract
+  const formatWithAi = async () => {
+    setIsAiProcessing(true);
+    try {
+      const result = await callEdgeFunction<{ success: boolean; formatted?: string; error?: string }>('search-wiki', {
+        action: 'format_extract',
+        entityId,
+        currentExtract: editedExtract || extract,
+        entityName: name,
+        language: language === 'uk' ? 'uk' : 'en',
+      });
+      if (result.success && result.formatted) {
+        setEditedExtract(result.formatted);
+        toast.success('Відформатовано');
+      } else {
+        throw new Error(result.error || 'AI formatting failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsAiProcessing(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -364,6 +447,12 @@ export default function WikiEntityPage() {
                         <TrendingUp className="w-4 h-4" />
                         <span>{entity.search_count} {language === 'uk' ? 'згадок' : 'mentions'}</span>
                       </div>
+                      {aggregatedViews > 0 && (
+                        <div className="flex items-center gap-1 text-primary font-medium">
+                          <Eye className="w-4 h-4" />
+                          <span>{aggregatedViews.toLocaleString()}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Wikipedia Link */}
@@ -382,17 +471,92 @@ export default function WikiEntityPage() {
                 </div>
               </Card>
 
+              {/* Topics Block */}
+              {sortedTopics.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Tag className="w-5 h-5 text-primary" />
+                      Topics
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {sortedTopics.map(([topic, count]) => (
+                        <Badge key={topic} variant="outline" className="text-sm">
+                          {topic}
+                          <span className="ml-1 text-muted-foreground">({count})</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Key Information Block */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                    {language === 'uk' ? 'Ключова інформація' : 'Key Information'}
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      {language === 'uk' ? 'Ключова інформація' : 'Key Information'}
+                    </CardTitle>
+                    {isAdmin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditedExtract(extract || '');
+                          setIsEditingExtract(true);
+                        }}
+                      >
+                        <Pencil className="w-4 h-4 mr-1" />
+                        {language === 'uk' ? 'Редагувати' : 'Edit'}
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {extract ? (
-                    <p className="text-muted-foreground leading-relaxed">{extract}</p>
+                  {isEditingExtract ? (
+                    <div className="space-y-3">
+                      <Textarea
+                        value={editedExtract}
+                        onChange={(e) => setEditedExtract(e.target.value)}
+                        rows={8}
+                        className="w-full"
+                      />
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          size="sm"
+                          onClick={() => saveExtractMutation.mutate(editedExtract)}
+                          disabled={saveExtractMutation.isPending}
+                        >
+                          {language === 'uk' ? 'Зберегти' : 'Save'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={formatWithAi}
+                          disabled={isAiProcessing}
+                        >
+                          {isAiProcessing ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-4 h-4 mr-1" />
+                          )}
+                          {language === 'uk' ? 'Форматувати ШІ' : 'Format with AI'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setIsEditingExtract(false)}
+                        >
+                          {language === 'uk' ? 'Скасувати' : 'Cancel'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : extract ? (
+                    <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{extract}</p>
                   ) : (
                     <p className="text-muted-foreground italic">
                       {language === 'uk' ? 'Інформація ще не завантажена' : 'Information not yet loaded'}

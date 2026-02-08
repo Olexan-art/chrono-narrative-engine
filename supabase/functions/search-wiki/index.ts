@@ -154,7 +154,64 @@ serve(async (req) => {
   }
 
   try {
-    const { newsId, terms, title, keywords, language = 'en' } = await req.json();
+    const body = await req.json();
+    const { action, newsId, terms, title, keywords, language = 'en' } = body;
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Handle AI format extract action
+    if (action === 'format_extract') {
+      const { entityId, currentExtract, entityName, language: lang = 'en' } = body;
+      
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      if (!LOVABLE_API_KEY) {
+        return new Response(JSON.stringify({ success: false, error: 'AI not configured' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const systemPrompt = lang === 'uk' 
+        ? `Ти експерт з форматування біографічних та енциклопедичних текстів. Твоє завдання - покращити та відформатувати текст про сутність, зберігаючи факти. Додай структуру, виправ стиль. Не додавай вигаданих фактів. Відповідай тільки відформатованим текстом без пояснень.`
+        : `You are an expert in formatting biographical and encyclopedic texts. Your task is to improve and format text about an entity while preserving facts. Add structure, improve style. Do not add fictional facts. Respond only with formatted text without explanations.`;
+
+      const userPrompt = lang === 'uk'
+        ? `Відформатуй цей текст про "${entityName}":\n\n${currentExtract}`
+        : `Format this text about "${entityName}":\n\n${currentExtract}`;
+
+      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-3-flash-preview',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        const errText = await aiResponse.text();
+        console.error('AI error:', errText);
+        return new Response(JSON.stringify({ success: false, error: 'AI request failed' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const aiData = await aiResponse.json();
+      const formatted = aiData.choices?.[0]?.message?.content || currentExtract;
+
+      return new Response(JSON.stringify({ success: true, formatted }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
