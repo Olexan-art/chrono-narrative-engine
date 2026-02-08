@@ -165,36 +165,55 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
             ))}
 
             {/* Center entity (main) */}
-            <g className="cursor-default">
+            <g className="cursor-default" filter="url(#glow)">
+              {/* Outer glow ring */}
               <circle
                 cx={200}
                 cy={200}
-                r={45}
-                fill="hsl(var(--primary))"
+                r={52}
+                fill="none"
+                stroke="hsl(var(--primary))"
+                strokeWidth={2}
+                opacity={0.4}
+              />
+              {/* Main circle */}
+              <circle
+                cx={200}
+                cy={200}
+                r={48}
+                fill="url(#centerGradient)"
                 className="drop-shadow-lg"
+              />
+              {/* Inner highlight */}
+              <circle
+                cx={200}
+                cy={190}
+                r={35}
+                fill="hsl(var(--primary))"
+                opacity={0.1}
               />
               {mainEntity.image_url ? (
                 <clipPath id="center-clip">
-                  <circle cx={200} cy={200} r={42} />
+                  <circle cx={200} cy={200} r={44} />
                 </clipPath>
               ) : null}
               {mainEntity.image_url ? (
                 <image
-                  x={200 - 42}
-                  y={200 - 42}
-                  width={84}
-                  height={84}
+                  x={200 - 44}
+                  y={200 - 44}
+                  width={88}
+                  height={88}
                   href={mainEntity.image_url}
                   clipPath="url(#center-clip)"
                   preserveAspectRatio="xMidYMid slice"
                 />
               ) : (
-                <foreignObject x={200 - 20} y={200 - 20} width={40} height={40}>
+                <foreignObject x={200 - 22} y={200 - 22} width={44} height={44}>
                   <div className="w-full h-full flex items-center justify-center text-primary-foreground">
                     {mainEntity.entity_type === 'person' ? (
-                      <User className="w-6 h-6" />
+                      <User className="w-7 h-7" />
                     ) : (
-                      <Building2 className="w-6 h-6" />
+                      <Building2 className="w-7 h-7" />
                     )}
                   </div>
                 </foreignObject>
