@@ -107,12 +107,35 @@ async function fetchAllNewsWithCountry(supabase: any): Promise<{ slug: string; c
 // Get all pages based on filter type
 async function getAllPagesToCache(
   supabase: any, 
-  filter?: 'all' | 'recent-24h' | 'news-7d'
+  filter?: 'all' | 'recent-24h' | 'news-7d' | 'wiki'
 ): Promise<string[]> {
   const pages: string[] = [];
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  // Wiki-only filter - just wiki pages and entities
+  if (filter === 'wiki') {
+    // Static wiki pages
+    pages.push('/wiki', '/news', '/news/us', '/news/ua', '/news/pl', '/news/in');
+    
+    // Add all wiki entities (top 500 by search count)
+    const { data: wikiEntities } = await supabase
+      .from('wiki_entities')
+      .select('id, slug')
+      .order('search_count', { ascending: false })
+      .limit(500);
+
+    if (wikiEntities) {
+      console.log(`Found ${wikiEntities.length} wiki entities to cache`);
+      for (const entity of wikiEntities) {
+        const entityPath = entity.slug || entity.id;
+        pages.push(`/wiki/${entityPath}`);
+      }
+    }
+    
+    return pages;
+  }
 
   // Static pages (only for 'all' or 'recent-24h')
   if (filter !== 'news-7d') {
