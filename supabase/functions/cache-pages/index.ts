@@ -116,7 +116,7 @@ async function getAllPagesToCache(
 
   // Static pages (only for 'all' or 'recent-24h')
   if (filter !== 'news-7d') {
-    pages.push('/', '/news', '/chapters', '/volumes', '/calendar', '/sitemap');
+    pages.push('/', '/news', '/chapters', '/volumes', '/calendar', '/sitemap', '/wiki');
   }
 
   // Add country news pages
