@@ -1051,8 +1051,42 @@ export default function WikiEntityPage() {
                     entity_type: entity.entity_type,
                   }}
                   relatedEntities={relatedEntities}
+                  secondaryConnections={secondaryConnections}
                 />
               )}
+
+              {/* Compact Rating Block */}
+              <div className="flex items-center justify-between gap-4 p-4 bg-muted/50 rounded-xl border border-border">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Swords className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <span className="text-2xl font-bold text-primary">
+                      {aggregatedRating.toLocaleString()}
+                    </span>
+                    <p className="text-xs text-muted-foreground">
+                      {language === 'uk' ? 'Загальний рейтинг' : 'Total Rating'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <Eye className="w-4 h-4" />
+                    <span>{aggregatedViews.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <ThumbsUp className="w-4 h-4" />
+                    <span>{(totalNewsLikes + totalCaricatureLikes).toLocaleString()}</span>
+                  </div>
+                  {(totalNewsDislikes + totalCaricatureDislikes) > 0 && (
+                    <div className="flex items-center gap-1 text-destructive/70">
+                      <ThumbsDown className="w-4 h-4" />
+                      <span>{(totalNewsDislikes + totalCaricatureDislikes).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Key Information Block */}
               <Card className="border-2 border-primary/20">
