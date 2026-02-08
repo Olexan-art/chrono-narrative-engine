@@ -465,6 +465,18 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   </div>
                 </foreignObject>
               )}
+              {/* Entity name label next to root node */}
+              <text
+                x={rootX + NODE_SIZES.root.outer + 12}
+                y={rootY + 5}
+                textAnchor="start"
+                fill="hsl(var(--foreground))"
+                fontSize="14"
+                fontWeight="600"
+                className="drop-shadow-sm"
+              >
+                {mainName}
+              </text>
             </g>
 
             {/* Entity nodes - hexagons with tiered sizes */}
