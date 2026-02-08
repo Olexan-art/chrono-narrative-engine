@@ -1351,27 +1351,6 @@ export default function WikiEntityPage() {
                 </Card>
               )}
 
-              {/* Keywords Block */}
-              {allKeywords.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Hash className="w-5 h-5 text-primary" />
-                      {language === 'uk' ? 'Ключові слова' : 'Keywords'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {allKeywords.map(([keyword, count]) => (
-                        <Badge key={keyword} variant="secondary" className="text-sm">
-                          {keyword}
-                          <span className="ml-1 text-muted-foreground">({count})</span>
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
               {/* News Section with Pagination */}
               <Card>
