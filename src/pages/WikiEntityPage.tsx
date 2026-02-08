@@ -1192,7 +1192,31 @@ export default function WikiEntityPage() {
                       </div>
                     </div>
                   ) : extract ? (
-                    <MarkdownContent content={extract} />
+                    <div className="space-y-6">
+                      <MarkdownContent content={extract} />
+                      
+                      {/* Categories Sub-block */}
+                      {extendedData?.categories && extendedData.categories.length > 0 && (
+                        <div className="pt-4 border-t border-border/50">
+                          <h4 className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
+                            <FolderOpen className="w-4 h-4" />
+                            {language === 'uk' ? 'Категорії Wikipedia' : 'Wikipedia Categories'}
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {extendedData.categories.slice(0, 12).map((category, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {category}
+                              </Badge>
+                            ))}
+                            {extendedData.categories.length > 12 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{extendedData.categories.length - 12}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       <FileText className="w-12 h-12 text-muted-foreground/30 mb-3" />
