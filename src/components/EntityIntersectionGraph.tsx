@@ -491,35 +491,68 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               );
             })}
 
-            {/* Root entity (main) - Hexagon at top - LARGER */}
+            {/* Fog layers around root node */}
+            <g>
+              {/* Fog layer 1 - primary color */}
+              <ellipse
+                cx={rootX - 30}
+                cy={rootY + 20}
+                rx={80}
+                ry={50}
+                fill="url(#fogGradient1)"
+                filter="url(#fogBlur)"
+                className="fog-layer-1"
+              />
+              {/* Fog layer 2 - secondary color */}
+              <ellipse
+                cx={rootX + 40}
+                cy={rootY - 10}
+                rx={70}
+                ry={45}
+                fill="url(#fogGradient2)"
+                filter="url(#fogBlur)"
+                className="fog-layer-2"
+              />
+              {/* Fog layer 3 - center glow */}
+              <circle
+                cx={rootX}
+                cy={rootY}
+                r={100}
+                fill="url(#fogGradient1)"
+                filter="url(#fogBlur)"
+                className="fog-layer-3"
+              />
+            </g>
+
+            {/* Root entity (main) - Square at top - LARGER */}
             <g className="cursor-default" filter="url(#glow)">
-              {/* Pulsing outer ring */}
+              {/* Pulsing outer ring - squared */}
               <path
-                d={getHexagonPath(rootX, rootY, NODE_SIZES.root.outer)}
+                d={getRoundedSquarePath(rootX, rootY, NODE_SIZES.root.outer * 2, 16)}
                 fill="none"
                 stroke="hsl(var(--primary))"
                 strokeWidth={3}
                 className="pulse-node"
               />
-              {/* Secondary outer glow */}
+              {/* Secondary outer glow - squared */}
               <path
-                d={getHexagonPath(rootX, rootY, NODE_SIZES.root.outer + 8)}
+                d={getRoundedSquarePath(rootX, rootY, NODE_SIZES.root.outer * 2 + 16, 20)}
                 fill="none"
                 stroke="hsl(var(--primary))"
                 strokeWidth={1}
                 strokeOpacity={0.3}
                 className="glow-node"
               />
-              {/* Main hexagon */}
+              {/* Main square */}
               <path
-                d={getHexagonPath(rootX, rootY, NODE_SIZES.root.base)}
+                d={getRoundedSquarePath(rootX, rootY, NODE_SIZES.root.base * 2, 14)}
                 fill="url(#rootGradient)"
                 className="drop-shadow-lg"
               />
               {mainEntity.image_url ? (
                 <>
                   <clipPath id="root-clip">
-                    <path d={getHexagonPath(rootX, rootY, NODE_SIZES.root.base - 4)} />
+                    <path d={getRoundedSquarePath(rootX, rootY, (NODE_SIZES.root.base - 4) * 2, 12)} />
                   </clipPath>
                   <image
                     x={rootX - (NODE_SIZES.root.base - 4)}
@@ -532,25 +565,25 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   />
                 </>
               ) : (
-                <foreignObject x={rootX - 20} y={rootY - 20} width={40} height={40}>
+                <foreignObject x={rootX - 28} y={rootY - 28} width={56} height={56}>
                   <div className="w-full h-full flex items-center justify-center text-primary-foreground">
                     {mainEntity.entity_type === 'person' ? (
-                      <User className="w-7 h-7" />
+                      <User className="w-10 h-10" />
                     ) : (
-                      <Building2 className="w-7 h-7" />
+                      <Building2 className="w-10 h-10" />
                     )}
                   </div>
                 </foreignObject>
               )}
               {/* Entity name label next to root node */}
               <text
-                x={rootX + NODE_SIZES.root.outer + 12}
-                y={rootY + 5}
+                x={rootX + NODE_SIZES.root.outer + 20}
+                y={rootY + 6}
                 textAnchor="start"
                 fill="hsl(var(--foreground))"
-                fontSize="14"
-                fontWeight="600"
-                className="drop-shadow-sm"
+                fontSize="16"
+                fontWeight="700"
+                className="drop-shadow-md"
               >
                 {mainName}
               </text>
