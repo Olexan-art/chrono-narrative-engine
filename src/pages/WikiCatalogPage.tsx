@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingEntities } from "@/components/TrendingEntities";
+import { WikiCatalogSeoContent } from "@/components/WikiCatalogSeoContent";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -489,6 +490,9 @@ export default function WikiCatalogPage() {
               {t.noResults}
             </div>
           )}
+
+          {/* SEO Content Section */}
+          <WikiCatalogSeoContent />
         </main>
       </div>
     </>
