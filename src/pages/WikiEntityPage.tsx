@@ -843,12 +843,12 @@ export default function WikiEntityPage() {
                           variant="secondary"
                           onClick={formatWithAi}
                           disabled={isAiProcessing}
-                          className="flex-1 sm:flex-none bg-gradient-to-r from-purple-600/20 to-pink-600/20 hover:from-purple-600/30 hover:to-pink-600/30 border border-purple-500/30"
+                          className="flex-1 sm:flex-none"
                         >
                           {isAiProcessing ? (
                             <Loader2 className="w-4 h-4 mr-1 animate-spin" />
                           ) : (
-                            <Sparkles className="w-4 h-4 mr-1 text-purple-500" />
+                            <Sparkles className="w-4 h-4 mr-1 text-primary" />
                           )}
                           {language === 'uk' ? 'Форматувати ШІ' : 'Format with AI'}
                         </Button>
