@@ -33,13 +33,35 @@ interface WikiEntity {
 type FilterType = 'all' | 'person' | 'company' | 'organization';
 type ViewMode = 'grid' | 'list';
 
+// Ukrainian and English alphabet letters
+const ALPHABET_UK = 'АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЮЯ'.split('');
+const ALPHABET_EN = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
 export default function WikiCatalogPage() {
   const { language } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryFilter = searchParams.get('category') || '';
+  const letterFilter = searchParams.get('letter') || '';
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+
+  // Get alphabet based on language
+  const alphabet = language === 'uk' ? ALPHABET_UK : ALPHABET_EN;
+
+  const setLetterFilter = (letter: string) => {
+    if (letter) {
+      searchParams.set('letter', letter);
+    } else {
+      searchParams.delete('letter');
+    }
+    setSearchParams(searchParams);
+  };
+
+  const clearLetterFilter = () => {
+    searchParams.delete('letter');
+    setSearchParams(searchParams);
+  };
 
   const clearCategoryFilter = () => {
     searchParams.delete('category');
