@@ -176,6 +176,8 @@ Deno.serve(async (req) => {
     const newsArticleMatch = path.match(/^\/news\/([a-z]{2})\/([a-z0-9-]+)$/);
     // News country list: /news/us or /news/ua
     const newsCountryMatch = path.match(/^\/news\/([a-z]{2})$/);
+    // Wiki entity page: /wiki/entity-slug-uuid or /wiki/uuid
+    const wikiEntityMatch = path.match(/^\/wiki\/([a-z0-9-]+)$/);
 
     let html = "";
     let title = "Точка Синхронізації";
