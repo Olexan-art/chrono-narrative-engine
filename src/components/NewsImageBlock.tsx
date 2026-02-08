@@ -18,6 +18,7 @@ interface NewsImageBlockProps {
   entities?: Array<{ name: string; entity_type: string; description?: string }>;
   hasRetelling: boolean;
   isAdmin: boolean;
+  sourceUrl?: string;  // Original source URL for fallback logo
   onImageUpdate?: () => void;
 }
 
