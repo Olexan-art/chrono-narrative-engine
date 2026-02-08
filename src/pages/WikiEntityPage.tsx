@@ -1234,21 +1234,21 @@ export default function WikiEntityPage() {
                       <MarkdownContent content={extract} />
                       
                       {/* Categories Sub-block */}
-                      {extendedData?.categories && extendedData.categories.length > 0 && (
+                      {wikiCategories.length > 0 && (
                         <div className="pt-4 border-t border-border/50">
                           <h4 className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
                             <FolderOpen className="w-4 h-4" />
                             {language === 'uk' ? 'Категорії Wikipedia' : 'Wikipedia Categories'}
                           </h4>
                           <div className="flex flex-wrap gap-2">
-                            {extendedData.categories.slice(0, 12).map((category, idx) => (
+                            {wikiCategories.slice(0, 12).map((category, idx) => (
                               <Badge key={idx} variant="outline" className="text-xs">
                                 {category}
                               </Badge>
                             ))}
-                            {extendedData.categories.length > 12 && (
+                            {wikiCategories.length > 12 && (
                               <Badge variant="secondary" className="text-xs">
-                                +{extendedData.categories.length - 12}
+                                +{wikiCategories.length - 12}
                               </Badge>
                             )}
                           </div>
