@@ -479,11 +479,12 @@ Deno.serve(async (req) => {
     }
 
     // New batch-aware refresh actions
-    if (action === 'refresh-all' || action === 'refresh-recent' || action === 'refresh-news') {
+    if (action === 'refresh-all' || action === 'refresh-recent' || action === 'refresh-news' || action === 'refresh-wiki') {
       // Determine filter type
-      let filter: 'all' | 'recent-24h' | 'news-7d' = 'all';
+      let filter: 'all' | 'recent-24h' | 'news-7d' | 'wiki' = 'all';
       if (action === 'refresh-recent') filter = 'recent-24h';
       if (action === 'refresh-news') filter = 'news-7d';
+      if (action === 'refresh-wiki') filter = 'wiki';
 
       // Get all pages to cache
       const allPages = await getAllPagesToCache(supabase, filter);
