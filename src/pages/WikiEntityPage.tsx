@@ -1216,6 +1216,73 @@ export default function WikiEntityPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Caricature Lightbox Modal */}
+      <Dialog open={!!selectedCaricature} onOpenChange={() => setSelectedCaricature(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+          {selectedCaricature && (
+            <>
+              <div className="relative">
+                <img
+                  src={selectedCaricature.caricature.image_url}
+                  alt={selectedCaricature.caricature.title || ''}
+                  className="w-full h-auto max-h-[60vh] object-contain bg-black"
+                />
+              </div>
+              <div className="p-4 space-y-3">
+                {selectedCaricature.caricature.title && (
+                  <h3 className="font-medium text-lg">{selectedCaricature.caricature.title}</h3>
+                )}
+                
+                {/* Related News */}
+                {selectedCaricature.newsItem && (
+                  <div className="border-t pt-3 mt-3">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {language === 'uk' ? 'Новина-джерело:' : 'Source news:'}
+                    </p>
+                    <Link
+                      to={selectedCaricature.newsItem.slug 
+                        ? `/news/${selectedCaricature.newsItem.country?.code?.toLowerCase()}/${selectedCaricature.newsItem.slug}` 
+                        : '#'}
+                      className="flex gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                      onClick={() => setSelectedCaricature(null)}
+                    >
+                      {selectedCaricature.newsItem.image_url && (
+                        <img
+                          src={selectedCaricature.newsItem.image_url}
+                          alt=""
+                          className="w-16 h-16 rounded object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span>{selectedCaricature.newsItem.country?.flag}</span>
+                          {selectedCaricature.newsItem.published_at && (
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(selectedCaricature.newsItem.published_at), 'dd.MM.yyyy')}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="font-medium text-sm line-clamp-2">
+                          {language === 'en' && selectedCaricature.newsItem.title_en 
+                            ? selectedCaricature.newsItem.title_en 
+                            : selectedCaricature.newsItem.title}
+                        </h4>
+                      </div>
+                    </Link>
+                  </div>
+                )}
+                
+                <div className="flex justify-end pt-2">
+                  <Button variant="outline" onClick={() => setSelectedCaricature(null)}>
+                    {language === 'uk' ? 'Закрити' : 'Close'}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
