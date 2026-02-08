@@ -295,6 +295,22 @@ async function getAllPagesToCache(
     }
   }
 
+  // Add wiki entity pages (top 100 by search count)
+  if (filter !== 'news-7d' && filter !== 'recent-24h') {
+    const { data: wikiEntities } = await supabase
+      .from('wiki_entities')
+      .select('id')
+      .order('search_count', { ascending: false })
+      .limit(100);
+
+    if (wikiEntities) {
+      console.log(`Found ${wikiEntities.length} wiki entities to cache`);
+      for (const entity of wikiEntities) {
+        pages.push(`/wiki/${entity.id}`);
+      }
+    }
+  }
+
   console.log(`Total pages to cache: ${pages.length}`);
   return pages;
 }
