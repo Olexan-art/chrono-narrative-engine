@@ -22,13 +22,20 @@ interface SecondaryConnection {
   weight: number;
 }
 
+interface MainEntityInfo {
+  id?: string;
+  slug?: string | null;
+  name: string;
+  name_en?: string | null;
+  description?: string | null;
+  description_en?: string | null;
+  image_url?: string | null;
+  entity_type: string;
+  shared_news_count?: number;
+}
+
 interface EntityIntersectionGraphProps {
-  mainEntity: {
-    name: string;
-    name_en?: string | null;
-    image_url?: string | null;
-    entity_type: string;
-  };
+  mainEntity: MainEntityInfo;
   relatedEntities: RelatedEntity[];
   secondaryConnections?: SecondaryConnection[];
   className?: string;
