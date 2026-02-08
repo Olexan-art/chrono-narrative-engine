@@ -472,14 +472,26 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               const isFirstLevel = pos.level === 0;
               
               return (
-                <g key={entity.id} className="cursor-pointer" filter="url(#softGlow)">
+                <g key={entity.id} className="cursor-pointer" filter={isFirstLevel ? "url(#glow)" : "url(#softGlow)"}>
                   <Link to={`/wiki/${entity.slug || entity.id}`}>
+                    {/* Outer glow ring for first-level connections */}
+                    {isFirstLevel && (
+                      <path
+                        d={getHexagonPath(pos.x, pos.y, nodeRadius + 6)}
+                        fill="none"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={1.5}
+                        strokeOpacity={0.4}
+                        className="glow-node"
+                      />
+                    )}
                     {/* Main node hexagon */}
                     <path
                       d={getHexagonPath(pos.x, pos.y, nodeRadius)}
-                      fill="url(#nodeGradient)"
-                      stroke="hsl(var(--border))"
-                      strokeWidth={2}
+                      fill={isFirstLevel ? "url(#firstLevelGradient)" : "url(#nodeGradient)"}
+                      stroke={isFirstLevel ? "hsl(var(--primary))" : "hsl(var(--border))"}
+                      strokeWidth={isFirstLevel ? 2.5 : 1.5}
+                      strokeOpacity={isFirstLevel ? 0.7 : 1}
                       className="transition-all duration-300 hover:stroke-primary hover:stroke-[3px]"
                     />
                     
@@ -501,16 +513,16 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                       </>
                     ) : (
                       <foreignObject 
-                        x={pos.x - 12} 
-                        y={pos.y - 12} 
-                        width={24} 
-                        height={24}
+                        x={pos.x - (isFirstLevel ? 14 : 10)} 
+                        y={pos.y - (isFirstLevel ? 14 : 10)} 
+                        width={isFirstLevel ? 28 : 20} 
+                        height={isFirstLevel ? 28 : 20}
                       >
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-primary transition-colors">
+                        <div className={`w-full h-full flex items-center justify-center ${isFirstLevel ? 'text-primary' : 'text-muted-foreground'} hover:text-primary transition-colors`}>
                           {entity.entity_type === 'person' ? (
-                            <User className="w-4 h-4" />
+                            <User className={isFirstLevel ? "w-5 h-5" : "w-3.5 h-3.5"} />
                           ) : (
-                            <Building2 className="w-4 h-4" />
+                            <Building2 className={isFirstLevel ? "w-5 h-5" : "w-3.5 h-3.5"} />
                           )}
                         </div>
                       </foreignObject>
