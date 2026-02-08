@@ -316,20 +316,20 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
       const domain = getSourceDomain();
       return (
         <div className="relative mb-4">
-          <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 rounded-lg border border-border/50 flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
+          <div className="w-full aspect-video max-h-64 bg-gradient-to-br from-muted/50 via-card/80 to-muted/50 rounded-lg border border-border/50 flex flex-col items-center justify-center gap-4 backdrop-blur-sm shadow-inner">
             <div className="relative">
-              <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl scale-150" />
+              <div className="absolute inset-0 bg-primary/15 rounded-full blur-2xl scale-[2]" />
               <img 
                 src={getSourceLogo()} 
                 alt={domain || "Source"} 
-                className="w-14 h-14 sm:w-16 sm:h-16 relative z-10 opacity-70 hover:opacity-100 transition-opacity"
+                className="w-16 h-16 sm:w-20 sm:h-20 relative z-10 opacity-80 hover:opacity-100 transition-opacity drop-shadow-lg"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = '/favicon.png';
                 }}
               />
             </div>
             {domain && (
-              <span className="text-xs text-muted-foreground font-mono">
+              <span className="text-sm text-muted-foreground/80 font-mono tracking-wide">
                 {domain}
               </span>
             )}
