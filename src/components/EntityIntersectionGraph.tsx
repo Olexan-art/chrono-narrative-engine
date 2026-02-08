@@ -179,7 +179,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const mainName = language === 'en' && mainEntity.name_en ? mainEntity.name_en : mainEntity.name;
 
   return (
-    <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-primary/5">
+    <Card className={`overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 ${className || ''}`}>
       <CardHeader className="pb-3 border-b border-border/50">
         <CardTitle className="flex items-center gap-2 text-lg">
           <div className="p-2 rounded-lg bg-primary/10">
