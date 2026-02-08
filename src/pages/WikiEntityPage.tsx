@@ -918,6 +918,61 @@ export default function WikiEntityPage() {
                             <Search className="w-4 h-4" />
                             Google
                           </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              const url = prompt(language === 'uk' ? 'Введіть URL зображення:' : 'Enter image URL:');
+                              if (url && url.startsWith('http')) {
+                                updateImageMutation.mutate(url);
+                              }
+                            }}
+                            disabled={updateImageMutation.isPending}
+                            className="gap-2"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            URL
+                          </Button>
+                          <label className="cursor-pointer">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="gap-2 w-full pointer-events-none"
+                              asChild
+                            >
+                              <span>
+                                <ImageIcon className="w-4 h-4" />
+                                Upload
+                              </span>
+                            </Button>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file || !entity?.id) return;
+                                
+                                const ext = file.name.split('.').pop() || 'jpg';
+                                const fileName = `${entity.id}.${ext}`;
+                                
+                                const { data, error } = await supabase.storage
+                                  .from('covers')
+                                  .upload(`wiki/${fileName}`, file, { upsert: true });
+                                
+                                if (error) {
+                                  toast.error('Upload failed: ' + error.message);
+                                  return;
+                                }
+                                
+                                const { data: urlData } = supabase.storage
+                                  .from('covers')
+                                  .getPublicUrl(`wiki/${fileName}`);
+                                
+                                updateImageMutation.mutate(urlData.publicUrl);
+                              }}
+                            />
+                          </label>
                         </div>
                       </div>
                     )}
@@ -1242,9 +1297,18 @@ export default function WikiEntityPage() {
                           </h4>
                           <div className="flex flex-wrap gap-2">
                             {wikiCategories.slice(0, 12).map((category, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs">
-                                {category}
-                              </Badge>
+                              <Link
+                                key={idx}
+                                to={`/wiki?category=${encodeURIComponent(category)}`}
+                                className="inline-flex"
+                              >
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs cursor-pointer hover:bg-primary/10 hover:border-primary transition-colors"
+                                >
+                                  {category}
+                                </Badge>
+                              </Link>
                             ))}
                             {wikiCategories.length > 12 && (
                               <Badge variant="secondary" className="text-xs">

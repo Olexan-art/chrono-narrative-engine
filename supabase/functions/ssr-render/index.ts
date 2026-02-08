@@ -176,6 +176,8 @@ Deno.serve(async (req) => {
     const newsArticleMatch = path.match(/^\/news\/([a-z]{2})\/([a-z0-9-]+)$/);
     // News country list: /news/us or /news/ua
     const newsCountryMatch = path.match(/^\/news\/([a-z]{2})$/);
+    // Wiki entity page: /wiki/entity-slug-uuid or /wiki/uuid
+    const wikiEntityMatch = path.match(/^\/wiki\/([a-z0-9-]+)$/);
 
     let html = "";
     let title = "Точка Синхронізації";
@@ -268,6 +270,18 @@ Deno.serve(async (req) => {
         .limit(1000);
 
       html = generateVolumesIndexHTML(volumes || [], lang);
+    } else if (path === "/wiki") {
+      // Wiki catalog page
+      title = "Entity Catalog | Echoes Wiki";
+      description = "People, companies and organizations in the news. Browse entities mentioned in our AI-curated news coverage.";
+      
+      const { data: entities } = await supabase
+        .from("wiki_entities")
+        .select("id, slug, name, name_en, description, description_en, image_url, entity_type, search_count")
+        .order("search_count", { ascending: false })
+        .limit(100);
+      
+      html = generateWikiCatalogHTML(entities || [], lang);
     } else if (path === "/ink-abyss") {
       // Ink Abyss gallery page
       title = "The Ink Abyss | Satirical Art Gallery";
@@ -504,6 +518,72 @@ Deno.serve(async (req) => {
         description = `Latest news from ${countryName}. AI-curated news digest with retelling and character dialogues.`;
         
         html = generateNewsCountryHTML(newsItems || [], country, lang, canonicalUrl, otherCountriesNews);
+      }
+    } else if (wikiEntityMatch) {
+      // Wiki entity page: /wiki/slug or /wiki/uuid
+      const [, entitySlug] = wikiEntityMatch;
+      
+      // Try slug first, then id
+      let entityQuery = supabase.from("wiki_entities").select("*");
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entitySlug);
+      
+      if (isUuid) {
+        entityQuery = entityQuery.eq("id", entitySlug);
+      } else {
+        entityQuery = entityQuery.eq("slug", entitySlug);
+      }
+      
+      const { data: entity } = await entityQuery.maybeSingle();
+      
+      if (entity) {
+        const entityName = entity.name_en || entity.name;
+        title = `${entityName} | Echoes Wiki`;
+        description = entity.description_en || entity.description || entity.extract_en?.substring(0, 160) || entity.extract?.substring(0, 160) || `Information about ${entityName}`;
+        image = entity.image_url || image;
+        canonicalUrl = `${BASE_URL}/wiki/${entity.slug || entity.id}`;
+        
+        // Fetch related news
+        const { data: newsLinks } = await supabase
+          .from("news_wiki_entities")
+          .select(`
+            news_item:news_rss_items(id, slug, title, title_en, published_at, country:news_countries(code, flag, name_en))
+          `)
+          .eq("wiki_entity_id", entity.id)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        
+        const linkedNews = (newsLinks || [])
+          .map((l: any) => l.news_item)
+          .filter(Boolean);
+        
+        // Fetch related entities
+        const newsIdsForEntity = linkedNews.map((n: any) => n.id);
+        let relatedEntities: any[] = [];
+        
+        if (newsIdsForEntity.length > 0) {
+          const { data: otherLinks } = await supabase
+            .from("news_wiki_entities")
+            .select(`wiki_entity:wiki_entities(id, name, name_en, slug, image_url, entity_type)`)
+            .in("news_item_id", newsIdsForEntity)
+            .neq("wiki_entity_id", entity.id);
+          
+          // Count and dedupe
+          const entityCounts = new Map<string, { entity: any; count: number }>();
+          for (const link of otherLinks || []) {
+            if (!link.wiki_entity) continue;
+            const e = link.wiki_entity as any;
+            const existing = entityCounts.get(e.id);
+            if (existing) existing.count++;
+            else entityCounts.set(e.id, { entity: e, count: 1 });
+          }
+          
+          relatedEntities = Array.from(entityCounts.values())
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 8)
+            .map(({ entity: e, count }) => ({ ...e, shared_news_count: count }));
+        }
+        
+        html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl);
       }
     } else if (dateMatch) {
       // Date stories page
@@ -1569,6 +1649,108 @@ function generateInkAbyssHTML(items: any[], lang: string) {
         </ul>
       </section>
     `).join("")}
+    
+    <nav>
+      <a href="https://echoes2.com/">← Home</a> |
+      <a href="https://echoes2.com/news">📰 News</a> |
+      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+    </nav>
+  `;
+}
+
+function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string) {
+  const name = entity.name_en || entity.name;
+  const description = entity.description_en || entity.description || '';
+  const extract = entity.extract_en || entity.extract || '';
+  const entityTypeLabel = entity.entity_type === 'person' ? '👤 Person' : entity.entity_type === 'company' ? '🏢 Company' : '🌐 Entity';
+  
+  return `
+    <article itemscope itemtype="https://schema.org/${entity.entity_type === 'person' ? 'Person' : 'Organization'}">
+      <header>
+        <span>${entityTypeLabel}</span>
+        ${entity.image_url ? `<img itemprop="image" src="${escapeHtml(entity.image_url)}" alt="${escapeHtml(name)}" width="200">` : ''}
+        <h1 itemprop="name">${escapeHtml(name)}</h1>
+        ${description ? `<p itemprop="description">${escapeHtml(description)}</p>` : ''}
+      </header>
+      
+      <section>
+        <h2>Key Information</h2>
+        ${extract ? `<div itemprop="description">${escapeHtml(extract)}</div>` : '<p>Information not yet loaded.</p>'}
+      </section>
+      
+      ${linkedNews.length > 0 ? `
+        <section>
+          <h2>Related News (${linkedNews.length})</h2>
+          <ul>
+            ${linkedNews.map((news: any) => {
+              const newsTitle = news.title_en || news.title;
+              const countryCode = (news.country as any)?.code?.toLowerCase() || 'us';
+              const newsUrl = news.slug ? `https://echoes2.com/news/${countryCode}/${news.slug}` : null;
+              return `
+                <li>
+                  ${newsUrl ? `<a href="${newsUrl}">${escapeHtml(newsTitle)}</a>` : escapeHtml(newsTitle)}
+                  ${news.published_at ? `<time>(${news.published_at.split('T')[0]})</time>` : ''}
+                </li>
+              `;
+            }).join("")}
+          </ul>
+        </section>
+      ` : ''}
+      
+      ${relatedEntities.length > 0 ? `
+        <section>
+          <h2>Related Entities</h2>
+          <ul>
+            ${relatedEntities.map((e: any) => {
+              const eName = e.name_en || e.name;
+              const eSlug = e.slug || e.id;
+              return `
+                <li>
+                  <a href="https://echoes2.com/wiki/${eSlug}">${escapeHtml(eName)}</a>
+                  <span>(${e.shared_news_count} shared news)</span>
+                </li>
+              `;
+            }).join("")}
+          </ul>
+        </section>
+      ` : ''}
+      
+      <nav>
+        <a href="https://echoes2.com/wiki">← Entity Catalog</a> |
+        <a href="https://echoes2.com/news">📰 News</a> |
+        <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+      </nav>
+    </article>
+  `;
+}
+
+function generateWikiCatalogHTML(entities: any[], lang: string) {
+  const titleField = lang === "en" ? "name_en" : "name";
+  const descField = lang === "en" ? "description_en" : "description";
+  
+  return `
+    <h1>Entity Catalog</h1>
+    <p>People, companies and organizations mentioned in the news.</p>
+    
+    <section>
+      <h2>All Entities (${entities.length})</h2>
+      <ul>
+        ${entities.map((e) => {
+          const name = e[titleField] || e.name;
+          const desc = e[descField] || e.description || '';
+          const slug = e.slug || e.id;
+          const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
+          return `
+            <li>
+              <a href="https://echoes2.com/wiki/${slug}">
+                ${typeIcon} ${escapeHtml(name)}
+              </a>
+              ${desc ? `<span> - ${escapeHtml(desc.substring(0, 100))}${desc.length > 100 ? '...' : ''}</span>` : ''}
+            </li>
+          `;
+        }).join("")}
+      </ul>
+    </section>
     
     <nav>
       <a href="https://echoes2.com/">← Home</a> |

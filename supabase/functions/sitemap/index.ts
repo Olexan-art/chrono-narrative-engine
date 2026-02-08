@@ -340,16 +340,18 @@ Deno.serve(async (req) => {
   </url>`;
     }
 
-    // Add wiki entity pages
+    // Add wiki entity pages with proper slugs
     const { data: wikiEntities, error: wikiError } = await supabase
       .from("wiki_entities")
-      .select("id, updated_at")
+      .select("id, slug, updated_at")
       .order("search_count", { ascending: false })
       .limit(500); // Top 500 entities
 
     if (!wikiError && wikiEntities) {
       for (const entity of wikiEntities) {
-        const url = `${BASE_URL}/wiki/${entity.id}`;
+        // Prefer slug over id for SEO-friendly URLs
+        const entityPath = entity.slug || entity.id;
+        const url = `${BASE_URL}/wiki/${entityPath}`;
         xml += `
   <url>
     <loc>${url}</loc>
