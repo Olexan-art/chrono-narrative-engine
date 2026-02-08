@@ -135,14 +135,24 @@ export function WikiEntityCard({ entity, compact = false, showLink = false }: Wi
             {description && (
               <p className="text-sm text-muted-foreground mb-2">{description}</p>
             )}
-            <a 
-              href={wikiUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-            >
-              Wikipedia <ExternalLink className="w-3 h-3" />
-            </a>
+            <div className="flex items-center gap-3">
+              <a 
+                href={wikiUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                Wikipedia <ExternalLink className="w-3 h-3" />
+              </a>
+              {showLink && (
+                <Link
+                  to={`/wiki/${entity.id}`}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                >
+                  {language === 'uk' ? 'Детальніше' : 'Learn more'} →
+                </Link>
+              )}
+            </div>
           </div>
         </div>
 
