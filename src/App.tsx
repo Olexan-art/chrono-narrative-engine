@@ -27,6 +27,8 @@ import EditPartPage from "./pages/EditPartPage";
 import EditChapterPage from "./pages/EditChapterPage";
 import InstallPage from "./pages/InstallPage";
 import PrivacyPage from "./pages/PrivacyPage";
+import WikiCatalogPage from "./pages/WikiCatalogPage";
+import WikiEntityPage from "./pages/WikiEntityPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

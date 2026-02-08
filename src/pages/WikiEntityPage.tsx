@@ -275,8 +275,7 @@ export default function WikiEntityPage() {
         title={`${name} | Echoes Wiki`}
         description={description || extract?.slice(0, 160) || `Information about ${name}`}
         canonicalUrl={`https://echoes2.com/wiki/${entity.id}`}
-        ogImage={entity.image_url || undefined}
-        ogType="profile"
+        image={entity.image_url || undefined}
       />
       
       <div className="min-h-screen bg-background">
