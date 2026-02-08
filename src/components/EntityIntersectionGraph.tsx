@@ -461,13 +461,15 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               )}
             </g>
 
-            {/* Entity nodes - hexagons */}
+            {/* Entity nodes - hexagons with tiered sizes */}
             {displayedEntities.map((entity, index) => {
               const pos = positions[index];
               if (!pos) return null;
               
               const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
-              const nodeRadius = 22 + (entity.shared_news_count / maxCount) * 6;
+              // Use tiered sizing based on level position
+              const nodeRadius = getNodeSize(pos.level, entity.shared_news_count, maxCount);
+              const isFirstLevel = pos.level === 0;
               
               return (
                 <g key={entity.id} className="cursor-pointer" filter="url(#softGlow)">
