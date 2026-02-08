@@ -67,6 +67,7 @@ const App = () => (
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/wiki" element={<WikiCatalogPage />} />
             <Route path="/wiki/:entityId" element={<WikiEntityPage />} />
+            {/* Fallback for old entity ID URLs - same component handles both */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

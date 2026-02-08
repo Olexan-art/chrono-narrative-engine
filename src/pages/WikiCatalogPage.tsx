@@ -25,6 +25,7 @@ interface WikiEntity {
   description_en: string | null;
   image_url: string | null;
   search_count: number;
+  slug: string | null;
   news_count?: number;
 }
 
@@ -63,7 +64,7 @@ export default function WikiCatalogPage() {
 
       let query = supabase
         .from('wiki_entities')
-        .select('id, wiki_id, entity_type, name, name_en, description, description_en, image_url, search_count')
+        .select('id, wiki_id, entity_type, name, name_en, description, description_en, image_url, search_count, slug')
         .limit(100);
 
       if (searchTerm) {
@@ -275,7 +276,7 @@ export default function WikiCatalogPage() {
                   return (
                     <Link
                       key={entity.id}
-                      to={`/wiki/${entity.id}`}
+                      to={`/wiki/${entity.slug || entity.id}`}
                       className="group"
                     >
                       <Card className="overflow-hidden h-full hover:shadow-lg transition-shadow">
@@ -336,7 +337,7 @@ export default function WikiCatalogPage() {
                   return (
                     <Link
                       key={entity.id}
-                      to={`/wiki/${entity.id}`}
+                      to={`/wiki/${entity.slug || entity.id}`}
                       className="flex items-center gap-4 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors group"
                     >
                       {entity.image_url ? (

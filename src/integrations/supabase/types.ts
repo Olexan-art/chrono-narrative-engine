@@ -1381,6 +1381,7 @@ export type Database = {
           name_en: string | null
           raw_data: Json | null
           search_count: number
+          slug: string | null
           updated_at: string
           wiki_id: string
           wiki_url: string
@@ -1400,6 +1401,7 @@ export type Database = {
           name_en?: string | null
           raw_data?: Json | null
           search_count?: number
+          slug?: string | null
           updated_at?: string
           wiki_id: string
           wiki_url: string
@@ -1419,6 +1421,7 @@ export type Database = {
           name_en?: string | null
           raw_data?: Json | null
           search_count?: number
+          slug?: string | null
           updated_at?: string
           wiki_id?: string
           wiki_url?: string
