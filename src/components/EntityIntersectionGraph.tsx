@@ -319,14 +319,14 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
           </svg>
 
           {/* Legend */}
-          <div className="absolute bottom-0 left-0 right-0 flex flex-wrap justify-center gap-3 text-xs text-muted-foreground">
+          <div className="absolute -bottom-2 left-0 right-0 flex flex-wrap justify-center gap-2 text-xs">
             {relatedEntities.slice(0, 5).map((entity) => {
               const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
               return (
                 <Link
                   key={entity.id}
                   to={`/wiki/${entity.slug || entity.id}`}
-                  className="max-w-[80px] truncate hover:text-primary transition-colors"
+                  className="max-w-[90px] truncate px-2 py-1 rounded-full bg-muted/50 text-muted-foreground hover:bg-primary/20 hover:text-primary transition-all duration-200"
                   title={name}
                 >
                   {name}
@@ -334,7 +334,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
               );
             })}
             {relatedEntities.length > 5 && (
-              <span className="text-muted-foreground/50">
+              <span className="px-2 py-1 rounded-full bg-muted/30 text-muted-foreground/60">
                 +{relatedEntities.length - 5}
               </span>
             )}
@@ -342,13 +342,16 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
         </div>
 
         {/* Stats */}
-        <div className="mt-4 pt-4 border-t border-border">
-          <p className="text-sm text-center text-muted-foreground">
-            {language === 'uk' 
-              ? `${relatedEntities.length} пов'язаних сутностей у спільних новинах`
-              : `${relatedEntities.length} related entities in shared news`
-            }
-          </p>
+        <div className="mt-8 pt-4 border-t border-border/50">
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <p>
+              {language === 'uk' 
+                ? `${relatedEntities.length} пов'язаних сутностей у спільних новинах`
+                : `${relatedEntities.length} related entities in shared news`
+              }
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>
