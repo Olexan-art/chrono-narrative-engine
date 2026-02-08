@@ -52,6 +52,12 @@ export function Header() {
               <span>{t('nav.calendar')}</span>
             </Button>
           </Link>
+          <Link to="/wiki">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <Users className="w-4 h-4" />
+              <span>Wiki</span>
+            </Button>
+          </Link>
           <LanguageSwitcher />
           {/*    <Link to="/admin">
             <Button variant="outline" size="sm" className="gap-2">
