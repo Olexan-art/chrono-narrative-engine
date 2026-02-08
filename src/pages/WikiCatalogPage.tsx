@@ -37,14 +37,33 @@ export default function WikiCatalogPage() {
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
-  // Fetch entities with news count
+  // Fetch entities with news count, sorted by last mention
   const { data: entities, isLoading } = useQuery({
     queryKey: ['wiki-catalog', searchTerm, filterType],
     queryFn: async () => {
+      // First get latest news links for each entity
+      const { data: latestLinks } = await supabase
+        .from('news_wiki_entities')
+        .select('wiki_entity_id, created_at')
+        .order('created_at', { ascending: false });
+
+      // Build map of entity -> latest mention date and count
+      const entityStats = new Map<string, { lastMention: string; count: number }>();
+      for (const link of latestLinks || []) {
+        const existing = entityStats.get(link.wiki_entity_id);
+        if (existing) {
+          existing.count++;
+        } else {
+          entityStats.set(link.wiki_entity_id, { 
+            lastMention: link.created_at, 
+            count: 1 
+          });
+        }
+      }
+
       let query = supabase
         .from('wiki_entities')
         .select('id, wiki_id, entity_type, name, name_en, description, description_en, image_url, search_count')
-        .order('search_count', { ascending: false })
         .limit(100);
 
       if (searchTerm) {
@@ -58,26 +77,26 @@ export default function WikiCatalogPage() {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Get news counts for each entity
-      if (data && data.length > 0) {
-        const entityIds = data.map(e => e.id);
-        const { data: counts } = await supabase
-          .from('news_wiki_entities')
-          .select('wiki_entity_id')
-          .in('wiki_entity_id', entityIds);
+      if (!data) return [];
 
-        const countMap = new Map<string, number>();
-        for (const c of counts || []) {
-          countMap.set(c.wiki_entity_id, (countMap.get(c.wiki_entity_id) || 0) + 1);
+      // Add news counts and sort by last mention
+      const enrichedData = data.map(e => ({
+        ...e,
+        news_count: entityStats.get(e.id)?.count || 0,
+        last_mention: entityStats.get(e.id)?.lastMention || null,
+      }));
+
+      // Sort by last mention (most recent first), then by search_count
+      enrichedData.sort((a, b) => {
+        if (a.last_mention && b.last_mention) {
+          return new Date(b.last_mention).getTime() - new Date(a.last_mention).getTime();
         }
+        if (a.last_mention) return -1;
+        if (b.last_mention) return 1;
+        return b.search_count - a.search_count;
+      });
 
-        return data.map(e => ({
-          ...e,
-          news_count: countMap.get(e.id) || 0,
-        })) as WikiEntity[];
-      }
-
-      return data as WikiEntity[];
+      return enrichedData as WikiEntity[];
     },
   });
 
