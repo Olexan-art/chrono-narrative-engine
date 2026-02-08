@@ -62,33 +62,106 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
   const mainName = language === 'en' && mainEntity.name_en ? mainEntity.name_en : mainEntity.name;
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-primary/5">
+      <CardHeader className="pb-3 border-b border-border/50">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Network className="w-5 h-5 text-primary" />
-          {language === 'uk' ? 'Граф пересічень' : 'Entity Intersection Graph'}
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Network className="w-5 h-5 text-primary" />
+          </div>
+          <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+            {language === 'uk' ? 'Граф пересічень' : 'Entity Intersection Graph'}
+          </span>
+          <Sparkles className="w-4 h-4 text-primary/50 ml-auto" />
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="relative w-full aspect-square max-w-[400px] mx-auto">
+      <CardContent className="pt-6">
+        <div className="relative w-full aspect-square max-w-[450px] mx-auto">
           <svg 
             viewBox="0 0 400 400" 
             className="w-full h-full"
             style={{ overflow: 'visible' }}
           >
-            {/* Connection lines */}
+            {/* Definitions for gradients and filters */}
+            <defs>
+              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="hsl(var(--secondary))" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
+              </linearGradient>
+              <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+              <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="2" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+              <radialGradient id="centerGradient" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="hsl(var(--primary))" />
+                <stop offset="70%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="hsl(var(--secondary))" stopOpacity="0.6" />
+              </radialGradient>
+              <radialGradient id="nodeGradient" cx="50%" cy="30%" r="70%">
+                <stop offset="0%" stopColor="hsl(var(--muted))" stopOpacity="1" />
+                <stop offset="100%" stopColor="hsl(var(--card))" stopOpacity="0.9" />
+              </radialGradient>
+            </defs>
+
+            {/* Background decorative circles */}
+            <circle
+              cx={200}
+              cy={200}
+              r={160}
+              fill="none"
+              stroke="hsl(var(--border))"
+              strokeWidth={1}
+              strokeDasharray="4 8"
+              opacity={0.3}
+            />
+            <circle
+              cx={200}
+              cy={200}
+              r={100}
+              fill="none"
+              stroke="hsl(var(--primary))"
+              strokeWidth={1}
+              strokeDasharray="2 6"
+              opacity={0.2}
+            />
+
+            {/* Connection lines with gradient */}
             {relatedEntities.map((entity, index) => (
-              <line
-                key={`line-${entity.id}`}
-                x1={200}
-                y1={200}
-                x2={positions[index].x}
-                y2={positions[index].y}
-                stroke="hsl(var(--primary))"
-                strokeWidth={getLineWidth(entity.shared_news_count)}
-                strokeOpacity={getOpacity(entity.shared_news_count)}
-                className="transition-all duration-300"
-              />
+              <g key={`line-${entity.id}`}>
+                {/* Glow effect line */}
+                <line
+                  x1={200}
+                  y1={200}
+                  x2={positions[index].x}
+                  y2={positions[index].y}
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={getLineWidth(entity.shared_news_count) + 4}
+                  strokeOpacity={getOpacity(entity.shared_news_count) * 0.2}
+                  strokeLinecap="round"
+                />
+                {/* Main line */}
+                <line
+                  x1={200}
+                  y1={200}
+                  x2={positions[index].x}
+                  y2={positions[index].y}
+                  stroke="url(#lineGradient)"
+                  strokeWidth={getLineWidth(entity.shared_news_count)}
+                  strokeOpacity={getOpacity(entity.shared_news_count)}
+                  strokeLinecap="round"
+                  className="transition-all duration-500"
+                />
+              </g>
             ))}
 
             {/* Center entity (main) */}
