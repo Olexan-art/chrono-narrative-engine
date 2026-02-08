@@ -760,20 +760,40 @@ export default function WikiEntityPage() {
               )}
 
               {/* Key Information Block */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Sparkles className="w-5 h-5 text-primary" />
-                      {language === 'uk' ? 'Ключова інформація' : 'Key Information'}
-                    </CardTitle>
+              <Card className="border-2 border-primary/20">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Sparkles className="w-5 h-5 text-primary" />
+                        {language === 'uk' ? 'Ключова інформація' : 'Key Information'}
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        {language === 'uk' ? 'Основні дані про сутність' : 'Core information about the entity'}
+                      </CardDescription>
+                    </div>
                     {isAdmin && (
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={fetchWikiImages}
+                          disabled={isFetchingImages}
+                          className="border-primary/30 hover:bg-primary/10"
+                        >
+                          {isFetchingImages ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4 mr-1" />
+                          )}
+                          {language === 'uk' ? 'Витягнути фото' : 'Fetch Images'}
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={runExtendedParsing}
                           disabled={isExtendedParsing}
+                          className="border-primary/30 hover:bg-primary/10"
                         >
                           {isExtendedParsing ? (
                             <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -789,6 +809,7 @@ export default function WikiEntityPage() {
                             setEditedExtract(extract || '');
                             setIsEditingExtract(true);
                           }}
+                          className="border-primary/30 hover:bg-primary/10"
                         >
                           <Pencil className="w-4 h-4 mr-1" />
                           {language === 'uk' ? 'Редагувати' : 'Edit'}
@@ -797,21 +818,24 @@ export default function WikiEntityPage() {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-4">
                   {isEditingExtract ? (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <Textarea
                         value={editedExtract}
                         onChange={(e) => setEditedExtract(e.target.value)}
-                        rows={8}
-                        className="w-full"
+                        rows={10}
+                        className="w-full font-mono text-sm"
+                        placeholder={language === 'uk' ? 'Введіть текст...' : 'Enter text...'}
                       />
-                      <div className="flex gap-2 flex-wrap">
+                      <div className="flex gap-2 flex-wrap p-3 bg-muted/50 rounded-lg">
                         <Button
                           size="sm"
                           onClick={() => saveExtractMutation.mutate(editedExtract)}
                           disabled={saveExtractMutation.isPending}
+                          className="flex-1 sm:flex-none"
                         >
+                          <Check className="w-4 h-4 mr-1" />
                           {language === 'uk' ? 'Зберегти' : 'Save'}
                         </Button>
                         <Button
@@ -819,11 +843,12 @@ export default function WikiEntityPage() {
                           variant="secondary"
                           onClick={formatWithAi}
                           disabled={isAiProcessing}
+                          className="flex-1 sm:flex-none bg-gradient-to-r from-purple-600/20 to-pink-600/20 hover:from-purple-600/30 hover:to-pink-600/30 border border-purple-500/30"
                         >
                           {isAiProcessing ? (
                             <Loader2 className="w-4 h-4 mr-1 animate-spin" />
                           ) : (
-                            <Sparkles className="w-4 h-4 mr-1" />
+                            <Sparkles className="w-4 h-4 mr-1 text-purple-500" />
                           )}
                           {language === 'uk' ? 'Форматувати ШІ' : 'Format with AI'}
                         </Button>
@@ -832,16 +857,38 @@ export default function WikiEntityPage() {
                           variant="ghost"
                           onClick={() => setIsEditingExtract(false)}
                         >
+                          <X className="w-4 h-4 mr-1" />
                           {language === 'uk' ? 'Скасувати' : 'Cancel'}
                         </Button>
                       </div>
                     </div>
                   ) : extract ? (
-                    <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{extract}</p>
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{extract}</p>
+                    </div>
                   ) : (
-                    <p className="text-muted-foreground italic">
-                      {language === 'uk' ? 'Інформація ще не завантажена' : 'Information not yet loaded'}
-                    </p>
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <FileText className="w-12 h-12 text-muted-foreground/30 mb-3" />
+                      <p className="text-muted-foreground italic">
+                        {language === 'uk' ? 'Інформація ще не завантажена' : 'Information not yet loaded'}
+                      </p>
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={runExtendedParsing}
+                          disabled={isExtendedParsing}
+                          className="mt-3"
+                        >
+                          {isExtendedParsing ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4 mr-1" />
+                          )}
+                          {language === 'uk' ? 'Завантажити з Wikipedia' : 'Load from Wikipedia'}
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </CardContent>
               </Card>
