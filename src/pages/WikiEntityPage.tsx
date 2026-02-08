@@ -7,7 +7,8 @@ import {
   RefreshCw, Trash2, ImageIcon, Sparkles, Network,
   Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight,
   Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit,
-  Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone
+  Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone, 
+  Swords, FolderOpen
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
