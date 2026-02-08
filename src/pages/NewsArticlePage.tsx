@@ -952,47 +952,19 @@ export default function NewsArticlePage() {
                         : 'Згенерувати повний переказ з тезами та метаданими'}
                     </p>
                     
+
                     {/* Progress indicator showing current step */}
-                    {(retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending) && (
+                    {retellNewsMutation.isPending && (
                       <div className="space-y-2 py-2">
                         <div className="flex items-center gap-2 text-xs">
-                          {retellNewsMutation.isPending ? (
-                            <Loader2 className="w-3 h-3 animate-spin text-primary" />
-                          ) : retellNewsMutation.isSuccess ? (
-                            <span className="w-3 h-3 rounded-full bg-green-500" />
-                          ) : (
-                            <span className="w-3 h-3 rounded-full bg-muted" />
-                          )}
-                          <span className={retellNewsMutation.isPending ? 'text-primary font-medium' : retellNewsMutation.isSuccess ? 'text-green-500' : 'text-muted-foreground'}>
-                            1. {language === 'en' ? 'Retelling' : language === 'pl' ? 'Przekaz' : 'Переказ'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs">
-                          {generateTweetsMutation.isPending ? (
-                            <Loader2 className="w-3 h-3 animate-spin text-primary" />
-                          ) : generateTweetsMutation.isSuccess ? (
-                            <span className="w-3 h-3 rounded-full bg-green-500" />
-                          ) : (
-                            <span className="w-3 h-3 rounded-full bg-muted" />
-                          )}
-                          <span className={generateTweetsMutation.isPending ? 'text-primary font-medium' : generateTweetsMutation.isSuccess ? 'text-green-500' : 'text-muted-foreground'}>
-                            2. {language === 'en' ? 'Tweets' : language === 'pl' ? 'Tweety' : 'Твіти'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs">
-                          {generateDialogueMutation.isPending ? (
-                            <Loader2 className="w-3 h-3 animate-spin text-primary" />
-                          ) : generateDialogueMutation.isSuccess ? (
-                            <span className="w-3 h-3 rounded-full bg-green-500" />
-                          ) : (
-                            <span className="w-3 h-3 rounded-full bg-muted" />
-                          )}
-                          <span className={generateDialogueMutation.isPending ? 'text-primary font-medium' : generateDialogueMutation.isSuccess ? 'text-green-500' : 'text-muted-foreground'}>
-                            3. {language === 'en' ? 'Dialogue' : language === 'pl' ? 'Dialog' : 'Діалог'}
+                          <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                          <span className="text-primary font-medium">
+                            {language === 'en' ? 'Retelling...' : language === 'pl' ? 'Przetwarzanie...' : 'Переказ...'}
                           </span>
                         </div>
                       </div>
                     )}
+
                     
                     <Select value={selectedTweetModel} onValueChange={setSelectedTweetModel}>
                       <SelectTrigger className="w-full">
