@@ -98,7 +98,7 @@ export default function WikiEntityPage() {
     enabled: !!entityId,
   });
 
-  // Fetch linked news
+  // Fetch linked news with themes
   const { data: linkedNews = [] } = useQuery({
     queryKey: ['entity-news', entityId],
     queryFn: async () => {
@@ -107,7 +107,7 @@ export default function WikiEntityPage() {
         .select(`
           news_item:news_rss_items(
             id, slug, title, title_en, description, description_en,
-            image_url, published_at, country_id,
+            image_url, published_at, themes, themes_en, country_id,
             country:news_countries(code, flag, name)
           )
         `)
@@ -126,6 +126,40 @@ export default function WikiEntityPage() {
     },
     enabled: !!entityId,
   });
+
+  // Aggregate views from all news
+  const { data: aggregatedViews = 0 } = useQuery({
+    queryKey: ['entity-views', entityId],
+    queryFn: async () => {
+      const newsIds = linkedNews.map(n => n.id);
+      if (!newsIds.length) return 0;
+      
+      const { data, error } = await supabase
+        .from('view_counts')
+        .select('views')
+        .eq('entity_type', 'news')
+        .in('entity_id', newsIds);
+      
+      if (error) return 0;
+      return data.reduce((sum, v) => sum + (v.views || 0), 0);
+    },
+    enabled: linkedNews.length > 0,
+  });
+
+  // Extract topics from news
+  const allTopics = linkedNews.reduce((acc, news) => {
+    const themes = language === 'en' && news.themes_en ? news.themes_en : news.themes;
+    if (themes) {
+      themes.forEach(t => {
+        acc[t] = (acc[t] || 0) + 1;
+      });
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  const sortedTopics = Object.entries(allTopics)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12);
 
   // Fetch related entities (entities that appear in the same news)
   const { data: relatedEntities = [] } = useQuery({
