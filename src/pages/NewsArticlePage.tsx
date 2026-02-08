@@ -856,33 +856,9 @@ export default function NewsArticlePage() {
                 )}
               </nav>
 
-              {/* Tweets Section */}
-              {tweets.length > 0 && (
-                <NewsTweetCard tweets={tweets} />
-              )}
-              
-              {/* Generate Tweets Button - Admin only */}
-              {isAdminAuthenticated && (
-                <div className="pt-4">
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => generateTweetsMutation.mutate()}
-                    disabled={generateTweetsMutation.isPending}
-                  >
-                    {generateTweetsMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Twitter className="w-4 h-4" />
-                    )}
-                    {tweets.length > 0 
-                      ? (language === 'en' ? 'Regenerate Tweets' : language === 'pl' ? 'Regeneruj tweety' : 'Перегенерувати твіти')
-                      : (language === 'en' ? 'Generate Tweets' : language === 'pl' ? 'Generuj tweety' : 'Генерувати твіти')
-                    }
-                  </Button>
-                </div>
-              )}
+
+               {/* Tweets disabled for news */}
+
             {/* Entity Intersection Graph - BELOW article on ALL screens */}
             {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
               <EntityIntersectionGraph
