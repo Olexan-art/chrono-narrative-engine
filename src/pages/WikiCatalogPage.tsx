@@ -490,6 +490,9 @@ export default function WikiCatalogPage() {
               {t.noResults}
             </div>
           )}
+
+          {/* SEO Content Section */}
+          <WikiCatalogSeoContent />
         </main>
       </div>
     </>
