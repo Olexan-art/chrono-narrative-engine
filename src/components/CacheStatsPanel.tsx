@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Loader2, Database, Clock, HardDrive, Zap, Calendar, FileText, Settings2, CheckCircle2, XCircle, AlertCircle, Newspaper, Timer, ChevronDown } from "lucide-react";
+import { RefreshCw, Loader2, Database, Clock, HardDrive, Zap, Calendar, FileText, Settings2, CheckCircle2, XCircle, AlertCircle, Newspaper, Timer, ChevronDown, Users, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +40,7 @@ interface CacheRefreshLog {
   isHeader?: boolean;
 }
 
-type RefreshAction = 'refresh-all' | 'refresh-recent' | 'refresh-news';
+type RefreshAction = 'refresh-all' | 'refresh-recent' | 'refresh-news' | 'refresh-wiki';
 
 export function CacheStatsPanel({ password }: Props) {
   const queryClient = useQueryClient();
@@ -123,6 +123,7 @@ export function CacheStatsPanel({ password }: Props) {
       'refresh-all': '🔄 Повне оновлення всіх сторінок (батчами)...',
       'refresh-recent': '⏰ Оновлення сторінок за 24 години...',
       'refresh-news': '📰 Оновлення новин за 7 днів...',
+      'refresh-wiki': '👥 Оновлення wiki сторінок та сутностей...',
     };
     
     try {
@@ -344,6 +345,13 @@ export function CacheStatsPanel({ password }: Props) {
               >
                 <Newspaper className="w-4 h-4 mr-2" />
                 Новини (7 днів)
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleRefreshCache('refresh-wiki')}
+                disabled={isRefreshing}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Wiki + сутності
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

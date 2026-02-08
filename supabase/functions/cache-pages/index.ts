@@ -107,12 +107,35 @@ async function fetchAllNewsWithCountry(supabase: any): Promise<{ slug: string; c
 // Get all pages based on filter type
 async function getAllPagesToCache(
   supabase: any, 
-  filter?: 'all' | 'recent-24h' | 'news-7d'
+  filter?: 'all' | 'recent-24h' | 'news-7d' | 'wiki'
 ): Promise<string[]> {
   const pages: string[] = [];
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  // Wiki-only filter - just wiki pages and entities
+  if (filter === 'wiki') {
+    // Static wiki pages
+    pages.push('/wiki', '/news', '/news/us', '/news/ua', '/news/pl', '/news/in');
+    
+    // Add all wiki entities (top 500 by search count)
+    const { data: wikiEntities } = await supabase
+      .from('wiki_entities')
+      .select('id, slug')
+      .order('search_count', { ascending: false })
+      .limit(500);
+
+    if (wikiEntities) {
+      console.log(`Found ${wikiEntities.length} wiki entities to cache`);
+      for (const entity of wikiEntities) {
+        const entityPath = entity.slug || entity.id;
+        pages.push(`/wiki/${entityPath}`);
+      }
+    }
+    
+    return pages;
+  }
 
   // Static pages (only for 'all' or 'recent-24h')
   if (filter !== 'news-7d') {
@@ -295,18 +318,20 @@ async function getAllPagesToCache(
     }
   }
 
-  // Add wiki entity pages (top 100 by search count)
+  // Add wiki entity pages (top 500 by search count) - use slug for SEO-friendly URLs
   if (filter !== 'news-7d' && filter !== 'recent-24h') {
     const { data: wikiEntities } = await supabase
       .from('wiki_entities')
-      .select('id')
+      .select('id, slug')
       .order('search_count', { ascending: false })
-      .limit(100);
+      .limit(500);
 
     if (wikiEntities) {
       console.log(`Found ${wikiEntities.length} wiki entities to cache`);
       for (const entity of wikiEntities) {
-        pages.push(`/wiki/${entity.id}`);
+        // Use slug if available, otherwise fallback to id
+        const entityPath = entity.slug || entity.id;
+        pages.push(`/wiki/${entityPath}`);
       }
     }
   }
@@ -454,11 +479,12 @@ Deno.serve(async (req) => {
     }
 
     // New batch-aware refresh actions
-    if (action === 'refresh-all' || action === 'refresh-recent' || action === 'refresh-news') {
+    if (action === 'refresh-all' || action === 'refresh-recent' || action === 'refresh-news' || action === 'refresh-wiki') {
       // Determine filter type
-      let filter: 'all' | 'recent-24h' | 'news-7d' = 'all';
+      let filter: 'all' | 'recent-24h' | 'news-7d' | 'wiki' = 'all';
       if (action === 'refresh-recent') filter = 'recent-24h';
       if (action === 'refresh-news') filter = 'news-7d';
+      if (action === 'refresh-wiki') filter = 'wiki';
 
       // Get all pages to cache
       const allPages = await getAllPagesToCache(supabase, filter);
