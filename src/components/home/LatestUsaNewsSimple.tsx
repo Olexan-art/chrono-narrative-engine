@@ -121,13 +121,17 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
                 className="group flex items-start gap-3 p-3 rounded-lg border border-border hover:border-primary/30 hover:bg-muted/30 transition-all animate-fade-in"
                 style={{ animationDelay: `${idx * 50}ms` }}
               >
-                {item.image_url && (
+                {item.image_url ? (
                   <OptimizedImage 
                     src={item.image_url} 
                     alt="" 
                     className="w-16 h-16 object-cover rounded shrink-0"
                     containerClassName="w-16 h-16 shrink-0 rounded"
                   />
+                ) : (
+                  <div className="w-16 h-16 shrink-0 rounded bg-gradient-to-br from-primary/10 to-muted/50 flex items-center justify-center border border-border/50">
+                    <Newspaper className="w-6 h-6 text-muted-foreground/60" />
+                  </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">

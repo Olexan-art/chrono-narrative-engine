@@ -39,7 +39,7 @@ const INITIAL_DISPLAYED = 18;
 
 // Node size configuration - tiered by connection level
 const NODE_SIZES = {
-  root: { base: 48, outer: 56 },     // Main entity - largest
+  root: { base: 56, outer: 68 },     // Main entity - largest
   first: { base: 32, min: 28 },      // First-level connections - large
   second: { base: 24, min: 20 },     // Second-level - medium
   third: { base: 18, min: 16 },      // Third-level - small
@@ -136,7 +136,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const containerWidth = 700;
   const containerHeight = 700;
   const rootX = containerWidth / 2;
-  const rootY = 25; // Raised even higher
+  const rootY = 15; // Raised even higher
 
   // Calculate tree positions
   const positions = useMemo(() => 
@@ -465,6 +465,18 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   </div>
                 </foreignObject>
               )}
+              {/* Entity name label next to root node */}
+              <text
+                x={rootX + NODE_SIZES.root.outer + 12}
+                y={rootY + 5}
+                textAnchor="start"
+                fill="hsl(var(--foreground))"
+                fontSize="14"
+                fontWeight="600"
+                className="drop-shadow-sm"
+              >
+                {mainName}
+              </text>
             </g>
 
             {/* Entity nodes - hexagons with tiered sizes */}
