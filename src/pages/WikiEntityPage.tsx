@@ -736,12 +736,12 @@ export default function WikiEntityPage() {
     unknown: language === 'uk' ? 'Сутність' : language === 'pl' ? 'Podmiot' : 'Entity',
   }[entity.entity_type] || entity.entity_type;
 
-  const getTopicIcon = (topic: string) => {
+  const getTopicIcon = (topic: string): { icon: React.ReactNode; color: string } => {
     const lowerTopic = topic.toLowerCase();
-    for (const [key, icon] of Object.entries(TOPIC_ICONS)) {
-      if (lowerTopic.includes(key)) return icon;
+    for (const [key, data] of Object.entries(TOPIC_ICONS)) {
+      if (lowerTopic.includes(key)) return data;
     }
-    return <Tag className="w-3 h-3" />;
+    return { icon: <Tag className="w-5 h-5" />, color: 'text-muted-foreground' };
   };
 
   return (
