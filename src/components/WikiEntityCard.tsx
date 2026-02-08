@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { ExternalLink, Building2, User, Globe, TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,12 +19,13 @@ interface WikiEntity {
   extract_en: string | null;
 }
 
-interface WikiEntityCardProps {
+export interface WikiEntityCardProps {
   entity: WikiEntity;
   compact?: boolean;
+  showLink?: boolean;
 }
 
-export function WikiEntityCard({ entity, compact = false }: WikiEntityCardProps) {
+export function WikiEntityCard({ entity, compact = false, showLink = false }: WikiEntityCardProps) {
   const { language } = useLanguage();
   
   const name = (language === 'en' && entity.name_en) ? entity.name_en : entity.name;
