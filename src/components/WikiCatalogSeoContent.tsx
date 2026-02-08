@@ -1,249 +1,172 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { Network, Users, Building2, Newspaper, TrendingUp, Globe, Sparkles } from "lucide-react";
-import { Helmet } from "react-helmet-async";
+import {
+  Network,
+  Users,
+  Building2,
+  Newspaper,
+  TrendingUp,
+  Globe,
+  Sparkles,
+} from "lucide-react";
+
+type SeoCopy = {
+  mainTitle: string;
+  mainDescription: string;
+  sectionsTitle: string;
+  personsTitle: string;
+  personsDescription: string;
+  corporationsTitle: string;
+  corporationsDescription: string;
+  organizationsTitle: string;
+  organizationsDescription: string;
+  connectionsTitle: string;
+  connectionsDescription: string;
+  newsTitle: string;
+  newsDescription: string;
+  analyticsTitle: string;
+  analyticsDescription: string;
+  conclusionTitle: string;
+  conclusionDescription: string;
+};
 
 export function WikiCatalogSeoContent() {
   const { language } = useLanguage();
-  
-  // JSON-LD structured data for the catalog page
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    "name": language === 'uk' ? "Каталог персон та організацій" : "Persons and Organizations Catalog",
-    "description": language === 'uk' 
-      ? "Повний каталог світових персон, корпорацій та організацій з аналітикою новин та візуалізацією зв'язків"
-      : "Complete catalog of global personas, corporations and organizations with news analytics and relationship visualization",
-    "url": "https://echoes2.com/wiki",
-    "inLanguage": language === 'uk' ? "uk-UA" : "en-US",
-    "isPartOf": {
-      "@type": "WebSite",
-      "name": "Echoes",
-      "url": "https://echoes2.com"
-    },
-    "about": [
-      {
-        "@type": "Thing",
-        "name": language === 'uk' ? "Політичні лідери" : "Political Leaders"
-      },
-      {
-        "@type": "Thing", 
-        "name": language === 'uk' ? "Міжнародні корпорації" : "International Corporations"
-      },
-      {
-        "@type": "Thing",
-        "name": language === 'uk' ? "Глобальні організації" : "Global Organizations"
-      }
-    ],
-    "mainEntity": {
-      "@type": "ItemList",
-      "name": language === 'uk' ? "Сутності" : "Entities",
-      "description": language === 'uk' 
-        ? "Перелік ключових персон та організацій світової політики та економіки"
-        : "List of key persons and organizations in world politics and economics"
-    }
-  };
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      {
-        "@type": "ListItem",
-        "position": 1,
-        "name": "Home",
-        "item": "https://echoes2.com/"
-      },
-      {
-        "@type": "ListItem",
-        "position": 2,
-        "name": language === 'uk' ? "Wiki каталог" : "Wiki Catalog",
-        "item": "https://echoes2.com/wiki"
-      }
-    ]
-  };
-  
-  const content = language === 'uk' ? {
-    mainTitle: "Енциклопедія глобальних персон та організацій",
-    mainDescription: "Echoes — це унікальна платформа, що систематизує інформацію про ключових гравців світової арени: політиків, бізнесменів, корпорації та міжнародні організації. Ми аналізуємо новини з США, України, Польщі та Індії, щоб виявити приховані зв'язки та взаємодії між впливовими фігурами сучасності.",
-    
-    sectionsTitle: "Що ви знайдете в каталозі",
-    
-    personsTitle: "Персони",
-    personsDescription: "Детальні профілі політичних лідерів, підприємців, науковців та громадських діячів. Від президентів та прем'єр-міністрів до CEO технологічних гігантів — кожен профіль містить біографію, останні новини та граф зв'язків з іншими персонами.",
-    
-    corporationsTitle: "Корпорації та компанії",
-    corporationsDescription: "Аналітика провідних світових компаній: технологічні гіганти FAANG, оборонні корпорації, фармацевтичні холдинги та енергетичні конгломерати. Відстежуйте їхню присутність у новинах та зв'язки з політичними структурами.",
-    
-    organizationsTitle: "Міжнародні організації",
-    organizationsDescription: "ООН, НАТО, ЄС, МВФ та інші глобальні інституції. Розуміння їхньої ролі у формуванні міжнародної політики через призму щоденних новин та взаємодій з урядами країн.",
-    
-    connectionsTitle: "Граф пересічень сутностей",
-    connectionsDescription: "Наша унікальна технологія візуалізує зв'язки між персонами та організаціями на основі спільних згадок у новинах. Інтерактивний граф показує, хто з ким взаємодіє, які компанії пов'язані з політиками, та як формуються альянси в реальному часі.",
-    
-    newsTitle: "Новини як джерело даних",
-    newsDescription: "Ми обробляємо тисячі новин щодня з авторитетних джерел: Reuters, Associated Press, BBC, Ukrinform, PAP та багатьох інших. Штучний інтелект аналізує контент, виявляє згадки сутностей та будує мережу взаємозв'язків.",
-    
-    analyticsTitle: "Аналітика та тренди",
-    analyticsDescription: "Відстежуйте, які персони та організації найчастіше згадуються в новинах. Наша система рейтингів показує динаміку популярності за останні 72 години, тиждень та місяць.",
-    
-    conclusionTitle: "Архів людської історії",
-    conclusionDescription: "Echoes — це більше ніж новинний агрегатор. Це живий архів сучасної історії, де кожна подія, кожна взаємодія та кожне рішення фіксується та стає частиною глобальної картини. Досліджуйте зв'язки, розумійте контекст, бачте повну картину."
-  } : {
-    mainTitle: "Encyclopedia of Global Personas and Organizations",
-    mainDescription: "Echoes is a unique platform that systematizes information about key players on the world stage: politicians, businesspeople, corporations, and international organizations. We analyze news from the USA, Ukraine, Poland, and India to reveal hidden connections and interactions between influential figures of our time.",
-    
-    sectionsTitle: "What You'll Find in the Catalog",
-    
-    personsTitle: "Personas",
-    personsDescription: "Detailed profiles of political leaders, entrepreneurs, scientists, and public figures. From presidents and prime ministers to CEOs of tech giants — each profile contains biography, latest news, and a graph of connections with other personas.",
-    
-    corporationsTitle: "Corporations and Companies",
-    corporationsDescription: "Analytics of leading global companies: FAANG tech giants, defense corporations, pharmaceutical holdings, and energy conglomerates. Track their presence in the news and connections with political structures.",
-    
-    organizationsTitle: "International Organizations",
-    organizationsDescription: "UN, NATO, EU, IMF, and other global institutions. Understanding their role in shaping international politics through the lens of daily news and interactions with national governments.",
-    
-    connectionsTitle: "Entity Intersection Graph",
-    connectionsDescription: "Our unique technology visualizes connections between personas and organizations based on co-mentions in news. The interactive graph shows who interacts with whom, which companies are connected to politicians, and how alliances form in real-time.",
-    
-    newsTitle: "News as Data Source",
-    newsDescription: "We process thousands of news items daily from authoritative sources: Reuters, Associated Press, BBC, Ukrinform, PAP, and many others. Artificial intelligence analyzes content, identifies entity mentions, and builds a network of relationships.",
-    
-    analyticsTitle: "Analytics and Trends",
-    analyticsDescription: "Track which personas and organizations are mentioned most frequently in the news. Our rating system shows popularity dynamics over the last 72 hours, week, and month.",
-    
-    conclusionTitle: "Archive of Human History",
-    conclusionDescription: "Echoes is more than a news aggregator. It's a living archive of contemporary history, where every event, every interaction, and every decision is recorded and becomes part of the global picture. Explore connections, understand context, see the complete picture."
-  };
+  const content: SeoCopy =
+    language === "uk"
+      ? {
+          mainTitle: "Енциклопедія глобальних персон та організацій",
+          mainDescription:
+            "Echoes — це унікальна платформа, що систематизує інформацію про ключових гравців світової арени: політиків, бізнесменів, корпорації та міжнародні організації. Ми аналізуємо новини з США, України, Польщі та Індії, щоб виявити зв'язки та взаємодії між впливовими фігурами сучасності.",
+
+          sectionsTitle: "Що ви знайдете в каталозі",
+
+          personsTitle: "Персони",
+          personsDescription:
+            "Профілі політичних лідерів, підприємців, науковців та громадських діячів. Кожен профіль містить короткий опис, динаміку згадок у новинах та перехід до повної сторінки сутності.",
+
+          corporationsTitle: "Корпорації та компанії",
+          corporationsDescription:
+            "Аналітика провідних світових компаній: технології, енергетика, фінанси, оборона. Сторінки компаній показують, у яких новинах вони фігурують і з якими персонами перетинаються.",
+
+          organizationsTitle: "Міжнародні організації",
+          organizationsDescription:
+            "ООН, НАТО, ЄС, МВФ та інші інституції — у контексті новин та взаємодій з урядами й компаніями. Це допомагає швидше зрозуміти роль організацій у подіях.",
+
+          connectionsTitle: "Зв'язки між сутностями",
+          connectionsDescription:
+            "Мережа зв'язків формується на основі спільних згадок у новинах. Так можна побачити, які персони, корпорації та організації найчастіше опиняються в одному інформаційному контексті.",
+
+          newsTitle: "Новини як джерело даних",
+          newsDescription:
+            "Ми агрегуємо новини з різних джерел і пов'язуємо їх із сутностями: людьми, компаніями, організаціями. Це перетворює стрічку новин у структуровану карту подій.",
+
+          analyticsTitle: "Тренди та згадки",
+          analyticsDescription:
+            "Рейтинги й тренди показують, хто і що в центрі уваги зараз. Каталог допомагає швидко перейти від новини до персони/компанії і назад — з контекстом.",
+
+          conclusionTitle: "Контекст замість шуму",
+          conclusionDescription:
+            "Каталог сутностей — це інструмент, який з'єднує новини, персони та корпорації в одну систему. Досліджуйте взаємозв'язки, порівнюйте згадки й розумійте, як події складаються в загальну картину.",
+        }
+      : {
+          mainTitle: "Encyclopedia of Global Personas and Organizations",
+          mainDescription:
+            "Echoes is a platform that organizes key actors on the world stage: people, corporations and international organizations. We analyze news from the USA, Ukraine, Poland and India to surface connections and recurring interactions between influential entities.",
+
+          sectionsTitle: "What you'll find in the catalog",
+
+          personsTitle: "People",
+          personsDescription:
+            "Profiles of political leaders, entrepreneurs, scientists and public figures. Each page connects the person to the latest stories and related entities for quick context.",
+
+          corporationsTitle: "Corporations & companies",
+          corporationsDescription:
+            "Coverage and analytics for major companies across tech, energy, finance and defense. See how companies appear in the news and which people and institutions they intersect with.",
+
+          organizationsTitle: "International organizations",
+          organizationsDescription:
+            "UN, NATO, EU, IMF and other institutions — tracked through daily coverage and their interactions with governments and corporations.",
+
+          connectionsTitle: "Entity connections",
+          connectionsDescription:
+            "Connections are inferred from co-mentions in news. This helps you understand which people, companies and organizations repeatedly share the same information context.",
+
+          newsTitle: "News as a data source",
+          newsDescription:
+            "We aggregate news and link stories to entities: people, corporations and organizations. This turns the feed into a structured map of events and actors.",
+
+          analyticsTitle: "Trends & mentions",
+          analyticsDescription:
+            "Trending signals highlight who and what is getting attention. The catalog lets you move from a story to an entity page — and back — without losing context.",
+
+          conclusionTitle: "Context over noise",
+          conclusionDescription:
+            "The entity catalog connects news, people and corporations into one navigable system. Explore relationships, compare mentions and understand how events fit together.",
+        };
+
+  const cards = [
+    { title: content.personsTitle, description: content.personsDescription, Icon: Users },
+    {
+      title: content.corporationsTitle,
+      description: content.corporationsDescription,
+      Icon: Building2,
+    },
+    {
+      title: content.organizationsTitle,
+      description: content.organizationsDescription,
+      Icon: Globe,
+    },
+    {
+      title: content.connectionsTitle,
+      description: content.connectionsDescription,
+      Icon: Network,
+    },
+    { title: content.newsTitle, description: content.newsDescription, Icon: Newspaper },
+    {
+      title: content.analyticsTitle,
+      description: content.analyticsDescription,
+      Icon: TrendingUp,
+    },
+  ] as const;
 
   return (
-    <>
-      <Helmet>
-        <script type="application/ld+json">
-          {JSON.stringify(jsonLd)}
-        </script>
-        <script type="application/ld+json">
-          {JSON.stringify(breadcrumbJsonLd)}
-        </script>
-      </Helmet>
-      
-      <section className="mt-16 pt-12 border-t border-border/50">
-        {/* Main Hero */}
-        <div className="text-center mb-12">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4 flex items-center justify-center gap-3">
-            <Sparkles className="w-7 h-7 text-primary" />
-            {content.mainTitle}
-          </h2>
-          <p className="text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            {content.mainDescription}
-          </p>
-        </div>
+    <section className="mt-16 pt-12 border-t border-border/50">
+      <div className="text-center mb-12">
+        <h2 className="text-2xl md:text-3xl font-bold mb-4 flex items-center justify-center gap-3">
+          <Sparkles className="w-7 h-7 text-primary" />
+          {content.mainTitle}
+        </h2>
+        <p className="text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+          {content.mainDescription}
+        </p>
+      </div>
 
-        {/* Sections Title */}
-        <h3 className="text-xl font-semibold text-center mb-8">{content.sectionsTitle}</h3>
+      <h3 className="text-xl font-semibold text-center mb-8">{content.sectionsTitle}</h3>
 
-        {/* Feature Cards Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {/* Persons */}
-          <Card className="bg-gradient-to-br from-blue-500/5 to-transparent border-blue-500/20">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        {cards.map(({ title, description, Icon }) => (
+          <Card key={title} className="bg-muted/30 border-border">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-blue-500/10">
-                  <Users className="w-5 h-5 text-blue-500" />
+                <div className="p-2.5 rounded-xl bg-primary/10">
+                  <Icon className="w-5 h-5 text-primary" />
                 </div>
-                <h4 className="font-semibold">{content.personsTitle}</h4>
+                <h4 className="font-semibold">{title}</h4>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {content.personsDescription}
-              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
             </CardContent>
           </Card>
+        ))}
+      </div>
 
-          {/* Corporations */}
-          <Card className="bg-gradient-to-br from-amber-500/5 to-transparent border-amber-500/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-amber-500/10">
-                  <Building2 className="w-5 h-5 text-amber-500" />
-                </div>
-                <h4 className="font-semibold">{content.corporationsTitle}</h4>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {content.corporationsDescription}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Organizations */}
-          <Card className="bg-gradient-to-br from-emerald-500/5 to-transparent border-emerald-500/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-emerald-500/10">
-                  <Globe className="w-5 h-5 text-emerald-500" />
-                </div>
-                <h4 className="font-semibold">{content.organizationsTitle}</h4>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {content.organizationsDescription}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Connections Graph */}
-          <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-purple-500/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-purple-500/10">
-                  <Network className="w-5 h-5 text-purple-500" />
-                </div>
-                <h4 className="font-semibold">{content.connectionsTitle}</h4>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {content.connectionsDescription}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* News Source */}
-          <Card className="bg-gradient-to-br from-rose-500/5 to-transparent border-rose-500/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-rose-500/10">
-                  <Newspaper className="w-5 h-5 text-rose-500" />
-                </div>
-                <h4 className="font-semibold">{content.newsTitle}</h4>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {content.newsDescription}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Analytics */}
-          <Card className="bg-gradient-to-br from-cyan-500/5 to-transparent border-cyan-500/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-cyan-500/10">
-                  <TrendingUp className="w-5 h-5 text-cyan-500" />
-                </div>
-                <h4 className="font-semibold">{content.analyticsTitle}</h4>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {content.analyticsDescription}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Conclusion */}
-        <div className="text-center py-8 px-6 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 border border-primary/10">
-          <h3 className="text-xl font-semibold mb-3">{content.conclusionTitle}</h3>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            {content.conclusionDescription}
-          </p>
-        </div>
-      </section>
-    </>
+      <div className="text-center py-8 px-6 rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 border border-primary/10">
+        <h3 className="text-xl font-semibold mb-3">{content.conclusionTitle}</h3>
+        <p className="text-muted-foreground max-w-2xl mx-auto">
+          {content.conclusionDescription}
+        </p>
+      </div>
+    </section>
   );
 }

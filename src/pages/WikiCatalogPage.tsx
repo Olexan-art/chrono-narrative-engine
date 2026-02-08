@@ -185,6 +185,25 @@ export default function WikiCatalogPage() {
         title={`${t.title} | Echoes`}
         description={t.description}
         canonicalUrl="https://echoes2.com/wiki"
+        breadcrumbs={[
+          {
+            name: language === 'uk' ? 'Головна' : 'Home',
+            url: 'https://echoes2.com/',
+          },
+          {
+            name: t.title,
+            url: 'https://echoes2.com/wiki',
+          },
+        ]}
+        schemaType="CollectionPage"
+        schemaExtra={{
+          url: 'https://echoes2.com/wiki',
+          mainEntity: {
+            '@type': 'ItemList',
+            name: t.title,
+            description: t.description,
+          },
+        }}
       />
 
       <div className="min-h-screen bg-background">

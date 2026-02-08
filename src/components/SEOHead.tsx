@@ -21,6 +21,11 @@ interface SEOHeadProps {
   robots?: RobotsDirective[];
   noIndex?: boolean;
   breadcrumbs?: BreadcrumbItem[];
+
+  // Optional: control/extend JSON-LD emitted by this component
+  schemaType?: 'WebSite' | 'CollectionPage' | 'WebPage' | 'NewsArticle';
+  schemaExtra?: Record<string, unknown>;
+  additionalSchemas?: Record<string, unknown>[];
 }
 
 export function SEOHead({
@@ -35,7 +40,10 @@ export function SEOHead({
   author = 'Synchronization Point AI',
   robots,
   noIndex = false,
-  breadcrumbs
+  breadcrumbs,
+  schemaType,
+  schemaExtra,
+  additionalSchemas,
 }: SEOHeadProps) {
   const { language } = useLanguage();
 
@@ -173,9 +181,12 @@ export function SEOHead({
       schemas.push(organizationSchema);
 
       // Main content schema - enhanced for LLM understanding
+      const baseSchemaType = type === 'article' ? 'NewsArticle' : 'WebSite';
+      const effectiveSchemaType = schemaType ?? (baseSchemaType as SEOHeadProps['schemaType']);
+
       const mainSchema: Record<string, unknown> = {
         '@context': 'https://schema.org',
-        '@type': type === 'article' ? 'NewsArticle' : 'WebSite',
+        '@type': effectiveSchemaType,
         name: fullTitle,
         headline: fullTitle,
         description,
@@ -235,6 +246,10 @@ export function SEOHead({
         };
       }
 
+      if (schemaExtra) {
+        Object.assign(mainSchema, schemaExtra);
+      }
+
       schemas.push(mainSchema);
 
       // BreadcrumbList schema
@@ -252,9 +267,13 @@ export function SEOHead({
         schemas.push(breadcrumbSchema);
       }
 
+      if (additionalSchemas && additionalSchemas.length > 0) {
+        schemas.push(...additionalSchemas);
+      }
+
       // Remove existing and add new JSON-LD
       document.querySelectorAll('script[type="application/ld+json"]').forEach(el => el.remove());
-      
+
       schemas.forEach(schema => {
         const ldJson = document.createElement('script');
         ldJson.setAttribute('type', 'application/ld+json');
