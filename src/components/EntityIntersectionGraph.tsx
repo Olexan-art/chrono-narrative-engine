@@ -46,19 +46,19 @@ function getHexagonPath(cx: number, cy: number, r: number): string {
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ') + 'Z';
 }
 
-// Calculate tree positions - hierarchical layout
+// Calculate tree positions - hierarchical layout with more levels
 function calculateTreePositions(entityCount: number, containerWidth: number, containerHeight: number) {
   const positions: { x: number; y: number; level: number }[] = [];
   
   if (entityCount === 0) return positions;
   
-  // Define levels based on entity count
+  // Define levels based on entity count - expanded for more nodes
   const levels: number[] = [];
   let remaining = entityCount;
   let currentLevel = 0;
   
-  // First level has fewer items, then expand
-  const levelSizes = [3, 4, 5, 6]; // Max items per level
+  // First level has fewer items, then expand more aggressively
+  const levelSizes = [3, 5, 6, 7, 8]; // Max items per level - increased
   
   while (remaining > 0) {
     const maxForLevel = levelSizes[Math.min(currentLevel, levelSizes.length - 1)];
@@ -70,21 +70,23 @@ function calculateTreePositions(entityCount: number, containerWidth: number, con
   
   // Calculate vertical spacing
   const levelCount = levels.length;
-  const startY = 120; // Start below the root
-  const endY = containerHeight - 60;
+  const startY = 100; // Start below the root
+  const endY = containerHeight - 50;
   const levelHeight = levelCount > 1 ? (endY - startY) / (levelCount - 1) : 0;
   
-  // Position entities on each level
+  // Position entities on each level with stagger for visual interest
   let entityIndex = 0;
   levels.forEach((count, levelIdx) => {
     const y = startY + levelIdx * levelHeight;
-    const levelWidth = containerWidth - 100;
+    const levelWidth = containerWidth - 80;
     const spacing = count > 1 ? levelWidth / (count - 1) : 0;
-    const startX = count > 1 ? 50 : containerWidth / 2;
+    const startX = count > 1 ? 40 : containerWidth / 2;
     
     for (let i = 0; i < count; i++) {
+      // Add slight vertical stagger for alternating items
+      const staggerY = (i % 2 === 0) ? 0 : (levelIdx > 0 ? 8 : 0);
       const x = count > 1 ? startX + i * spacing : startX;
-      positions.push({ x, y, level: levelIdx });
+      positions.push({ x, y: y + staggerY, level: levelIdx });
       entityIndex++;
     }
   });
