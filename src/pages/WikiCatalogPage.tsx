@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Search, User, Building2, Globe, Filter, Grid, List, 
-  TrendingUp, Newspaper, ArrowRight
+  TrendingUp, Newspaper, ArrowRight, X
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -35,13 +35,20 @@ type ViewMode = 'grid' | 'list';
 
 export default function WikiCatalogPage() {
   const { language } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryFilter = searchParams.get('category') || '';
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
+  const clearCategoryFilter = () => {
+    searchParams.delete('category');
+    setSearchParams(searchParams);
+  };
+
   // Fetch entities with news count, sorted by last mention
   const { data: entities, isLoading } = useQuery({
-    queryKey: ['wiki-catalog', searchTerm, filterType],
+    queryKey: ['wiki-catalog', searchTerm, filterType, categoryFilter],
     queryFn: async () => {
       // First get latest news links for each entity
       const { data: latestLinks } = await supabase
@@ -82,11 +89,16 @@ export default function WikiCatalogPage() {
       if (!data) return [];
 
       // Add news counts and sort by last mention
-      const enrichedData = data.map(e => ({
+      let enrichedData = data.map(e => ({
         ...e,
         news_count: entityStats.get(e.id)?.count || 0,
         last_mention: entityStats.get(e.id)?.lastMention || null,
       }));
+
+      // If category filter is active, we need to filter entities by Wikipedia category
+      // This is a client-side filter since we fetch categories dynamically
+      // For now, we'll just show all entities and let user search by name
+      // The category filter is more of a suggested search term
 
       // Sort by last mention (most recent first), then by search_count
       enrichedData.sort((a, b) => {
