@@ -768,8 +768,17 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               />
             ))}
 
-            {/* Root entity node */}
-            <g className="cursor-default root-pulse" filter="url(#rootGlow)" style={{ transformOrigin: `${rootX}px ${rootY}px` }}>
+            {/* Root entity node - CLICKABLE */}
+            <g 
+              className="cursor-pointer root-pulse" 
+              filter="url(#rootGlow)" 
+              style={{ transformOrigin: `${rootX}px ${rootY}px` }}
+              onClick={(e) => {
+                e.preventDefault();
+                setSelectedEntity(mainEntity);
+                setIsRootSelected(true);
+              }}
+            >
               {/* Outer glow ring */}
               <path
                 d={getRoundedSquarePath(rootX, rootY, NODE_SIZES.root.outer * 2.3, 20)}
