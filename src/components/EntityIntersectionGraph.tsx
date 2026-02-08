@@ -288,6 +288,47 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                     0%, 100% { transform: translateY(0px); }
                     50% { transform: translateY(-3px); }
                   }
+                  @keyframes fogDrift {
+                    0% { 
+                      opacity: 0.2; 
+                      transform: translate(0, 0) scale(1);
+                    }
+                    25% { 
+                      opacity: 0.4; 
+                      transform: translate(-5px, 3px) scale(1.05);
+                    }
+                    50% { 
+                      opacity: 0.3; 
+                      transform: translate(3px, -2px) scale(1.1);
+                    }
+                    75% { 
+                      opacity: 0.5; 
+                      transform: translate(-3px, -4px) scale(1.02);
+                    }
+                    100% { 
+                      opacity: 0.2; 
+                      transform: translate(0, 0) scale(1);
+                    }
+                  }
+                  @keyframes fogPulse {
+                    0%, 100% { 
+                      opacity: 0.15;
+                      filter: blur(25px);
+                    }
+                    50% { 
+                      opacity: 0.35;
+                      filter: blur(35px);
+                    }
+                  }
+                  .fog-layer-1 {
+                    animation: fogDrift 8s ease-in-out infinite;
+                  }
+                  .fog-layer-2 {
+                    animation: fogDrift 12s ease-in-out infinite reverse;
+                  }
+                  .fog-layer-3 {
+                    animation: fogPulse 6s ease-in-out infinite;
+                  }
                 `}
               </style>
               
@@ -316,6 +357,13 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   <feMergeNode in="SourceGraphic"/>
                 </feMerge>
               </filter>
+
+              <filter id="fogBlur" x="-100%" y="-100%" width="300%" height="300%">
+                <feGaussianBlur stdDeviation="20" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                </feMerge>
+              </filter>
               
               <radialGradient id="rootGradient" cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="hsl(var(--primary))" />
@@ -332,6 +380,18 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                 <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.25" />
                 <stop offset="50%" stopColor="hsl(var(--muted))" stopOpacity="0.95" />
                 <stop offset="100%" stopColor="hsl(var(--card))" stopOpacity="0.9" />
+              </radialGradient>
+
+              <radialGradient id="fogGradient1" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.4" />
+                <stop offset="60%" stopColor="hsl(var(--primary))" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+              </radialGradient>
+
+              <radialGradient id="fogGradient2" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="hsl(var(--secondary))" stopOpacity="0.3" />
+                <stop offset="70%" stopColor="hsl(var(--secondary))" stopOpacity="0.1" />
+                <stop offset="100%" stopColor="hsl(var(--secondary))" stopOpacity="0" />
               </radialGradient>
             </defs>
 
