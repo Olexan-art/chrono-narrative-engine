@@ -1049,16 +1049,17 @@ export default function NewsArticlePage() {
                           console.error('Full retelling failed:', error);
                         }
                       }}
-                      disabled={retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending}
+                      disabled={retellNewsMutation.isPending}
                     >
-                      {(retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending) ? (
+                      {retellNewsMutation.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <Sparkles className="w-4 h-4" />
                       )}
-                      {(retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending)
+                      {retellNewsMutation.isPending
                         ? (language === 'en' ? 'Processing...' : language === 'pl' ? 'Przetwarzanie...' : 'Обробка...')
                         : (language === 'en' ? 'Run Full Retelling' : language === 'pl' ? 'Uruchom pełny przekaz' : 'Запустити повний переказ')}
+
                     </Button>
                   </CardContent>
                 </Card>
