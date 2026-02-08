@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, Clock, Menu, X, Globe, Palette, Calendar } from "lucide-react";
+import { BookOpen, Clock, Menu, X, Globe, Palette, Calendar, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
