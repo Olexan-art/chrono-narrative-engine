@@ -536,35 +536,36 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                       </foreignObject>
                     )}
 
-                    {/* Count badge */}
+                    {/* Count badge - larger for first level */}
                     <path
-                      d={getHexagonPath(pos.x + nodeRadius * 0.7, pos.y - nodeRadius * 0.7, 10)}
+                      d={getHexagonPath(pos.x + nodeRadius * 0.7, pos.y - nodeRadius * 0.7, isFirstLevel ? 12 : 9)}
                       fill="hsl(var(--primary))"
                       stroke="hsl(var(--background))"
-                      strokeWidth={2}
+                      strokeWidth={isFirstLevel ? 2.5 : 1.5}
                       className="drop-shadow-md"
                     />
                     <text
                       x={pos.x + nodeRadius * 0.7}
-                      y={pos.y - nodeRadius * 0.7 + 3}
+                      y={pos.y - nodeRadius * 0.7 + (isFirstLevel ? 4 : 3)}
                       textAnchor="middle"
                       fill="hsl(var(--primary-foreground))"
-                      fontSize="9"
+                      fontSize={isFirstLevel ? "11" : "8"}
                       fontWeight="bold"
                     >
                       {entity.shared_news_count}
                     </text>
 
-                    {/* Entity name label below node */}
+                    {/* Entity name label below node - larger for first level */}
                     <text
                       x={pos.x}
-                      y={pos.y + nodeRadius + 14}
+                      y={pos.y + nodeRadius + (isFirstLevel ? 16 : 12)}
                       textAnchor="middle"
-                      fill="hsl(var(--muted-foreground))"
-                      fontSize="9"
+                      fill={isFirstLevel ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))"}
+                      fontSize={isFirstLevel ? "11" : "8"}
+                      fontWeight={isFirstLevel ? "500" : "normal"}
                       className="pointer-events-none"
                     >
-                      {name.length > 12 ? name.substring(0, 12) + '...' : name}
+                      {name.length > (isFirstLevel ? 16 : 10) ? name.substring(0, isFirstLevel ? 16 : 10) + '...' : name}
                     </text>
                   </Link>
                 </g>
