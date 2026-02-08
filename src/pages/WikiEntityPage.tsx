@@ -831,34 +831,6 @@ export default function WikiEntityPage() {
             <span className="text-foreground">{name}</span>
           </div>
 
-          {/* Big Aggregated Rating Block - Combined rating */}
-          <div className="mb-6 flex items-center justify-center gap-6 py-6 px-8 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 rounded-2xl border-2 border-primary/30 shadow-lg">
-            <div className="bg-primary/20 p-4 rounded-full">
-              <Eye className="w-12 h-12 text-primary" />
-            </div>
-            <div className="text-center">
-              <span className="text-5xl md:text-6xl font-bold text-primary">
-                {aggregatedRating.toLocaleString()}
-              </span>
-              <p className="text-lg text-muted-foreground mt-1">
-                {language === 'uk' ? 'Загальний рейтинг' : 'Total Rating'}
-              </p>
-              <div className="flex items-center justify-center gap-4 mt-2 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Eye className="w-4 h-4" /> {aggregatedViews.toLocaleString()}
-                </span>
-                <span className="flex items-center gap-1">
-                  <ThumbsUp className="w-4 h-4" /> {(totalNewsLikes + totalCaricatureLikes).toLocaleString()}
-                </span>
-                {(totalNewsDislikes + totalCaricatureDislikes) > 0 && (
-                  <span className="flex items-center gap-1 text-destructive">
-                    <ThumbsDown className="w-4 h-4" /> {(totalNewsDislikes + totalCaricatureDislikes).toLocaleString()}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Column */}
             <div className="lg:col-span-2 space-y-6">
