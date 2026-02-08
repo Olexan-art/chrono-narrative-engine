@@ -856,33 +856,9 @@ export default function NewsArticlePage() {
                 )}
               </nav>
 
-              {/* Tweets Section */}
-              {tweets.length > 0 && (
-                <NewsTweetCard tweets={tweets} />
-              )}
-              
-              {/* Generate Tweets Button - Admin only */}
-              {isAdminAuthenticated && (
-                <div className="pt-4">
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => generateTweetsMutation.mutate()}
-                    disabled={generateTweetsMutation.isPending}
-                  >
-                    {generateTweetsMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Twitter className="w-4 h-4" />
-                    )}
-                    {tweets.length > 0 
-                      ? (language === 'en' ? 'Regenerate Tweets' : language === 'pl' ? 'Regeneruj tweety' : 'Перегенерувати твіти')
-                      : (language === 'en' ? 'Generate Tweets' : language === 'pl' ? 'Generuj tweety' : 'Генерувати твіти')
-                    }
-                  </Button>
-                </div>
-              )}
+
+               {/* Tweets disabled for news */}
+
             {/* Entity Intersection Graph - BELOW article on ALL screens */}
             {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
               <EntityIntersectionGraph
@@ -893,14 +869,9 @@ export default function NewsArticlePage() {
             )}
           </article>
 
-            {/* Character Dialogue Section - MOBILE ONLY (below article) */}
-            <NewsDialogueSection
-              chatDialogue={chatDialogue as any}
-              isAdminAuthenticated={isAdminAuthenticated}
-              isGenerating={generateDialogueMutation.isPending}
-              onGenerateDialogue={() => generateDialogueMutation.mutate()}
-              className="mt-8 lg:hidden"
-            />
+
+            {/* Dialogue disabled for news (mobile) */}
+
 
             {/* Other Countries News - After navigation */}
             <OtherCountriesNews
@@ -974,11 +945,11 @@ export default function NewsArticlePage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      {language === 'en' 
-                        ? 'Generate full retelling with key points, tweets, and dialogue' 
-                        : language === 'pl' 
-                        ? 'Wygeneruj pełny przekaz z kluczowymi punktami, tweetami i dialogiem'
-                        : 'Згенерувати повний переказ з тезами, твітами та діалогом'}
+                      {language === 'en'
+                        ? 'Generate full retelling with key points and metadata'
+                        : language === 'pl'
+                        ? 'Wygeneruj pełny przekaz z kluczowymi punktami i metadanymi'
+                        : 'Згенерувати повний переказ з тезами та метаданими'}
                     </p>
                     
                     {/* Progress indicator showing current step */}
@@ -1042,25 +1013,24 @@ export default function NewsArticlePage() {
                           toast.info(language === 'en' ? 'Starting full retelling...' : language === 'pl' ? 'Rozpoczynam pełny przekaz...' : 'Запускаю повний переказ...');
                           // Run retell first
                           await retellNewsMutation.mutateAsync();
-                          // Then generate tweets
-                          await generateTweetsMutation.mutateAsync();
-                          // Then generate dialogue
-                          await generateDialogueMutation.mutateAsync();
+                          // Social content disabled (no tweets/dialogue)
+
                           toast.success(language === 'en' ? 'Full retelling complete!' : language === 'pl' ? 'Pełny przekaz zakończony!' : 'Повний переказ завершено!');
                         } catch (error) {
                           console.error('Full retelling failed:', error);
                         }
                       }}
-                      disabled={retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending}
+                      disabled={retellNewsMutation.isPending}
                     >
-                      {(retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending) ? (
+                      {retellNewsMutation.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <Sparkles className="w-4 h-4" />
                       )}
-                      {(retellNewsMutation.isPending || generateTweetsMutation.isPending || generateDialogueMutation.isPending)
+                      {retellNewsMutation.isPending
                         ? (language === 'en' ? 'Processing...' : language === 'pl' ? 'Przetwarzanie...' : 'Обробка...')
                         : (language === 'en' ? 'Run Full Retelling' : language === 'pl' ? 'Uruchom pełny przekaz' : 'Запустити повний переказ')}
+
                     </Button>
                   </CardContent>
                 </Card>
@@ -1295,14 +1265,10 @@ export default function NewsArticlePage() {
             />
 
 
-            {/* Character Dialogue Section - DESKTOP ONLY (in sidebar) */}
-            <NewsDialogueSection
-              chatDialogue={chatDialogue as any}
-              isAdminAuthenticated={isAdminAuthenticated}
-              isGenerating={generateDialogueMutation.isPending}
-              onGenerateDialogue={() => generateDialogueMutation.mutate()}
-              className="hidden lg:block"
-            />
+
+
+            {/* Dialogue disabled for news */}
+
 
             {/* Related Country News - DESKTOP ONLY */}
             <RelatedCountryNews
