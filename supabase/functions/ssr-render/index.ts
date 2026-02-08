@@ -270,6 +270,18 @@ Deno.serve(async (req) => {
         .limit(1000);
 
       html = generateVolumesIndexHTML(volumes || [], lang);
+    } else if (path === "/wiki") {
+      // Wiki catalog page
+      title = "Entity Catalog | Echoes Wiki";
+      description = "People, companies and organizations in the news. Browse entities mentioned in our AI-curated news coverage.";
+      
+      const { data: entities } = await supabase
+        .from("wiki_entities")
+        .select("id, slug, name, name_en, description, description_en, image_url, entity_type, search_count")
+        .order("search_count", { ascending: false })
+        .limit(100);
+      
+      html = generateWikiCatalogHTML(entities || [], lang);
     } else if (path === "/ink-abyss") {
       // Ink Abyss gallery page
       title = "The Ink Abyss | Satirical Art Gallery";
