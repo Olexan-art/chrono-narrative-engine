@@ -32,9 +32,9 @@ interface EntityIntersectionGraphProps {
   secondaryConnections?: SecondaryConnection[];
 }
 
-// Tree layout configuration
-const MAX_DISPLAYED_ENTITIES = 15;
-const INITIAL_DISPLAYED = 12;
+// Tree layout configuration - expanded for more entities
+const MAX_DISPLAYED_ENTITIES = 24;
+const INITIAL_DISPLAYED = 18;
 
 // Generate hexagon path for SVG
 function getHexagonPath(cx: number, cy: number, r: number): string {
@@ -46,19 +46,19 @@ function getHexagonPath(cx: number, cy: number, r: number): string {
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ') + 'Z';
 }
 
-// Calculate tree positions - hierarchical layout
+// Calculate tree positions - hierarchical layout with more levels
 function calculateTreePositions(entityCount: number, containerWidth: number, containerHeight: number) {
   const positions: { x: number; y: number; level: number }[] = [];
   
   if (entityCount === 0) return positions;
   
-  // Define levels based on entity count
+  // Define levels based on entity count - expanded for more nodes
   const levels: number[] = [];
   let remaining = entityCount;
   let currentLevel = 0;
   
-  // First level has fewer items, then expand
-  const levelSizes = [3, 4, 5, 6]; // Max items per level
+  // First level has fewer items, then expand more aggressively
+  const levelSizes = [3, 5, 6, 7, 8]; // Max items per level - increased
   
   while (remaining > 0) {
     const maxForLevel = levelSizes[Math.min(currentLevel, levelSizes.length - 1)];
@@ -70,21 +70,23 @@ function calculateTreePositions(entityCount: number, containerWidth: number, con
   
   // Calculate vertical spacing
   const levelCount = levels.length;
-  const startY = 120; // Start below the root
-  const endY = containerHeight - 60;
+  const startY = 100; // Start below the root
+  const endY = containerHeight - 50;
   const levelHeight = levelCount > 1 ? (endY - startY) / (levelCount - 1) : 0;
   
-  // Position entities on each level
+  // Position entities on each level with stagger for visual interest
   let entityIndex = 0;
   levels.forEach((count, levelIdx) => {
     const y = startY + levelIdx * levelHeight;
-    const levelWidth = containerWidth - 100;
+    const levelWidth = containerWidth - 80;
     const spacing = count > 1 ? levelWidth / (count - 1) : 0;
-    const startX = count > 1 ? 50 : containerWidth / 2;
+    const startX = count > 1 ? 40 : containerWidth / 2;
     
     for (let i = 0; i < count; i++) {
+      // Add slight vertical stagger for alternating items
+      const staggerY = (i % 2 === 0) ? 0 : (levelIdx > 0 ? 8 : 0);
       const x = count > 1 ? startX + i * spacing : startX;
-      positions.push({ x, y, level: levelIdx });
+      positions.push({ x, y: y + staggerY, level: levelIdx });
       entityIndex++;
     }
   });
@@ -121,11 +123,11 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const hasMore = sortedEntities.length > INITIAL_DISPLAYED;
   const remainingCount = Math.min(sortedEntities.length, MAX_DISPLAYED_ENTITIES) - INITIAL_DISPLAYED;
 
-  // Container dimensions
-  const containerWidth = 500;
-  const containerHeight = 500;
+  // Container dimensions - increased for more entities
+  const containerWidth = 600;
+  const containerHeight = 600;
   const rootX = containerWidth / 2;
-  const rootY = 50;
+  const rootY = 45;
 
   // Calculate tree positions
   const positions = useMemo(() => 
@@ -217,25 +219,36 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               <style>
                 {`
                   @keyframes flowDown {
-                    0% { stroke-dashoffset: 20; }
+                    0% { stroke-dashoffset: 30; }
                     100% { stroke-dashoffset: 0; }
                   }
                   .tree-line {
-                    animation: flowDown 2s linear infinite;
+                    animation: flowDown 3s linear infinite;
                   }
                   @keyframes dashMove {
-                    0% { stroke-dashoffset: 20; }
+                    0% { stroke-dashoffset: 24; }
                     100% { stroke-dashoffset: 0; }
                   }
                   .secondary-line {
-                    animation: dashMove 1s linear infinite;
+                    animation: dashMove 1.5s linear infinite;
                   }
                   @keyframes pulse {
-                    0%, 100% { opacity: 0.6; }
-                    50% { opacity: 1; }
+                    0%, 100% { opacity: 0.5; transform: scale(1); }
+                    50% { opacity: 1; transform: scale(1.05); }
                   }
                   .pulse-node {
-                    animation: pulse 2s ease-in-out infinite;
+                    animation: pulse 2.5s ease-in-out infinite;
+                  }
+                  @keyframes glow {
+                    0%, 100% { filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.3)); }
+                    50% { filter: drop-shadow(0 0 6px hsl(var(--primary) / 0.6)); }
+                  }
+                  .glow-node {
+                    animation: glow 3s ease-in-out infinite;
+                  }
+                  @keyframes nodeFloat {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-3px); }
                   }
                 `}
               </style>

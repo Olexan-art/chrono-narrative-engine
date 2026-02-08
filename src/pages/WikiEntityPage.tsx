@@ -1264,20 +1264,29 @@ export default function WikiEntityPage() {
                             {language === 'uk' ? 'Категорії Wikipedia' : 'Wikipedia Categories'}
                           </h4>
                           <div className="flex flex-wrap gap-2">
-                            {wikiCategories.slice(0, 12).map((category, idx) => (
-                              <Link
-                                key={idx}
-                                to={`/wiki?category=${encodeURIComponent(category)}`}
-                                className="inline-flex"
-                              >
-                                <Badge 
-                                  variant="outline" 
-                                  className="text-xs cursor-pointer hover:bg-primary/10 hover:border-primary transition-colors"
+                            {wikiCategories.slice(0, 12).map((category, idx) => {
+                              // Determine wiki language from entity URL
+                              const wikiLang = entity?.wiki_url?.includes('uk.wikipedia') ? 'uk' : 'en';
+                              const wikiSearchUrl = `https://${wikiLang}.wikipedia.org/wiki/Category:${encodeURIComponent(category.replace(/ /g, '_'))}`;
+                              
+                              return (
+                                <a
+                                  key={idx}
+                                  href={wikiSearchUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex"
                                 >
-                                  {category}
-                                </Badge>
-                              </Link>
-                            ))}
+                                  <Badge 
+                                    variant="outline" 
+                                    className="text-xs cursor-pointer hover:bg-primary/10 hover:border-primary transition-colors gap-1"
+                                  >
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                    {category}
+                                  </Badge>
+                                </a>
+                              );
+                            })}
                             {wikiCategories.length > 12 && (
                               <Badge variant="secondary" className="text-xs">
                                 +{wikiCategories.length - 12}
