@@ -17,7 +17,7 @@ import { NewsTweetCard } from "@/components/NewsTweetCard";
 import { NewsKeyPoints, NewsKeywords } from "@/components/NewsKeyPoints";
 import { NewsWikiEntities } from "@/components/NewsWikiEntities";
 import { RelatedEntitiesNews } from "@/components/RelatedEntitiesNews";
-import { EntityHighlightedContent } from "@/components/EntityHighlightedContent";
+import { EntityIntersectionGraph } from "@/components/EntityIntersectionGraph";
 import { OutrageInkBlock } from "@/components/OutrageInkBlock";
 import { OriginalSourceBlock } from "@/components/OriginalSourceBlock";
 import { NewsImageBlock } from "@/components/NewsImageBlock";
