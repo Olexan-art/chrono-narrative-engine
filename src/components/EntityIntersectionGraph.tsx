@@ -419,20 +419,18 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               )}
             </g>
 
-            {/* Related entities - optimized rendering */}
+            {/* Related entities - optimized rendering with hexagons */}
             {displayedEntities.map((entity, index) => {
               const pos = positions[index];
               const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
-              const entityRadius = 28 + (entity.shared_news_count / maxCount) * 10;
+              const entityRadius = 26 + (entity.shared_news_count / maxCount) * 8;
               
               return (
                 <g key={entity.id} className="cursor-pointer" filter="url(#softGlow)">
                   <Link to={`/wiki/${entity.slug || entity.id}`}>
-                    {/* Main node circle */}
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r={entityRadius}
+                    {/* Main node hexagon */}
+                    <path
+                      d={getHexagonPath(pos.x, pos.y, entityRadius)}
                       fill="url(#nodeGradient)"
                       stroke="hsl(var(--border))"
                       strokeWidth={2}
@@ -442,7 +440,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                     {entity.image_url ? (
                       <>
                         <clipPath id={`clip-${entity.id}`}>
-                          <circle cx={pos.x} cy={pos.y} r={entityRadius - 3} />
+                          <path d={getHexagonPath(pos.x, pos.y, entityRadius - 3)} />
                         </clipPath>
                         <image
                           x={pos.x - (entityRadius - 3)}
@@ -472,11 +470,9 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                       </foreignObject>
                     )}
 
-                    {/* Count badge */}
-                    <circle
-                      cx={pos.x + entityRadius * 0.7}
-                      cy={pos.y - entityRadius * 0.7}
-                      r={12}
+                    {/* Count badge - hexagonal */}
+                    <path
+                      d={getHexagonPath(pos.x + entityRadius * 0.7, pos.y - entityRadius * 0.7, 11)}
                       fill="hsl(var(--primary))"
                       stroke="hsl(var(--background))"
                       strokeWidth={2}
