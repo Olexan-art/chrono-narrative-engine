@@ -39,7 +39,7 @@ const INITIAL_DISPLAYED = 18;
 
 // Node size configuration - tiered by connection level
 const NODE_SIZES = {
-  root: { base: 56, outer: 68 },     // Main entity - largest
+  root: { base: 72, outer: 88 },     // Main entity - largest (squared, bigger)
   first: { base: 32, min: 28 },      // First-level connections - large
   second: { base: 24, min: 20 },     // Second-level - medium
   third: { base: 18, min: 16 },      // Third-level - small
@@ -53,6 +53,23 @@ function getHexagonPath(cx: number, cy: number, r: number): string {
     points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
   }
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ') + 'Z';
+}
+
+// Generate rounded square path for root node
+function getRoundedSquarePath(cx: number, cy: number, size: number, radius: number = 12): string {
+  const half = size / 2;
+  const x = cx - half;
+  const y = cy - half;
+  return `M ${x + radius} ${y}
+    L ${x + size - radius} ${y}
+    Q ${x + size} ${y} ${x + size} ${y + radius}
+    L ${x + size} ${y + size - radius}
+    Q ${x + size} ${y + size} ${x + size - radius} ${y + size}
+    L ${x + radius} ${y + size}
+    Q ${x} ${y + size} ${x} ${y + size - radius}
+    L ${x} ${y + radius}
+    Q ${x} ${y} ${x + radius} ${y}
+    Z`;
 }
 
 // Calculate tree positions - hierarchical layout with more levels
@@ -136,7 +153,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const containerWidth = 700;
   const containerHeight = 700;
   const rootX = containerWidth / 2;
-  const rootY = 15; // Raised even higher
+  const rootY = -30; // Raised much higher (3x more)
 
   // Calculate tree positions
   const positions = useMemo(() => 
@@ -271,6 +288,47 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                     0%, 100% { transform: translateY(0px); }
                     50% { transform: translateY(-3px); }
                   }
+                  @keyframes fogDrift {
+                    0% { 
+                      opacity: 0.2; 
+                      transform: translate(0, 0) scale(1);
+                    }
+                    25% { 
+                      opacity: 0.4; 
+                      transform: translate(-5px, 3px) scale(1.05);
+                    }
+                    50% { 
+                      opacity: 0.3; 
+                      transform: translate(3px, -2px) scale(1.1);
+                    }
+                    75% { 
+                      opacity: 0.5; 
+                      transform: translate(-3px, -4px) scale(1.02);
+                    }
+                    100% { 
+                      opacity: 0.2; 
+                      transform: translate(0, 0) scale(1);
+                    }
+                  }
+                  @keyframes fogPulse {
+                    0%, 100% { 
+                      opacity: 0.15;
+                      filter: blur(25px);
+                    }
+                    50% { 
+                      opacity: 0.35;
+                      filter: blur(35px);
+                    }
+                  }
+                  .fog-layer-1 {
+                    animation: fogDrift 8s ease-in-out infinite;
+                  }
+                  .fog-layer-2 {
+                    animation: fogDrift 12s ease-in-out infinite reverse;
+                  }
+                  .fog-layer-3 {
+                    animation: fogPulse 6s ease-in-out infinite;
+                  }
                 `}
               </style>
               
@@ -299,6 +357,13 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   <feMergeNode in="SourceGraphic"/>
                 </feMerge>
               </filter>
+
+              <filter id="fogBlur" x="-100%" y="-100%" width="300%" height="300%">
+                <feGaussianBlur stdDeviation="20" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                </feMerge>
+              </filter>
               
               <radialGradient id="rootGradient" cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="hsl(var(--primary))" />
@@ -315,6 +380,18 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                 <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.25" />
                 <stop offset="50%" stopColor="hsl(var(--muted))" stopOpacity="0.95" />
                 <stop offset="100%" stopColor="hsl(var(--card))" stopOpacity="0.9" />
+              </radialGradient>
+
+              <radialGradient id="fogGradient1" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.4" />
+                <stop offset="60%" stopColor="hsl(var(--primary))" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+              </radialGradient>
+
+              <radialGradient id="fogGradient2" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="hsl(var(--secondary))" stopOpacity="0.3" />
+                <stop offset="70%" stopColor="hsl(var(--secondary))" stopOpacity="0.1" />
+                <stop offset="100%" stopColor="hsl(var(--secondary))" stopOpacity="0" />
               </radialGradient>
             </defs>
 
@@ -414,35 +491,68 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               );
             })}
 
-            {/* Root entity (main) - Hexagon at top - LARGER */}
+            {/* Fog layers around root node */}
+            <g>
+              {/* Fog layer 1 - primary color */}
+              <ellipse
+                cx={rootX - 30}
+                cy={rootY + 20}
+                rx={80}
+                ry={50}
+                fill="url(#fogGradient1)"
+                filter="url(#fogBlur)"
+                className="fog-layer-1"
+              />
+              {/* Fog layer 2 - secondary color */}
+              <ellipse
+                cx={rootX + 40}
+                cy={rootY - 10}
+                rx={70}
+                ry={45}
+                fill="url(#fogGradient2)"
+                filter="url(#fogBlur)"
+                className="fog-layer-2"
+              />
+              {/* Fog layer 3 - center glow */}
+              <circle
+                cx={rootX}
+                cy={rootY}
+                r={100}
+                fill="url(#fogGradient1)"
+                filter="url(#fogBlur)"
+                className="fog-layer-3"
+              />
+            </g>
+
+            {/* Root entity (main) - Square at top - LARGER */}
             <g className="cursor-default" filter="url(#glow)">
-              {/* Pulsing outer ring */}
+              {/* Pulsing outer ring - squared */}
               <path
-                d={getHexagonPath(rootX, rootY, NODE_SIZES.root.outer)}
+                d={getRoundedSquarePath(rootX, rootY, NODE_SIZES.root.outer * 2, 16)}
                 fill="none"
                 stroke="hsl(var(--primary))"
                 strokeWidth={3}
                 className="pulse-node"
               />
-              {/* Secondary outer glow */}
+              {/* Secondary outer glow - squared */}
               <path
-                d={getHexagonPath(rootX, rootY, NODE_SIZES.root.outer + 8)}
+                d={getRoundedSquarePath(rootX, rootY, NODE_SIZES.root.outer * 2 + 16, 20)}
                 fill="none"
                 stroke="hsl(var(--primary))"
                 strokeWidth={1}
                 strokeOpacity={0.3}
                 className="glow-node"
               />
-              {/* Main hexagon */}
+              {/* Main square */}
               <path
-                d={getHexagonPath(rootX, rootY, NODE_SIZES.root.base)}
+                d={getRoundedSquarePath(rootX, rootY, NODE_SIZES.root.base * 2, 14)}
                 fill="url(#rootGradient)"
                 className="drop-shadow-lg"
               />
               {mainEntity.image_url ? (
                 <>
                   <clipPath id="root-clip">
-                    <path d={getHexagonPath(rootX, rootY, NODE_SIZES.root.base - 4)} />
+                    <path d={getRoundedSquarePath(rootX, rootY, (NODE_SIZES.root.base - 4) * 2, 12)} />
                   </clipPath>
                   <image
                     x={rootX - (NODE_SIZES.root.base - 4)}
@@ -455,25 +565,25 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   />
                 </>
               ) : (
-                <foreignObject x={rootX - 20} y={rootY - 20} width={40} height={40}>
+                <foreignObject x={rootX - 28} y={rootY - 28} width={56} height={56}>
                   <div className="w-full h-full flex items-center justify-center text-primary-foreground">
                     {mainEntity.entity_type === 'person' ? (
-                      <User className="w-7 h-7" />
+                      <User className="w-10 h-10" />
                     ) : (
-                      <Building2 className="w-7 h-7" />
+                      <Building2 className="w-10 h-10" />
                     )}
                   </div>
                 </foreignObject>
               )}
               {/* Entity name label next to root node */}
               <text
-                x={rootX + NODE_SIZES.root.outer + 12}
-                y={rootY + 5}
+                x={rootX + NODE_SIZES.root.outer + 20}
+                y={rootY + 6}
                 textAnchor="start"
                 fill="hsl(var(--foreground))"
-                fontSize="14"
-                fontWeight="600"
-                className="drop-shadow-sm"
+                fontSize="16"
+                fontWeight="700"
+                className="drop-shadow-md"
               >
                 {mainName}
               </text>
