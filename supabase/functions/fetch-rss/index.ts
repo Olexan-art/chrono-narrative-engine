@@ -1128,11 +1128,11 @@ serve(async (req) => {
         .single();
       
       const autoRetellEnabled = settings?.news_auto_retell_enabled ?? true;
-      const autoDialogueEnabled = settings?.news_auto_dialogue_enabled ?? true;
-      const autoTweetsEnabled = settings?.news_auto_tweets_enabled ?? true;
+      const autoDialogueEnabled = false;
+      const autoTweetsEnabled = false;
       const dialogueCount = settings?.news_dialogue_count ?? 7;
       const tweetCount = settings?.news_tweet_count ?? 4;
-      
+
       // Determine LLM model name for display
       const llmProvider = settings?.llm_text_provider || 'lovable';
       const llmModel = settings?.llm_text_model || 'google/gemini-3-flash-preview';
