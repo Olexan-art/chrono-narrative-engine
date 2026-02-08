@@ -276,7 +276,7 @@ export default function WikiCatalogPage() {
                   return (
                     <Link
                       key={entity.id}
-                      to={`/wiki/${entity.id}`}
+                      to={`/wiki/${entity.slug || entity.id}`}
                       className="group"
                     >
                       <Card className="overflow-hidden h-full hover:shadow-lg transition-shadow">
