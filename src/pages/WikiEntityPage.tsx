@@ -102,26 +102,32 @@ interface CaricatureLightbox {
   newsItem?: NewsItem;
 }
 
-// Topic icons mapping
-const TOPIC_ICONS: Record<string, React.ReactNode> = {
-  'політика': <Globe className="w-3 h-3" />,
-  'politics': <Globe className="w-3 h-3" />,
-  'економіка': <Building2 className="w-3 h-3" />,
-  'economy': <Building2 className="w-3 h-3" />,
-  'бізнес': <Building2 className="w-3 h-3" />,
-  'business': <Building2 className="w-3 h-3" />,
-  'технології': <Network className="w-3 h-3" />,
-  'technology': <Network className="w-3 h-3" />,
-  'скандал': <ThumbsDown className="w-3 h-3" />,
-  'scandal': <ThumbsDown className="w-3 h-3" />,
-  'війна': <X className="w-3 h-3" />,
-  'war': <X className="w-3 h-3" />,
-  'здоров\'я': <ThumbsUp className="w-3 h-3" />,
-  'health': <ThumbsUp className="w-3 h-3" />,
-  'спорт': <ThumbsUp className="w-3 h-3" />,
-  'sport': <ThumbsUp className="w-3 h-3" />,
-  'наука': <Sparkles className="w-3 h-3" />,
-  'science': <Sparkles className="w-3 h-3" />,
+// Topic icons mapping - larger icons with more topics
+const TOPIC_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
+  'політика': { icon: <Globe className="w-5 h-5" />, color: 'text-blue-500' },
+  'politics': { icon: <Globe className="w-5 h-5" />, color: 'text-blue-500' },
+  'економіка': { icon: <Briefcase className="w-5 h-5" />, color: 'text-emerald-500' },
+  'economy': { icon: <Briefcase className="w-5 h-5" />, color: 'text-emerald-500' },
+  'бізнес': { icon: <Building2 className="w-5 h-5" />, color: 'text-indigo-500' },
+  'business': { icon: <Building2 className="w-5 h-5" />, color: 'text-indigo-500' },
+  'технології': { icon: <Zap className="w-5 h-5" />, color: 'text-violet-500' },
+  'technology': { icon: <Zap className="w-5 h-5" />, color: 'text-violet-500' },
+  'скандал': { icon: <Flame className="w-5 h-5" />, color: 'text-orange-500' },
+  'scandal': { icon: <Flame className="w-5 h-5" />, color: 'text-orange-500' },
+  'війна': { icon: <Shield className="w-5 h-5" />, color: 'text-red-500' },
+  'war': { icon: <Shield className="w-5 h-5" />, color: 'text-red-500' },
+  'здоров\'я': { icon: <Heart className="w-5 h-5" />, color: 'text-rose-500' },
+  'health': { icon: <Heart className="w-5 h-5" />, color: 'text-rose-500' },
+  'спорт': { icon: <ThumbsUp className="w-5 h-5" />, color: 'text-green-500' },
+  'sport': { icon: <ThumbsUp className="w-5 h-5" />, color: 'text-green-500' },
+  'наука': { icon: <Sparkles className="w-5 h-5" />, color: 'text-cyan-500' },
+  'science': { icon: <Sparkles className="w-5 h-5" />, color: 'text-cyan-500' },
+  'право': { icon: <Scale className="w-5 h-5" />, color: 'text-amber-500' },
+  'law': { icon: <Scale className="w-5 h-5" />, color: 'text-amber-500' },
+  'культура': { icon: <BookOpen className="w-5 h-5" />, color: 'text-purple-500' },
+  'culture': { icon: <BookOpen className="w-5 h-5" />, color: 'text-purple-500' },
+  'медіа': { icon: <Megaphone className="w-5 h-5" />, color: 'text-pink-500' },
+  'media': { icon: <Megaphone className="w-5 h-5" />, color: 'text-pink-500' },
 };
 
 const NEWS_PER_PAGE = 70;
