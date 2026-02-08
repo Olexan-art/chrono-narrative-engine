@@ -181,6 +181,21 @@ export default function WikiCatalogPage() {
             <p className="text-muted-foreground">{t.description}</p>
           </div>
 
+          {/* Category Filter Active */}
+          {categoryFilter && (
+            <div className="mb-6 flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">
+                {language === 'uk' ? 'Фільтр категорії:' : 'Category filter:'}
+              </span>
+              <Badge variant="secondary" className="text-sm gap-1">
+                {categoryFilter}
+                <button onClick={clearCategoryFilter} className="hover:text-destructive ml-1">
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            </div>
+          )}
+
           {/* Trending Entities - Top 4 by 72h mentions */}
           <div className="mb-8">
             <TrendingEntities />
