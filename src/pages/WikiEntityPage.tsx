@@ -1506,7 +1506,7 @@ export default function WikiEntityPage() {
                       <ThumbsUp className="w-4 h-4" />
                       {language === 'uk' ? 'Лайків' : 'Likes'}
                     </span>
-                    <span className="font-medium text-green-600">{(totalNewsLikes + totalCaricatureLikes).toLocaleString()}</span>
+                    <span className="font-medium text-primary">{(totalNewsLikes + totalCaricatureLikes).toLocaleString()}</span>
                   </div>
                   {caricatures.length > 0 && (
                     <div className="flex justify-between text-sm">
