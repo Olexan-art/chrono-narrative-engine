@@ -507,6 +507,72 @@ Deno.serve(async (req) => {
         
         html = generateNewsCountryHTML(newsItems || [], country, lang, canonicalUrl, otherCountriesNews);
       }
+    } else if (wikiEntityMatch) {
+      // Wiki entity page: /wiki/slug or /wiki/uuid
+      const [, entitySlug] = wikiEntityMatch;
+      
+      // Try slug first, then id
+      let entityQuery = supabase.from("wiki_entities").select("*");
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entitySlug);
+      
+      if (isUuid) {
+        entityQuery = entityQuery.eq("id", entitySlug);
+      } else {
+        entityQuery = entityQuery.eq("slug", entitySlug);
+      }
+      
+      const { data: entity } = await entityQuery.maybeSingle();
+      
+      if (entity) {
+        const entityName = entity.name_en || entity.name;
+        title = `${entityName} | Echoes Wiki`;
+        description = entity.description_en || entity.description || entity.extract_en?.substring(0, 160) || entity.extract?.substring(0, 160) || `Information about ${entityName}`;
+        image = entity.image_url || image;
+        canonicalUrl = `${BASE_URL}/wiki/${entity.slug || entity.id}`;
+        
+        // Fetch related news
+        const { data: newsLinks } = await supabase
+          .from("news_wiki_entities")
+          .select(`
+            news_item:news_rss_items(id, slug, title, title_en, published_at, country:news_countries(code, flag, name_en))
+          `)
+          .eq("wiki_entity_id", entity.id)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        
+        const linkedNews = (newsLinks || [])
+          .map((l: any) => l.news_item)
+          .filter(Boolean);
+        
+        // Fetch related entities
+        const newsIdsForEntity = linkedNews.map((n: any) => n.id);
+        let relatedEntities: any[] = [];
+        
+        if (newsIdsForEntity.length > 0) {
+          const { data: otherLinks } = await supabase
+            .from("news_wiki_entities")
+            .select(`wiki_entity:wiki_entities(id, name, name_en, slug, image_url, entity_type)`)
+            .in("news_item_id", newsIdsForEntity)
+            .neq("wiki_entity_id", entity.id);
+          
+          // Count and dedupe
+          const entityCounts = new Map<string, { entity: any; count: number }>();
+          for (const link of otherLinks || []) {
+            if (!link.wiki_entity) continue;
+            const e = link.wiki_entity as any;
+            const existing = entityCounts.get(e.id);
+            if (existing) existing.count++;
+            else entityCounts.set(e.id, { entity: e, count: 1 });
+          }
+          
+          relatedEntities = Array.from(entityCounts.values())
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 8)
+            .map(({ entity: e, count }) => ({ ...e, shared_news_count: count }));
+        }
+        
+        html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl);
+      }
     } else if (dateMatch) {
       // Date stories page
       const [, date] = dateMatch;
