@@ -1,35 +1,4 @@
-# Memory: features/wiki-entities/public-ecosystem-v4
+# Memory: features/wiki-entities/public-ecosystem-v5
 Updated: now
 
-Публічна екосистема Wikipedia-сутностей включає каталог (/wiki) та детальні профілі (/wiki/:slug). Ключові компоненти:
-
-## Каталог (/wiki)
-- **Trending Entities блок** - топ-4 сутності за кількістю згадок за останні 72 години (TrendingEntities компонент)
-- Сортування за останньою згадкою в новинах
-- Фільтри по типу сутності та пошук
-
-## Профіль сутності (/wiki/:slug)
-1. **Агрегований рейтинг** - комбінований показник: перегляди новин + лайки новин + лайки карикатур.
-
-2. **Hero-блок з фото** - редагування імені/опису, оновлення фото з Wikipedia.
-
-3. **Графік динаміки** - 7-денний графік переглядів (EntityViewsChart).
-
-4. **Topics з великими іконками** - теми відображаються у grid-layout з великими тематичними іконками (Globe, Briefcase, Flame, Shield, Heart, Zap тощо) та кількістю новин.
-
-5. **Entity Intersection Graph** - SVG-граф пересічень сутностей у новинах (EntityIntersectionGraph компонент). Показує зв'язки між сутністю та іншими, що згадуються в тих самих новинах.
-
-6. **Key Information з Markdown** - MarkdownContent компонент рендерить текст з підтримкою: headers (#, ##, ###, ####), bold (**), italic (*), links, lists, blockquotes.
-
-7. **Keywords** - агреговані ключові слова з усіх пов'язаних новин.
-
-8. **Карикатури з лайтбоксом** - галерея з можливістю збільшення та посиланням на новину-джерело.
-
-9. **Новини з пагінацією** - 70 елементів на сторінку.
-
-10. **Related Entities** - сутності з спільних новин.
-
-## Компоненти
-- `MarkdownContent` - рендеринг markdown-тексту
-- `EntityIntersectionGraph` - SVG-граф зв'язків сутностей
-- `TrendingEntities` - топ-4 за 72 години
+The Wikipedia entity ecosystem features a public catalog and profile pages with SEO-friendly slugs (e.g., /wiki/name-id_suffix). Entity profiles include Markdown-rendered AI summaries, a 7-day views trend chart, and a visual 'Intersection Graph' mapping relationships between entities based on shared news mentions. The 'Total Rating' is an aggregated metric summing news views, news likes, and caricature engagement. Profiles feature icon-based 'Topics' and top 20 'Keywords' aggregated from linked news. The catalog highlights the top 4 'Trending' entities from the last 72 hours. Administrative tools include AI-powered formatting, a Wikipedia image fetching tool, and an 'Extended Parse' feature for MediaWiki data integration. Caricatures are linked to source news articles and viewable via a lightbox.
