@@ -1485,6 +1485,67 @@ export default function WikiEntityPage() {
                 </CardContent>
               </Card>
 
+              {/* Topics Block - Compact for Sidebar */}
+              {sortedTopics.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <Tag className="w-4 h-4 text-primary" />
+                      {language === 'uk' ? 'Теми' : 'Topics'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex flex-wrap gap-1.5">
+                      {sortedTopics.slice(0, 8).map(([topic, count]) => {
+                        const { color } = getTopicIcon(topic);
+                        return (
+                          <Badge 
+                            key={topic} 
+                            variant="outline"
+                            className={`text-xs ${color}`}
+                          >
+                            {topic}
+                            <span className="ml-1 text-muted-foreground/70">({count})</span>
+                          </Badge>
+                        );
+                      })}
+                      {sortedTopics.length > 8 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{sortedTopics.length - 8}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Keywords Block - Compact for Sidebar */}
+              {allKeywords.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <Hash className="w-4 h-4 text-primary" />
+                      {language === 'uk' ? 'Ключові слова' : 'Keywords'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex flex-wrap gap-1.5">
+                      {allKeywords.slice(0, 12).map(([keyword, count]) => (
+                        <Badge key={keyword} variant="secondary" className="text-xs">
+                          {keyword}
+                          <span className="ml-1 text-muted-foreground/70">({count})</span>
+                        </Badge>
+                      ))}
+                      {allKeywords.length > 12 && (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          +{allKeywords.length - 12}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Statistics */}
               <Card>
                 <CardHeader>
