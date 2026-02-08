@@ -1295,14 +1295,6 @@ export default function NewsArticlePage() {
               showSearchButton
             />
 
-            {/* Entity Intersection Graph - DESKTOP ONLY (above dialogue) */}
-            {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
-              <EntityIntersectionGraph
-                mainEntity={mainEntityData.mainEntity}
-                relatedEntities={mainEntityData.relatedEntities}
-                className="hidden lg:block"
-              />
-            )}
 
             {/* Character Dialogue Section - DESKTOP ONLY (in sidebar) */}
             <NewsDialogueSection
