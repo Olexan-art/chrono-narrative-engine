@@ -77,6 +77,9 @@ export default function WikiEntityPage() {
   const { entityId } = useParams<{ entityId: string }>();
   const { language } = useLanguage();
   const { isAuthenticated: isAdmin } = useAdminStore();
+  const [isEditingExtract, setIsEditingExtract] = useState(false);
+  const [editedExtract, setEditedExtract] = useState("");
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch entity data
