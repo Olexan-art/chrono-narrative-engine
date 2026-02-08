@@ -816,19 +816,35 @@ export default function WikiEntityPage() {
                     )}
                     {/* Admin overlay for image */}
                     {isAdmin && (
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={fetchWikiImages}
-                          disabled={isFetchingImages}
-                        >
-                          {isFetchingImages ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Download className="w-4 h-4" />
-                          )}
-                        </Button>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={fetchWikiImages}
+                            disabled={isFetchingImages}
+                            className="gap-2"
+                          >
+                            {isFetchingImages ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                            Wiki
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              const searchQuery = encodeURIComponent(`${name} ${entity.entity_type === 'person' ? 'photo portrait' : 'logo'}`);
+                              window.open(`https://www.google.com/search?tbm=isch&q=${searchQuery}`, '_blank');
+                            }}
+                            className="gap-2"
+                          >
+                            <Search className="w-4 h-4" />
+                            Google
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
