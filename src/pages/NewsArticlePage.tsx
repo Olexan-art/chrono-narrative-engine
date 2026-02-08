@@ -974,11 +974,11 @@ export default function NewsArticlePage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      {language === 'en' 
-                        ? 'Generate full retelling with key points, tweets, and dialogue' 
-                        : language === 'pl' 
-                        ? 'Wygeneruj pełny przekaz z kluczowymi punktami, tweetami i dialogiem'
-                        : 'Згенерувати повний переказ з тезами, твітами та діалогом'}
+                      {language === 'en'
+                        ? 'Generate full retelling with key points and metadata'
+                        : language === 'pl'
+                        ? 'Wygeneruj pełny przekaz z kluczowymi punktami i metadanymi'
+                        : 'Згенерувати повний переказ з тезами та метаданими'}
                     </p>
                     
                     {/* Progress indicator showing current step */}
