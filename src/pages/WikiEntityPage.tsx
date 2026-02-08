@@ -5,17 +5,19 @@ import { format, subDays } from "date-fns";
 import { 
   ArrowLeft, ExternalLink, User, Building2, Globe, Newspaper, 
   RefreshCw, Trash2, ImageIcon, Sparkles, Network,
-  Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight
+  Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight,
+  Download, FileText, ZoomIn
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { EntityViewsChart } from "@/components/EntityViewsChart";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -52,6 +54,7 @@ interface NewsItem {
   published_at: string | null;
   themes: string[] | null;
   themes_en: string[] | null;
+  keywords: string[] | null;
   country: {
     code: string;
     flag: string;
@@ -74,6 +77,7 @@ interface OutrageInk {
   title: string | null;
   likes: number;
   dislikes: number;
+  news_item_id: string | null;
 }
 
 interface ExtendedWikiData {
@@ -83,6 +87,11 @@ interface ExtendedWikiData {
   image?: string;
   categories?: string[];
   infobox?: Record<string, string>;
+}
+
+interface CaricatureLightbox {
+  caricature: OutrageInk;
+  newsItem?: NewsItem;
 }
 
 const NEWS_PER_PAGE = 70;
@@ -95,9 +104,11 @@ export default function WikiEntityPage() {
   const [editedExtract, setEditedExtract] = useState("");
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [isExtendedParsing, setIsExtendedParsing] = useState(false);
+  const [isFetchingImages, setIsFetchingImages] = useState(false);
   const [extendedData, setExtendedData] = useState<ExtendedWikiData | null>(null);
   const [selectedSections, setSelectedSections] = useState<Set<string>>(new Set());
   const [newsPage, setNewsPage] = useState(1);
+  const [selectedCaricature, setSelectedCaricature] = useState<CaricatureLightbox | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch entity data
@@ -125,7 +136,7 @@ export default function WikiEntityPage() {
         .select(`
           news_item:news_rss_items(
             id, slug, title, title_en, description, description_en,
-            image_url, published_at, themes, themes_en, country_id,
+            image_url, published_at, themes, themes_en, keywords, country_id,
             country:news_countries(code, flag, name)
           )
         `)
@@ -305,7 +316,7 @@ export default function WikiEntityPage() {
         
         const { data: inks } = await supabase
           .from('outrage_ink')
-          .select('id, image_url, title, likes, dislikes')
+          .select('id, image_url, title, likes, dislikes, news_item_id')
           .in('id', allInkIds);
         
         return (inks || []) as OutrageInk[];
@@ -315,13 +326,28 @@ export default function WikiEntityPage() {
 
       const { data: inks } = await supabase
         .from('outrage_ink')
-        .select('id, image_url, title, likes, dislikes')
+        .select('id, image_url, title, likes, dislikes, news_item_id')
         .in('id', directIds);
 
       return (inks || []) as OutrageInk[];
     },
     enabled: !!entityId,
   });
+
+  // Extract aggregated keywords from news
+  const allKeywords = useMemo(() => {
+    const keywordCount: Record<string, number> = {};
+    allLinkedNews.forEach(news => {
+      if (news.keywords) {
+        news.keywords.forEach(kw => {
+          keywordCount[kw] = (keywordCount[kw] || 0) + 1;
+        });
+      }
+    });
+    return Object.entries(keywordCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20);
+  }, [allLinkedNews]);
 
   // Delete entity mutation (admin only)
   const deleteMutation = useMutation({
@@ -463,6 +489,63 @@ export default function WikiEntityPage() {
     toast.success('Дані оновлено');
     setExtendedData(null);
     queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] });
+  };
+
+  // Fetch images from Wikipedia
+  const fetchWikiImages = async () => {
+    if (!entity) return;
+    setIsFetchingImages(true);
+    try {
+      const result = await callEdgeFunction<{ 
+        success: boolean; 
+        data?: ExtendedWikiData; 
+        error?: string 
+      }>('search-wiki', {
+        action: 'extended_parse',
+        wikiUrl: entity.wiki_url,
+        language: language === 'uk' ? 'uk' : 'en',
+      });
+      
+      if (result.success && result.data) {
+        setExtendedData(result.data);
+        // Auto-select image if found
+        if (result.data.image) {
+          setSelectedSections(new Set(['image']));
+        } else {
+          toast.info(language === 'uk' ? 'Зображення не знайдено' : 'No images found');
+        }
+      } else {
+        throw new Error(result.error || 'Failed to fetch images');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsFetchingImages(false);
+    }
+  };
+
+  // Open caricature lightbox with related news
+  const openCaricatureLightbox = async (caricature: OutrageInk) => {
+    let newsItem: NewsItem | undefined;
+    
+    if (caricature.news_item_id) {
+      // Find from existing list or fetch
+      newsItem = allLinkedNews.find(n => n.id === caricature.news_item_id);
+      
+      if (!newsItem) {
+        const { data } = await supabase
+          .from('news_rss_items')
+          .select('id, slug, title, title_en, description, description_en, image_url, published_at, country:news_countries(code, flag, name)')
+          .eq('id', caricature.news_item_id)
+          .single();
+        
+        if (data) {
+          newsItem = { ...data, country: data.country } as any;
+        }
+      }
+    }
+    
+    setSelectedCaricature({ caricature, newsItem });
   };
 
   const toggleSection = (section: string) => {
@@ -677,20 +760,40 @@ export default function WikiEntityPage() {
               )}
 
               {/* Key Information Block */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Sparkles className="w-5 h-5 text-primary" />
-                      {language === 'uk' ? 'Ключова інформація' : 'Key Information'}
-                    </CardTitle>
+              <Card className="border-2 border-primary/20">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Sparkles className="w-5 h-5 text-primary" />
+                        {language === 'uk' ? 'Ключова інформація' : 'Key Information'}
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        {language === 'uk' ? 'Основні дані про сутність' : 'Core information about the entity'}
+                      </CardDescription>
+                    </div>
                     {isAdmin && (
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={fetchWikiImages}
+                          disabled={isFetchingImages}
+                          className="border-primary/30 hover:bg-primary/10"
+                        >
+                          {isFetchingImages ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4 mr-1" />
+                          )}
+                          {language === 'uk' ? 'Витягнути фото' : 'Fetch Images'}
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={runExtendedParsing}
                           disabled={isExtendedParsing}
+                          className="border-primary/30 hover:bg-primary/10"
                         >
                           {isExtendedParsing ? (
                             <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -706,6 +809,7 @@ export default function WikiEntityPage() {
                             setEditedExtract(extract || '');
                             setIsEditingExtract(true);
                           }}
+                          className="border-primary/30 hover:bg-primary/10"
                         >
                           <Pencil className="w-4 h-4 mr-1" />
                           {language === 'uk' ? 'Редагувати' : 'Edit'}
@@ -714,21 +818,24 @@ export default function WikiEntityPage() {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-4">
                   {isEditingExtract ? (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <Textarea
                         value={editedExtract}
                         onChange={(e) => setEditedExtract(e.target.value)}
-                        rows={8}
-                        className="w-full"
+                        rows={10}
+                        className="w-full font-mono text-sm"
+                        placeholder={language === 'uk' ? 'Введіть текст...' : 'Enter text...'}
                       />
-                      <div className="flex gap-2 flex-wrap">
+                      <div className="flex gap-2 flex-wrap p-3 bg-muted/50 rounded-lg">
                         <Button
                           size="sm"
                           onClick={() => saveExtractMutation.mutate(editedExtract)}
                           disabled={saveExtractMutation.isPending}
+                          className="flex-1 sm:flex-none"
                         >
+                          <Check className="w-4 h-4 mr-1" />
                           {language === 'uk' ? 'Зберегти' : 'Save'}
                         </Button>
                         <Button
@@ -736,11 +843,12 @@ export default function WikiEntityPage() {
                           variant="secondary"
                           onClick={formatWithAi}
                           disabled={isAiProcessing}
+                          className="flex-1 sm:flex-none"
                         >
                           {isAiProcessing ? (
                             <Loader2 className="w-4 h-4 mr-1 animate-spin" />
                           ) : (
-                            <Sparkles className="w-4 h-4 mr-1" />
+                            <Sparkles className="w-4 h-4 mr-1 text-primary" />
                           )}
                           {language === 'uk' ? 'Форматувати ШІ' : 'Format with AI'}
                         </Button>
@@ -749,16 +857,38 @@ export default function WikiEntityPage() {
                           variant="ghost"
                           onClick={() => setIsEditingExtract(false)}
                         >
+                          <X className="w-4 h-4 mr-1" />
                           {language === 'uk' ? 'Скасувати' : 'Cancel'}
                         </Button>
                       </div>
                     </div>
                   ) : extract ? (
-                    <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{extract}</p>
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{extract}</p>
+                    </div>
                   ) : (
-                    <p className="text-muted-foreground italic">
-                      {language === 'uk' ? 'Інформація ще не завантажена' : 'Information not yet loaded'}
-                    </p>
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <FileText className="w-12 h-12 text-muted-foreground/30 mb-3" />
+                      <p className="text-muted-foreground italic">
+                        {language === 'uk' ? 'Інформація ще не завантажена' : 'Information not yet loaded'}
+                      </p>
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={runExtendedParsing}
+                          disabled={isExtendedParsing}
+                          className="mt-3"
+                        >
+                          {isExtendedParsing ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4 mr-1" />
+                          )}
+                          {language === 'uk' ? 'Завантажити з Wikipedia' : 'Load from Wikipedia'}
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -775,18 +905,47 @@ export default function WikiEntityPage() {
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {caricatures.map((c) => (
-                        <Link key={c.id} to="/ink-abyss" className="group">
-                          <div className="aspect-square rounded-lg overflow-hidden border border-border">
+                        <button 
+                          key={c.id} 
+                          onClick={() => openCaricatureLightbox(c)}
+                          className="group text-left relative"
+                        >
+                          <div className="aspect-square rounded-lg overflow-hidden border border-border relative">
                             <img
                               src={c.image_url}
                               alt={c.title || ''}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                             />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <ZoomIn className="w-8 h-8 text-white drop-shadow-lg" />
+                            </div>
                           </div>
                           {c.title && (
                             <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{c.title}</p>
                           )}
-                        </Link>
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Keywords Block */}
+              {allKeywords.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <FileText className="w-5 h-5 text-primary" />
+                      {language === 'uk' ? 'Ключові слова' : 'Keywords'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {allKeywords.map(([keyword, count]) => (
+                        <Badge key={keyword} variant="secondary" className="text-sm">
+                          {keyword}
+                          <span className="ml-1 text-muted-foreground">({count})</span>
+                        </Badge>
                       ))}
                     </div>
                   </CardContent>
@@ -1055,6 +1214,73 @@ export default function WikiEntityPage() {
               {language === 'uk' ? 'Застосувати вибране' : 'Apply Selected'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Caricature Lightbox Modal */}
+      <Dialog open={!!selectedCaricature} onOpenChange={() => setSelectedCaricature(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+          {selectedCaricature && (
+            <>
+              <div className="relative">
+                <img
+                  src={selectedCaricature.caricature.image_url}
+                  alt={selectedCaricature.caricature.title || ''}
+                  className="w-full h-auto max-h-[60vh] object-contain bg-black"
+                />
+              </div>
+              <div className="p-4 space-y-3">
+                {selectedCaricature.caricature.title && (
+                  <h3 className="font-medium text-lg">{selectedCaricature.caricature.title}</h3>
+                )}
+                
+                {/* Related News */}
+                {selectedCaricature.newsItem && (
+                  <div className="border-t pt-3 mt-3">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {language === 'uk' ? 'Новина-джерело:' : 'Source news:'}
+                    </p>
+                    <Link
+                      to={selectedCaricature.newsItem.slug 
+                        ? `/news/${selectedCaricature.newsItem.country?.code?.toLowerCase()}/${selectedCaricature.newsItem.slug}` 
+                        : '#'}
+                      className="flex gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                      onClick={() => setSelectedCaricature(null)}
+                    >
+                      {selectedCaricature.newsItem.image_url && (
+                        <img
+                          src={selectedCaricature.newsItem.image_url}
+                          alt=""
+                          className="w-16 h-16 rounded object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span>{selectedCaricature.newsItem.country?.flag}</span>
+                          {selectedCaricature.newsItem.published_at && (
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(selectedCaricature.newsItem.published_at), 'dd.MM.yyyy')}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="font-medium text-sm line-clamp-2">
+                          {language === 'en' && selectedCaricature.newsItem.title_en 
+                            ? selectedCaricature.newsItem.title_en 
+                            : selectedCaricature.newsItem.title}
+                        </h4>
+                      </div>
+                    </Link>
+                  </div>
+                )}
+                
+                <div className="flex justify-end pt-2">
+                  <Button variant="outline" onClick={() => setSelectedCaricature(null)}>
+                    {language === 'uk' ? 'Закрити' : 'Close'}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </>
