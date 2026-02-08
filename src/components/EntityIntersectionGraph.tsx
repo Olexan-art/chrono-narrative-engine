@@ -986,6 +986,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                     </g>
                   )}
                 </g>
+                </Link>
               );
             })}
           </svg>
