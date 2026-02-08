@@ -213,10 +213,6 @@ serve(async (req) => {
       });
     }
     
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     // Determine search terms
     let searchTerms: string[] = terms || [];
     if (searchTerms.length === 0 && (title || keywords)) {
