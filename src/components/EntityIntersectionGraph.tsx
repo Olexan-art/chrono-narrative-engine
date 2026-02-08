@@ -32,9 +32,9 @@ interface EntityIntersectionGraphProps {
   secondaryConnections?: SecondaryConnection[];
 }
 
-// Tree layout configuration
-const MAX_DISPLAYED_ENTITIES = 15;
-const INITIAL_DISPLAYED = 12;
+// Tree layout configuration - expanded for more entities
+const MAX_DISPLAYED_ENTITIES = 24;
+const INITIAL_DISPLAYED = 18;
 
 // Generate hexagon path for SVG
 function getHexagonPath(cx: number, cy: number, r: number): string {
