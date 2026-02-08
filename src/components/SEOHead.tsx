@@ -21,6 +21,11 @@ interface SEOHeadProps {
   robots?: RobotsDirective[];
   noIndex?: boolean;
   breadcrumbs?: BreadcrumbItem[];
+
+  // Optional: control/extend JSON-LD emitted by this component
+  schemaType?: 'WebSite' | 'CollectionPage' | 'WebPage' | 'NewsArticle';
+  schemaExtra?: Record<string, unknown>;
+  additionalSchemas?: Record<string, unknown>[];
 }
 
 export function SEOHead({
