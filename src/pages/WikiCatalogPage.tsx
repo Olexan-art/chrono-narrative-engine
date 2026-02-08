@@ -64,7 +64,7 @@ export default function WikiCatalogPage() {
 
       let query = supabase
         .from('wiki_entities')
-        .select('id, wiki_id, entity_type, name, name_en, description, description_en, image_url, search_count')
+        .select('id, wiki_id, entity_type, name, name_en, description, description_en, image_url, search_count, slug')
         .limit(100);
 
       if (searchTerm) {
