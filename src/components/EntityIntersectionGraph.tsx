@@ -875,16 +875,16 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               const isHovered = hoveredNode === entity.id;
               
               return (
-                <g 
+                <Link 
                   key={entity.id} 
-                  className={`cursor-pointer ${isHovered ? 'node-hover' : ''}`}
+                  to={`/wiki/${entity.slug || entity.id}`}
+                  className={`${isHovered ? 'node-hover' : ''}`}
+                >
+                <g 
+                  className="cursor-pointer"
                   filter={isFirstLevel || isHovered ? "url(#glow)" : "url(#softGlow)"}
                   onMouseEnter={() => setHoveredNode(entity.id)}
                   onMouseLeave={() => setHoveredNode(null)}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setSelectedEntity(entity);
-                  }}
                 >
                   {/* Outer glow for first-level or hovered */}
                   {(isFirstLevel || isHovered) && (
@@ -986,6 +986,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                     </g>
                   )}
                 </g>
+                </Link>
               );
             })}
           </svg>
