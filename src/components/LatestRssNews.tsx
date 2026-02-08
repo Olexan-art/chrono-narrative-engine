@@ -71,12 +71,16 @@ export function LatestRssNews() {
               className="group block"
             >
               <article className="flex gap-3 p-2 rounded-lg border border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200">
-                {news.image_url && (
+                {news.image_url ? (
                   <img 
                     src={news.image_url} 
                     alt="" 
                     className="w-16 h-16 object-cover rounded shrink-0"
                   />
+                ) : (
+                  <div className="w-16 h-16 shrink-0 rounded bg-gradient-to-br from-primary/10 to-muted/50 flex items-center justify-center border border-border/50">
+                    <Newspaper className="w-6 h-6 text-muted-foreground/60" />
+                  </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1">
