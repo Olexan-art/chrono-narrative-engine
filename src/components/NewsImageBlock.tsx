@@ -18,6 +18,7 @@ interface NewsImageBlockProps {
   entities?: Array<{ name: string; entity_type: string; description?: string }>;
   hasRetelling: boolean;
   isAdmin: boolean;
+  sourceUrl?: string;  // Original source URL for fallback logo
   onImageUpdate?: () => void;
 }
 
@@ -50,6 +51,7 @@ export function NewsImageBlock({
   entities = [],
   hasRetelling,
   isAdmin,
+  sourceUrl,
   onImageUpdate
 }: NewsImageBlockProps) {
   const { language } = useLanguage();
@@ -285,9 +287,33 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
     </Select>
   );
 
-  // No image - show generate/upload buttons for admin
+  // Helper to get source favicon/logo
+  const getSourceLogo = () => {
+    if (!sourceUrl) return '/favicon.png';
+    try {
+      const url = new URL(sourceUrl);
+      return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=128`;
+    } catch {
+      return '/favicon.png';
+    }
+  };
+
+  // No image - show source logo for non-admins, generate/upload buttons for admin
   if (!imageUrl) {
-    if (!isAdmin) return null;
+    // For non-admins, show source logo as fallback
+    if (!isAdmin) {
+      return (
+        <div className="relative mb-4">
+          <div className="w-full h-48 bg-muted/30 rounded-lg border border-border flex items-center justify-center">
+            <img 
+              src={getSourceLogo()} 
+              alt="Source logo" 
+              className="w-16 h-16 opacity-50 grayscale"
+            />
+          </div>
+        </div>
+      );
+    }
     
     return (
       <div className="relative border-2 border-dashed border-border rounded-lg p-8 mb-4 flex flex-col items-center justify-center gap-3 bg-muted/20">
