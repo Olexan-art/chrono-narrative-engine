@@ -269,52 +269,76 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
       <CardContent className="pt-6 relative">
         {/* Selected entity panel */}
         {selectedEntity && (
-          <div className="absolute top-4 right-4 z-20 bg-card/98 backdrop-blur-md border border-primary/30 rounded-xl p-4 shadow-2xl max-w-[220px] animate-in fade-in slide-in-from-right-3 duration-300">
+          <div className="absolute top-4 right-4 z-20 bg-card/98 backdrop-blur-md border border-primary/30 rounded-xl p-4 shadow-2xl max-w-[240px] animate-in fade-in slide-in-from-right-3 duration-300">
             <Button 
               variant="ghost" 
               size="sm" 
               className="absolute -top-2 -right-2 h-7 w-7 rounded-full p-0 bg-card border border-border hover:bg-destructive/10"
-              onClick={() => setSelectedEntity(null)}
+              onClick={() => { setSelectedEntity(null); setIsRootSelected(false); }}
             >
               <X className="w-3.5 h-3.5" />
             </Button>
+            
+            {/* Root indicator badge */}
+            {isRootSelected && (
+              <Badge variant="default" className="absolute -top-2 left-3 text-[10px] bg-primary">
+                {language === 'uk' ? 'Головна' : 'Root'}
+              </Badge>
+            )}
+            
             <div className="flex items-start gap-3">
               {selectedEntity.image_url ? (
                 <img 
                   src={selectedEntity.image_url} 
                   alt={selectedEntity.name}
-                  className="w-12 h-12 rounded-xl object-cover border border-border"
+                  className="w-14 h-14 rounded-xl object-cover border-2 border-primary/30"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center border border-border">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center border-2 border-primary/30">
                   {selectedEntity.entity_type === 'person' ? (
-                    <User className="w-6 h-6 text-muted-foreground" />
+                    <User className="w-7 h-7 text-primary" />
                   ) : (
-                    <Building2 className="w-6 h-6 text-muted-foreground" />
+                    <Building2 className="w-7 h-7 text-primary" />
                   )}
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate">
+                <p className="font-semibold text-sm leading-tight">
                   {language === 'en' && selectedEntity.name_en ? selectedEntity.name_en : selectedEntity.name}
                 </p>
-                <Badge variant="secondary" className="text-[10px] mt-1 capitalize">
+                <Badge variant="secondary" className="text-[10px] mt-1.5 capitalize">
                   {selectedEntity.entity_type}
                 </Badge>
               </div>
             </div>
+            
+            {/* Description for root entity */}
+            {isRootSelected && selectedEntity.description && (
+              <p className="text-xs text-muted-foreground mt-3 line-clamp-2">
+                {language === 'en' && selectedEntity.description_en 
+                  ? selectedEntity.description_en 
+                  : selectedEntity.description}
+              </p>
+            )}
+            
             <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
-              <div className="flex items-center gap-2 text-xs">
-                <Zap className="w-3.5 h-3.5 text-primary" />
-                <span className="text-muted-foreground">{selectedEntity.shared_news_count} {language === 'uk' ? 'спільних новин' : 'shared news'}</span>
-              </div>
-              <Link 
-                to={`/wiki/${selectedEntity.slug || selectedEntity.id}`}
-                className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
-              >
-                <Eye className="w-3 h-3" />
-                {language === 'uk' ? 'Переглянути профіль →' : 'View profile →'}
-              </Link>
+              {selectedEntity.shared_news_count !== undefined && selectedEntity.shared_news_count > 0 && (
+                <div className="flex items-center gap-2 text-xs">
+                  <Zap className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-muted-foreground">
+                    {selectedEntity.shared_news_count} {language === 'uk' ? 'спільних новин' : 'shared news'}
+                  </span>
+                </div>
+              )}
+              {(selectedEntity.slug || selectedEntity.id) && (
+                <Link 
+                  to={`/wiki/${selectedEntity.slug || selectedEntity.id}`}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+                >
+                  <Eye className="w-3 h-3" />
+                  {language === 'uk' ? 'Переглянути профіль →' : 'View profile →'}
+                </Link>
+              )}
             </div>
           </div>
         )}
