@@ -73,29 +73,11 @@ export default function WikiCatalogPage() {
   const { data: entities, isLoading } = useQuery<WikiEntity[]>({
     queryKey: ['wiki-catalog', searchTerm, filterType, categoryFilter, letterFilter],
     queryFn: async () => {
-      // First get latest news links for each entity
-      const { data: latestLinks } = await supabase
-        .from('news_wiki_entities')
-        .select('wiki_entity_id, created_at')
-        .order('created_at', { ascending: false });
-
-      // Build map of entity -> latest mention date and count
-      const entityStats = new Map<string, { lastMention: string; count: number }>();
-      for (const link of latestLinks || []) {
-        const existing = entityStats.get(link.wiki_entity_id);
-        if (existing) {
-          existing.count++;
-        } else {
-          entityStats.set(link.wiki_entity_id, { 
-            lastMention: link.created_at, 
-            count: 1 
-          });
-        }
-      }
-
+      // Build query for entities first - more efficient
       let query = supabase
         .from('wiki_entities')
         .select('id, wiki_id, entity_type, name, name_en, description, description_en, image_url, search_count, slug')
+        .order('search_count', { ascending: false })
         .limit(100);
 
       if (searchTerm) {
@@ -114,32 +96,38 @@ export default function WikiCatalogPage() {
       const { data, error } = await query;
       if (error) throw error;
 
-      if (!data) return [];
+      if (!data || data.length === 0) return [];
 
-      // Add news counts and sort by last mention
-      let enrichedData = data.map(e => ({
+      // Get news counts only for the entities we're displaying (batch by IDs)
+      const entityIds = data.map(e => e.id);
+      const { data: newsLinks } = await supabase
+        .from('news_wiki_entities')
+        .select('wiki_entity_id')
+        .in('wiki_entity_id', entityIds);
+
+      // Count news per entity
+      const entityStats = new Map<string, number>();
+      for (const link of newsLinks || []) {
+        entityStats.set(link.wiki_entity_id, (entityStats.get(link.wiki_entity_id) || 0) + 1);
+      }
+
+      // Add news counts
+      const enrichedData = data.map(e => ({
         ...e,
-        news_count: entityStats.get(e.id)?.count || 0,
-        last_mention: entityStats.get(e.id)?.lastMention || null,
+        news_count: entityStats.get(e.id) || 0,
       }));
 
-      // If category filter is active, we need to filter entities by Wikipedia category
-      // This is a client-side filter since we fetch categories dynamically
-      // For now, we'll just show all entities and let user search by name
-      // The category filter is more of a suggested search term
-
-      // Sort by last mention (most recent first), then by search_count
+      // Sort by news_count first, then by search_count
       enrichedData.sort((a, b) => {
-        if (a.last_mention && b.last_mention) {
-          return new Date(b.last_mention).getTime() - new Date(a.last_mention).getTime();
+        if (b.news_count !== a.news_count) {
+          return b.news_count - a.news_count;
         }
-        if (a.last_mention) return -1;
-        if (b.last_mention) return 1;
         return b.search_count - a.search_count;
       });
 
       return enrichedData as WikiEntity[];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
   // Fetch stats
