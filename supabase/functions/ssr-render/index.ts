@@ -1144,6 +1144,27 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
         </section>
       ` : ""}
       
+      ${mainEntityForGraph && relatedEntitiesForGraph.length > 0 ? `
+        <section>
+          <h3>🔗 Entity Intersection Graph</h3>
+          <p>Connections for <strong>${escapeHtml(mainEntityForGraph.name_en || mainEntityForGraph.name)}</strong>:</p>
+          <ul>
+            ${relatedEntitiesForGraph.map((e: any) => {
+              const eName = e.name_en || e.name;
+              const eSlug = e.slug || e.id;
+              const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
+              return `
+                <li>
+                  ${typeIcon} <a href="https://echoes2.com/wiki/${eSlug}">${escapeHtml(eName)}</a>
+                  <span>(${e.shared_news_count} shared articles)</span>
+                </li>
+              `;
+            }).join("")}
+          </ul>
+          <p><a href="https://echoes2.com/wiki/${mainEntityForGraph.slug || mainEntityForGraph.id}">View full profile →</a></p>
+        </section>
+      ` : ""}
+      
       ${newsItem.original_content && newsItem.original_content.length > 100 ? `
         <details>
           <summary style="cursor:pointer;font-weight:bold;padding:8px 0;">📄 Original Source Content</summary>
