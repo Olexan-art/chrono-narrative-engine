@@ -136,7 +136,7 @@ export default function WikiEntityPage() {
         .select(`
           news_item:news_rss_items(
             id, slug, title, title_en, description, description_en,
-            image_url, published_at, themes, themes_en, country_id,
+            image_url, published_at, themes, themes_en, keywords, country_id,
             country:news_countries(code, flag, name)
           )
         `)
