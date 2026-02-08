@@ -956,31 +956,50 @@ export default function WikiEntityPage() {
                 <EntityViewsChart data={dailyViews} />
               )}
 
-              {/* Topics Block with Icons */}
+              {/* Topics Block with Icons - Enhanced Design */}
               {sortedTopics.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
+                <Card className="overflow-hidden">
+                  <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-transparent">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <Tag className="w-5 h-5 text-primary" />
-                      Topics
+                      {language === 'uk' ? 'Теми' : 'Topics'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {sortedTopics.map(([topic, count]) => (
-                        <Badge 
-                          key={topic} 
-                          variant="outline" 
-                          className="text-sm flex items-center gap-1.5 py-1.5 px-3"
-                        >
-                          {getTopicIcon(topic)}
-                          <span className="max-w-[100px] truncate" title={topic}>{topic}</span>
-                          <span className="text-muted-foreground">({count})</span>
-                        </Badge>
-                      ))}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {sortedTopics.map(([topic, count]) => {
+                        const { icon, color } = getTopicIcon(topic);
+                        return (
+                          <div 
+                            key={topic} 
+                            className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors group"
+                          >
+                            <div className={`p-2 rounded-lg bg-background shadow-sm ${color} group-hover:scale-110 transition-transform`}>
+                              {icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate" title={topic}>{topic}</p>
+                              <p className="text-xs text-muted-foreground">{count} {language === 'uk' ? 'новин' : 'news'}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
+              )}
+
+              {/* Entity Intersection Graph */}
+              {relatedEntities.length > 0 && (
+                <EntityIntersectionGraph 
+                  mainEntity={{
+                    name: entity.name,
+                    name_en: entity.name_en,
+                    image_url: entity.image_url,
+                    entity_type: entity.entity_type,
+                  }}
+                  relatedEntities={relatedEntities}
+                />
               )}
 
               {/* Key Information Block */}
