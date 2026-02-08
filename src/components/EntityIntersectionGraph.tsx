@@ -219,25 +219,36 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               <style>
                 {`
                   @keyframes flowDown {
-                    0% { stroke-dashoffset: 20; }
+                    0% { stroke-dashoffset: 30; }
                     100% { stroke-dashoffset: 0; }
                   }
                   .tree-line {
-                    animation: flowDown 2s linear infinite;
+                    animation: flowDown 3s linear infinite;
                   }
                   @keyframes dashMove {
-                    0% { stroke-dashoffset: 20; }
+                    0% { stroke-dashoffset: 24; }
                     100% { stroke-dashoffset: 0; }
                   }
                   .secondary-line {
-                    animation: dashMove 1s linear infinite;
+                    animation: dashMove 1.5s linear infinite;
                   }
                   @keyframes pulse {
-                    0%, 100% { opacity: 0.6; }
-                    50% { opacity: 1; }
+                    0%, 100% { opacity: 0.5; transform: scale(1); }
+                    50% { opacity: 1; transform: scale(1.05); }
                   }
                   .pulse-node {
-                    animation: pulse 2s ease-in-out infinite;
+                    animation: pulse 2.5s ease-in-out infinite;
+                  }
+                  @keyframes glow {
+                    0%, 100% { filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.3)); }
+                    50% { filter: drop-shadow(0 0 6px hsl(var(--primary) / 0.6)); }
+                  }
+                  .glow-node {
+                    animation: glow 3s ease-in-out infinite;
+                  }
+                  @keyframes nodeFloat {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-3px); }
                   }
                 `}
               </style>

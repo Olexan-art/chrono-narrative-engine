@@ -105,6 +105,11 @@ export default function WikiCatalogPage() {
         query = query.eq('entity_type', filterType);
       }
 
+      // Letter filter - search by first letter of name
+      if (letterFilter) {
+        query = query.or(`name.ilike.${letterFilter}%,name_en.ilike.${letterFilter}%`);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
 
