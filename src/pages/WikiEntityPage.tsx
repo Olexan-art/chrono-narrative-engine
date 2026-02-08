@@ -98,6 +98,12 @@ interface ExtendedWikiData {
   infobox?: Record<string, string>;
 }
 
+interface SecondaryConnection {
+  from: RelatedEntity;
+  to: RelatedEntity;
+  weight: number;
+}
+
 interface CaricatureLightbox {
   caricature: OutrageInk;
   newsItem?: NewsItem;
