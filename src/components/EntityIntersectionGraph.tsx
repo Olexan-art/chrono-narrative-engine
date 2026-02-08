@@ -133,16 +133,28 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const remainingCount = Math.min(sortedEntities.length, MAX_DISPLAYED_ENTITIES) - INITIAL_DISPLAYED;
 
   // Container dimensions - increased for more entities
-  const containerWidth = 600;
-  const containerHeight = 600;
+  const containerWidth = 700;
+  const containerHeight = 700;
   const rootX = containerWidth / 2;
-  const rootY = 45;
+  const rootY = 55;
 
   // Calculate tree positions
   const positions = useMemo(() => 
     calculateTreePositions(displayedEntities.length, containerWidth, containerHeight),
     [displayedEntities.length]
   );
+
+  // Calculate node size based on level and importance
+  const getNodeSize = (level: number, sharedCount: number, maxCount: number) => {
+    const importance = sharedCount / maxCount;
+    if (level === 0) {
+      return NODE_SIZES.first.min + (NODE_SIZES.first.base - NODE_SIZES.first.min) * importance;
+    } else if (level === 1) {
+      return NODE_SIZES.second.min + (NODE_SIZES.second.base - NODE_SIZES.second.min) * importance;
+    } else {
+      return NODE_SIZES.third.min + (NODE_SIZES.third.base - NODE_SIZES.third.min) * importance;
+    }
+  };
 
   // Create entity position map for secondary connections
   const entityPositionMap = useMemo(() => {
