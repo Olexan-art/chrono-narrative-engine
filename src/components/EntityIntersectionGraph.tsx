@@ -123,11 +123,11 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const hasMore = sortedEntities.length > INITIAL_DISPLAYED;
   const remainingCount = Math.min(sortedEntities.length, MAX_DISPLAYED_ENTITIES) - INITIAL_DISPLAYED;
 
-  // Container dimensions
-  const containerWidth = 500;
-  const containerHeight = 500;
+  // Container dimensions - increased for more entities
+  const containerWidth = 600;
+  const containerHeight = 600;
   const rootX = containerWidth / 2;
-  const rootY = 50;
+  const rootY = 45;
 
   // Calculate tree positions
   const positions = useMemo(() => 
