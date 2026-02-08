@@ -28,11 +28,12 @@ export function TrendingEntities() {
     queryFn: async () => {
       const cutoff = subHours(new Date(), 72).toISOString();
 
-      // Get news_wiki_entities links from last 72 hours
+      // Get news_wiki_entities links from last 72 hours - limit to 500 for performance
       const { data: recentLinks, error: linksError } = await supabase
         .from('news_wiki_entities')
-        .select('wiki_entity_id, created_at')
-        .gte('created_at', cutoff);
+        .select('wiki_entity_id')
+        .gte('created_at', cutoff)
+        .limit(500);
 
       if (linksError) throw linksError;
 
@@ -69,7 +70,7 @@ export function TrendingEntities() {
 
       return result as TrendingEntity[];
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes cache
   });
 
   const getEntityIcon = (type: string) => {
