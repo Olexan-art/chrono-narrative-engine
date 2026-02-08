@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { 
   ArrowLeft, ExternalLink, User, Building2, Globe, Newspaper, 
-  RefreshCw, Trash2, Link as LinkIcon, Quote, TrendingUp,
-  ImageIcon, Sparkles, Network
+  RefreshCw, Trash2, TrendingUp, ImageIcon, Sparkles, Network,
+  Eye, Pencil, Loader2, Tag
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -13,8 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminStore } from "@/stores/adminStore";
@@ -48,6 +47,8 @@ interface NewsItem {
   description_en: string | null;
   image_url: string | null;
   published_at: string | null;
+  themes: string[] | null;
+  themes_en: string[] | null;
   country: {
     code: string;
     flag: string;
