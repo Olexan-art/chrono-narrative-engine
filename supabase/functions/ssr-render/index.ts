@@ -1724,6 +1724,42 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
   `;
 }
 
+function generateWikiCatalogHTML(entities: any[], lang: string) {
+  const titleField = lang === "en" ? "name_en" : "name";
+  const descField = lang === "en" ? "description_en" : "description";
+  
+  return `
+    <h1>Entity Catalog</h1>
+    <p>People, companies and organizations mentioned in the news.</p>
+    
+    <section>
+      <h2>All Entities (${entities.length})</h2>
+      <ul>
+        ${entities.map((e) => {
+          const name = e[titleField] || e.name;
+          const desc = e[descField] || e.description || '';
+          const slug = e.slug || e.id;
+          const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
+          return `
+            <li>
+              <a href="https://echoes2.com/wiki/${slug}">
+                ${typeIcon} ${escapeHtml(name)}
+              </a>
+              ${desc ? `<span> - ${escapeHtml(desc.substring(0, 100))}${desc.length > 100 ? '...' : ''}</span>` : ''}
+            </li>
+          `;
+        }).join("")}
+      </ul>
+    </section>
+    
+    <nav>
+      <a href="https://echoes2.com/">← Home</a> |
+      <a href="https://echoes2.com/news">📰 News</a> |
+      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+    </nav>
+  `;
+}
+
 function generateNewsSourcesHTML(sources: any) {
   if (!sources || !Array.isArray(sources) || sources.length === 0) return "";
 
