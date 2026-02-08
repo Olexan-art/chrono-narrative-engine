@@ -5,17 +5,19 @@ import { format, subDays } from "date-fns";
 import { 
   ArrowLeft, ExternalLink, User, Building2, Globe, Newspaper, 
   RefreshCw, Trash2, ImageIcon, Sparkles, Network,
-  Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight
+  Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight,
+  Download, FileText, ZoomIn
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { EntityViewsChart } from "@/components/EntityViewsChart";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -52,6 +54,7 @@ interface NewsItem {
   published_at: string | null;
   themes: string[] | null;
   themes_en: string[] | null;
+  keywords: string[] | null;
   country: {
     code: string;
     flag: string;
@@ -74,6 +77,7 @@ interface OutrageInk {
   title: string | null;
   likes: number;
   dislikes: number;
+  news_item_id: string | null;
 }
 
 interface ExtendedWikiData {
@@ -83,6 +87,11 @@ interface ExtendedWikiData {
   image?: string;
   categories?: string[];
   infobox?: Record<string, string>;
+}
+
+interface CaricatureLightbox {
+  caricature: OutrageInk;
+  newsItem?: NewsItem;
 }
 
 const NEWS_PER_PAGE = 70;
@@ -95,9 +104,11 @@ export default function WikiEntityPage() {
   const [editedExtract, setEditedExtract] = useState("");
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [isExtendedParsing, setIsExtendedParsing] = useState(false);
+  const [isFetchingImages, setIsFetchingImages] = useState(false);
   const [extendedData, setExtendedData] = useState<ExtendedWikiData | null>(null);
   const [selectedSections, setSelectedSections] = useState<Set<string>>(new Set());
   const [newsPage, setNewsPage] = useState(1);
+  const [selectedCaricature, setSelectedCaricature] = useState<CaricatureLightbox | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch entity data
