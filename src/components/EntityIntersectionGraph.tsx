@@ -134,7 +134,8 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const [showAll, setShowAll] = useState(false);
   const [showSecondary, setShowSecondary] = useState(true);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-  const [selectedEntity, setSelectedEntity] = useState<RelatedEntity | null>(null);
+  const [selectedEntity, setSelectedEntity] = useState<RelatedEntity | MainEntityInfo | null>(null);
+  const [isRootSelected, setIsRootSelected] = useState(false);
 
   const sortedEntities = useMemo(() => 
     [...relatedEntities].sort((a, b) => b.shared_news_count - a.shared_news_count),
