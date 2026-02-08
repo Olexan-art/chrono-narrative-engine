@@ -69,7 +69,7 @@ export default function WikiCatalogPage() {
   };
 
   // Fetch entities with news count, sorted by last mention
-  const { data: entities, isLoading } = useQuery({
+  const { data: entities, isLoading } = useQuery<WikiEntity[]>({
     queryKey: ['wiki-catalog', searchTerm, filterType, categoryFilter],
     queryFn: async () => {
       // First get latest news links for each entity
