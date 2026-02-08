@@ -65,6 +65,8 @@ const App = () => (
             <Route path="/admin/chapter/:id" element={<EditChapterPage />} />
             <Route path="/install" element={<InstallPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/wiki" element={<WikiCatalogPage />} />
+            <Route path="/wiki/:entityId" element={<WikiEntityPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
