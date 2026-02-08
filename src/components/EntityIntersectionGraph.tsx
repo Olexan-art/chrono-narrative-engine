@@ -313,9 +313,9 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
             </div>
             
             {/* Description for root entity */}
-            {isRootSelected && selectedEntity.description && (
+            {isRootSelected && 'description' in selectedEntity && selectedEntity.description && (
               <p className="text-xs text-muted-foreground mt-3 line-clamp-2">
-                {language === 'en' && selectedEntity.description_en 
+                {language === 'en' && 'description_en' in selectedEntity && selectedEntity.description_en 
                   ? selectedEntity.description_en 
                   : selectedEntity.description}
               </p>
