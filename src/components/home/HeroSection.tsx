@@ -1,17 +1,12 @@
 import { memo } from "react";
 import { Link } from "react-router-dom";
-import { Sparkles } from "lucide-react";
+import { Sparkles, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HeroTweets } from "@/components/HeroTweets";
+import { HeroTrendingEntities } from "@/components/home/HeroTrendingEntities";
 import { useLanguage } from "@/contexts/LanguageContext";
-import type { Part } from "@/types/database";
 
-interface HeroSectionProps {
-  latestParts: Part[];
-}
-
-export const HeroSection = memo(function HeroSection({ latestParts }: HeroSectionProps) {
-  const { t } = useLanguage();
+export const HeroSection = memo(function HeroSection() {
+  const { t, language } = useLanguage();
 
   return (
     <section className="relative py-6 md:py-12 overflow-hidden border-b border-border">
@@ -43,15 +38,15 @@ export const HeroSection = memo(function HeroSection({ latestParts }: HeroSectio
             </div>
           </div>
 
-          {/* Right - Tweets Carousel */}
+          {/* Right - Trending Entities */}
           <div className="hidden sm:block lg:pl-4 animate-fade-in" style={{ animationDelay: '150ms' }}>
             <div className="flex items-center gap-2 mb-3 justify-center lg:justify-start">
-              <span className="text-lg font-bold">MW</span>
+              <TrendingUp className="w-4 h-4 text-primary" />
               <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                {t('tweets.title')}
+                {language === 'uk' ? 'Топ за 24 години' : language === 'pl' ? 'Top 24 godziny' : 'Trending 24h'}
               </span>
             </div>
-            <HeroTweets parts={latestParts} />
+            <HeroTrendingEntities />
           </div>
         </div>
       </div>

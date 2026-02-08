@@ -32,9 +32,19 @@ interface EntityIntersectionGraphProps {
   secondaryConnections?: SecondaryConnection[];
 }
 
-// Optimized: limit displayed entities for performance
-const MAX_DISPLAYED_ENTITIES = 8;
-const INITIAL_DISPLAYED = 6;
+// Optimized: increased display limits for better visualization
+const MAX_DISPLAYED_ENTITIES = 12;
+const INITIAL_DISPLAYED = 10;
+
+// Generate hexagon path for SVG
+function getHexagonPath(cx: number, cy: number, r: number): string {
+  const points: [number, number][] = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i - Math.PI / 2; // Start from top
+    points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+  }
+  return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ') + 'Z';
+}
 
 export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondaryConnections = [] }: EntityIntersectionGraphProps) {
   const { language } = useLanguage();
@@ -57,9 +67,9 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
 
   // Calculate positions for entities in a circular layout - memoized
   const positions = useMemo(() => {
-    const centerX = 200;
-    const centerY = 200;
-    const radius = 140;
+    const centerX = 220;
+    const centerY = 220;
+    const radius = 160;
     
     return displayedEntities.map((_, index) => {
       const angle = (2 * Math.PI * index) / displayedEntities.length - Math.PI / 2;
@@ -144,9 +154,9 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
         )}
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="relative w-full aspect-square max-w-[450px] mx-auto">
+        <div className="relative w-full aspect-square max-w-[500px] mx-auto">
           <svg 
-            viewBox="0 0 400 400" 
+            viewBox="0 0 440 440" 
             className="w-full h-full"
             style={{ overflow: 'visible' }}
           >
@@ -233,21 +243,17 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               </radialGradient>
             </defs>
 
-            {/* Background decorative circles */}
-            <circle
-              cx={200}
-              cy={200}
-              r={160}
+            {/* Background decorative hexagon */}
+            <path
+              d={getHexagonPath(220, 220, 180)}
               fill="none"
               stroke="hsl(var(--border))"
               strokeWidth={1}
               strokeDasharray="4 8"
               opacity={0.3}
             />
-            <circle
-              cx={200}
-              cy={200}
-              r={100}
+            <path
+              d={getHexagonPath(220, 220, 110)}
               fill="none"
               stroke="hsl(var(--primary))"
               strokeWidth={1}
@@ -313,8 +319,8 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                 <g key={`line-${entity.id}`}>
                   {/* Outer glow effect line */}
                   <line
-                    x1={200}
-                    y1={200}
+                    x1={220}
+                    y1={220}
                     x2={positions[index].x}
                     y2={positions[index].y}
                     stroke="hsl(var(--primary))"
@@ -325,8 +331,8 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   />
                   {/* Pulsing background line */}
                   <line
-                    x1={200}
-                    y1={200}
+                    x1={220}
+                    y1={220}
                     x2={positions[index].x}
                     y2={positions[index].y}
                     stroke="hsl(var(--primary))"
@@ -341,8 +347,8 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   />
                   {/* Main line with gradient */}
                   <line
-                    x1={200}
-                    y1={200}
+                    x1={220}
+                    y1={220}
                     x2={positions[index].x}
                     y2={positions[index].y}
                     stroke="url(#lineGradientPulse)"
@@ -356,56 +362,44 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               );
             })}
 
-            {/* Center entity (main) */}
+            {/* Center entity (main) - Hexagon */}
             <g className="cursor-default" filter="url(#glow)">
-              {/* Pulsing outer ring */}
-              <circle
-                cx={200}
-                cy={200}
-                r={52}
+              {/* Pulsing outer hexagon ring */}
+              <path
+                d={getHexagonPath(220, 220, 54)}
                 fill="none"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 opacity={0.4}
               >
                 <animate 
-                  attributeName="r" 
-                  values="52;56;52" 
-                  dur="2s" 
-                  repeatCount="indefinite" 
-                />
-                <animate 
                   attributeName="opacity" 
                   values="0.4;0.7;0.4" 
                   dur="2s" 
                   repeatCount="indefinite" 
                 />
-              </circle>
-              {/* Main circle */}
-              <circle
-                cx={200}
-                cy={200}
-                r={48}
+              </path>
+              {/* Main hexagon */}
+              <path
+                d={getHexagonPath(220, 220, 48)}
                 fill="url(#centerGradient)"
                 className="drop-shadow-lg"
               />
               {/* Inner highlight */}
-              <circle
-                cx={200}
-                cy={190}
-                r={35}
+              <path
+                d={getHexagonPath(220, 210, 35)}
                 fill="hsl(var(--primary))"
                 opacity={0.1}
               />
               {mainEntity.image_url ? (
                 <clipPath id="center-clip">
-                  <circle cx={200} cy={200} r={44} />
+                  <path d={getHexagonPath(220, 220, 44)} />
                 </clipPath>
               ) : null}
               {mainEntity.image_url ? (
                 <image
-                  x={200 - 44}
-                  y={200 - 44}
+                  x={220 - 44}
+                  y={220 - 44}
                   width={88}
                   height={88}
                   href={mainEntity.image_url}
@@ -413,7 +407,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   preserveAspectRatio="xMidYMid slice"
                 />
               ) : (
-                <foreignObject x={200 - 22} y={200 - 22} width={44} height={44}>
+                <foreignObject x={220 - 22} y={220 - 22} width={44} height={44}>
                   <div className="w-full h-full flex items-center justify-center text-primary-foreground">
                     {mainEntity.entity_type === 'person' ? (
                       <User className="w-7 h-7" />
@@ -425,20 +419,18 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               )}
             </g>
 
-            {/* Related entities - optimized rendering */}
+            {/* Related entities - optimized rendering with hexagons */}
             {displayedEntities.map((entity, index) => {
               const pos = positions[index];
               const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
-              const entityRadius = 28 + (entity.shared_news_count / maxCount) * 10;
+              const entityRadius = 26 + (entity.shared_news_count / maxCount) * 8;
               
               return (
                 <g key={entity.id} className="cursor-pointer" filter="url(#softGlow)">
                   <Link to={`/wiki/${entity.slug || entity.id}`}>
-                    {/* Main node circle */}
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r={entityRadius}
+                    {/* Main node hexagon */}
+                    <path
+                      d={getHexagonPath(pos.x, pos.y, entityRadius)}
                       fill="url(#nodeGradient)"
                       stroke="hsl(var(--border))"
                       strokeWidth={2}
@@ -448,7 +440,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                     {entity.image_url ? (
                       <>
                         <clipPath id={`clip-${entity.id}`}>
-                          <circle cx={pos.x} cy={pos.y} r={entityRadius - 3} />
+                          <path d={getHexagonPath(pos.x, pos.y, entityRadius - 3)} />
                         </clipPath>
                         <image
                           x={pos.x - (entityRadius - 3)}
@@ -478,11 +470,9 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                       </foreignObject>
                     )}
 
-                    {/* Count badge */}
-                    <circle
-                      cx={pos.x + entityRadius * 0.7}
-                      cy={pos.y - entityRadius * 0.7}
-                      r={12}
+                    {/* Count badge - hexagonal */}
+                    <path
+                      d={getHexagonPath(pos.x + entityRadius * 0.7, pos.y - entityRadius * 0.7, 11)}
                       fill="hsl(var(--primary))"
                       stroke="hsl(var(--background))"
                       strokeWidth={2}

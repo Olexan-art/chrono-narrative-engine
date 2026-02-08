@@ -1101,38 +1101,6 @@ export default function WikiEntityPage() {
                 <EntityViewsChart data={dailyViews} />
               )}
 
-              {/* Topics Block with Icons - Enhanced Design */}
-              {sortedTopics.length > 0 && (
-                <Card className="overflow-hidden">
-                  <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-transparent">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Tag className="w-5 h-5 text-primary" />
-                      {language === 'uk' ? 'Теми' : 'Topics'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {sortedTopics.map(([topic, count]) => {
-                        const { icon, color } = getTopicIcon(topic);
-                        return (
-                          <div 
-                            key={topic} 
-                            className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors group"
-                          >
-                            <div className={`p-2 rounded-lg bg-background shadow-sm ${color} group-hover:scale-110 transition-transform`}>
-                              {icon}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate" title={topic}>{topic}</p>
-                              <p className="text-xs text-muted-foreground">{count} {language === 'uk' ? 'новин' : 'news'}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
               {/* Entity Intersection Graph */}
               {relatedEntities.length > 0 && (
@@ -1383,27 +1351,6 @@ export default function WikiEntityPage() {
                 </Card>
               )}
 
-              {/* Keywords Block */}
-              {allKeywords.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Hash className="w-5 h-5 text-primary" />
-                      {language === 'uk' ? 'Ключові слова' : 'Keywords'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {allKeywords.map(([keyword, count]) => (
-                        <Badge key={keyword} variant="secondary" className="text-sm">
-                          {keyword}
-                          <span className="ml-1 text-muted-foreground">({count})</span>
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
               {/* News Section with Pagination */}
               <Card>
@@ -1537,6 +1484,67 @@ export default function WikiEntityPage() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Topics Block - Compact for Sidebar */}
+              {sortedTopics.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <Tag className="w-4 h-4 text-primary" />
+                      {language === 'uk' ? 'Теми' : 'Topics'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex flex-wrap gap-1.5">
+                      {sortedTopics.slice(0, 8).map(([topic, count]) => {
+                        const { color } = getTopicIcon(topic);
+                        return (
+                          <Badge 
+                            key={topic} 
+                            variant="outline"
+                            className={`text-xs ${color}`}
+                          >
+                            {topic}
+                            <span className="ml-1 text-muted-foreground/70">({count})</span>
+                          </Badge>
+                        );
+                      })}
+                      {sortedTopics.length > 8 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{sortedTopics.length - 8}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Keywords Block - Compact for Sidebar */}
+              {allKeywords.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <Hash className="w-4 h-4 text-primary" />
+                      {language === 'uk' ? 'Ключові слова' : 'Keywords'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex flex-wrap gap-1.5">
+                      {allKeywords.slice(0, 12).map(([keyword, count]) => (
+                        <Badge key={keyword} variant="secondary" className="text-xs">
+                          {keyword}
+                          <span className="ml-1 text-muted-foreground/70">({count})</span>
+                        </Badge>
+                      ))}
+                      {allKeywords.length > 12 && (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          +{allKeywords.length - 12}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Statistics */}
               <Card>
