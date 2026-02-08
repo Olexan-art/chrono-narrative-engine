@@ -153,7 +153,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const containerWidth = 700;
   const containerHeight = 700;
   const rootX = containerWidth / 2;
-  const rootY = 15; // Raised even higher
+  const rootY = -30; // Raised much higher (3x more)
 
   // Calculate tree positions
   const positions = useMemo(() => 
