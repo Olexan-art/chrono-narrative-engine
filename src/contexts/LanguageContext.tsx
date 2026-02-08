@@ -401,12 +401,12 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.volumes': 'Tomy',
     'nav.calendar': 'Kalendarz',
     'nav.admin': 'Admin',
-    'header.subtitle': 'ARCHIWUM AI HISTORII LUDZKOŚCI',
+    'header.subtitle': 'ARCHIVE OF HUMAN HISTORY',
     
     // Hero
-    'hero.badge': 'FANTASTYKA NAUKOWA GENEROWANA PRZEZ AI',
+    'hero.badge': 'SMART NEWS',
     'hero.title': 'Punkt Synchronizacji',
-    'hero.description': 'Książka, która pisze się sama. Archiwista AI strukturyzuje chaos ludzkiej historii przez pryzmat fantastyki naukowej.',
+    'hero.description': 'Książka, która pisze się sama. Archiwista strukturyzuje chaos ludzkiej historii przez pryzmat wiadomości, generując codzienne opowiadania z prawdziwych wiadomości.',
     'hero.archive': 'Przeglądaj Archiwum',
     'hero.latest': 'Czytaj Najnowsze',
     'hero.allUsNews': 'Wszystkie wiadomości USA',
