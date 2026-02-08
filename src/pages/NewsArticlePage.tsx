@@ -18,6 +18,7 @@ import { NewsKeyPoints, NewsKeywords } from "@/components/NewsKeyPoints";
 import { NewsWikiEntities } from "@/components/NewsWikiEntities";
 import { RelatedEntitiesNews } from "@/components/RelatedEntitiesNews";
 import { EntityHighlightedContent } from "@/components/EntityHighlightedContent";
+import { EntityIntersectionGraph } from "@/components/EntityIntersectionGraph";
 import { OutrageInkBlock } from "@/components/OutrageInkBlock";
 import { OriginalSourceBlock } from "@/components/OriginalSourceBlock";
 import { NewsImageBlock } from "@/components/NewsImageBlock";
@@ -178,6 +179,80 @@ export default function NewsArticlePage() {
       return { prev: prevData, next: nextData };
     },
     enabled: !!article?.id && !!article?.country_id && !!article?.published_at
+  });
+
+  // Fetch the main entity (most mentioned) for this news article to display intersection graph
+  const { data: mainEntityData } = useQuery({
+    queryKey: ['news-main-entity', article?.id],
+    queryFn: async () => {
+      // Get all entities linked to this news
+      const { data: entityLinks } = await supabase
+        .from('news_wiki_entities')
+        .select(`
+          wiki_entity:wiki_entities(
+            id, name, name_en, image_url, entity_type, slug, wiki_url
+          )
+        `)
+        .eq('news_item_id', article?.id);
+
+      if (!entityLinks?.length) return null;
+
+      // Get the first entity (primary entity based on match)
+      const entities = entityLinks
+        .filter(l => l.wiki_entity)
+        .map(l => l.wiki_entity as any);
+      
+      if (entities.length === 0) return null;
+
+      const mainEntity = entities[0];
+
+      // Get news IDs where this entity appears
+      const { data: newsLinks } = await supabase
+        .from('news_wiki_entities')
+        .select('news_item_id')
+        .eq('wiki_entity_id', mainEntity.id)
+        .neq('news_item_id', article?.id);
+
+      if (!newsLinks?.length) return { mainEntity, relatedEntities: [] };
+
+      const newsIds = newsLinks.map(l => l.news_item_id);
+
+      // Find other entities from those news items
+      const { data: otherLinks } = await supabase
+        .from('news_wiki_entities')
+        .select(`
+          wiki_entity:wiki_entities(id, name, name_en, image_url, entity_type, slug)
+        `)
+        .in('news_item_id', newsIds)
+        .neq('wiki_entity_id', mainEntity.id);
+
+      if (!otherLinks?.length) return { mainEntity, relatedEntities: [] };
+
+      // Count occurrences
+      const entityCounts = new Map<string, { entity: any; count: number }>();
+      for (const link of otherLinks) {
+        if (!link.wiki_entity) continue;
+        const e = link.wiki_entity as any;
+        const existing = entityCounts.get(e.id);
+        if (existing) {
+          existing.count++;
+        } else {
+          entityCounts.set(e.id, { entity: e, count: 1 });
+        }
+      }
+
+      const relatedEntities = Array.from(entityCounts.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 12)
+        .map(({ entity, count }) => ({
+          ...entity,
+          shared_news_count: count,
+        }));
+
+      return { mainEntity, relatedEntities };
+    },
+    enabled: !!article?.id,
+    staleTime: 1000 * 60 * 5,
   });
 
   // Detect the language of the news content
@@ -810,6 +885,15 @@ export default function NewsArticlePage() {
             </article>
 
 
+            {/* Entity Intersection Graph - MOBILE ONLY (above dialogue) */}
+            {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
+              <EntityIntersectionGraph
+                mainEntity={mainEntityData.mainEntity}
+                relatedEntities={mainEntityData.relatedEntities}
+                className="mt-8 lg:hidden"
+              />
+            )}
+
             {/* Character Dialogue Section - MOBILE ONLY (below article) */}
             <NewsDialogueSection
               chatDialogue={chatDialogue as any}
@@ -1210,6 +1294,15 @@ export default function NewsArticlePage() {
               keywords={articleKeywords}
               showSearchButton
             />
+
+            {/* Entity Intersection Graph - DESKTOP ONLY (above dialogue) */}
+            {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
+              <EntityIntersectionGraph
+                mainEntity={mainEntityData.mainEntity}
+                relatedEntities={mainEntityData.relatedEntities}
+                className="hidden lg:block"
+              />
+            )}
 
             {/* Character Dialogue Section - DESKTOP ONLY (in sidebar) */}
             <NewsDialogueSection

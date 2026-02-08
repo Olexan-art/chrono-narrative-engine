@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { EntityViewsChart } from "@/components/EntityViewsChart";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import { EntityLinkedContent } from "@/components/EntityLinkedContent";
 import { EntityIntersectionGraph } from "@/components/EntityIntersectionGraph";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -1254,7 +1255,7 @@ export default function WikiEntityPage() {
                     </div>
                   ) : extract ? (
                     <div className="space-y-6">
-                      <MarkdownContent content={extract} />
+                      <EntityLinkedContent content={extract} excludeEntityId={entity?.id} />
                       
                       {/* Categories Sub-block */}
                       {wikiCategories.length > 0 && (
