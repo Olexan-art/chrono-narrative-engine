@@ -39,7 +39,7 @@ const INITIAL_DISPLAYED = 18;
 
 // Node size configuration - tiered by connection level
 const NODE_SIZES = {
-  root: { base: 48, outer: 56 },     // Main entity - largest
+  root: { base: 56, outer: 68 },     // Main entity - largest
   first: { base: 32, min: 28 },      // First-level connections - large
   second: { base: 24, min: 20 },     // Second-level - medium
   third: { base: 18, min: 16 },      // Third-level - small
