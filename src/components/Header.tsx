@@ -104,6 +104,12 @@ export function Header() {
                 {t('nav.calendar')}
               </Button>
             </Link>
+            <Link to="/wiki" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start gap-3">
+                <Users className="w-4 h-4" />
+                Wiki
+              </Button>
+            </Link>
             <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
               <Button variant="outline" className="w-full justify-start gap-3 mt-2">
                 <Clock className="w-4 h-4" />
