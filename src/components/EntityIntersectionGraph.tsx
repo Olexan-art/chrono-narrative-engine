@@ -30,6 +30,7 @@ interface EntityIntersectionGraphProps {
   };
   relatedEntities: RelatedEntity[];
   secondaryConnections?: SecondaryConnection[];
+  className?: string;
 }
 
 // Tree layout configuration - expanded for more entities
