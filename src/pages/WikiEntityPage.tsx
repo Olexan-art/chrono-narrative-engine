@@ -445,6 +445,63 @@ export default function WikiEntityPage() {
     enabled: !!entity?.id,
   });
 
+  // Fetch secondary connections (connections between related entities)
+  const { data: secondaryConnections = [] } = useQuery({
+    queryKey: ['secondary-connections', entity?.id, relatedEntities.length],
+    queryFn: async (): Promise<SecondaryConnection[]> => {
+      if (relatedEntities.length < 2) return [];
+
+      const relatedIds = relatedEntities.map(e => e.id);
+      
+      // For each pair of related entities, check if they share news
+      const connections: SecondaryConnection[] = [];
+      
+      // Get all news-entity links for related entities
+      const { data: allLinks } = await supabase
+        .from('news_wiki_entities')
+        .select('news_item_id, wiki_entity_id')
+        .in('wiki_entity_id', relatedIds);
+
+      if (!allLinks) return [];
+
+      // Group news by entity
+      const entityNewsMap = new Map<string, Set<string>>();
+      for (const link of allLinks) {
+        if (!entityNewsMap.has(link.wiki_entity_id)) {
+          entityNewsMap.set(link.wiki_entity_id, new Set());
+        }
+        entityNewsMap.get(link.wiki_entity_id)!.add(link.news_item_id);
+      }
+
+      // Find connections between pairs
+      for (let i = 0; i < relatedEntities.length; i++) {
+        for (let j = i + 1; j < relatedEntities.length; j++) {
+          const entity1 = relatedEntities[i];
+          const entity2 = relatedEntities[j];
+          const news1 = entityNewsMap.get(entity1.id) || new Set();
+          const news2 = entityNewsMap.get(entity2.id) || new Set();
+          
+          // Count shared news
+          let sharedCount = 0;
+          news1.forEach(newsId => {
+            if (news2.has(newsId)) sharedCount++;
+          });
+
+          if (sharedCount > 0) {
+            connections.push({
+              from: entity1,
+              to: entity2,
+              weight: sharedCount,
+            });
+          }
+        }
+      }
+
+      return connections.sort((a, b) => b.weight - a.weight).slice(0, 15);
+    },
+    enabled: relatedEntities.length >= 2,
+  });
+
   // Delete entity mutation (admin only)
   const deleteMutation = useMutation({
     mutationFn: async () => {
