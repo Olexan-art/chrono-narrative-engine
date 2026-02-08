@@ -882,17 +882,15 @@ export default function NewsArticlePage() {
                   </Button>
                 </div>
               )}
-            </article>
-
-
-            {/* Entity Intersection Graph - MOBILE ONLY (above dialogue) */}
+            {/* Entity Intersection Graph - BELOW article on ALL screens */}
             {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
               <EntityIntersectionGraph
                 mainEntity={mainEntityData.mainEntity}
                 relatedEntities={mainEntityData.relatedEntities}
-                className="mt-8 lg:hidden"
+                className="mt-8"
               />
             )}
+          </article>
 
             {/* Character Dialogue Section - MOBILE ONLY (below article) */}
             <NewsDialogueSection
@@ -1295,14 +1293,6 @@ export default function NewsArticlePage() {
               showSearchButton
             />
 
-            {/* Entity Intersection Graph - DESKTOP ONLY (above dialogue) */}
-            {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
-              <EntityIntersectionGraph
-                mainEntity={mainEntityData.mainEntity}
-                relatedEntities={mainEntityData.relatedEntities}
-                className="hidden lg:block"
-              />
-            )}
 
             {/* Character Dialogue Section - DESKTOP ONLY (in sidebar) */}
             <NewsDialogueSection

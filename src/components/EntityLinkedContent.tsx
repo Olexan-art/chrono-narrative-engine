@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { User, Building2, Globe } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MarkdownContent } from "@/components/MarkdownContent";
 
 interface WikiEntity {
   id: string;
@@ -26,9 +25,8 @@ interface EntityLinkedContentProps {
 }
 
 /**
- * Renders markdown content with automatic highlighting of entity names
- * that exist in our wiki_entities database. Each match becomes a tooltip
- * link to the entity's profile page.
+ * Renders markdown content with automatic highlighting of entity names.
+ * Parses markdown syntax (headers, bold, italic, lists) AND links entity mentions.
  */
 export function EntityLinkedContent({ content, excludeEntityId, className }: EntityLinkedContentProps) {
   const { language } = useLanguage();
@@ -50,107 +48,79 @@ export function EntityLinkedContent({ content, excludeEntityId, className }: Ent
 
       return (data || []).filter(e => e.id !== excludeEntityId) as WikiEntity[];
     },
-    staleTime: 1000 * 60 * 10, // Cache for 10 minutes
+    staleTime: 1000 * 60 * 10,
   });
 
-  // Build highlighted content with tooltips
-  const highlightedContent = useMemo(() => {
-    if (!entities.length || !content) {
-      return null;
-    }
-
-    // Build search terms from entities (name + name_en)
-    const searchTerms: { term: string; entity: WikiEntity }[] = [];
-    
+  // Build entity lookup map
+  const entityMap = useMemo(() => {
+    const map = new Map<string, WikiEntity>();
     for (const entity of entities) {
-      // Add main name (must be at least 3 characters to avoid false matches)
       if (entity.name && entity.name.length >= 3) {
-        searchTerms.push({ term: entity.name, entity });
+        map.set(entity.name.toLowerCase(), entity);
       }
-      // Add English name if different
       if (entity.name_en && entity.name_en !== entity.name && entity.name_en.length >= 3) {
-        searchTerms.push({ term: entity.name_en, entity });
+        map.set(entity.name_en.toLowerCase(), entity);
       }
     }
+    return map;
+  }, [entities]);
 
-    // Sort by term length (longer first) to avoid partial matches
-    searchTerms.sort((a, b) => b.term.length - a.term.length);
+  // Helper to get entity icon
+  const getEntityIcon = (entityType: string) => {
+    switch (entityType) {
+      case 'person': return <User className="w-3 h-3" />;
+      case 'company': return <Building2 className="w-3 h-3" />;
+      default: return <Globe className="w-3 h-3" />;
+    }
+  };
 
-    // Take only top 50 to avoid regex explosion
-    const topTerms = searchTerms.slice(0, 50);
+  // Parse inline text with entity linking
+  const parseInlineWithEntities = (text: string, keyPrefix: string): (string | JSX.Element)[] => {
+    if (!text || !entityMap.size) return [text];
 
-    // Build regex pattern for all terms (word boundaries)
-    const escapedTerms = topTerms.map(t => 
-      t.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    );
-    
-    if (escapedTerms.length === 0) return null;
+    // Build regex from entity names
+    const terms = Array.from(entityMap.keys()).sort((a, b) => b.length - a.length).slice(0, 50);
+    if (terms.length === 0) return [text];
 
-    // Use word boundaries to match whole words only
+    const escapedTerms = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     const pattern = new RegExp(`\\b(${escapedTerms.join('|')})\\b`, 'gi');
-    
-    // Split content by matches
-    const parts = content.split(pattern);
-    
-    // Track which entities we've already linked (avoid duplicate tooltips)
-    const linkedEntities = new Set<string>();
-    
-    return parts.map((part, index) => {
-      // Check if this part matches any entity
-      const matchedTerm = topTerms.find(
-        t => t.term.toLowerCase() === part.toLowerCase()
-      );
 
-      if (matchedTerm && !linkedEntities.has(matchedTerm.entity.id)) {
-        linkedEntities.add(matchedTerm.entity.id);
-        
-        const entity = matchedTerm.entity;
-        const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
-        const description = language === 'en' && entity.description_en ? entity.description_en : entity.description;
+    const parts = text.split(pattern);
+    const linkedIds = new Set<string>();
 
-        const getEntityIcon = () => {
-          switch (entity.entity_type) {
-            case 'person': return <User className="w-3 h-3" />;
-            case 'company': return <Building2 className="w-3 h-3" />;
-            default: return <Globe className="w-3 h-3" />;
-          }
-        };
+    return parts.map((part, idx) => {
+      const matchedEntity = entityMap.get(part.toLowerCase());
+
+      if (matchedEntity && !linkedIds.has(matchedEntity.id)) {
+        linkedIds.add(matchedEntity.id);
+        const name = language === 'en' && matchedEntity.name_en ? matchedEntity.name_en : matchedEntity.name;
+        const description = language === 'en' && matchedEntity.description_en ? matchedEntity.description_en : matchedEntity.description;
 
         return (
-          <TooltipProvider key={index} delayDuration={300}>
+          <TooltipProvider key={`${keyPrefix}-${idx}`} delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link 
-                  to={`/wiki/${entity.slug || entity.id}`}
+                  to={`/wiki/${matchedEntity.slug || matchedEntity.id}`}
                   className="border-b border-dotted border-primary/50 text-primary hover:border-primary hover:text-primary/80 transition-colors"
                 >
                   {part}
                 </Link>
               </TooltipTrigger>
-              <TooltipContent 
-                side="top" 
-                align="center" 
-                className="max-w-xs p-0 overflow-hidden"
-              >
+              <TooltipContent side="top" align="center" className="max-w-xs p-0 overflow-hidden">
                 <div className="p-3 space-y-2">
                   <div className="flex gap-3">
-                    {entity.image_url && (
-                      <img 
-                        src={entity.image_url} 
-                        alt="" 
-                        className="w-10 h-10 rounded object-cover flex-shrink-0"
-                      />
+                    {matchedEntity.image_url && (
+                      <img src={matchedEntity.image_url} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
                     )}
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 gap-0.5">
-                          {getEntityIcon()}
+                          {getEntityIcon(matchedEntity.entity_type)}
                         </Badge>
                         <span className="font-semibold text-sm">{name}</span>
                       </div>
-                      {description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">{description}</p>
-                      )}
+                      {description && <p className="text-xs text-muted-foreground line-clamp-2">{description}</p>}
                     </div>
                   </div>
                 </div>
@@ -160,19 +130,130 @@ export function EntityLinkedContent({ content, excludeEntityId, className }: Ent
         );
       }
 
-      // For subsequent matches of the same entity, just show plain text
-      if (matchedTerm && linkedEntities.has(matchedTerm.entity.id)) {
-        return part;
-      }
-
       return part;
     });
-  }, [content, entities, language]);
+  };
 
-  // If no entities to highlight, return plain markdown
-  if (!highlightedContent) {
-    return <MarkdownContent content={content} className={className} />;
-  }
+  // Parse inline markdown (bold, italic) with entity linking
+  const parseInlineMarkdown = (text: string, keyPrefix: string): JSX.Element => {
+    // Process bold first **text**
+    let processed = text.replace(/\*\*(.*?)\*\*/g, '<BOLD>$1</BOLD>');
+    // Process italic *text*
+    processed = processed.replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, '<ITALIC>$1</ITALIC>');
 
-  return <div className={className}>{highlightedContent}</div>;
+    const parts = processed.split(/(<BOLD>.*?<\/BOLD>|<ITALIC>.*?<\/ITALIC>)/g);
+
+    return (
+      <span>
+        {parts.map((part, idx) => {
+          if (part.startsWith('<BOLD>')) {
+            const innerText = part.replace(/<\/?BOLD>/g, '');
+            return <strong key={idx} className="font-semibold text-foreground">{parseInlineWithEntities(innerText, `${keyPrefix}-b${idx}`)}</strong>;
+          }
+          if (part.startsWith('<ITALIC>')) {
+            const innerText = part.replace(/<\/?ITALIC>/g, '');
+            return <em key={idx} className="italic">{parseInlineWithEntities(innerText, `${keyPrefix}-i${idx}`)}</em>;
+          }
+          return <span key={idx}>{parseInlineWithEntities(part, `${keyPrefix}-t${idx}`)}</span>;
+        })}
+      </span>
+    );
+  };
+
+  // Build rendered content with markdown + entity linking
+  const renderedContent = useMemo(() => {
+    if (!content) return null;
+
+    const lines = content.split('\n');
+    const elements: JSX.Element[] = [];
+    let listItems: string[] = [];
+    let listType: 'ul' | 'ol' | null = null;
+
+    const flushList = () => {
+      if (listItems.length > 0 && listType) {
+        const ListTag = listType;
+        elements.push(
+          <ListTag key={`list-${elements.length}`} className={listType === 'ul' ? "list-disc list-inside space-y-1 mb-4 text-muted-foreground" : "list-decimal list-inside space-y-1 mb-4 text-muted-foreground"}>
+            {listItems.map((item, i) => <li key={i}>{parseInlineMarkdown(item, `li-${elements.length}-${i}`)}</li>)}
+          </ListTag>
+        );
+        listItems = [];
+        listType = null;
+      }
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      if (!line) { flushList(); continue; }
+
+      // Headers
+      if (line.startsWith('####')) {
+        flushList();
+        elements.push(<h4 key={`h4-${i}`} className="text-base font-semibold text-foreground mt-4 mb-2">{parseInlineMarkdown(line.replace(/^####\s*/, ''), `h4-${i}`)}</h4>);
+        continue;
+      }
+      if (line.startsWith('###')) {
+        flushList();
+        elements.push(<h3 key={`h3-${i}`} className="text-lg font-semibold text-foreground mt-5 mb-2">{parseInlineMarkdown(line.replace(/^###\s*/, ''), `h3-${i}`)}</h3>);
+        continue;
+      }
+      if (line.startsWith('##')) {
+        flushList();
+        elements.push(<h2 key={`h2-${i}`} className="text-xl font-bold text-foreground mt-6 mb-3 border-b border-border pb-2">{parseInlineMarkdown(line.replace(/^##\s*/, ''), `h2-${i}`)}</h2>);
+        continue;
+      }
+      if (line.startsWith('#')) {
+        flushList();
+        elements.push(<h1 key={`h1-${i}`} className="text-2xl font-bold text-foreground mt-6 mb-4">{parseInlineMarkdown(line.replace(/^#\s*/, ''), `h1-${i}`)}</h1>);
+        continue;
+      }
+
+      // Unordered list
+      if (line.startsWith('- ') || line.startsWith('* ')) {
+        if (listType !== 'ul') { flushList(); listType = 'ul'; }
+        listItems.push(line.substring(2));
+        continue;
+      }
+
+      // Ordered list
+      const orderedMatch = line.match(/^(\d+)\.\s+(.+)$/);
+      if (orderedMatch) {
+        if (listType !== 'ol') { flushList(); listType = 'ol'; }
+        listItems.push(orderedMatch[2]);
+        continue;
+      }
+
+      // Horizontal rule
+      if (line === '---' || line === '***' || line === '___') {
+        flushList();
+        elements.push(<hr key={`hr-${i}`} className="my-6 border-border" />);
+        continue;
+      }
+
+      // Blockquote
+      if (line.startsWith('>')) {
+        flushList();
+        elements.push(
+          <blockquote key={`bq-${i}`} className="border-l-4 border-primary/30 pl-4 py-2 my-4 text-muted-foreground italic bg-muted/30 rounded-r">
+            {parseInlineMarkdown(line.replace(/^>\s*/, ''), `bq-${i}`)}
+          </blockquote>
+        );
+        continue;
+      }
+
+      // Regular paragraph
+      flushList();
+      elements.push(<p key={`p-${i}`} className="text-muted-foreground leading-relaxed mb-3">{parseInlineMarkdown(line, `p-${i}`)}</p>);
+    }
+
+    flushList();
+    return elements;
+  }, [content, entityMap, language]);
+
+  return (
+    <div className={`prose prose-sm max-w-none dark:prose-invert ${className || ''}`}>
+      {renderedContent}
+    </div>
+  );
 }
