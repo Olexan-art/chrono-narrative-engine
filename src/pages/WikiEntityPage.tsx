@@ -447,6 +447,12 @@ export default function WikiEntityPage() {
                         <TrendingUp className="w-4 h-4" />
                         <span>{entity.search_count} {language === 'uk' ? 'згадок' : 'mentions'}</span>
                       </div>
+                      {aggregatedViews > 0 && (
+                        <div className="flex items-center gap-1 text-primary font-medium">
+                          <Eye className="w-4 h-4" />
+                          <span>{aggregatedViews.toLocaleString()}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Wikipedia Link */}
@@ -465,17 +471,92 @@ export default function WikiEntityPage() {
                 </div>
               </Card>
 
+              {/* Topics Block */}
+              {sortedTopics.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Tag className="w-5 h-5 text-primary" />
+                      Topics
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {sortedTopics.map(([topic, count]) => (
+                        <Badge key={topic} variant="outline" className="text-sm">
+                          {topic}
+                          <span className="ml-1 text-muted-foreground">({count})</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Key Information Block */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                    {language === 'uk' ? 'Ключова інформація' : 'Key Information'}
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      {language === 'uk' ? 'Ключова інформація' : 'Key Information'}
+                    </CardTitle>
+                    {isAdmin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditedExtract(extract || '');
+                          setIsEditingExtract(true);
+                        }}
+                      >
+                        <Pencil className="w-4 h-4 mr-1" />
+                        {language === 'uk' ? 'Редагувати' : 'Edit'}
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {extract ? (
-                    <p className="text-muted-foreground leading-relaxed">{extract}</p>
+                  {isEditingExtract ? (
+                    <div className="space-y-3">
+                      <Textarea
+                        value={editedExtract}
+                        onChange={(e) => setEditedExtract(e.target.value)}
+                        rows={8}
+                        className="w-full"
+                      />
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          size="sm"
+                          onClick={() => saveExtractMutation.mutate(editedExtract)}
+                          disabled={saveExtractMutation.isPending}
+                        >
+                          {language === 'uk' ? 'Зберегти' : 'Save'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={formatWithAi}
+                          disabled={isAiProcessing}
+                        >
+                          {isAiProcessing ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-4 h-4 mr-1" />
+                          )}
+                          {language === 'uk' ? 'Форматувати ШІ' : 'Format with AI'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setIsEditingExtract(false)}
+                        >
+                          {language === 'uk' ? 'Скасувати' : 'Cancel'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : extract ? (
+                    <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{extract}</p>
                   ) : (
                     <p className="text-muted-foreground italic">
                       {language === 'uk' ? 'Інформація ще не завантажена' : 'Information not yet loaded'}
