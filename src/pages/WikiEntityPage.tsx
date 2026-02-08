@@ -316,7 +316,7 @@ export default function WikiEntityPage() {
         
         const { data: inks } = await supabase
           .from('outrage_ink')
-          .select('id, image_url, title, likes, dislikes')
+          .select('id, image_url, title, likes, dislikes, news_item_id')
           .in('id', allInkIds);
         
         return (inks || []) as OutrageInk[];
@@ -326,13 +326,28 @@ export default function WikiEntityPage() {
 
       const { data: inks } = await supabase
         .from('outrage_ink')
-        .select('id, image_url, title, likes, dislikes')
+        .select('id, image_url, title, likes, dislikes, news_item_id')
         .in('id', directIds);
 
       return (inks || []) as OutrageInk[];
     },
     enabled: !!entityId,
   });
+
+  // Extract aggregated keywords from news
+  const allKeywords = useMemo(() => {
+    const keywordCount: Record<string, number> = {};
+    allLinkedNews.forEach(news => {
+      if (news.keywords) {
+        news.keywords.forEach(kw => {
+          keywordCount[kw] = (keywordCount[kw] || 0) + 1;
+        });
+      }
+    });
+    return Object.entries(keywordCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20);
+  }, [allLinkedNews]);
 
   // Delete entity mutation (admin only)
   const deleteMutation = useMutation({
