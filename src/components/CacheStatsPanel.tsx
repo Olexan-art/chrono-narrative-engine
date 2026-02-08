@@ -346,6 +346,13 @@ export function CacheStatsPanel({ password }: Props) {
                 <Newspaper className="w-4 h-4 mr-2" />
                 Новини (7 днів)
               </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleRefreshCache('refresh-wiki')}
+                disabled={isRefreshing}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Wiki + сутності
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
