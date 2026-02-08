@@ -67,9 +67,9 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
 
   // Calculate positions for entities in a circular layout - memoized
   const positions = useMemo(() => {
-    const centerX = 200;
-    const centerY = 200;
-    const radius = 140;
+    const centerX = 220;
+    const centerY = 220;
+    const radius = 160;
     
     return displayedEntities.map((_, index) => {
       const angle = (2 * Math.PI * index) / displayedEntities.length - Math.PI / 2;
