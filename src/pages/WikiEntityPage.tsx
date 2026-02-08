@@ -7,7 +7,8 @@ import {
   RefreshCw, Trash2, ImageIcon, Sparkles, Network,
   Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight,
   Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit,
-  Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone
+  Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone, 
+  Swords, FolderOpen
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -95,6 +96,12 @@ interface ExtendedWikiData {
   image?: string;
   categories?: string[];
   infobox?: Record<string, string>;
+}
+
+interface SecondaryConnection {
+  from: RelatedEntity;
+  to: RelatedEntity;
+  weight: number;
 }
 
 interface CaricatureLightbox {
@@ -389,6 +396,44 @@ export default function WikiEntityPage() {
       .slice(0, 20);
   }, [allLinkedNews]);
 
+  // Fetch Wikipedia categories automatically
+  const { data: wikiCategories = [] } = useQuery({
+    queryKey: ['wiki-categories', entity?.id, entity?.wiki_url],
+    queryFn: async (): Promise<string[]> => {
+      if (!entity?.wiki_url) return [];
+      
+      try {
+        // Extract page title from wiki URL
+        const url = new URL(entity.wiki_url);
+        const pathParts = url.pathname.split('/');
+        const pageTitle = pathParts[pathParts.length - 1];
+        
+        // Determine wiki language
+        const wikiLang = url.hostname.includes('uk.wikipedia') ? 'uk' : 'en';
+        
+        // Fetch categories from Wikipedia API
+        const apiUrl = `https://${wikiLang}.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(pageTitle)}&prop=categories&cllimit=20&format=json&origin=*`;
+        
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        
+        const pages = data?.query?.pages;
+        if (!pages) return [];
+        
+        const pageId = Object.keys(pages)[0];
+        const categories = pages[pageId]?.categories || [];
+        
+        return categories
+          .map((c: { title: string }) => c.title.replace(/^(Category:|Категорія:)/i, ''))
+          .filter((c: string) => !c.includes('Вікіпедія') && !c.includes('Wikipedia') && !c.includes('Articles') && c.length < 60);
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!entity?.wiki_url,
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+  });
+
   // Fetch related entities (entities that appear in the same news)
   const { data: relatedEntities = [] } = useQuery({
     queryKey: ['related-entities', entity?.id],
@@ -436,6 +481,63 @@ export default function WikiEntityPage() {
         })) as RelatedEntity[];
     },
     enabled: !!entity?.id,
+  });
+
+  // Fetch secondary connections (connections between related entities)
+  const { data: secondaryConnections = [] } = useQuery({
+    queryKey: ['secondary-connections', entity?.id, relatedEntities.length],
+    queryFn: async (): Promise<SecondaryConnection[]> => {
+      if (relatedEntities.length < 2) return [];
+
+      const relatedIds = relatedEntities.map(e => e.id);
+      
+      // For each pair of related entities, check if they share news
+      const connections: SecondaryConnection[] = [];
+      
+      // Get all news-entity links for related entities
+      const { data: allLinks } = await supabase
+        .from('news_wiki_entities')
+        .select('news_item_id, wiki_entity_id')
+        .in('wiki_entity_id', relatedIds);
+
+      if (!allLinks) return [];
+
+      // Group news by entity
+      const entityNewsMap = new Map<string, Set<string>>();
+      for (const link of allLinks) {
+        if (!entityNewsMap.has(link.wiki_entity_id)) {
+          entityNewsMap.set(link.wiki_entity_id, new Set());
+        }
+        entityNewsMap.get(link.wiki_entity_id)!.add(link.news_item_id);
+      }
+
+      // Find connections between pairs
+      for (let i = 0; i < relatedEntities.length; i++) {
+        for (let j = i + 1; j < relatedEntities.length; j++) {
+          const entity1 = relatedEntities[i];
+          const entity2 = relatedEntities[j];
+          const news1 = entityNewsMap.get(entity1.id) || new Set();
+          const news2 = entityNewsMap.get(entity2.id) || new Set();
+          
+          // Count shared news
+          let sharedCount = 0;
+          news1.forEach(newsId => {
+            if (news2.has(newsId)) sharedCount++;
+          });
+
+          if (sharedCount > 0) {
+            connections.push({
+              from: entity1,
+              to: entity2,
+              weight: sharedCount,
+            });
+          }
+        }
+      }
+
+      return connections.sort((a, b) => b.weight - a.weight).slice(0, 15);
+    },
+    enabled: relatedEntities.length >= 2,
   });
 
   // Delete entity mutation (admin only)
@@ -767,34 +869,6 @@ export default function WikiEntityPage() {
             <span className="text-foreground">{name}</span>
           </div>
 
-          {/* Big Aggregated Rating Block - Combined rating */}
-          <div className="mb-6 flex items-center justify-center gap-6 py-6 px-8 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 rounded-2xl border-2 border-primary/30 shadow-lg">
-            <div className="bg-primary/20 p-4 rounded-full">
-              <Eye className="w-12 h-12 text-primary" />
-            </div>
-            <div className="text-center">
-              <span className="text-5xl md:text-6xl font-bold text-primary">
-                {aggregatedRating.toLocaleString()}
-              </span>
-              <p className="text-lg text-muted-foreground mt-1">
-                {language === 'uk' ? 'Загальний рейтинг' : 'Total Rating'}
-              </p>
-              <div className="flex items-center justify-center gap-4 mt-2 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Eye className="w-4 h-4" /> {aggregatedViews.toLocaleString()}
-                </span>
-                <span className="flex items-center gap-1">
-                  <ThumbsUp className="w-4 h-4" /> {(totalNewsLikes + totalCaricatureLikes).toLocaleString()}
-                </span>
-                {(totalNewsDislikes + totalCaricatureDislikes) > 0 && (
-                  <span className="flex items-center gap-1 text-destructive">
-                    <ThumbsDown className="w-4 h-4" /> {(totalNewsDislikes + totalCaricatureDislikes).toLocaleString()}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Column */}
             <div className="lg:col-span-2 space-y-6">
@@ -1015,8 +1089,42 @@ export default function WikiEntityPage() {
                     entity_type: entity.entity_type,
                   }}
                   relatedEntities={relatedEntities}
+                  secondaryConnections={secondaryConnections}
                 />
               )}
+
+              {/* Compact Rating Block */}
+              <div className="flex items-center justify-between gap-4 p-4 bg-muted/50 rounded-xl border border-border">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Swords className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <span className="text-2xl font-bold text-primary">
+                      {aggregatedRating.toLocaleString()}
+                    </span>
+                    <p className="text-xs text-muted-foreground">
+                      {language === 'uk' ? 'Загальний рейтинг' : 'Total Rating'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <Eye className="w-4 h-4" />
+                    <span>{aggregatedViews.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <ThumbsUp className="w-4 h-4" />
+                    <span>{(totalNewsLikes + totalCaricatureLikes).toLocaleString()}</span>
+                  </div>
+                  {(totalNewsDislikes + totalCaricatureDislikes) > 0 && (
+                    <div className="flex items-center gap-1 text-destructive/70">
+                      <ThumbsDown className="w-4 h-4" />
+                      <span>{(totalNewsDislikes + totalCaricatureDislikes).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Key Information Block */}
               <Card className="border-2 border-primary/20">
@@ -1122,7 +1230,31 @@ export default function WikiEntityPage() {
                       </div>
                     </div>
                   ) : extract ? (
-                    <MarkdownContent content={extract} />
+                    <div className="space-y-6">
+                      <MarkdownContent content={extract} />
+                      
+                      {/* Categories Sub-block */}
+                      {wikiCategories.length > 0 && (
+                        <div className="pt-4 border-t border-border/50">
+                          <h4 className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
+                            <FolderOpen className="w-4 h-4" />
+                            {language === 'uk' ? 'Категорії Wikipedia' : 'Wikipedia Categories'}
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {wikiCategories.slice(0, 12).map((category, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {category}
+                              </Badge>
+                            ))}
+                            {wikiCategories.length > 12 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{wikiCategories.length - 12}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       <FileText className="w-12 h-12 text-muted-foreground/30 mb-3" />
@@ -1374,7 +1506,7 @@ export default function WikiEntityPage() {
                       <ThumbsUp className="w-4 h-4" />
                       {language === 'uk' ? 'Лайків' : 'Likes'}
                     </span>
-                    <span className="font-medium text-green-600">{(totalNewsLikes + totalCaricatureLikes).toLocaleString()}</span>
+                    <span className="font-medium text-primary">{(totalNewsLikes + totalCaricatureLikes).toLocaleString()}</span>
                   </div>
                   {caricatures.length > 0 && (
                     <div className="flex justify-between text-sm">

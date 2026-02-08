@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Network, User, Building2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { Network, User, Building2, Sparkles, ChevronDown, ChevronUp, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -15,6 +15,12 @@ interface RelatedEntity {
   shared_news_count: number;
 }
 
+interface SecondaryConnection {
+  from: RelatedEntity;
+  to: RelatedEntity;
+  weight: number;
+}
+
 interface EntityIntersectionGraphProps {
   mainEntity: {
     name: string;
@@ -23,15 +29,17 @@ interface EntityIntersectionGraphProps {
     entity_type: string;
   };
   relatedEntities: RelatedEntity[];
+  secondaryConnections?: SecondaryConnection[];
 }
 
 // Optimized: limit displayed entities for performance
 const MAX_DISPLAYED_ENTITIES = 8;
 const INITIAL_DISPLAYED = 6;
 
-export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityIntersectionGraphProps) {
+export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondaryConnections = [] }: EntityIntersectionGraphProps) {
   const { language } = useLanguage();
   const [showAll, setShowAll] = useState(false);
+  const [showSecondary, setShowSecondary] = useState(true);
 
   // Limit entities for performance - sort by relevance first
   const sortedEntities = useMemo(() => 
@@ -61,6 +69,24 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
       };
     });
   }, [displayedEntities.length]);
+
+  // Create entity position map for secondary connections
+  const entityPositionMap = useMemo(() => {
+    const map = new Map<string, { x: number; y: number }>();
+    displayedEntities.forEach((entity, index) => {
+      map.set(entity.id, positions[index]);
+    });
+    return map;
+  }, [displayedEntities, positions]);
+
+  // Filter secondary connections to only include displayed entities
+  const visibleSecondaryConnections = useMemo(() => {
+    if (!showSecondary) return [];
+    const displayedIds = new Set(displayedEntities.map(e => e.id));
+    return secondaryConnections.filter(
+      conn => displayedIds.has(conn.from.id) && displayedIds.has(conn.to.id)
+    );
+  }, [secondaryConnections, displayedEntities, showSecondary]);
 
   // Calculate line thickness based on shared news count
   const maxCount = useMemo(() => 
@@ -99,6 +125,23 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
           </span>
           <Sparkles className="w-4 h-4 text-primary/50 ml-auto" />
         </CardTitle>
+        {/* Secondary connections toggle */}
+        {secondaryConnections.length > 0 && (
+          <div className="flex items-center gap-2 mt-2">
+            <Button
+              variant={showSecondary ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setShowSecondary(!showSecondary)}
+              className="gap-2 text-xs"
+            >
+              <Share2 className="w-3 h-3" />
+              {language === 'uk' 
+                ? `Вторинні зв'язки (${secondaryConnections.length})` 
+                : `Secondary connections (${secondaryConnections.length})`
+              }
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="pt-6">
         <div className="relative w-full aspect-square max-w-[450px] mx-auto">
@@ -123,6 +166,13 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
                   .pulse-line {
                     animation: pulseOpacity 2s ease-in-out infinite, pulseWidth 2s ease-in-out infinite;
                   }
+                  @keyframes dashMove {
+                    0% { stroke-dashoffset: 20; }
+                    100% { stroke-dashoffset: 0; }
+                  }
+                  .secondary-line {
+                    animation: dashMove 1s linear infinite;
+                  }
                 `}
               </style>
               
@@ -139,6 +189,11 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
                 <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3">
                   <animate attributeName="stopOpacity" values="0.3;0.8;0.3" dur="2s" repeatCount="indefinite" />
                 </stop>
+              </linearGradient>
+
+              <linearGradient id="secondaryGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.3" />
               </linearGradient>
               
               <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -200,7 +255,56 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
               opacity={0.2}
             />
 
-            {/* Connection lines with pulsing animation */}
+            {/* Secondary connections (entity-to-entity, not through main) */}
+            {visibleSecondaryConnections.map((conn, index) => {
+              const fromPos = entityPositionMap.get(conn.from.id);
+              const toPos = entityPositionMap.get(conn.to.id);
+              if (!fromPos || !toPos) return null;
+
+              return (
+                <g key={`secondary-${conn.from.id}-${conn.to.id}`}>
+                  {/* Dashed secondary connection line */}
+                  <line
+                    x1={fromPos.x}
+                    y1={fromPos.y}
+                    x2={toPos.x}
+                    y2={toPos.y}
+                    stroke="url(#secondaryGradient)"
+                    strokeWidth={1.5}
+                    strokeDasharray="4 4"
+                    strokeLinecap="round"
+                    className="secondary-line"
+                    style={{ animationDelay: `${index * 0.2}s` }}
+                    opacity={0.5}
+                  />
+                  {/* Connection weight indicator in the middle */}
+                  {conn.weight > 1 && (
+                    <g>
+                      <circle
+                        cx={(fromPos.x + toPos.x) / 2}
+                        cy={(fromPos.y + toPos.y) / 2}
+                        r={8}
+                        fill="hsl(var(--muted))"
+                        stroke="hsl(var(--border))"
+                        strokeWidth={1}
+                      />
+                      <text
+                        x={(fromPos.x + toPos.x) / 2}
+                        y={(fromPos.y + toPos.y) / 2 + 3}
+                        textAnchor="middle"
+                        fill="hsl(var(--muted-foreground))"
+                        fontSize="8"
+                        fontWeight="bold"
+                      >
+                        {conn.weight}
+                      </text>
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+
+            {/* Primary connection lines with pulsing animation */}
             {displayedEntities.map((entity, index) => {
               const lineWidth = getLineWidth(entity.shared_news_count);
               const opacity = getOpacity(entity.shared_news_count);
@@ -449,14 +553,27 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
 
         {/* Stats */}
         <div className="mt-6 pt-4 border-t border-border/50">
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <p>
-              {language === 'uk' 
-                ? `${relatedEntities.length} пов'язаних сутностей у спільних новинах`
-                : `${relatedEntities.length} related entities in shared news`
-              }
-            </p>
+          <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <span>
+                {language === 'uk' 
+                  ? `${relatedEntities.length} пов'язаних сутностей`
+                  : `${relatedEntities.length} related entities`
+                }
+              </span>
+            </div>
+            {secondaryConnections.length > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-0.5 border-t-2 border-dashed border-muted-foreground/50" />
+                <span>
+                  {language === 'uk' 
+                    ? `${secondaryConnections.length} вторинних зв'язків`
+                    : `${secondaryConnections.length} secondary connections`
+                  }
+                </span>
+              </div>
+            )}
           </div>
           {relatedEntities.length > MAX_DISPLAYED_ENTITIES && (
             <p className="text-center text-xs text-muted-foreground/60 mt-1">
