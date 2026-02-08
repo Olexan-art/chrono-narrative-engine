@@ -362,56 +362,44 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               );
             })}
 
-            {/* Center entity (main) */}
+            {/* Center entity (main) - Hexagon */}
             <g className="cursor-default" filter="url(#glow)">
-              {/* Pulsing outer ring */}
-              <circle
-                cx={200}
-                cy={200}
-                r={52}
+              {/* Pulsing outer hexagon ring */}
+              <path
+                d={getHexagonPath(220, 220, 54)}
                 fill="none"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 opacity={0.4}
               >
                 <animate 
-                  attributeName="r" 
-                  values="52;56;52" 
-                  dur="2s" 
-                  repeatCount="indefinite" 
-                />
-                <animate 
                   attributeName="opacity" 
                   values="0.4;0.7;0.4" 
                   dur="2s" 
                   repeatCount="indefinite" 
                 />
-              </circle>
-              {/* Main circle */}
-              <circle
-                cx={200}
-                cy={200}
-                r={48}
+              </path>
+              {/* Main hexagon */}
+              <path
+                d={getHexagonPath(220, 220, 48)}
                 fill="url(#centerGradient)"
                 className="drop-shadow-lg"
               />
               {/* Inner highlight */}
-              <circle
-                cx={200}
-                cy={190}
-                r={35}
+              <path
+                d={getHexagonPath(220, 210, 35)}
                 fill="hsl(var(--primary))"
                 opacity={0.1}
               />
               {mainEntity.image_url ? (
                 <clipPath id="center-clip">
-                  <circle cx={200} cy={200} r={44} />
+                  <path d={getHexagonPath(220, 220, 44)} />
                 </clipPath>
               ) : null}
               {mainEntity.image_url ? (
                 <image
-                  x={200 - 44}
-                  y={200 - 44}
+                  x={220 - 44}
+                  y={220 - 44}
                   width={88}
                   height={88}
                   href={mainEntity.image_url}
@@ -419,7 +407,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   preserveAspectRatio="xMidYMid slice"
                 />
               ) : (
-                <foreignObject x={200 - 22} y={200 - 22} width={44} height={44}>
+                <foreignObject x={220 - 22} y={220 - 22} width={44} height={44}>
                   <div className="w-full h-full flex items-center justify-center text-primary-foreground">
                     {mainEntity.entity_type === 'person' ? (
                       <User className="w-7 h-7" />
