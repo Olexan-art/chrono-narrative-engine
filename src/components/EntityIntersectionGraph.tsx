@@ -408,44 +408,53 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               );
             })}
 
-            {/* Root entity (main) - Hexagon at top */}
+            {/* Root entity (main) - Hexagon at top - LARGER */}
             <g className="cursor-default" filter="url(#glow)">
               {/* Pulsing outer ring */}
               <path
-                d={getHexagonPath(rootX, rootY, 42)}
+                d={getHexagonPath(rootX, rootY, NODE_SIZES.root.outer)}
                 fill="none"
                 stroke="hsl(var(--primary))"
-                strokeWidth={2}
+                strokeWidth={3}
                 className="pulse-node"
+              />
+              {/* Secondary outer glow */}
+              <path
+                d={getHexagonPath(rootX, rootY, NODE_SIZES.root.outer + 8)}
+                fill="none"
+                stroke="hsl(var(--primary))"
+                strokeWidth={1}
+                strokeOpacity={0.3}
+                className="glow-node"
               />
               {/* Main hexagon */}
               <path
-                d={getHexagonPath(rootX, rootY, 36)}
+                d={getHexagonPath(rootX, rootY, NODE_SIZES.root.base)}
                 fill="url(#rootGradient)"
                 className="drop-shadow-lg"
               />
               {mainEntity.image_url ? (
                 <>
                   <clipPath id="root-clip">
-                    <path d={getHexagonPath(rootX, rootY, 32)} />
+                    <path d={getHexagonPath(rootX, rootY, NODE_SIZES.root.base - 4)} />
                   </clipPath>
                   <image
-                    x={rootX - 32}
-                    y={rootY - 32}
-                    width={64}
-                    height={64}
+                    x={rootX - (NODE_SIZES.root.base - 4)}
+                    y={rootY - (NODE_SIZES.root.base - 4)}
+                    width={(NODE_SIZES.root.base - 4) * 2}
+                    height={(NODE_SIZES.root.base - 4) * 2}
                     href={mainEntity.image_url}
                     clipPath="url(#root-clip)"
                     preserveAspectRatio="xMidYMid slice"
                   />
                 </>
               ) : (
-                <foreignObject x={rootX - 16} y={rootY - 16} width={32} height={32}>
+                <foreignObject x={rootX - 20} y={rootY - 20} width={40} height={40}>
                   <div className="w-full h-full flex items-center justify-center text-primary-foreground">
                     {mainEntity.entity_type === 'person' ? (
-                      <User className="w-5 h-5" />
+                      <User className="w-7 h-7" />
                     ) : (
-                      <Building2 className="w-5 h-5" />
+                      <Building2 className="w-7 h-7" />
                     )}
                   </div>
                 </foreignObject>
