@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { 
   Calendar, BookOpen, Library, Newspaper, ChevronRight, 
-  Globe, Loader2, MapPin 
+  Globe, Loader2, MapPin, Users
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SEOHead } from "@/components/SEOHead";
@@ -116,7 +116,8 @@ export default function SitemapPage() {
                   { url: '/calendar', name: 'Calendar' },
                   { url: '/chapters', name: 'Chapters' },
                   { url: '/volumes', name: 'Volumes' },
-                  { url: '/news', name: 'News Hub' }
+                  { url: '/news', name: 'News Hub' },
+                  { url: '/wiki', name: 'Entity Catalog' }
                 ].map(page => (
                   <li key={page.url} className="flex items-center gap-2">
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />

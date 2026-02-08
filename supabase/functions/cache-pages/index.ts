@@ -116,7 +116,7 @@ async function getAllPagesToCache(
 
   // Static pages (only for 'all' or 'recent-24h')
   if (filter !== 'news-7d') {
-    pages.push('/', '/news', '/chapters', '/volumes', '/calendar', '/sitemap');
+    pages.push('/', '/news', '/chapters', '/volumes', '/calendar', '/sitemap', '/wiki');
   }
 
   // Add country news pages
@@ -291,6 +291,22 @@ async function getAllPagesToCache(
         // Both routes exist in the SPA; cache both so bots/tools can index either URL.
         pages.push(`/read/${date}`);
         pages.push(`/date/${date}`);
+      }
+    }
+  }
+
+  // Add wiki entity pages (top 100 by search count)
+  if (filter !== 'news-7d' && filter !== 'recent-24h') {
+    const { data: wikiEntities } = await supabase
+      .from('wiki_entities')
+      .select('id')
+      .order('search_count', { ascending: false })
+      .limit(100);
+
+    if (wikiEntities) {
+      console.log(`Found ${wikiEntities.length} wiki entities to cache`);
+      for (const entity of wikiEntities) {
+        pages.push(`/wiki/${entity.id}`);
       }
     }
   }

@@ -317,7 +317,11 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
                 </div>
               ) : (
                 <>
-                  <WikiEntityCard entity={link.wiki_entity} compact={entityLinks.length > 2} />
+                  <WikiEntityCard 
+                    entity={link.wiki_entity} 
+                    compact={entityLinks.length > 2} 
+                    showLink={true}
+                  />
                   {isAdmin && (
                     <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button

@@ -306,8 +306,14 @@ export function WikiEntitiesPanel() {
 
       {/* Filters */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Wikipedia сутності</CardTitle>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/wiki">
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Публічний каталог
+            </Link>
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2 mb-4">
@@ -419,9 +425,20 @@ export function WikiEntitiesPanel() {
                             variant="ghost"
                             size="icon"
                             asChild
+                            title="Сторінка сутності"
+                          >
+                            <Link to={`/wiki/${entity.id}`}>
+                              <ExternalLink className="w-4 h-4 text-primary" />
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            asChild
+                            title="Wikipedia"
                           >
                             <a href={entity.wiki_url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="w-4 h-4" />
+                              <Globe className="w-4 h-4" />
                             </a>
                           </Button>
                           <Button
@@ -429,6 +446,7 @@ export function WikiEntitiesPanel() {
                             size="icon"
                             onClick={() => deleteMutation.mutate(entity.id)}
                             disabled={deleteMutation.isPending}
+                            title="Видалити"
                           >
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>

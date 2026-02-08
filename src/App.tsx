@@ -27,6 +27,8 @@ import EditPartPage from "./pages/EditPartPage";
 import EditChapterPage from "./pages/EditChapterPage";
 import InstallPage from "./pages/InstallPage";
 import PrivacyPage from "./pages/PrivacyPage";
+import WikiCatalogPage from "./pages/WikiCatalogPage";
+import WikiEntityPage from "./pages/WikiEntityPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,6 +65,8 @@ const App = () => (
             <Route path="/admin/chapter/:id" element={<EditChapterPage />} />
             <Route path="/install" element={<InstallPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/wiki" element={<WikiCatalogPage />} />
+            <Route path="/wiki/:entityId" element={<WikiEntityPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

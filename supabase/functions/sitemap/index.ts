@@ -253,6 +253,13 @@ Deno.serve(async (req) => {
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>${addHreflangLinks(`${BASE_URL}/sitemap`)}
   </url>
+  
+  <url>
+    <loc>${BASE_URL}/wiki</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>${addHreflangLinks(`${BASE_URL}/wiki`)}
+  </url>
 `;
 
     // Add date listing pages (/date/:date) for each unique date with stories
@@ -331,6 +338,26 @@ Deno.serve(async (req) => {
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>${addHreflangLinks(url)}
   </url>`;
+    }
+
+    // Add wiki entity pages
+    const { data: wikiEntities, error: wikiError } = await supabase
+      .from("wiki_entities")
+      .select("id, updated_at")
+      .order("search_count", { ascending: false })
+      .limit(500); // Top 500 entities
+
+    if (!wikiError && wikiEntities) {
+      for (const entity of wikiEntities) {
+        const url = `${BASE_URL}/wiki/${entity.id}`;
+        xml += `
+  <url>
+    <loc>${url}</loc>
+    <lastmod>${entity.updated_at || now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>${addHreflangLinks(url)}
+  </url>`;
+      }
     }
 
     xml += `

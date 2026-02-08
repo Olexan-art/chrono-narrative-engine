@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { ExternalLink, Building2, User, Globe, TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,12 +19,13 @@ interface WikiEntity {
   extract_en: string | null;
 }
 
-interface WikiEntityCardProps {
+export interface WikiEntityCardProps {
   entity: WikiEntity;
   compact?: boolean;
+  showLink?: boolean;
 }
 
-export function WikiEntityCard({ entity, compact = false }: WikiEntityCardProps) {
+export function WikiEntityCard({ entity, compact = false, showLink = false }: WikiEntityCardProps) {
   const { language } = useLanguage();
   
   const name = (language === 'en' && entity.name_en) ? entity.name_en : entity.name;
@@ -62,11 +64,14 @@ export function WikiEntityCard({ entity, compact = false }: WikiEntityCardProps)
   };
 
   if (compact) {
+    const CardWrapper = showLink ? Link : 'a';
+    const cardProps = showLink 
+      ? { to: `/wiki/${entity.id}` } 
+      : { href: wikiUrl, target: "_blank", rel: "noopener noreferrer" };
+
     return (
-      <a 
-        href={wikiUrl} 
-        target="_blank" 
-        rel="noopener noreferrer"
+      <CardWrapper 
+        {...(cardProps as any)}
         className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
       >
         {entity.image_url ? (
@@ -90,7 +95,7 @@ export function WikiEntityCard({ entity, compact = false }: WikiEntityCardProps)
           <p className="text-xs text-muted-foreground line-clamp-2">{description || extract?.slice(0, 100)}</p>
         </div>
         <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-      </a>
+      </CardWrapper>
     );
   }
 
@@ -130,14 +135,24 @@ export function WikiEntityCard({ entity, compact = false }: WikiEntityCardProps)
             {description && (
               <p className="text-sm text-muted-foreground mb-2">{description}</p>
             )}
-            <a 
-              href={wikiUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-            >
-              Wikipedia <ExternalLink className="w-3 h-3" />
-            </a>
+            <div className="flex items-center gap-3">
+              <a 
+                href={wikiUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                Wikipedia <ExternalLink className="w-3 h-3" />
+              </a>
+              {showLink && (
+                <Link
+                  to={`/wiki/${entity.id}`}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                >
+                  {language === 'uk' ? 'Детальніше' : 'Learn more'} →
+                </Link>
+              )}
+            </div>
           </div>
         </div>
 
