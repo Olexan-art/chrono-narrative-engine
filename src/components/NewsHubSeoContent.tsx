@@ -7,7 +7,7 @@ export function NewsHubSeoContent() {
       {/* Hero Section */}
       <div className="text-center mb-12">
         <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-          Brave New News.
+          Smart News Hub
         </h2>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
           World News Digest: The Pulse of Reality
@@ -23,7 +23,7 @@ export function NewsHubSeoContent() {
             </p>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Newspaper className="w-4 h-4 text-primary" />
-              <span>Real facts and structured updates for the AI Archive of Human History</span>
+              <span>Real facts and structured updates for the Archive of Human History</span>
             </div>
           </CardContent>
         </Card>
