@@ -885,6 +885,15 @@ export default function NewsArticlePage() {
             </article>
 
 
+            {/* Entity Intersection Graph - MOBILE ONLY (above dialogue) */}
+            {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
+              <EntityIntersectionGraph
+                mainEntity={mainEntityData.mainEntity}
+                relatedEntities={mainEntityData.relatedEntities}
+                className="mt-8 lg:hidden"
+              />
+            )}
+
             {/* Character Dialogue Section - MOBILE ONLY (below article) */}
             <NewsDialogueSection
               chatDialogue={chatDialogue as any}
