@@ -1044,7 +1044,7 @@ function generateChapterHTML(chapter: any, lang: string, canonicalUrl: string) {
   `;
 }
 
-function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, moreFromCountry: any[] = [], otherCountriesNews: any[] = [], wikiEntities: any[] = []) {
+function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, moreFromCountry: any[] = [], otherCountriesNews: any[] = [], wikiEntities: any[] = [], mainEntityForGraph: any = null, relatedEntitiesForGraph: any[] = []) {
   const title = newsItem.title_en || newsItem.title;
   const content = newsItem.content_en || newsItem.content || newsItem.description_en || newsItem.description || "";
   const countryName = newsItem.country?.name_en || newsItem.country?.name || "";
