@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TrendingEntities } from "@/components/TrendingEntities";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -166,6 +167,11 @@ export default function WikiCatalogPage() {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2">{t.title}</h1>
             <p className="text-muted-foreground">{t.description}</p>
+          </div>
+
+          {/* Trending Entities - Top 4 by 72h mentions */}
+          <div className="mb-8">
+            <TrendingEntities />
           </div>
 
           {/* Stats */}

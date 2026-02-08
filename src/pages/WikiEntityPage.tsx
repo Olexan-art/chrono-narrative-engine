@@ -6,7 +6,8 @@ import {
   ArrowLeft, ExternalLink, User, Building2, Globe, Newspaper, 
   RefreshCw, Trash2, ImageIcon, Sparkles, Network,
   Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight,
-  Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit
+  Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit,
+  Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -20,6 +21,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { EntityViewsChart } from "@/components/EntityViewsChart";
+import { MarkdownContent } from "@/components/MarkdownContent";
+import { EntityIntersectionGraph } from "@/components/EntityIntersectionGraph";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminStore } from "@/stores/adminStore";
@@ -99,26 +102,32 @@ interface CaricatureLightbox {
   newsItem?: NewsItem;
 }
 
-// Topic icons mapping
-const TOPIC_ICONS: Record<string, React.ReactNode> = {
-  'політика': <Globe className="w-3 h-3" />,
-  'politics': <Globe className="w-3 h-3" />,
-  'економіка': <Building2 className="w-3 h-3" />,
-  'economy': <Building2 className="w-3 h-3" />,
-  'бізнес': <Building2 className="w-3 h-3" />,
-  'business': <Building2 className="w-3 h-3" />,
-  'технології': <Network className="w-3 h-3" />,
-  'technology': <Network className="w-3 h-3" />,
-  'скандал': <ThumbsDown className="w-3 h-3" />,
-  'scandal': <ThumbsDown className="w-3 h-3" />,
-  'війна': <X className="w-3 h-3" />,
-  'war': <X className="w-3 h-3" />,
-  'здоров\'я': <ThumbsUp className="w-3 h-3" />,
-  'health': <ThumbsUp className="w-3 h-3" />,
-  'спорт': <ThumbsUp className="w-3 h-3" />,
-  'sport': <ThumbsUp className="w-3 h-3" />,
-  'наука': <Sparkles className="w-3 h-3" />,
-  'science': <Sparkles className="w-3 h-3" />,
+// Topic icons mapping - larger icons with more topics
+const TOPIC_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
+  'політика': { icon: <Globe className="w-5 h-5" />, color: 'text-blue-500' },
+  'politics': { icon: <Globe className="w-5 h-5" />, color: 'text-blue-500' },
+  'економіка': { icon: <Briefcase className="w-5 h-5" />, color: 'text-emerald-500' },
+  'economy': { icon: <Briefcase className="w-5 h-5" />, color: 'text-emerald-500' },
+  'бізнес': { icon: <Building2 className="w-5 h-5" />, color: 'text-indigo-500' },
+  'business': { icon: <Building2 className="w-5 h-5" />, color: 'text-indigo-500' },
+  'технології': { icon: <Zap className="w-5 h-5" />, color: 'text-violet-500' },
+  'technology': { icon: <Zap className="w-5 h-5" />, color: 'text-violet-500' },
+  'скандал': { icon: <Flame className="w-5 h-5" />, color: 'text-orange-500' },
+  'scandal': { icon: <Flame className="w-5 h-5" />, color: 'text-orange-500' },
+  'війна': { icon: <Shield className="w-5 h-5" />, color: 'text-red-500' },
+  'war': { icon: <Shield className="w-5 h-5" />, color: 'text-red-500' },
+  'здоров\'я': { icon: <Heart className="w-5 h-5" />, color: 'text-rose-500' },
+  'health': { icon: <Heart className="w-5 h-5" />, color: 'text-rose-500' },
+  'спорт': { icon: <ThumbsUp className="w-5 h-5" />, color: 'text-green-500' },
+  'sport': { icon: <ThumbsUp className="w-5 h-5" />, color: 'text-green-500' },
+  'наука': { icon: <Sparkles className="w-5 h-5" />, color: 'text-cyan-500' },
+  'science': { icon: <Sparkles className="w-5 h-5" />, color: 'text-cyan-500' },
+  'право': { icon: <Scale className="w-5 h-5" />, color: 'text-amber-500' },
+  'law': { icon: <Scale className="w-5 h-5" />, color: 'text-amber-500' },
+  'культура': { icon: <BookOpen className="w-5 h-5" />, color: 'text-purple-500' },
+  'culture': { icon: <BookOpen className="w-5 h-5" />, color: 'text-purple-500' },
+  'медіа': { icon: <Megaphone className="w-5 h-5" />, color: 'text-pink-500' },
+  'media': { icon: <Megaphone className="w-5 h-5" />, color: 'text-pink-500' },
 };
 
 const NEWS_PER_PAGE = 70;
@@ -727,12 +736,12 @@ export default function WikiEntityPage() {
     unknown: language === 'uk' ? 'Сутність' : language === 'pl' ? 'Podmiot' : 'Entity',
   }[entity.entity_type] || entity.entity_type;
 
-  const getTopicIcon = (topic: string) => {
+  const getTopicIcon = (topic: string): { icon: React.ReactNode; color: string } => {
     const lowerTopic = topic.toLowerCase();
-    for (const [key, icon] of Object.entries(TOPIC_ICONS)) {
-      if (lowerTopic.includes(key)) return icon;
+    for (const [key, data] of Object.entries(TOPIC_ICONS)) {
+      if (lowerTopic.includes(key)) return data;
     }
-    return <Tag className="w-3 h-3" />;
+    return { icon: <Tag className="w-5 h-5" />, color: 'text-muted-foreground' };
   };
 
   return (
@@ -947,31 +956,50 @@ export default function WikiEntityPage() {
                 <EntityViewsChart data={dailyViews} />
               )}
 
-              {/* Topics Block with Icons */}
+              {/* Topics Block with Icons - Enhanced Design */}
               {sortedTopics.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
+                <Card className="overflow-hidden">
+                  <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-transparent">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <Tag className="w-5 h-5 text-primary" />
-                      Topics
+                      {language === 'uk' ? 'Теми' : 'Topics'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {sortedTopics.map(([topic, count]) => (
-                        <Badge 
-                          key={topic} 
-                          variant="outline" 
-                          className="text-sm flex items-center gap-1.5 py-1.5 px-3"
-                        >
-                          {getTopicIcon(topic)}
-                          <span className="max-w-[100px] truncate" title={topic}>{topic}</span>
-                          <span className="text-muted-foreground">({count})</span>
-                        </Badge>
-                      ))}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {sortedTopics.map(([topic, count]) => {
+                        const { icon, color } = getTopicIcon(topic);
+                        return (
+                          <div 
+                            key={topic} 
+                            className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors group"
+                          >
+                            <div className={`p-2 rounded-lg bg-background shadow-sm ${color} group-hover:scale-110 transition-transform`}>
+                              {icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate" title={topic}>{topic}</p>
+                              <p className="text-xs text-muted-foreground">{count} {language === 'uk' ? 'новин' : 'news'}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
+              )}
+
+              {/* Entity Intersection Graph */}
+              {relatedEntities.length > 0 && (
+                <EntityIntersectionGraph 
+                  mainEntity={{
+                    name: entity.name,
+                    name_en: entity.name_en,
+                    image_url: entity.image_url,
+                    entity_type: entity.entity_type,
+                  }}
+                  relatedEntities={relatedEntities}
+                />
               )}
 
               {/* Key Information Block */}
@@ -1078,9 +1106,7 @@ export default function WikiEntityPage() {
                       </div>
                     </div>
                   ) : extract ? (
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
-                      <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{extract}</p>
-                    </div>
+                    <MarkdownContent content={extract} />
                   ) : (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       <FileText className="w-12 h-12 text-muted-foreground/30 mb-3" />
