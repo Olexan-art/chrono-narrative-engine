@@ -1080,7 +1080,7 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
 
   return `
     <article itemscope itemtype="https://schema.org/NewsArticle">
-      ${newsItem.image_url ? `<img src="${newsItem.image_url}" alt="${escapeHtml(title)}" itemprop="image">` : ""}
+      ${newsItem.image_url ? `<img src="${newsItem.image_url}" alt="${escapeHtml(title)}" itemprop="image">` : `<img src="https://echoes2.com/favicon.png" alt="${escapeHtml(title)}" itemprop="image" style="opacity:0.6;">`}
       
       <div class="meta">
         <time datetime="${newsItem.published_at || newsItem.created_at}" itemprop="datePublished">
