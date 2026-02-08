@@ -1106,9 +1106,7 @@ export default function WikiEntityPage() {
                       </div>
                     </div>
                   ) : extract ? (
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
-                      <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{extract}</p>
-                    </div>
+                    <MarkdownContent content={extract} />
                   ) : (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       <FileText className="w-12 h-12 text-muted-foreground/30 mb-3" />

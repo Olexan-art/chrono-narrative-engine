@@ -169,6 +169,11 @@ export default function WikiCatalogPage() {
             <p className="text-muted-foreground">{t.description}</p>
           </div>
 
+          {/* Trending Entities - Top 4 by 72h mentions */}
+          <div className="mb-8">
+            <TrendingEntities />
+          </div>
+
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mb-8 max-w-md mx-auto">
             <Card>
