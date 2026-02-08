@@ -1242,9 +1242,18 @@ export default function WikiEntityPage() {
                           </h4>
                           <div className="flex flex-wrap gap-2">
                             {wikiCategories.slice(0, 12).map((category, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs">
-                                {category}
-                              </Badge>
+                              <Link
+                                key={idx}
+                                to={`/wiki?category=${encodeURIComponent(category)}`}
+                                className="inline-flex"
+                              >
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs cursor-pointer hover:bg-primary/10 hover:border-primary transition-colors"
+                                >
+                                  {category}
+                                </Badge>
+                              </Link>
                             ))}
                             {wikiCategories.length > 12 && (
                               <Badge variant="secondary" className="text-xs">
