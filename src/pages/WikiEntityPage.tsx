@@ -1097,6 +1097,73 @@ export default function WikiEntityPage() {
                 </div>
               </Card>
 
+              {/* Latest News Block */}
+              {allLinkedNews.length > 0 && (
+                <Card className="overflow-hidden border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="destructive" className="text-[10px] px-2 py-0.5 uppercase tracking-wide">
+                        {language === 'uk' ? 'Останнє' : 'Latest'}
+                      </Badge>
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-primary" />
+                        {language === 'uk' ? 'Остання новина' : 'Latest News'}
+                      </CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    {(() => {
+                      const latestNews = allLinkedNews[0];
+                      const newsTitle = language === 'en' && latestNews.title_en ? latestNews.title_en : latestNews.title;
+                      const newsDesc = language === 'en' && latestNews.description_en ? latestNews.description_en : latestNews.description;
+                      return (
+                        <Link 
+                          to={`/news/${latestNews.country?.code || 'ua'}/${latestNews.slug || latestNews.id}`}
+                          className="block group"
+                        >
+                          <div className="flex gap-4">
+                            {latestNews.image_url && (
+                              <img 
+                                src={latestNews.image_url} 
+                                alt={newsTitle}
+                                className="w-24 h-20 object-cover rounded-lg flex-shrink-0 group-hover:scale-105 transition-transform"
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                                {newsTitle}
+                              </h3>
+                              {newsDesc && (
+                                <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                                  {newsDesc}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                                {latestNews.country && (
+                                  <span className="flex items-center gap-1">
+                                    <span>{latestNews.country.flag}</span>
+                                    {latestNews.country.name}
+                                  </span>
+                                )}
+                                {latestNews.published_at && (
+                                  <span>
+                                    {format(new Date(latestNews.published_at), 'dd.MM.yyyy')}
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1">
+                                  <ThumbsUp className="w-3 h-3" />
+                                  {latestNews.likes}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Views Chart */}
               {dailyViews.some(d => d.views > 0) && (
                 <EntityViewsChart data={dailyViews} />
@@ -1107,10 +1174,15 @@ export default function WikiEntityPage() {
               {relatedEntities.length > 0 && (
                 <EntityIntersectionGraph 
                   mainEntity={{
+                    id: entity.id,
+                    slug: entity.slug,
                     name: entity.name,
                     name_en: entity.name_en,
+                    description: entity.description,
+                    description_en: entity.description_en,
                     image_url: entity.image_url,
                     entity_type: entity.entity_type,
+                    shared_news_count: totalMentions,
                   }}
                   relatedEntities={relatedEntities}
                   secondaryConnections={secondaryConnections}
