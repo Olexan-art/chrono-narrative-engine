@@ -224,45 +224,65 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
             {relatedEntities.map((entity, index) => {
               const pos = positions[index];
               const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
-              const entityRadius = 30 + (entity.shared_news_count / maxCount) * 10;
+              const entityRadius = 32 + (entity.shared_news_count / maxCount) * 12;
               
               return (
-                <g key={entity.id} className="cursor-pointer group">
+                <g key={entity.id} className="cursor-pointer" filter="url(#softGlow)">
                   <Link to={`/wiki/${entity.slug || entity.id}`}>
+                    {/* Hover glow ring */}
+                    <circle
+                      cx={pos.x}
+                      cy={pos.y}
+                      r={entityRadius + 4}
+                      fill="none"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      opacity={0}
+                      className="transition-all duration-300 group-hover:opacity-50"
+                    />
+                    {/* Main node circle */}
                     <circle
                       cx={pos.x}
                       cy={pos.y}
                       r={entityRadius}
-                      fill="hsl(var(--muted))"
+                      fill="url(#nodeGradient)"
                       stroke="hsl(var(--border))"
                       strokeWidth={2}
-                      className="transition-all duration-300 group-hover:fill-primary/20 group-hover:stroke-primary"
+                      className="transition-all duration-300 hover:stroke-primary hover:stroke-[3px]"
+                    />
+                    {/* Inner highlight */}
+                    <circle
+                      cx={pos.x}
+                      cy={pos.y - entityRadius * 0.2}
+                      r={entityRadius * 0.6}
+                      fill="hsl(var(--foreground))"
+                      opacity={0.03}
                     />
                     
                     {entity.image_url ? (
                       <>
                         <clipPath id={`clip-${entity.id}`}>
-                          <circle cx={pos.x} cy={pos.y} r={entityRadius - 2} />
+                          <circle cx={pos.x} cy={pos.y} r={entityRadius - 3} />
                         </clipPath>
                         <image
-                          x={pos.x - (entityRadius - 2)}
-                          y={pos.y - (entityRadius - 2)}
-                          width={(entityRadius - 2) * 2}
-                          height={(entityRadius - 2) * 2}
+                          x={pos.x - (entityRadius - 3)}
+                          y={pos.y - (entityRadius - 3)}
+                          width={(entityRadius - 3) * 2}
+                          height={(entityRadius - 3) * 2}
                           href={entity.image_url}
                           clipPath={`url(#clip-${entity.id})`}
                           preserveAspectRatio="xMidYMid slice"
-                          className="transition-opacity group-hover:opacity-90"
+                          className="transition-opacity hover:opacity-90"
                         />
                       </>
                     ) : (
                       <foreignObject 
-                        x={pos.x - 15} 
-                        y={pos.y - 15} 
-                        width={30} 
-                        height={30}
+                        x={pos.x - 16} 
+                        y={pos.y - 16} 
+                        width={32} 
+                        height={32}
                       >
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-primary transition-colors">
                           {entity.entity_type === 'person' ? (
                             <User className="w-5 h-5" />
                           ) : (
@@ -272,20 +292,22 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
                       </foreignObject>
                     )}
 
-                    {/* Count badge */}
+                    {/* Count badge with gradient */}
                     <circle
-                      cx={pos.x + entityRadius * 0.7}
-                      cy={pos.y - entityRadius * 0.7}
-                      r={12}
+                      cx={pos.x + entityRadius * 0.75}
+                      cy={pos.y - entityRadius * 0.75}
+                      r={14}
                       fill="hsl(var(--primary))"
-                      className="drop-shadow"
+                      stroke="hsl(var(--background))"
+                      strokeWidth={2}
+                      className="drop-shadow-md"
                     />
                     <text
-                      x={pos.x + entityRadius * 0.7}
-                      y={pos.y - entityRadius * 0.7 + 4}
+                      x={pos.x + entityRadius * 0.75}
+                      y={pos.y - entityRadius * 0.75 + 4}
                       textAnchor="middle"
                       fill="hsl(var(--primary-foreground))"
-                      fontSize="10"
+                      fontSize="11"
                       fontWeight="bold"
                     >
                       {entity.shared_news_count}
