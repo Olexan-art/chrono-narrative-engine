@@ -40,7 +40,7 @@ interface CacheRefreshLog {
   isHeader?: boolean;
 }
 
-type RefreshAction = 'refresh-all' | 'refresh-recent' | 'refresh-news';
+type RefreshAction = 'refresh-all' | 'refresh-recent' | 'refresh-news' | 'refresh-wiki';
 
 export function CacheStatsPanel({ password }: Props) {
   const queryClient = useQueryClient();
