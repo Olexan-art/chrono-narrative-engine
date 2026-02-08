@@ -32,9 +32,19 @@ interface EntityIntersectionGraphProps {
   secondaryConnections?: SecondaryConnection[];
 }
 
-// Optimized: limit displayed entities for performance
-const MAX_DISPLAYED_ENTITIES = 8;
-const INITIAL_DISPLAYED = 6;
+// Optimized: increased display limits for better visualization
+const MAX_DISPLAYED_ENTITIES = 12;
+const INITIAL_DISPLAYED = 10;
+
+// Generate hexagon path for SVG
+function getHexagonPath(cx: number, cy: number, r: number): string {
+  const points: [number, number][] = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i - Math.PI / 2; // Start from top
+    points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+  }
+  return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ') + 'Z';
+}
 
 export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondaryConnections = [] }: EntityIntersectionGraphProps) {
   const { language } = useLanguage();
