@@ -893,14 +893,9 @@ export default function NewsArticlePage() {
             )}
           </article>
 
-            {/* Character Dialogue Section - MOBILE ONLY (below article) */}
-            <NewsDialogueSection
-              chatDialogue={chatDialogue as any}
-              isAdminAuthenticated={isAdminAuthenticated}
-              isGenerating={generateDialogueMutation.isPending}
-              onGenerateDialogue={() => generateDialogueMutation.mutate()}
-              className="mt-8 lg:hidden"
-            />
+
+            {/* Dialogue disabled for news (mobile) */}
+
 
             {/* Other Countries News - After navigation */}
             <OtherCountriesNews
