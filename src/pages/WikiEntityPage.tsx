@@ -4,8 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { 
   ArrowLeft, ExternalLink, User, Building2, Globe, Newspaper, 
-  RefreshCw, Trash2, TrendingUp, ImageIcon, Sparkles, Network,
-  Eye, Pencil, Loader2, Tag
+  RefreshCw, Trash2, ImageIcon, Sparkles, Network,
+  Eye, Pencil, Loader2, Tag, Search, Check, X
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminStore } from "@/stores/adminStore";
@@ -73,6 +75,15 @@ interface OutrageInk {
   dislikes: number;
 }
 
+interface ExtendedWikiData {
+  title: string;
+  extract: string;
+  description?: string;
+  image?: string;
+  categories?: string[];
+  infobox?: Record<string, string>;
+}
+
 export default function WikiEntityPage() {
   const { entityId } = useParams<{ entityId: string }>();
   const { language } = useLanguage();
@@ -80,6 +91,9 @@ export default function WikiEntityPage() {
   const [isEditingExtract, setIsEditingExtract] = useState(false);
   const [editedExtract, setEditedExtract] = useState("");
   const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [isExtendedParsing, setIsExtendedParsing] = useState(false);
+  const [extendedData, setExtendedData] = useState<ExtendedWikiData | null>(null);
+  const [selectedSections, setSelectedSections] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
 
   // Fetch entity data
@@ -127,9 +141,12 @@ export default function WikiEntityPage() {
     enabled: !!entityId,
   });
 
+  // Count total mentions (number of linked news)
+  const totalMentions = linkedNews.length;
+
   // Aggregate views from all news
   const { data: aggregatedViews = 0 } = useQuery({
-    queryKey: ['entity-views', entityId],
+    queryKey: ['entity-views', entityId, linkedNews.length],
     queryFn: async () => {
       const newsIds = linkedNews.map(n => n.id);
       if (!newsIds.length) return 0;
@@ -210,26 +227,35 @@ export default function WikiEntityPage() {
     enabled: !!entityId,
   });
 
-  // Fetch caricatures
+  // Fetch caricatures - fix the query
   const { data: caricatures = [] } = useQuery({
     queryKey: ['entity-caricatures', entityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get entity links to outrage_ink
+      const { data: links, error: linkError } = await supabase
         .from('outrage_ink_entities')
-        .select(`
-          outrage_ink_id,
-          outrage_ink:outrage_ink(id, image_url, title, likes, dislikes)
-        `)
+        .select('outrage_ink_id')
         .eq('wiki_entity_id', entityId);
 
-      if (error) {
-        console.error('Caricatures error:', error);
+      if (linkError || !links?.length) {
+        console.log('No outrage_ink_entities links found for entity:', entityId);
         return [];
       }
 
-      return data
-        .filter(d => d.outrage_ink)
-        .map(d => d.outrage_ink as OutrageInk);
+      const inkIds = links.map(l => l.outrage_ink_id);
+      
+      // Then fetch the actual outrage_ink records
+      const { data: inks, error: inkError } = await supabase
+        .from('outrage_ink')
+        .select('id, image_url, title, likes, dislikes')
+        .in('id', inkIds);
+
+      if (inkError) {
+        console.error('Caricatures fetch error:', inkError);
+        return [];
+      }
+
+      return (inks || []) as OutrageInk[];
     },
     enabled: !!entityId,
   });
@@ -310,6 +336,82 @@ export default function WikiEntityPage() {
     }
   };
 
+  // Extended Wikipedia parsing
+  const runExtendedParsing = async () => {
+    if (!entity) return;
+    setIsExtendedParsing(true);
+    try {
+      const result = await callEdgeFunction<{ 
+        success: boolean; 
+        data?: ExtendedWikiData; 
+        error?: string 
+      }>('search-wiki', {
+        action: 'extended_parse',
+        wikiUrl: entity.wiki_url,
+        language: language === 'uk' ? 'uk' : 'en',
+      });
+      
+      if (result.success && result.data) {
+        setExtendedData(result.data);
+        setSelectedSections(new Set(['extract']));
+      } else {
+        throw new Error(result.error || 'Extended parsing failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsExtendedParsing(false);
+    }
+  };
+
+  // Apply selected sections from extended data
+  const applyExtendedData = async () => {
+    if (!extendedData) return;
+    
+    const updates: Record<string, string | null> = {};
+    
+    if (selectedSections.has('extract') && extendedData.extract) {
+      const field = language === 'en' ? 'extract_en' : 'extract';
+      updates[field] = extendedData.extract;
+    }
+    if (selectedSections.has('description') && extendedData.description) {
+      const field = language === 'en' ? 'description_en' : 'description';
+      updates[field] = extendedData.description;
+    }
+    if (selectedSections.has('image') && extendedData.image) {
+      updates['image_url'] = extendedData.image;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      toast.info('Нічого не вибрано');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('wiki_entities')
+      .update(updates)
+      .eq('id', entityId);
+
+    if (error) {
+      toast.error('Помилка збереження');
+      return;
+    }
+
+    toast.success('Дані оновлено');
+    setExtendedData(null);
+    queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] });
+  };
+
+  const toggleSection = (section: string) => {
+    const newSet = new Set(selectedSections);
+    if (newSet.has(section)) {
+      newSet.delete(section);
+    } else {
+      newSet.add(section);
+    }
+    setSelectedSections(newSet);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -375,6 +477,17 @@ export default function WikiEntityPage() {
             <span className="text-foreground">{name}</span>
           </div>
 
+          {/* Big Rating Block */}
+          {aggregatedViews > 0 && (
+            <div className="mb-6 flex items-center justify-center gap-3 py-4 px-6 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 rounded-xl border border-primary/20">
+              <Eye className="w-8 h-8 text-primary" />
+              <span className="text-3xl font-bold text-primary">{aggregatedViews.toLocaleString()}</span>
+              <span className="text-lg text-muted-foreground">
+                {language === 'uk' ? 'переглядів' : 'views'}
+              </span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Column */}
             <div className="lg:col-span-2 space-y-6">
@@ -418,6 +531,7 @@ export default function WikiEntityPage() {
                             size="icon"
                             onClick={() => refreshMutation.mutate()}
                             disabled={refreshMutation.isPending}
+                            title="Оновити з Wikipedia"
                           >
                             <RefreshCw className={`w-4 h-4 ${refreshMutation.isPending ? 'animate-spin' : ''}`} />
                           </Button>
@@ -430,6 +544,7 @@ export default function WikiEntityPage() {
                               }
                             }}
                             disabled={deleteMutation.isPending}
+                            title="Видалити"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -441,18 +556,8 @@ export default function WikiEntityPage() {
                     <div className="flex flex-wrap gap-4 mt-4 text-sm">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Newspaper className="w-4 h-4" />
-                        <span>{linkedNews.length} {language === 'uk' ? 'новин' : 'news articles'}</span>
+                        <span>{totalMentions} {language === 'uk' ? 'новин' : 'news articles'}</span>
                       </div>
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <TrendingUp className="w-4 h-4" />
-                        <span>{entity.search_count} {language === 'uk' ? 'згадок' : 'mentions'}</span>
-                      </div>
-                      {aggregatedViews > 0 && (
-                        <div className="flex items-center gap-1 text-primary font-medium">
-                          <Eye className="w-4 h-4" />
-                          <span>{aggregatedViews.toLocaleString()}</span>
-                        </div>
-                      )}
                     </div>
 
                     {/* Wikipedia Link */}
@@ -496,23 +601,38 @@ export default function WikiEntityPage() {
               {/* Key Information Block */}
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <Sparkles className="w-5 h-5 text-primary" />
                       {language === 'uk' ? 'Ключова інформація' : 'Key Information'}
                     </CardTitle>
                     {isAdmin && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEditedExtract(extract || '');
-                          setIsEditingExtract(true);
-                        }}
-                      >
-                        <Pencil className="w-4 h-4 mr-1" />
-                        {language === 'uk' ? 'Редагувати' : 'Edit'}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={runExtendedParsing}
+                          disabled={isExtendedParsing}
+                        >
+                          {isExtendedParsing ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Search className="w-4 h-4 mr-1" />
+                          )}
+                          {language === 'uk' ? 'Розширений парсінг' : 'Extended Parse'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditedExtract(extract || '');
+                            setIsEditingExtract(true);
+                          }}
+                        >
+                          <Pencil className="w-4 h-4 mr-1" />
+                          {language === 'uk' ? 'Редагувати' : 'Edit'}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </CardHeader>
@@ -571,7 +691,7 @@ export default function WikiEntityPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <ImageIcon className="w-5 h-5 text-primary" />
-                      {language === 'uk' ? 'Карикатури' : 'Caricatures'}
+                      {language === 'uk' ? 'Карикатури' : 'Caricatures'} ({caricatures.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -716,26 +836,112 @@ export default function WikiEntityPage() {
                     </span>
                     <span>{format(new Date(entity.created_at), 'dd.MM.yyyy')}</span>
                   </div>
-                  {entity.last_searched_at && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {language === 'uk' ? 'Останній пошук' : 'Last search'}
-                      </span>
-                      <span>{format(new Date(entity.last_searched_at), 'dd.MM.yyyy HH:mm')}</span>
-                    </div>
-                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">
-                      {language === 'uk' ? 'Всього згадок' : 'Total mentions'}
+                      {language === 'uk' ? 'Згадок у новинах' : 'News mentions'}
                     </span>
-                    <span>{entity.search_count}</span>
+                    <span className="font-medium">{totalMentions}</span>
                   </div>
+                  {aggregatedViews > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Eye className="w-4 h-4" />
+                        {language === 'uk' ? 'Переглядів' : 'Views'}
+                      </span>
+                      <span className="font-medium text-primary">{aggregatedViews.toLocaleString()}</span>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
           </div>
         </main>
       </div>
+
+      {/* Extended Parsing Modal */}
+      <Dialog open={!!extendedData} onOpenChange={() => setExtendedData(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'uk' ? 'Знайдені дані з Wikipedia' : 'Wikipedia Data Found'}
+            </DialogTitle>
+          </DialogHeader>
+
+          {extendedData && (
+            <div className="space-y-4">
+              {/* Title */}
+              <div className="p-3 border rounded-lg">
+                <p className="font-medium">{extendedData.title}</p>
+              </div>
+
+              {/* Description */}
+              {extendedData.description && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedSections.has('description')}
+                      onCheckedChange={() => toggleSection('description')}
+                    />
+                    <span className="font-medium">{language === 'uk' ? 'Опис' : 'Description'}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-6">{extendedData.description}</p>
+                </div>
+              )}
+
+              {/* Extract */}
+              {extendedData.extract && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedSections.has('extract')}
+                      onCheckedChange={() => toggleSection('extract')}
+                    />
+                    <span className="font-medium">{language === 'uk' ? 'Повний текст' : 'Full Text'}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-6 line-clamp-6">{extendedData.extract}</p>
+                </div>
+              )}
+
+              {/* Image */}
+              {extendedData.image && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedSections.has('image')}
+                      onCheckedChange={() => toggleSection('image')}
+                    />
+                    <span className="font-medium">{language === 'uk' ? 'Зображення' : 'Image'}</span>
+                  </div>
+                  <img src={extendedData.image} alt="" className="w-32 h-32 object-cover rounded ml-6" />
+                </div>
+              )}
+
+              {/* Categories */}
+              {extendedData.categories && extendedData.categories.length > 0 && (
+                <div className="space-y-2">
+                  <span className="font-medium">{language === 'uk' ? 'Категорії' : 'Categories'}</span>
+                  <div className="flex flex-wrap gap-1">
+                    {extendedData.categories.slice(0, 10).map((cat, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">{cat}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setExtendedData(null)}>
+              <X className="w-4 h-4 mr-1" />
+              {language === 'uk' ? 'Скасувати' : 'Cancel'}
+            </Button>
+            <Button onClick={applyExtendedData} disabled={selectedSections.size === 0}>
+              <Check className="w-4 h-4 mr-1" />
+              {language === 'uk' ? 'Застосувати вибране' : 'Apply Selected'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -212,11 +212,89 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Handle extended Wikipedia parsing
+    if (action === 'extended_parse') {
+      const { wikiUrl, language: lang = 'en' } = body;
+      
+      if (!wikiUrl) {
+        return new Response(JSON.stringify({ success: false, error: 'wikiUrl required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      try {
+        // Extract title from URL
+        const urlMatch = wikiUrl.match(/\/wiki\/(.+)$/);
+        if (!urlMatch) {
+          throw new Error('Invalid Wikipedia URL');
+        }
+        const pageTitle = decodeURIComponent(urlMatch[1].replace(/_/g, ' '));
+        
+        // Determine Wikipedia language from URL
+        const langMatch = wikiUrl.match(/https?:\/\/([a-z]+)\.wikipedia\.org/);
+        const wikiLang = langMatch ? langMatch[1] : 'en';
+        
+        const baseUrl = `https://${wikiLang}.wikipedia.org/w/api.php`;
+        
+        // Fetch extended page data
+        const params = new URLSearchParams({
+          action: 'query',
+          format: 'json',
+          prop: 'extracts|pageimages|categories|description',
+          exintro: 'false',
+          explaintext: 'true',
+          exsectionformat: 'plain',
+          piprop: 'original',
+          cllimit: '20',
+          titles: pageTitle,
+          redirects: '1',
+        });
+
+        const response = await fetch(`${baseUrl}?${params}`);
+        const data = await response.json();
+        
+        const pages = data.query?.pages;
+        if (!pages) {
+          throw new Error('No pages found');
+        }
+        
+        const pageId = Object.keys(pages)[0];
+        if (pageId === '-1') {
+          throw new Error('Page not found');
+        }
+        
+        const page = pages[pageId];
+        
+        // Extract categories
+        const categories = page.categories?.map((c: any) => 
+          c.title.replace(/^Category:/, '').replace(/^Категорія:/, '')
+        ) || [];
+        
+        const extendedData = {
+          title: page.title,
+          extract: page.extract?.slice(0, 5000) || '',
+          description: page.description || '',
+          image: page.original?.source || null,
+          categories,
+        };
+
+        return new Response(JSON.stringify({ success: true, data: extendedData }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (err) {
+        console.error('Extended parse error:', err);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: err instanceof Error ? err.message : 'Parse failed' 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+    
     // Determine search terms
     let searchTerms: string[] = terms || [];
     if (searchTerms.length === 0 && (title || keywords)) {
