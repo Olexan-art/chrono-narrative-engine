@@ -37,6 +37,14 @@ interface EntityIntersectionGraphProps {
 const MAX_DISPLAYED_ENTITIES = 24;
 const INITIAL_DISPLAYED = 18;
 
+// Node size configuration - tiered by connection level
+const NODE_SIZES = {
+  root: { base: 48, outer: 56 },     // Main entity - largest
+  first: { base: 32, min: 28 },      // First-level connections - large
+  second: { base: 24, min: 20 },     // Second-level - medium
+  third: { base: 18, min: 16 },      // Third-level - small
+};
+
 // Generate hexagon path for SVG
 function getHexagonPath(cx: number, cy: number, r: number): string {
   const points: [number, number][] = [];

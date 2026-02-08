@@ -97,16 +97,20 @@ export const LatestUsaNews = memo(function LatestUsaNews() {
                 style={{ animationDelay: `${idx * 75}ms` }}
               >
                 <article className="cosmic-card h-full border border-primary/20 bg-primary/5 hover:border-primary/50 hover:bg-primary/10 transition-all duration-300 overflow-hidden flex">
-                  {item.image_url && (
-                    <div className="relative w-24 md:w-32 shrink-0 overflow-hidden">
+                  <div className="relative w-24 md:w-32 shrink-0 overflow-hidden">
+                    {item.image_url ? (
                       <OptimizedImage 
                         src={item.image_url} 
                         alt="" 
                         priority={idx < 2}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                    </div>
-                  )}
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/10 via-primary/5 to-primary/10 flex items-center justify-center">
+                        <Sparkles className="w-8 h-8 text-primary/30" />
+                      </div>
+                    )}
+                  </div>
                   <div className="p-3 flex-1 min-w-0 flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <span className="inline-flex items-center text-[10px] px-1 py-0 h-4 border border-primary/30 text-primary rounded-sm">
