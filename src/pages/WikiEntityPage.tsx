@@ -217,11 +217,15 @@ export default function WikiEntityPage() {
       const { data, error } = await supabase
         .from('outrage_ink_entities')
         .select(`
+          outrage_ink_id,
           outrage_ink:outrage_ink(id, image_url, title, likes, dislikes)
         `)
         .eq('wiki_entity_id', entityId);
 
-      if (error) return [];
+      if (error) {
+        console.error('Caricatures error:', error);
+        return [];
+      }
 
       return data
         .filter(d => d.outrage_ink)
@@ -264,6 +268,47 @@ export default function WikiEntityPage() {
       toast.error(err.message);
     },
   });
+
+  // Save extract mutation
+  const saveExtractMutation = useMutation({
+    mutationFn: async (newExtract: string) => {
+      const field = language === 'en' ? 'extract_en' : 'extract';
+      const { error } = await supabase
+        .from('wiki_entities')
+        .update({ [field]: newExtract })
+        .eq('id', entityId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Збережено');
+      setIsEditingExtract(false);
+      queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] });
+    },
+  });
+
+  // AI format extract
+  const formatWithAi = async () => {
+    setIsAiProcessing(true);
+    try {
+      const result = await callEdgeFunction<{ success: boolean; formatted?: string; error?: string }>('search-wiki', {
+        action: 'format_extract',
+        entityId,
+        currentExtract: editedExtract || extract,
+        entityName: name,
+        language: language === 'uk' ? 'uk' : 'en',
+      });
+      if (result.success && result.formatted) {
+        setEditedExtract(result.formatted);
+        toast.success('Відформатовано');
+      } else {
+        throw new Error(result.error || 'AI formatting failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsAiProcessing(false);
+    }
+  };
 
   if (isLoading) {
     return (
