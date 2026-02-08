@@ -208,12 +208,12 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.volumes': 'Volumes',
     'nav.calendar': 'Calendar',
     'nav.admin': 'Admin',
-    'header.subtitle': 'AI ARCHIVE OF HUMAN HISTORY',
+    'header.subtitle': 'ARCHIVE OF HUMAN HISTORY',
     
     // Hero
-    'hero.badge': 'AI-GENERATED SCIENCE FICTION',
+    'hero.badge': 'SMART NEWS',
     'hero.title': 'Synchronization Point',
-    'hero.description': 'A book that writes itself. An AI archivist structures the chaos of human history through the lens of science fiction.',
+    'hero.description': 'A book that writes itself. An archivist structures the chaos of human history through the lens of news, generating daily stories from real-world news.',
     'hero.archive': 'Browse Archive',
     'hero.latest': 'Read Latest',
     'hero.allUsNews': 'All USA News',
