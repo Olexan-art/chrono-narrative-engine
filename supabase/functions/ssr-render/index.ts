@@ -444,6 +444,50 @@ Deno.serve(async (req) => {
         // Extract wiki entities from response
         const wikiEntities = (wikiLinks || []).map((link: any) => link.wiki_entity).filter(Boolean);
         
+        // Find the most mentioned entity (for Entity Intersection Graph)
+        let mainEntityForGraph: any = null;
+        let relatedEntitiesForGraph: any[] = [];
+        
+        if (wikiEntities.length > 0) {
+          // Use the first entity as main (most relevant based on order)
+          mainEntityForGraph = wikiEntities[0];
+          
+          // Find other entities mentioned with this main entity in other news
+          if (mainEntityForGraph) {
+            const { data: relatedNewsLinks } = await supabase
+              .from("news_wiki_entities")
+              .select("news_item_id")
+              .eq("wiki_entity_id", mainEntityForGraph.id)
+              .neq("news_item_id", newsItem.id)
+              .limit(50);
+            
+            if (relatedNewsLinks && relatedNewsLinks.length > 0) {
+              const relatedNewsIds = relatedNewsLinks.map((l: any) => l.news_item_id);
+              
+              const { data: otherEntityLinks } = await supabase
+                .from("news_wiki_entities")
+                .select("wiki_entity:wiki_entities(id, name, name_en, slug, image_url, entity_type)")
+                .in("news_item_id", relatedNewsIds)
+                .neq("wiki_entity_id", mainEntityForGraph.id);
+              
+              // Count and dedupe
+              const entityCounts = new Map<string, { entity: any; count: number }>();
+              for (const link of otherEntityLinks || []) {
+                if (!link.wiki_entity) continue;
+                const e = link.wiki_entity as any;
+                const existing = entityCounts.get(e.id);
+                if (existing) existing.count++;
+                else entityCounts.set(e.id, { entity: e, count: 1 });
+              }
+              
+              relatedEntitiesForGraph = Array.from(entityCounts.values())
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 12)
+                .map(({ entity: e, count }) => ({ ...e, shared_news_count: count }));
+            }
+          }
+        }
+        
         // Fetch "Other countries" news (3 per country)
         const otherCountries = (allCountries || []).filter((c: any) => c.id !== newsItem.country_id);
         const otherCountriesNewsPromises = otherCountries.map((c: any) =>
