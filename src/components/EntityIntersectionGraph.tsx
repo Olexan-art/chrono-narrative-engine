@@ -39,7 +39,7 @@ const INITIAL_DISPLAYED = 18;
 
 // Node size configuration - tiered by connection level
 const NODE_SIZES = {
-  root: { base: 56, outer: 68 },     // Main entity - largest
+  root: { base: 72, outer: 88 },     // Main entity - largest (squared, bigger)
   first: { base: 32, min: 28 },      // First-level connections - large
   second: { base: 24, min: 20 },     // Second-level - medium
   third: { base: 18, min: 16 },      // Third-level - small
@@ -53,6 +53,23 @@ function getHexagonPath(cx: number, cy: number, r: number): string {
     points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
   }
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ') + 'Z';
+}
+
+// Generate rounded square path for root node
+function getRoundedSquarePath(cx: number, cy: number, size: number, radius: number = 12): string {
+  const half = size / 2;
+  const x = cx - half;
+  const y = cy - half;
+  return `M ${x + radius} ${y}
+    L ${x + size - radius} ${y}
+    Q ${x + size} ${y} ${x + size} ${y + radius}
+    L ${x + size} ${y + size - radius}
+    Q ${x + size} ${y + size} ${x + size - radius} ${y + size}
+    L ${x + radius} ${y + size}
+    Q ${x} ${y + size} ${x} ${y + size - radius}
+    L ${x} ${y + radius}
+    Q ${x} ${y} ${x + radius} ${y}
+    Z`;
 }
 
 // Calculate tree positions - hierarchical layout with more levels
