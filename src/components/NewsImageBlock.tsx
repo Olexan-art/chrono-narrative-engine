@@ -315,23 +315,30 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
     if (!isAdmin) {
       const domain = getSourceDomain();
       return (
-        <div className="relative mb-4">
-          <div className="w-full aspect-video max-h-64 bg-gradient-to-br from-muted/50 via-card/80 to-muted/50 rounded-lg border border-border/50 flex flex-col items-center justify-center gap-4 backdrop-blur-sm shadow-inner">
+        <div className="relative mb-6">
+          <div className="w-full min-h-[200px] sm:min-h-[280px] bg-gradient-to-br from-primary/5 via-card to-muted/30 rounded-xl border-2 border-dashed border-primary/20 flex flex-col items-center justify-center gap-5 shadow-lg">
             <div className="relative">
-              <div className="absolute inset-0 bg-primary/15 rounded-full blur-2xl scale-[2]" />
-              <img 
-                src={getSourceLogo()} 
-                alt={domain || "Source"} 
-                className="w-16 h-16 sm:w-20 sm:h-20 relative z-10 opacity-80 hover:opacity-100 transition-opacity drop-shadow-lg"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/favicon.png';
-                }}
-              />
+              <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl scale-[3]" />
+              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-card/80 border border-border/50 flex items-center justify-center shadow-xl relative z-10">
+                <img 
+                  src={getSourceLogo()} 
+                  alt={domain || "Source"} 
+                  className="w-16 h-16 sm:w-20 sm:h-20 opacity-90 hover:opacity-100 transition-opacity"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/favicon.png';
+                  }}
+                />
+              </div>
             </div>
             {domain && (
-              <span className="text-sm text-muted-foreground/80 font-mono tracking-wide">
-                {domain}
-              </span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-sm sm:text-base text-foreground/70 font-medium">
+                  {language === 'en' ? 'Source' : language === 'pl' ? 'Źródło' : 'Джерело'}
+                </span>
+                <span className="text-base sm:text-lg text-primary font-mono tracking-wide">
+                  {domain}
+                </span>
+              </div>
             )}
           </div>
         </div>
