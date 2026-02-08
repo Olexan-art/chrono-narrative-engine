@@ -6,7 +6,8 @@ import {
   ArrowLeft, ExternalLink, User, Building2, Globe, Newspaper, 
   RefreshCw, Trash2, ImageIcon, Sparkles, Network,
   Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight,
-  Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit
+  Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit,
+  Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -20,6 +21,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { EntityViewsChart } from "@/components/EntityViewsChart";
+import { MarkdownContent } from "@/components/MarkdownContent";
+import { EntityIntersectionGraph } from "@/components/EntityIntersectionGraph";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminStore } from "@/stores/adminStore";
