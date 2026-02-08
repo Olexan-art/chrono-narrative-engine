@@ -27,6 +27,9 @@ const SSR_PATTERNS = [
   /^\/volumes$/,
   /^\/calendar$/,
   /^\/sitemap$/,
+  /^\/wiki$/,
+  /^\/wiki\/[a-z0-9-]+$/,
+  /^\/ink-abyss$/,
 ];
 
 function isBot(userAgent: string): boolean {

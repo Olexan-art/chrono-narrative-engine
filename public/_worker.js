@@ -129,6 +129,9 @@ function shouldSSR(pathname) {
     /^\/volumes$/,
     /^\/calendar$/,
     /^\/sitemap$/,
+    /^\/wiki$/,
+    /^\/wiki\/[a-z0-9-]+$/,
+    /^\/ink-abyss$/,
   ];
   
   return ssrPatterns.some(pattern => pattern.test(pathname));
