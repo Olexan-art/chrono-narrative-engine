@@ -243,21 +243,17 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               </radialGradient>
             </defs>
 
-            {/* Background decorative circles */}
-            <circle
-              cx={200}
-              cy={200}
-              r={160}
+            {/* Background decorative hexagon */}
+            <path
+              d={getHexagonPath(220, 220, 180)}
               fill="none"
               stroke="hsl(var(--border))"
               strokeWidth={1}
               strokeDasharray="4 8"
               opacity={0.3}
             />
-            <circle
-              cx={200}
-              cy={200}
-              r={100}
+            <path
+              d={getHexagonPath(220, 220, 110)}
               fill="none"
               stroke="hsl(var(--primary))"
               strokeWidth={1}
