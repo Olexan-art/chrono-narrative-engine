@@ -396,6 +396,44 @@ export default function WikiEntityPage() {
       .slice(0, 20);
   }, [allLinkedNews]);
 
+  // Fetch Wikipedia categories automatically
+  const { data: wikiCategories = [] } = useQuery({
+    queryKey: ['wiki-categories', entity?.id, entity?.wiki_url],
+    queryFn: async (): Promise<string[]> => {
+      if (!entity?.wiki_url) return [];
+      
+      try {
+        // Extract page title from wiki URL
+        const url = new URL(entity.wiki_url);
+        const pathParts = url.pathname.split('/');
+        const pageTitle = pathParts[pathParts.length - 1];
+        
+        // Determine wiki language
+        const wikiLang = url.hostname.includes('uk.wikipedia') ? 'uk' : 'en';
+        
+        // Fetch categories from Wikipedia API
+        const apiUrl = `https://${wikiLang}.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(pageTitle)}&prop=categories&cllimit=20&format=json&origin=*`;
+        
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        
+        const pages = data?.query?.pages;
+        if (!pages) return [];
+        
+        const pageId = Object.keys(pages)[0];
+        const categories = pages[pageId]?.categories || [];
+        
+        return categories
+          .map((c: { title: string }) => c.title.replace(/^(Category:|Категорія:)/i, ''))
+          .filter((c: string) => !c.includes('Вікіпедія') && !c.includes('Wikipedia') && !c.includes('Articles') && c.length < 60);
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!entity?.wiki_url,
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+  });
+
   // Fetch related entities (entities that appear in the same news)
   const { data: relatedEntities = [] } = useQuery({
     queryKey: ['related-entities', entity?.id],
