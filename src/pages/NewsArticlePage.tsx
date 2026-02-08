@@ -681,6 +681,7 @@ export default function NewsArticlePage() {
                   keyPoints={keyPoints}
                   hasRetelling={!!(article.content_en && article.content_en.length > 100)}
                   isAdmin={isAdminAuthenticated}
+                  sourceUrl={(article as any).url}
                   onImageUpdate={() => queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] })}
                 />
 
