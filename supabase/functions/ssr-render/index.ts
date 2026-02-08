@@ -513,7 +513,7 @@ Deno.serve(async (req) => {
           }));
         }
         
-        html = generateNewsHTML(newsItem, lang, canonicalUrl, moreFromCountry || [], otherCountriesNews, wikiEntities);
+        html = generateNewsHTML(newsItem, lang, canonicalUrl, moreFromCountry || [], otherCountriesNews, wikiEntities, mainEntityForGraph, relatedEntitiesForGraph);
       }
     } else if (newsCountryMatch) {
       // News country listing page: /news/us - include cross-country links
