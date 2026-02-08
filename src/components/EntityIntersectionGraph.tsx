@@ -319,8 +319,8 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                 <g key={`line-${entity.id}`}>
                   {/* Outer glow effect line */}
                   <line
-                    x1={200}
-                    y1={200}
+                    x1={220}
+                    y1={220}
                     x2={positions[index].x}
                     y2={positions[index].y}
                     stroke="hsl(var(--primary))"
@@ -331,8 +331,8 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   />
                   {/* Pulsing background line */}
                   <line
-                    x1={200}
-                    y1={200}
+                    x1={220}
+                    y1={220}
                     x2={positions[index].x}
                     y2={positions[index].y}
                     stroke="hsl(var(--primary))"
@@ -347,8 +347,8 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   />
                   {/* Main line with gradient */}
                   <line
-                    x1={200}
-                    y1={200}
+                    x1={220}
+                    y1={220}
                     x2={positions[index].x}
                     y2={positions[index].y}
                     stroke="url(#lineGradientPulse)"
