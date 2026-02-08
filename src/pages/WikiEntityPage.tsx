@@ -1101,38 +1101,6 @@ export default function WikiEntityPage() {
                 <EntityViewsChart data={dailyViews} />
               )}
 
-              {/* Topics Block with Icons - Enhanced Design */}
-              {sortedTopics.length > 0 && (
-                <Card className="overflow-hidden">
-                  <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-transparent">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Tag className="w-5 h-5 text-primary" />
-                      {language === 'uk' ? 'Теми' : 'Topics'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {sortedTopics.map(([topic, count]) => {
-                        const { icon, color } = getTopicIcon(topic);
-                        return (
-                          <div 
-                            key={topic} 
-                            className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors group"
-                          >
-                            <div className={`p-2 rounded-lg bg-background shadow-sm ${color} group-hover:scale-110 transition-transform`}>
-                              {icon}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate" title={topic}>{topic}</p>
-                              <p className="text-xs text-muted-foreground">{count} {language === 'uk' ? 'новин' : 'news'}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
               {/* Entity Intersection Graph */}
               {relatedEntities.length > 0 && (
