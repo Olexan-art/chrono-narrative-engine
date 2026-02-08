@@ -223,6 +223,46 @@ export default function WikiCatalogPage() {
             </div>
           )}
 
+          {/* Letter Filter Active */}
+          {letterFilter && (
+            <div className="mb-6 flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">
+                {language === 'uk' ? 'Фільтр за літерою:' : 'Letter filter:'}
+              </span>
+              <Badge variant="secondary" className="text-sm gap-1">
+                {letterFilter}
+                <button onClick={clearLetterFilter} className="hover:text-destructive ml-1">
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            </div>
+          )}
+
+          {/* Alphabet Filter */}
+          <div className="mb-6 overflow-x-auto">
+            <div className="flex gap-1 min-w-max pb-2">
+              <Button
+                variant={!letterFilter ? 'default' : 'ghost'}
+                size="sm"
+                className="min-w-[32px] h-8 px-2"
+                onClick={clearLetterFilter}
+              >
+                {language === 'uk' ? 'Всі' : 'All'}
+              </Button>
+              {alphabet.map((letter) => (
+                <Button
+                  key={letter}
+                  variant={letterFilter === letter ? 'default' : 'ghost'}
+                  size="sm"
+                  className="min-w-[32px] h-8 px-2 font-medium"
+                  onClick={() => setLetterFilter(letter)}
+                >
+                  {letter}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {/* Trending Entities - Top 4 by 72h mentions */}
           <div className="mb-8">
             <TrendingEntities />
