@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { 
   Calendar, BookOpen, Library, Newspaper, ChevronRight, 
-  Globe, Loader2, MapPin 
+  Globe, Loader2, MapPin, Users
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SEOHead } from "@/components/SEOHead";
