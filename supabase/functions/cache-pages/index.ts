@@ -295,18 +295,20 @@ async function getAllPagesToCache(
     }
   }
 
-  // Add wiki entity pages (top 100 by search count)
+  // Add wiki entity pages (top 500 by search count) - use slug for SEO-friendly URLs
   if (filter !== 'news-7d' && filter !== 'recent-24h') {
     const { data: wikiEntities } = await supabase
       .from('wiki_entities')
-      .select('id')
+      .select('id, slug')
       .order('search_count', { ascending: false })
-      .limit(100);
+      .limit(500);
 
     if (wikiEntities) {
       console.log(`Found ${wikiEntities.length} wiki entities to cache`);
       for (const entity of wikiEntities) {
-        pages.push(`/wiki/${entity.id}`);
+        // Use slug if available, otherwise fallback to id
+        const entityPath = entity.slug || entity.id;
+        pages.push(`/wiki/${entityPath}`);
       }
     }
   }
