@@ -1295,14 +1295,10 @@ export default function NewsArticlePage() {
             />
 
 
-            {/* Character Dialogue Section - DESKTOP ONLY (in sidebar) */}
-            <NewsDialogueSection
-              chatDialogue={chatDialogue as any}
-              isAdminAuthenticated={isAdminAuthenticated}
-              isGenerating={generateDialogueMutation.isPending}
-              onGenerateDialogue={() => generateDialogueMutation.mutate()}
-              className="hidden lg:block"
-            />
+
+
+            {/* Dialogue disabled for news */}
+
 
             {/* Related Country News - DESKTOP ONLY */}
             <RelatedCountryNews
