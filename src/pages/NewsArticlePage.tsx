@@ -1042,10 +1042,8 @@ export default function NewsArticlePage() {
                           toast.info(language === 'en' ? 'Starting full retelling...' : language === 'pl' ? 'Rozpoczynam pełny przekaz...' : 'Запускаю повний переказ...');
                           // Run retell first
                           await retellNewsMutation.mutateAsync();
-                          // Then generate tweets
-                          await generateTweetsMutation.mutateAsync();
-                          // Then generate dialogue
-                          await generateDialogueMutation.mutateAsync();
+                          // Social content disabled (no tweets/dialogue)
+
                           toast.success(language === 'en' ? 'Full retelling complete!' : language === 'pl' ? 'Pełny przekaz zakończony!' : 'Повний переказ завершено!');
                         } catch (error) {
                           console.error('Full retelling failed:', error);
