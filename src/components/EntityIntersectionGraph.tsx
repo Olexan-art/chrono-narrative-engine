@@ -32,18 +32,74 @@ interface EntityIntersectionGraphProps {
   secondaryConnections?: SecondaryConnection[];
 }
 
-// Optimized: increased display limits for better visualization
-const MAX_DISPLAYED_ENTITIES = 12;
-const INITIAL_DISPLAYED = 10;
+// Tree layout configuration
+const MAX_DISPLAYED_ENTITIES = 15;
+const INITIAL_DISPLAYED = 12;
 
 // Generate hexagon path for SVG
 function getHexagonPath(cx: number, cy: number, r: number): string {
   const points: [number, number][] = [];
   for (let i = 0; i < 6; i++) {
-    const angle = (Math.PI / 3) * i - Math.PI / 2; // Start from top
+    const angle = (Math.PI / 3) * i - Math.PI / 2;
     points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
   }
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ') + 'Z';
+}
+
+// Calculate tree positions - hierarchical layout
+function calculateTreePositions(entityCount: number, containerWidth: number, containerHeight: number) {
+  const positions: { x: number; y: number; level: number }[] = [];
+  
+  if (entityCount === 0) return positions;
+  
+  // Define levels based on entity count
+  const levels: number[] = [];
+  let remaining = entityCount;
+  let currentLevel = 0;
+  
+  // First level has fewer items, then expand
+  const levelSizes = [3, 4, 5, 6]; // Max items per level
+  
+  while (remaining > 0) {
+    const maxForLevel = levelSizes[Math.min(currentLevel, levelSizes.length - 1)];
+    const countForLevel = Math.min(remaining, maxForLevel);
+    levels.push(countForLevel);
+    remaining -= countForLevel;
+    currentLevel++;
+  }
+  
+  // Calculate vertical spacing
+  const levelCount = levels.length;
+  const startY = 120; // Start below the root
+  const endY = containerHeight - 60;
+  const levelHeight = levelCount > 1 ? (endY - startY) / (levelCount - 1) : 0;
+  
+  // Position entities on each level
+  let entityIndex = 0;
+  levels.forEach((count, levelIdx) => {
+    const y = startY + levelIdx * levelHeight;
+    const levelWidth = containerWidth - 100;
+    const spacing = count > 1 ? levelWidth / (count - 1) : 0;
+    const startX = count > 1 ? 50 : containerWidth / 2;
+    
+    for (let i = 0; i < count; i++) {
+      const x = count > 1 ? startX + i * spacing : startX;
+      positions.push({ x, y, level: levelIdx });
+      entityIndex++;
+    }
+  });
+  
+  return positions;
+}
+
+// Generate curved path for tree connections
+function getTreeConnectionPath(
+  fromX: number, fromY: number, 
+  toX: number, toY: number,
+  curveStrength: number = 0.5
+): string {
+  const midY = fromY + (toY - fromY) * curveStrength;
+  return `M ${fromX} ${fromY} C ${fromX} ${midY}, ${toX} ${midY}, ${toX} ${toY}`;
 }
 
 export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondaryConnections = [] }: EntityIntersectionGraphProps) {
@@ -51,7 +107,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const [showAll, setShowAll] = useState(false);
   const [showSecondary, setShowSecondary] = useState(true);
 
-  // Limit entities for performance - sort by relevance first
+  // Sort by relevance
   const sortedEntities = useMemo(() => 
     [...relatedEntities].sort((a, b) => b.shared_news_count - a.shared_news_count),
     [relatedEntities]
@@ -65,26 +121,25 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const hasMore = sortedEntities.length > INITIAL_DISPLAYED;
   const remainingCount = Math.min(sortedEntities.length, MAX_DISPLAYED_ENTITIES) - INITIAL_DISPLAYED;
 
-  // Calculate positions for entities in a circular layout - memoized
-  const positions = useMemo(() => {
-    const centerX = 220;
-    const centerY = 220;
-    const radius = 160;
-    
-    return displayedEntities.map((_, index) => {
-      const angle = (2 * Math.PI * index) / displayedEntities.length - Math.PI / 2;
-      return {
-        x: centerX + radius * Math.cos(angle),
-        y: centerY + radius * Math.sin(angle),
-      };
-    });
-  }, [displayedEntities.length]);
+  // Container dimensions
+  const containerWidth = 500;
+  const containerHeight = 500;
+  const rootX = containerWidth / 2;
+  const rootY = 50;
+
+  // Calculate tree positions
+  const positions = useMemo(() => 
+    calculateTreePositions(displayedEntities.length, containerWidth, containerHeight),
+    [displayedEntities.length]
+  );
 
   // Create entity position map for secondary connections
   const entityPositionMap = useMemo(() => {
     const map = new Map<string, { x: number; y: number }>();
     displayedEntities.forEach((entity, index) => {
-      map.set(entity.id, positions[index]);
+      if (positions[index]) {
+        map.set(entity.id, { x: positions[index].x, y: positions[index].y });
+      }
     });
     return map;
   }, [displayedEntities, positions]);
@@ -105,19 +160,16 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   );
   
   const getLineWidth = (count: number) => {
-    const min = 2;
-    const max = 6;
+    const min = 1.5;
+    const max = 4;
     return min + ((count / maxCount) * (max - min));
   };
 
   const getOpacity = (count: number) => {
-    const min = 0.4;
+    const min = 0.5;
     const max = 1;
     return min + ((count / maxCount) * (max - min));
   };
-
-  // Assign pulse animation delay based on index
-  const getPulseDelay = (index: number) => `${index * 0.3}s`;
 
   if (relatedEntities.length === 0) return null;
 
@@ -154,27 +206,22 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
         )}
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="relative w-full aspect-square max-w-[500px] mx-auto">
+        <div className="relative w-full" style={{ maxWidth: `${containerWidth}px`, margin: '0 auto' }}>
           <svg 
-            viewBox="0 0 440 440" 
-            className="w-full h-full"
+            viewBox={`0 0 ${containerWidth} ${containerHeight}`}
+            className="w-full h-auto"
             style={{ overflow: 'visible' }}
           >
             {/* Definitions for gradients, filters, and animations */}
             <defs>
-              {/* Pulsing animation for lines */}
               <style>
                 {`
-                  @keyframes pulseOpacity {
-                    0%, 100% { opacity: 0.4; }
-                    50% { opacity: 1; }
+                  @keyframes flowDown {
+                    0% { stroke-dashoffset: 20; }
+                    100% { stroke-dashoffset: 0; }
                   }
-                  @keyframes pulseWidth {
-                    0%, 100% { stroke-width: var(--base-width); }
-                    50% { stroke-width: calc(var(--base-width) + 2); }
-                  }
-                  .pulse-line {
-                    animation: pulseOpacity 2s ease-in-out infinite, pulseWidth 2s ease-in-out infinite;
+                  .tree-line {
+                    animation: flowDown 2s linear infinite;
                   }
                   @keyframes dashMove {
                     0% { stroke-dashoffset: 20; }
@@ -183,27 +230,24 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   .secondary-line {
                     animation: dashMove 1s linear infinite;
                   }
+                  @keyframes pulse {
+                    0%, 100% { opacity: 0.6; }
+                    50% { opacity: 1; }
+                  }
+                  .pulse-node {
+                    animation: pulse 2s ease-in-out infinite;
+                  }
                 `}
               </style>
               
-              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <linearGradient id="treeLineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.9" />
-                <stop offset="50%" stopColor="hsl(var(--secondary))" stopOpacity="0.7" />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.4" />
-              </linearGradient>
-              
-              <linearGradient id="lineGradientPulse" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="1">
-                  <animate attributeName="stopOpacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" />
-                </stop>
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3">
-                  <animate attributeName="stopOpacity" values="0.3;0.8;0.3" dur="2s" repeatCount="indefinite" />
-                </stop>
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
               </linearGradient>
 
               <linearGradient id="secondaryGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.6" />
-                <stop offset="100%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.3" />
+                <stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.2" />
               </linearGradient>
               
               <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -222,16 +266,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                 </feMerge>
               </filter>
               
-              <filter id="lineGlow" x="-100%" y="-100%" width="300%" height="300%">
-                <feGaussianBlur stdDeviation="4" result="glow"/>
-                <feMerge>
-                  <feMergeNode in="glow"/>
-                  <feMergeNode in="glow"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-              
-              <radialGradient id="centerGradient" cx="50%" cy="50%" r="50%">
+              <radialGradient id="rootGradient" cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="hsl(var(--primary))" />
                 <stop offset="70%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
                 <stop offset="100%" stopColor="hsl(var(--secondary))" stopOpacity="0.6" />
@@ -243,23 +278,19 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               </radialGradient>
             </defs>
 
-            {/* Background decorative hexagon */}
-            <path
-              d={getHexagonPath(220, 220, 180)}
-              fill="none"
-              stroke="hsl(var(--border))"
-              strokeWidth={1}
-              strokeDasharray="4 8"
-              opacity={0.3}
-            />
-            <path
-              d={getHexagonPath(220, 220, 110)}
-              fill="none"
-              stroke="hsl(var(--primary))"
-              strokeWidth={1}
-              strokeDasharray="2 6"
-              opacity={0.2}
-            />
+            {/* Background tree structure lines (decorative) */}
+            <g opacity={0.1}>
+              {positions.map((pos, idx) => (
+                <line 
+                  key={`bg-${idx}`}
+                  x1={rootX} y1={rootY + 30}
+                  x2={pos.x} y2={pos.y}
+                  stroke="hsl(var(--border))"
+                  strokeWidth={1}
+                  strokeDasharray="4 8"
+                />
+              ))}
+            </g>
 
             {/* Secondary connections (entity-to-entity, not through main) */}
             {visibleSecondaryConnections.map((conn, index) => {
@@ -269,7 +300,6 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
 
               return (
                 <g key={`secondary-${conn.from.id}-${conn.to.id}`}>
-                  {/* Dashed secondary connection line */}
                   <line
                     x1={fromPos.x}
                     y1={fromPos.y}
@@ -281,9 +311,8 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                     strokeLinecap="round"
                     className="secondary-line"
                     style={{ animationDelay: `${index * 0.2}s` }}
-                    opacity={0.5}
+                    opacity={0.4}
                   />
-                  {/* Connection weight indicator in the middle */}
                   {conn.weight > 1 && (
                     <g>
                       <circle
@@ -310,127 +339,99 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               );
             })}
 
-            {/* Primary connection lines with pulsing animation */}
+            {/* Tree connection lines from root to entities */}
             {displayedEntities.map((entity, index) => {
+              const pos = positions[index];
+              if (!pos) return null;
+              
               const lineWidth = getLineWidth(entity.shared_news_count);
               const opacity = getOpacity(entity.shared_news_count);
               
               return (
                 <g key={`line-${entity.id}`}>
-                  {/* Outer glow effect line */}
-                  <line
-                    x1={220}
-                    y1={220}
-                    x2={positions[index].x}
-                    y2={positions[index].y}
+                  {/* Glow effect */}
+                  <path
+                    d={getTreeConnectionPath(rootX, rootY + 30, pos.x, pos.y - 20, 0.4)}
+                    fill="none"
                     stroke="hsl(var(--primary))"
-                    strokeWidth={lineWidth + 6}
-                    strokeOpacity={0.15}
+                    strokeWidth={lineWidth + 4}
+                    strokeOpacity={0.1}
                     strokeLinecap="round"
-                    filter="url(#lineGlow)"
                   />
-                  {/* Pulsing background line */}
-                  <line
-                    x1={220}
-                    y1={220}
-                    x2={positions[index].x}
-                    y2={positions[index].y}
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={lineWidth + 3}
-                    strokeLinecap="round"
-                    className="pulse-line"
-                    style={{ 
-                      '--base-width': `${lineWidth + 3}px`,
-                      animationDelay: getPulseDelay(index),
-                    } as React.CSSProperties}
-                    opacity={opacity * 0.3}
-                  />
-                  {/* Main line with gradient */}
-                  <line
-                    x1={220}
-                    y1={220}
-                    x2={positions[index].x}
-                    y2={positions[index].y}
-                    stroke="url(#lineGradientPulse)"
+                  {/* Main curved connection */}
+                  <path
+                    d={getTreeConnectionPath(rootX, rootY + 30, pos.x, pos.y - 20, 0.4)}
+                    fill="none"
+                    stroke="url(#treeLineGradient)"
                     strokeWidth={lineWidth}
                     strokeOpacity={opacity}
                     strokeLinecap="round"
-                    className="transition-all duration-300"
-                    style={{ animationDelay: getPulseDelay(index) }}
+                    strokeDasharray="8 4"
+                    className="tree-line"
+                    style={{ animationDelay: `${index * 0.1}s` }}
                   />
                 </g>
               );
             })}
 
-            {/* Center entity (main) - Hexagon */}
+            {/* Root entity (main) - Hexagon at top */}
             <g className="cursor-default" filter="url(#glow)">
-              {/* Pulsing outer hexagon ring */}
+              {/* Pulsing outer ring */}
               <path
-                d={getHexagonPath(220, 220, 54)}
+                d={getHexagonPath(rootX, rootY, 42)}
                 fill="none"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
-                opacity={0.4}
-              >
-                <animate 
-                  attributeName="opacity" 
-                  values="0.4;0.7;0.4" 
-                  dur="2s" 
-                  repeatCount="indefinite" 
-                />
-              </path>
+                className="pulse-node"
+              />
               {/* Main hexagon */}
               <path
-                d={getHexagonPath(220, 220, 48)}
-                fill="url(#centerGradient)"
+                d={getHexagonPath(rootX, rootY, 36)}
+                fill="url(#rootGradient)"
                 className="drop-shadow-lg"
               />
-              {/* Inner highlight */}
-              <path
-                d={getHexagonPath(220, 210, 35)}
-                fill="hsl(var(--primary))"
-                opacity={0.1}
-              />
               {mainEntity.image_url ? (
-                <clipPath id="center-clip">
-                  <path d={getHexagonPath(220, 220, 44)} />
-                </clipPath>
-              ) : null}
-              {mainEntity.image_url ? (
-                <image
-                  x={220 - 44}
-                  y={220 - 44}
-                  width={88}
-                  height={88}
-                  href={mainEntity.image_url}
-                  clipPath="url(#center-clip)"
-                  preserveAspectRatio="xMidYMid slice"
-                />
+                <>
+                  <clipPath id="root-clip">
+                    <path d={getHexagonPath(rootX, rootY, 32)} />
+                  </clipPath>
+                  <image
+                    x={rootX - 32}
+                    y={rootY - 32}
+                    width={64}
+                    height={64}
+                    href={mainEntity.image_url}
+                    clipPath="url(#root-clip)"
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                </>
               ) : (
-                <foreignObject x={220 - 22} y={220 - 22} width={44} height={44}>
+                <foreignObject x={rootX - 16} y={rootY - 16} width={32} height={32}>
                   <div className="w-full h-full flex items-center justify-center text-primary-foreground">
                     {mainEntity.entity_type === 'person' ? (
-                      <User className="w-7 h-7" />
+                      <User className="w-5 h-5" />
                     ) : (
-                      <Building2 className="w-7 h-7" />
+                      <Building2 className="w-5 h-5" />
                     )}
                   </div>
                 </foreignObject>
               )}
             </g>
 
-            {/* Related entities - optimized rendering with hexagons */}
+            {/* Entity nodes - hexagons */}
             {displayedEntities.map((entity, index) => {
               const pos = positions[index];
+              if (!pos) return null;
+              
               const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
-              const entityRadius = 26 + (entity.shared_news_count / maxCount) * 8;
+              const nodeRadius = 22 + (entity.shared_news_count / maxCount) * 6;
               
               return (
                 <g key={entity.id} className="cursor-pointer" filter="url(#softGlow)">
                   <Link to={`/wiki/${entity.slug || entity.id}`}>
                     {/* Main node hexagon */}
                     <path
-                      d={getHexagonPath(pos.x, pos.y, entityRadius)}
+                      d={getHexagonPath(pos.x, pos.y, nodeRadius)}
                       fill="url(#nodeGradient)"
                       stroke="hsl(var(--border))"
                       strokeWidth={2}
@@ -440,13 +441,13 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                     {entity.image_url ? (
                       <>
                         <clipPath id={`clip-${entity.id}`}>
-                          <path d={getHexagonPath(pos.x, pos.y, entityRadius - 3)} />
+                          <path d={getHexagonPath(pos.x, pos.y, nodeRadius - 3)} />
                         </clipPath>
                         <image
-                          x={pos.x - (entityRadius - 3)}
-                          y={pos.y - (entityRadius - 3)}
-                          width={(entityRadius - 3) * 2}
-                          height={(entityRadius - 3) * 2}
+                          x={pos.x - (nodeRadius - 3)}
+                          y={pos.y - (nodeRadius - 3)}
+                          width={(nodeRadius - 3) * 2}
+                          height={(nodeRadius - 3) * 2}
                           href={entity.image_url}
                           clipPath={`url(#clip-${entity.id})`}
                           preserveAspectRatio="xMidYMid slice"
@@ -455,10 +456,10 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                       </>
                     ) : (
                       <foreignObject 
-                        x={pos.x - 14} 
-                        y={pos.y - 14} 
-                        width={28} 
-                        height={28}
+                        x={pos.x - 12} 
+                        y={pos.y - 12} 
+                        width={24} 
+                        height={24}
                       >
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-primary transition-colors">
                           {entity.entity_type === 'person' ? (
@@ -470,56 +471,46 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                       </foreignObject>
                     )}
 
-                    {/* Count badge - hexagonal */}
+                    {/* Count badge */}
                     <path
-                      d={getHexagonPath(pos.x + entityRadius * 0.7, pos.y - entityRadius * 0.7, 11)}
+                      d={getHexagonPath(pos.x + nodeRadius * 0.7, pos.y - nodeRadius * 0.7, 10)}
                       fill="hsl(var(--primary))"
                       stroke="hsl(var(--background))"
                       strokeWidth={2}
                       className="drop-shadow-md"
                     />
                     <text
-                      x={pos.x + entityRadius * 0.7}
-                      y={pos.y - entityRadius * 0.7 + 4}
+                      x={pos.x + nodeRadius * 0.7}
+                      y={pos.y - nodeRadius * 0.7 + 3}
                       textAnchor="middle"
                       fill="hsl(var(--primary-foreground))"
-                      fontSize="10"
+                      fontSize="9"
                       fontWeight="bold"
                     >
                       {entity.shared_news_count}
+                    </text>
+
+                    {/* Entity name label below node */}
+                    <text
+                      x={pos.x}
+                      y={pos.y + nodeRadius + 14}
+                      textAnchor="middle"
+                      fill="hsl(var(--muted-foreground))"
+                      fontSize="9"
+                      className="pointer-events-none"
+                    >
+                      {name.length > 12 ? name.substring(0, 12) + '...' : name}
                     </text>
                   </Link>
                 </g>
               );
             })}
           </svg>
-
-          {/* Legend with expand option */}
-          <div className="absolute -bottom-2 left-0 right-0 flex flex-wrap justify-center gap-2 text-xs">
-            {displayedEntities.slice(0, 4).map((entity) => {
-              const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
-              return (
-                <Link
-                  key={entity.id}
-                  to={`/wiki/${entity.slug || entity.id}`}
-                  className="max-w-[80px] truncate px-2 py-1 rounded-full bg-muted/50 text-muted-foreground hover:bg-primary/20 hover:text-primary transition-all duration-200"
-                  title={name}
-                >
-                  {name}
-                </Link>
-              );
-            })}
-            {displayedEntities.length > 4 && (
-              <span className="px-2 py-1 rounded-full bg-muted/30 text-muted-foreground/60">
-                +{displayedEntities.length - 4}
-              </span>
-            )}
-          </div>
         </div>
 
         {/* Expand/collapse button for many entities */}
         {hasMore && (
-          <div className="mt-8 flex justify-center">
+          <div className="mt-4 flex justify-center">
             <Button
               variant="ghost"
               size="sm"
@@ -542,7 +533,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
         )}
 
         {/* Stats */}
-        <div className="mt-6 pt-4 border-t border-border/50">
+        <div className="mt-4 pt-4 border-t border-border/50">
           <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground flex-wrap">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
