@@ -70,7 +70,7 @@ export default function WikiCatalogPage() {
 
   // Fetch entities with news count, sorted by last mention
   const { data: entities, isLoading } = useQuery<WikiEntity[]>({
-    queryKey: ['wiki-catalog', searchTerm, filterType, categoryFilter],
+    queryKey: ['wiki-catalog', searchTerm, filterType, categoryFilter, letterFilter],
     queryFn: async () => {
       // First get latest news links for each entity
       const { data: latestLinks } = await supabase
