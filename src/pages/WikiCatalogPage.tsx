@@ -337,7 +337,7 @@ export default function WikiCatalogPage() {
                   return (
                     <Link
                       key={entity.id}
-                      to={`/wiki/${entity.id}`}
+                      to={`/wiki/${entity.slug || entity.id}`}
                       className="flex items-center gap-4 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors group"
                     >
                       {entity.image_url ? (
