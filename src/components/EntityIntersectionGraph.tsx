@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Network, User, Building2, Sparkles } from "lucide-react";
+import { Network, User, Building2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface RelatedEntity {
@@ -24,38 +25,63 @@ interface EntityIntersectionGraphProps {
   relatedEntities: RelatedEntity[];
 }
 
+// Optimized: limit displayed entities for performance
+const MAX_DISPLAYED_ENTITIES = 8;
+const INITIAL_DISPLAYED = 6;
+
 export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityIntersectionGraphProps) {
   const { language } = useLanguage();
+  const [showAll, setShowAll] = useState(false);
 
-  // Calculate positions for entities in a circular layout
+  // Limit entities for performance - sort by relevance first
+  const sortedEntities = useMemo(() => 
+    [...relatedEntities].sort((a, b) => b.shared_news_count - a.shared_news_count),
+    [relatedEntities]
+  );
+
+  const displayedEntities = useMemo(() => {
+    const limit = showAll ? MAX_DISPLAYED_ENTITIES : INITIAL_DISPLAYED;
+    return sortedEntities.slice(0, limit);
+  }, [sortedEntities, showAll]);
+
+  const hasMore = sortedEntities.length > INITIAL_DISPLAYED;
+  const remainingCount = Math.min(sortedEntities.length, MAX_DISPLAYED_ENTITIES) - INITIAL_DISPLAYED;
+
+  // Calculate positions for entities in a circular layout - memoized
   const positions = useMemo(() => {
     const centerX = 200;
     const centerY = 200;
-    const radius = 150;
+    const radius = 140;
     
-    return relatedEntities.map((_, index) => {
-      const angle = (2 * Math.PI * index) / relatedEntities.length - Math.PI / 2;
+    return displayedEntities.map((_, index) => {
+      const angle = (2 * Math.PI * index) / displayedEntities.length - Math.PI / 2;
       return {
         x: centerX + radius * Math.cos(angle),
         y: centerY + radius * Math.sin(angle),
       };
     });
-  }, [relatedEntities.length]);
+  }, [displayedEntities.length]);
 
   // Calculate line thickness based on shared news count
-  const maxCount = Math.max(...relatedEntities.map(e => e.shared_news_count), 1);
+  const maxCount = useMemo(() => 
+    Math.max(...displayedEntities.map(e => e.shared_news_count), 1),
+    [displayedEntities]
+  );
   
   const getLineWidth = (count: number) => {
-    const min = 1;
+    const min = 2;
     const max = 6;
     return min + ((count / maxCount) * (max - min));
   };
 
   const getOpacity = (count: number) => {
-    const min = 0.3;
+    const min = 0.4;
     const max = 1;
     return min + ((count / maxCount) * (max - min));
   };
+
+  // Assign pulse animation delay based on index
+  const getPulseDelay = (index: number) => `${index * 0.3}s`;
 
   if (relatedEntities.length === 0) return null;
 
@@ -81,13 +107,40 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
             className="w-full h-full"
             style={{ overflow: 'visible' }}
           >
-            {/* Definitions for gradients and filters */}
+            {/* Definitions for gradients, filters, and animations */}
             <defs>
+              {/* Pulsing animation for lines */}
+              <style>
+                {`
+                  @keyframes pulseOpacity {
+                    0%, 100% { opacity: 0.4; }
+                    50% { opacity: 1; }
+                  }
+                  @keyframes pulseWidth {
+                    0%, 100% { stroke-width: var(--base-width); }
+                    50% { stroke-width: calc(var(--base-width) + 2); }
+                  }
+                  .pulse-line {
+                    animation: pulseOpacity 2s ease-in-out infinite, pulseWidth 2s ease-in-out infinite;
+                  }
+                `}
+              </style>
+              
               <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
-                <stop offset="50%" stopColor="hsl(var(--secondary))" stopOpacity="0.6" />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.9" />
+                <stop offset="50%" stopColor="hsl(var(--secondary))" stopOpacity="0.7" />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.4" />
               </linearGradient>
+              
+              <linearGradient id="lineGradientPulse" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="1">
+                  <animate attributeName="stopOpacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" />
+                </stop>
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3">
+                  <animate attributeName="stopOpacity" values="0.3;0.8;0.3" dur="2s" repeatCount="indefinite" />
+                </stop>
+              </linearGradient>
+              
               <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
                 <feMerge>
@@ -95,6 +148,7 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
                   <feMergeNode in="SourceGraphic"/>
                 </feMerge>
               </filter>
+              
               <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="2" result="blur"/>
                 <feMerge>
@@ -102,11 +156,22 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
                   <feMergeNode in="SourceGraphic"/>
                 </feMerge>
               </filter>
+              
+              <filter id="lineGlow" x="-100%" y="-100%" width="300%" height="300%">
+                <feGaussianBlur stdDeviation="4" result="glow"/>
+                <feMerge>
+                  <feMergeNode in="glow"/>
+                  <feMergeNode in="glow"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+              
               <radialGradient id="centerGradient" cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="hsl(var(--primary))" />
                 <stop offset="70%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
                 <stop offset="100%" stopColor="hsl(var(--secondary))" stopOpacity="0.6" />
               </radialGradient>
+              
               <radialGradient id="nodeGradient" cx="50%" cy="30%" r="70%">
                 <stop offset="0%" stopColor="hsl(var(--muted))" stopOpacity="1" />
                 <stop offset="100%" stopColor="hsl(var(--card))" stopOpacity="0.9" />
@@ -135,38 +200,61 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
               opacity={0.2}
             />
 
-            {/* Connection lines with gradient */}
-            {relatedEntities.map((entity, index) => (
-              <g key={`line-${entity.id}`}>
-                {/* Glow effect line */}
-                <line
-                  x1={200}
-                  y1={200}
-                  x2={positions[index].x}
-                  y2={positions[index].y}
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={getLineWidth(entity.shared_news_count) + 4}
-                  strokeOpacity={getOpacity(entity.shared_news_count) * 0.2}
-                  strokeLinecap="round"
-                />
-                {/* Main line */}
-                <line
-                  x1={200}
-                  y1={200}
-                  x2={positions[index].x}
-                  y2={positions[index].y}
-                  stroke="url(#lineGradient)"
-                  strokeWidth={getLineWidth(entity.shared_news_count)}
-                  strokeOpacity={getOpacity(entity.shared_news_count)}
-                  strokeLinecap="round"
-                  className="transition-all duration-500"
-                />
-              </g>
-            ))}
+            {/* Connection lines with pulsing animation */}
+            {displayedEntities.map((entity, index) => {
+              const lineWidth = getLineWidth(entity.shared_news_count);
+              const opacity = getOpacity(entity.shared_news_count);
+              
+              return (
+                <g key={`line-${entity.id}`}>
+                  {/* Outer glow effect line */}
+                  <line
+                    x1={200}
+                    y1={200}
+                    x2={positions[index].x}
+                    y2={positions[index].y}
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={lineWidth + 6}
+                    strokeOpacity={0.15}
+                    strokeLinecap="round"
+                    filter="url(#lineGlow)"
+                  />
+                  {/* Pulsing background line */}
+                  <line
+                    x1={200}
+                    y1={200}
+                    x2={positions[index].x}
+                    y2={positions[index].y}
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={lineWidth + 3}
+                    strokeLinecap="round"
+                    className="pulse-line"
+                    style={{ 
+                      '--base-width': `${lineWidth + 3}px`,
+                      animationDelay: getPulseDelay(index),
+                    } as React.CSSProperties}
+                    opacity={opacity * 0.3}
+                  />
+                  {/* Main line with gradient */}
+                  <line
+                    x1={200}
+                    y1={200}
+                    x2={positions[index].x}
+                    y2={positions[index].y}
+                    stroke="url(#lineGradientPulse)"
+                    strokeWidth={lineWidth}
+                    strokeOpacity={opacity}
+                    strokeLinecap="round"
+                    className="transition-all duration-300"
+                    style={{ animationDelay: getPulseDelay(index) }}
+                  />
+                </g>
+              );
+            })}
 
             {/* Center entity (main) */}
             <g className="cursor-default" filter="url(#glow)">
-              {/* Outer glow ring */}
+              {/* Pulsing outer ring */}
               <circle
                 cx={200}
                 cy={200}
@@ -175,7 +263,20 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 opacity={0.4}
-              />
+              >
+                <animate 
+                  attributeName="r" 
+                  values="52;56;52" 
+                  dur="2s" 
+                  repeatCount="indefinite" 
+                />
+                <animate 
+                  attributeName="opacity" 
+                  values="0.4;0.7;0.4" 
+                  dur="2s" 
+                  repeatCount="indefinite" 
+                />
+              </circle>
               {/* Main circle */}
               <circle
                 cx={200}
@@ -220,26 +321,15 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
               )}
             </g>
 
-            {/* Related entities */}
-            {relatedEntities.map((entity, index) => {
+            {/* Related entities - optimized rendering */}
+            {displayedEntities.map((entity, index) => {
               const pos = positions[index];
               const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
-              const entityRadius = 32 + (entity.shared_news_count / maxCount) * 12;
+              const entityRadius = 28 + (entity.shared_news_count / maxCount) * 10;
               
               return (
                 <g key={entity.id} className="cursor-pointer" filter="url(#softGlow)">
                   <Link to={`/wiki/${entity.slug || entity.id}`}>
-                    {/* Hover glow ring */}
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r={entityRadius + 4}
-                      fill="none"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2}
-                      opacity={0}
-                      className="transition-all duration-300 group-hover:opacity-50"
-                    />
                     {/* Main node circle */}
                     <circle
                       cx={pos.x}
@@ -249,14 +339,6 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
                       stroke="hsl(var(--border))"
                       strokeWidth={2}
                       className="transition-all duration-300 hover:stroke-primary hover:stroke-[3px]"
-                    />
-                    {/* Inner highlight */}
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y - entityRadius * 0.2}
-                      r={entityRadius * 0.6}
-                      fill="hsl(var(--foreground))"
-                      opacity={0.03}
                     />
                     
                     {entity.image_url ? (
@@ -277,37 +359,37 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
                       </>
                     ) : (
                       <foreignObject 
-                        x={pos.x - 16} 
-                        y={pos.y - 16} 
-                        width={32} 
-                        height={32}
+                        x={pos.x - 14} 
+                        y={pos.y - 14} 
+                        width={28} 
+                        height={28}
                       >
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-primary transition-colors">
                           {entity.entity_type === 'person' ? (
-                            <User className="w-5 h-5" />
+                            <User className="w-4 h-4" />
                           ) : (
-                            <Building2 className="w-5 h-5" />
+                            <Building2 className="w-4 h-4" />
                           )}
                         </div>
                       </foreignObject>
                     )}
 
-                    {/* Count badge with gradient */}
+                    {/* Count badge */}
                     <circle
-                      cx={pos.x + entityRadius * 0.75}
-                      cy={pos.y - entityRadius * 0.75}
-                      r={14}
+                      cx={pos.x + entityRadius * 0.7}
+                      cy={pos.y - entityRadius * 0.7}
+                      r={12}
                       fill="hsl(var(--primary))"
                       stroke="hsl(var(--background))"
                       strokeWidth={2}
                       className="drop-shadow-md"
                     />
                     <text
-                      x={pos.x + entityRadius * 0.75}
-                      y={pos.y - entityRadius * 0.75 + 4}
+                      x={pos.x + entityRadius * 0.7}
+                      y={pos.y - entityRadius * 0.7 + 4}
                       textAnchor="middle"
                       fill="hsl(var(--primary-foreground))"
-                      fontSize="11"
+                      fontSize="10"
                       fontWeight="bold"
                     >
                       {entity.shared_news_count}
@@ -318,31 +400,55 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
             })}
           </svg>
 
-          {/* Legend */}
+          {/* Legend with expand option */}
           <div className="absolute -bottom-2 left-0 right-0 flex flex-wrap justify-center gap-2 text-xs">
-            {relatedEntities.slice(0, 5).map((entity) => {
+            {displayedEntities.slice(0, 4).map((entity) => {
               const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
               return (
                 <Link
                   key={entity.id}
                   to={`/wiki/${entity.slug || entity.id}`}
-                  className="max-w-[90px] truncate px-2 py-1 rounded-full bg-muted/50 text-muted-foreground hover:bg-primary/20 hover:text-primary transition-all duration-200"
+                  className="max-w-[80px] truncate px-2 py-1 rounded-full bg-muted/50 text-muted-foreground hover:bg-primary/20 hover:text-primary transition-all duration-200"
                   title={name}
                 >
                   {name}
                 </Link>
               );
             })}
-            {relatedEntities.length > 5 && (
+            {displayedEntities.length > 4 && (
               <span className="px-2 py-1 rounded-full bg-muted/30 text-muted-foreground/60">
-                +{relatedEntities.length - 5}
+                +{displayedEntities.length - 4}
               </span>
             )}
           </div>
         </div>
 
+        {/* Expand/collapse button for many entities */}
+        {hasMore && (
+          <div className="mt-8 flex justify-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAll(!showAll)}
+              className="gap-2"
+            >
+              {showAll ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  {language === 'uk' ? 'Показати менше' : 'Show less'}
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  {language === 'uk' ? `Показати ще ${remainingCount}` : `Show ${remainingCount} more`}
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
         {/* Stats */}
-        <div className="mt-8 pt-4 border-t border-border/50">
+        <div className="mt-6 pt-4 border-t border-border/50">
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             <p>
@@ -352,6 +458,14 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities }: EntityI
               }
             </p>
           </div>
+          {relatedEntities.length > MAX_DISPLAYED_ENTITIES && (
+            <p className="text-center text-xs text-muted-foreground/60 mt-1">
+              {language === 'uk' 
+                ? `Показано топ-${MAX_DISPLAYED_ENTITIES} за релевантністю`
+                : `Showing top ${MAX_DISPLAYED_ENTITIES} by relevance`
+              }
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
