@@ -51,6 +51,7 @@ export function NewsImageBlock({
   entities = [],
   hasRetelling,
   isAdmin,
+  sourceUrl,
   onImageUpdate
 }: NewsImageBlockProps) {
   const { language } = useLanguage();
