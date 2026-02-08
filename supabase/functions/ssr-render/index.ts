@@ -1764,15 +1764,17 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
       
       ${relatedEntities.length > 0 ? `
         <section>
-          <h2>Related Entities</h2>
+          <h2>🔗 Entity Intersection Graph</h2>
+          <p>People and organizations frequently mentioned alongside <strong>${escapeHtml(name)}</strong>:</p>
           <ul>
             ${relatedEntities.map((e: any) => {
               const eName = e.name_en || e.name;
               const eSlug = e.slug || e.id;
+              const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
               return `
                 <li>
-                  <a href="https://echoes2.com/wiki/${eSlug}">${escapeHtml(eName)}</a>
-                  <span>(${e.shared_news_count} shared news)</span>
+                  ${typeIcon} <a href="https://echoes2.com/wiki/${eSlug}">${escapeHtml(eName)}</a>
+                  <span>(${e.shared_news_count} shared articles)</span>
                 </li>
               `;
             }).join("")}
