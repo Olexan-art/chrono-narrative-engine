@@ -101,7 +101,7 @@ export default function Index() {
       <Header />
       
       {/* Hero Section */}
-      <HeroSection latestParts={latestParts} />
+      <HeroSection />
       
       {/* Latest USA Retold News */}
       <LatestUsaNews />
