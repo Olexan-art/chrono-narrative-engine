@@ -64,11 +64,14 @@ export function WikiEntityCard({ entity, compact = false, showLink = false }: Wi
   };
 
   if (compact) {
+    const CardWrapper = showLink ? Link : 'a';
+    const cardProps = showLink 
+      ? { to: `/wiki/${entity.id}` } 
+      : { href: wikiUrl, target: "_blank", rel: "noopener noreferrer" };
+
     return (
-      <a 
-        href={wikiUrl} 
-        target="_blank" 
-        rel="noopener noreferrer"
+      <CardWrapper 
+        {...(cardProps as any)}
         className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
       >
         {entity.image_url ? (
@@ -92,7 +95,7 @@ export function WikiEntityCard({ entity, compact = false, showLink = false }: Wi
           <p className="text-xs text-muted-foreground line-clamp-2">{description || extract?.slice(0, 100)}</p>
         </div>
         <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-      </a>
+      </CardWrapper>
     );
   }
 
