@@ -79,16 +79,16 @@ export default function Index() {
   });
 
   const pageTitle = language === 'en' 
-    ? 'Synchronization Point - AI Science Fiction from Real News' 
+    ? 'Synchronization Point - Smart News, Real News' 
     : language === 'pl' 
-    ? 'Punkt Synchronizacji - AI Science Fiction z prawdziwych wiadomości'
-    : 'Точка Синхронізації - ШІ наукова фантастика з реальних новин';
+    ? 'Punkt Synchronizacji - Smart News, Real News'
+    : 'Точка Синхронізації - Smart News, Real News';
   
   const pageDescription = language === 'en'
-    ? 'A book that writes itself. An AI archivist structures the chaos of human history through the lens of science fiction, generating daily stories from real-world news.'
+    ? 'A book that writes itself. An archivist structures the chaos of human history through the lens of news, generating daily stories from real-world news.'
     : language === 'pl'
-    ? 'Książka, która pisze się sama. Archiwista AI porządkuje chaos ludzkiej historii przez pryzmat science fiction, generując codzienne opowiadania z prawdziwych wiadomości.'
-    : 'Книга, що пише себе сама. ШІ-архіваріус структурує хаос людської історії крізь призму наукової фантастики, генеруючи щоденні оповідання з реальних новин.';
+    ? 'Książka, która pisze się sama. Archiwista porządkuje chaos ludzkiej historii przez pryzmat wiadomości, generując codzienne opowiadania z prawdziwych wiadomości.'
+    : 'Книга, що пише себе сама. Архіваріус структурує хаос людської історії крізь призму новин, генеруючи щоденні оповідання з реальних подій.';
 
   return (
     <div className="min-h-screen bg-background">
