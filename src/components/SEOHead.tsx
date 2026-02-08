@@ -40,7 +40,10 @@ export function SEOHead({
   author = 'Synchronization Point AI',
   robots,
   noIndex = false,
-  breadcrumbs
+  breadcrumbs,
+  schemaType,
+  schemaExtra,
+  additionalSchemas,
 }: SEOHeadProps) {
   const { language } = useLanguage();
 
