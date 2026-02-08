@@ -491,6 +491,63 @@ export default function WikiEntityPage() {
     queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] });
   };
 
+  // Fetch images from Wikipedia
+  const fetchWikiImages = async () => {
+    if (!entity) return;
+    setIsFetchingImages(true);
+    try {
+      const result = await callEdgeFunction<{ 
+        success: boolean; 
+        data?: ExtendedWikiData; 
+        error?: string 
+      }>('search-wiki', {
+        action: 'extended_parse',
+        wikiUrl: entity.wiki_url,
+        language: language === 'uk' ? 'uk' : 'en',
+      });
+      
+      if (result.success && result.data) {
+        setExtendedData(result.data);
+        // Auto-select image if found
+        if (result.data.image) {
+          setSelectedSections(new Set(['image']));
+        } else {
+          toast.info(language === 'uk' ? 'Зображення не знайдено' : 'No images found');
+        }
+      } else {
+        throw new Error(result.error || 'Failed to fetch images');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsFetchingImages(false);
+    }
+  };
+
+  // Open caricature lightbox with related news
+  const openCaricatureLightbox = async (caricature: OutrageInk) => {
+    let newsItem: NewsItem | undefined;
+    
+    if (caricature.news_item_id) {
+      // Find from existing list or fetch
+      newsItem = allLinkedNews.find(n => n.id === caricature.news_item_id);
+      
+      if (!newsItem) {
+        const { data } = await supabase
+          .from('news_rss_items')
+          .select('id, slug, title, title_en, description, description_en, image_url, published_at, country:news_countries(code, flag, name)')
+          .eq('id', caricature.news_item_id)
+          .single();
+        
+        if (data) {
+          newsItem = { ...data, country: data.country } as any;
+        }
+      }
+    }
+    
+    setSelectedCaricature({ caricature, newsItem });
+  };
+
   const toggleSection = (section: string) => {
     const newSet = new Set(selectedSections);
     if (newSet.has(section)) {
