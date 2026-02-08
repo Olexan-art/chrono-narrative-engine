@@ -1646,6 +1646,72 @@ function generateInkAbyssHTML(items: any[], lang: string) {
   `;
 }
 
+function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string) {
+  const name = entity.name_en || entity.name;
+  const description = entity.description_en || entity.description || '';
+  const extract = entity.extract_en || entity.extract || '';
+  const entityTypeLabel = entity.entity_type === 'person' ? '👤 Person' : entity.entity_type === 'company' ? '🏢 Company' : '🌐 Entity';
+  
+  return `
+    <article itemscope itemtype="https://schema.org/${entity.entity_type === 'person' ? 'Person' : 'Organization'}">
+      <header>
+        <span>${entityTypeLabel}</span>
+        ${entity.image_url ? `<img itemprop="image" src="${escapeHtml(entity.image_url)}" alt="${escapeHtml(name)}" width="200">` : ''}
+        <h1 itemprop="name">${escapeHtml(name)}</h1>
+        ${description ? `<p itemprop="description">${escapeHtml(description)}</p>` : ''}
+      </header>
+      
+      <section>
+        <h2>Key Information</h2>
+        ${extract ? `<div itemprop="description">${escapeHtml(extract)}</div>` : '<p>Information not yet loaded.</p>'}
+      </section>
+      
+      ${linkedNews.length > 0 ? `
+        <section>
+          <h2>Related News (${linkedNews.length})</h2>
+          <ul>
+            ${linkedNews.map((news: any) => {
+              const newsTitle = news.title_en || news.title;
+              const countryCode = (news.country as any)?.code?.toLowerCase() || 'us';
+              const newsUrl = news.slug ? `https://echoes2.com/news/${countryCode}/${news.slug}` : null;
+              return `
+                <li>
+                  ${newsUrl ? `<a href="${newsUrl}">${escapeHtml(newsTitle)}</a>` : escapeHtml(newsTitle)}
+                  ${news.published_at ? `<time>(${news.published_at.split('T')[0]})</time>` : ''}
+                </li>
+              `;
+            }).join("")}
+          </ul>
+        </section>
+      ` : ''}
+      
+      ${relatedEntities.length > 0 ? `
+        <section>
+          <h2>Related Entities</h2>
+          <ul>
+            ${relatedEntities.map((e: any) => {
+              const eName = e.name_en || e.name;
+              const eSlug = e.slug || e.id;
+              return `
+                <li>
+                  <a href="https://echoes2.com/wiki/${eSlug}">${escapeHtml(eName)}</a>
+                  <span>(${e.shared_news_count} shared news)</span>
+                </li>
+              `;
+            }).join("")}
+          </ul>
+        </section>
+      ` : ''}
+      
+      <nav>
+        <a href="https://echoes2.com/wiki">← Entity Catalog</a> |
+        <a href="https://echoes2.com/news">📰 News</a> |
+        <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+      </nav>
+    </article>
+  `;
+}
+
 function generateNewsSourcesHTML(sources: any) {
   if (!sources || !Array.isArray(sources) || sources.length === 0) return "";
 
