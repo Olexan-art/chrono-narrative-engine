@@ -317,8 +317,6 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                 <stop offset="100%" stopColor="hsl(var(--card))" stopOpacity="0.9" />
               </radialGradient>
             </defs>
-              </radialGradient>
-            </defs>
 
             {/* Background tree structure lines (decorative) */}
             <g opacity={0.1}>
