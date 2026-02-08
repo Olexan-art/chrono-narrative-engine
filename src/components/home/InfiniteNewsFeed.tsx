@@ -220,32 +220,28 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
                 style={{ animationDelay: `${(index % 20) * 25}ms` }}
               >
                 <article className="cosmic-card h-full border border-border/50 hover:border-primary/50 transition-all duration-200 overflow-hidden hover:shadow-lg hover:-translate-y-1">
-                  {item.image_url && (
-                    <div className="relative h-32 overflow-hidden">
+                  <div className="relative h-32 overflow-hidden">
+                    {item.image_url ? (
                       <OptimizedImage 
                         src={item.image_url} 
                         alt="" 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
-                      <div className="absolute top-2 left-2 flex items-center gap-1">
-                        <span className="text-base">{country.flag}</span>
-                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-background/80 backdrop-blur-sm">
-                          {item.category || 'news'}
-                        </Badge>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="p-3">
-                    {!item.image_url && (
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <span className="text-base">{country.flag}</span>
-                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                          {item.category || 'news'}
-                        </Badge>
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-muted/30 via-muted/10 to-muted/30 flex items-center justify-center">
+                        <Newspaper className="w-10 h-10 text-muted-foreground/30" />
                       </div>
                     )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+                    <div className="absolute top-2 left-2 flex items-center gap-1">
+                      <span className="text-base">{country.flag}</span>
+                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-background/80 backdrop-blur-sm">
+                        {item.category || 'news'}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="p-3">
                     
                     <h4 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors mb-2">
                       {localizedTitle}

@@ -298,18 +298,41 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
     }
   };
 
+  // Helper to get source domain name
+  const getSourceDomain = () => {
+    if (!sourceUrl) return null;
+    try {
+      const url = new URL(sourceUrl);
+      return url.hostname.replace('www.', '');
+    } catch {
+      return null;
+    }
+  };
+
   // No image - show source logo for non-admins, generate/upload buttons for admin
   if (!imageUrl) {
-    // For non-admins, show source logo as fallback
+    // For non-admins, show source logo as fallback with better styling
     if (!isAdmin) {
+      const domain = getSourceDomain();
       return (
         <div className="relative mb-4">
-          <div className="w-full h-48 bg-muted/30 rounded-lg border border-border flex items-center justify-center">
-            <img 
-              src={getSourceLogo()} 
-              alt="Source logo" 
-              className="w-16 h-16 opacity-50 grayscale"
-            />
+          <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 rounded-lg border border-border/50 flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl scale-150" />
+              <img 
+                src={getSourceLogo()} 
+                alt={domain || "Source"} 
+                className="w-14 h-14 sm:w-16 sm:h-16 relative z-10 opacity-70 hover:opacity-100 transition-opacity"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/favicon.png';
+                }}
+              />
+            </div>
+            {domain && (
+              <span className="text-xs text-muted-foreground font-mono">
+                {domain}
+              </span>
+            )}
           </div>
         </div>
       );

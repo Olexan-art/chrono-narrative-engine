@@ -37,6 +37,14 @@ interface EntityIntersectionGraphProps {
 const MAX_DISPLAYED_ENTITIES = 24;
 const INITIAL_DISPLAYED = 18;
 
+// Node size configuration - tiered by connection level
+const NODE_SIZES = {
+  root: { base: 48, outer: 56 },     // Main entity - largest
+  first: { base: 32, min: 28 },      // First-level connections - large
+  second: { base: 24, min: 20 },     // Second-level - medium
+  third: { base: 18, min: 16 },      // Third-level - small
+};
+
 // Generate hexagon path for SVG
 function getHexagonPath(cx: number, cy: number, r: number): string {
   const points: [number, number][] = [];
@@ -125,16 +133,28 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const remainingCount = Math.min(sortedEntities.length, MAX_DISPLAYED_ENTITIES) - INITIAL_DISPLAYED;
 
   // Container dimensions - increased for more entities
-  const containerWidth = 600;
-  const containerHeight = 600;
+  const containerWidth = 700;
+  const containerHeight = 700;
   const rootX = containerWidth / 2;
-  const rootY = 45;
+  const rootY = 55;
 
   // Calculate tree positions
   const positions = useMemo(() => 
     calculateTreePositions(displayedEntities.length, containerWidth, containerHeight),
     [displayedEntities.length]
   );
+
+  // Calculate node size based on level and importance
+  const getNodeSize = (level: number, sharedCount: number, maxCount: number) => {
+    const importance = sharedCount / maxCount;
+    if (level === 0) {
+      return NODE_SIZES.first.min + (NODE_SIZES.first.base - NODE_SIZES.first.min) * importance;
+    } else if (level === 1) {
+      return NODE_SIZES.second.min + (NODE_SIZES.second.base - NODE_SIZES.second.min) * importance;
+    } else {
+      return NODE_SIZES.third.min + (NODE_SIZES.third.base - NODE_SIZES.third.min) * importance;
+    }
+  };
 
   // Create entity position map for secondary connections
   const entityPositionMap = useMemo(() => {
@@ -290,6 +310,12 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                 <stop offset="0%" stopColor="hsl(var(--muted))" stopOpacity="1" />
                 <stop offset="100%" stopColor="hsl(var(--card))" stopOpacity="0.9" />
               </radialGradient>
+
+              <radialGradient id="firstLevelGradient" cx="50%" cy="30%" r="70%">
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.25" />
+                <stop offset="50%" stopColor="hsl(var(--muted))" stopOpacity="0.95" />
+                <stop offset="100%" stopColor="hsl(var(--card))" stopOpacity="0.9" />
+              </radialGradient>
             </defs>
 
             {/* Background tree structure lines (decorative) */}
@@ -388,67 +414,90 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               );
             })}
 
-            {/* Root entity (main) - Hexagon at top */}
+            {/* Root entity (main) - Hexagon at top - LARGER */}
             <g className="cursor-default" filter="url(#glow)">
               {/* Pulsing outer ring */}
               <path
-                d={getHexagonPath(rootX, rootY, 42)}
+                d={getHexagonPath(rootX, rootY, NODE_SIZES.root.outer)}
                 fill="none"
                 stroke="hsl(var(--primary))"
-                strokeWidth={2}
+                strokeWidth={3}
                 className="pulse-node"
+              />
+              {/* Secondary outer glow */}
+              <path
+                d={getHexagonPath(rootX, rootY, NODE_SIZES.root.outer + 8)}
+                fill="none"
+                stroke="hsl(var(--primary))"
+                strokeWidth={1}
+                strokeOpacity={0.3}
+                className="glow-node"
               />
               {/* Main hexagon */}
               <path
-                d={getHexagonPath(rootX, rootY, 36)}
+                d={getHexagonPath(rootX, rootY, NODE_SIZES.root.base)}
                 fill="url(#rootGradient)"
                 className="drop-shadow-lg"
               />
               {mainEntity.image_url ? (
                 <>
                   <clipPath id="root-clip">
-                    <path d={getHexagonPath(rootX, rootY, 32)} />
+                    <path d={getHexagonPath(rootX, rootY, NODE_SIZES.root.base - 4)} />
                   </clipPath>
                   <image
-                    x={rootX - 32}
-                    y={rootY - 32}
-                    width={64}
-                    height={64}
+                    x={rootX - (NODE_SIZES.root.base - 4)}
+                    y={rootY - (NODE_SIZES.root.base - 4)}
+                    width={(NODE_SIZES.root.base - 4) * 2}
+                    height={(NODE_SIZES.root.base - 4) * 2}
                     href={mainEntity.image_url}
                     clipPath="url(#root-clip)"
                     preserveAspectRatio="xMidYMid slice"
                   />
                 </>
               ) : (
-                <foreignObject x={rootX - 16} y={rootY - 16} width={32} height={32}>
+                <foreignObject x={rootX - 20} y={rootY - 20} width={40} height={40}>
                   <div className="w-full h-full flex items-center justify-center text-primary-foreground">
                     {mainEntity.entity_type === 'person' ? (
-                      <User className="w-5 h-5" />
+                      <User className="w-7 h-7" />
                     ) : (
-                      <Building2 className="w-5 h-5" />
+                      <Building2 className="w-7 h-7" />
                     )}
                   </div>
                 </foreignObject>
               )}
             </g>
 
-            {/* Entity nodes - hexagons */}
+            {/* Entity nodes - hexagons with tiered sizes */}
             {displayedEntities.map((entity, index) => {
               const pos = positions[index];
               if (!pos) return null;
               
               const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
-              const nodeRadius = 22 + (entity.shared_news_count / maxCount) * 6;
+              // Use tiered sizing based on level position
+              const nodeRadius = getNodeSize(pos.level, entity.shared_news_count, maxCount);
+              const isFirstLevel = pos.level === 0;
               
               return (
-                <g key={entity.id} className="cursor-pointer" filter="url(#softGlow)">
+                <g key={entity.id} className="cursor-pointer" filter={isFirstLevel ? "url(#glow)" : "url(#softGlow)"}>
                   <Link to={`/wiki/${entity.slug || entity.id}`}>
+                    {/* Outer glow ring for first-level connections */}
+                    {isFirstLevel && (
+                      <path
+                        d={getHexagonPath(pos.x, pos.y, nodeRadius + 6)}
+                        fill="none"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={1.5}
+                        strokeOpacity={0.4}
+                        className="glow-node"
+                      />
+                    )}
                     {/* Main node hexagon */}
                     <path
                       d={getHexagonPath(pos.x, pos.y, nodeRadius)}
-                      fill="url(#nodeGradient)"
-                      stroke="hsl(var(--border))"
-                      strokeWidth={2}
+                      fill={isFirstLevel ? "url(#firstLevelGradient)" : "url(#nodeGradient)"}
+                      stroke={isFirstLevel ? "hsl(var(--primary))" : "hsl(var(--border))"}
+                      strokeWidth={isFirstLevel ? 2.5 : 1.5}
+                      strokeOpacity={isFirstLevel ? 0.7 : 1}
                       className="transition-all duration-300 hover:stroke-primary hover:stroke-[3px]"
                     />
                     
@@ -470,50 +519,51 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                       </>
                     ) : (
                       <foreignObject 
-                        x={pos.x - 12} 
-                        y={pos.y - 12} 
-                        width={24} 
-                        height={24}
+                        x={pos.x - (isFirstLevel ? 14 : 10)} 
+                        y={pos.y - (isFirstLevel ? 14 : 10)} 
+                        width={isFirstLevel ? 28 : 20} 
+                        height={isFirstLevel ? 28 : 20}
                       >
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-primary transition-colors">
+                        <div className={`w-full h-full flex items-center justify-center ${isFirstLevel ? 'text-primary' : 'text-muted-foreground'} hover:text-primary transition-colors`}>
                           {entity.entity_type === 'person' ? (
-                            <User className="w-4 h-4" />
+                            <User className={isFirstLevel ? "w-5 h-5" : "w-3.5 h-3.5"} />
                           ) : (
-                            <Building2 className="w-4 h-4" />
+                            <Building2 className={isFirstLevel ? "w-5 h-5" : "w-3.5 h-3.5"} />
                           )}
                         </div>
                       </foreignObject>
                     )}
 
-                    {/* Count badge */}
+                    {/* Count badge - larger for first level */}
                     <path
-                      d={getHexagonPath(pos.x + nodeRadius * 0.7, pos.y - nodeRadius * 0.7, 10)}
+                      d={getHexagonPath(pos.x + nodeRadius * 0.7, pos.y - nodeRadius * 0.7, isFirstLevel ? 12 : 9)}
                       fill="hsl(var(--primary))"
                       stroke="hsl(var(--background))"
-                      strokeWidth={2}
+                      strokeWidth={isFirstLevel ? 2.5 : 1.5}
                       className="drop-shadow-md"
                     />
                     <text
                       x={pos.x + nodeRadius * 0.7}
-                      y={pos.y - nodeRadius * 0.7 + 3}
+                      y={pos.y - nodeRadius * 0.7 + (isFirstLevel ? 4 : 3)}
                       textAnchor="middle"
                       fill="hsl(var(--primary-foreground))"
-                      fontSize="9"
+                      fontSize={isFirstLevel ? "11" : "8"}
                       fontWeight="bold"
                     >
                       {entity.shared_news_count}
                     </text>
 
-                    {/* Entity name label below node */}
+                    {/* Entity name label below node - larger for first level */}
                     <text
                       x={pos.x}
-                      y={pos.y + nodeRadius + 14}
+                      y={pos.y + nodeRadius + (isFirstLevel ? 16 : 12)}
                       textAnchor="middle"
-                      fill="hsl(var(--muted-foreground))"
-                      fontSize="9"
+                      fill={isFirstLevel ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))"}
+                      fontSize={isFirstLevel ? "11" : "8"}
+                      fontWeight={isFirstLevel ? "500" : "normal"}
                       className="pointer-events-none"
                     >
-                      {name.length > 12 ? name.substring(0, 12) + '...' : name}
+                      {name.length > (isFirstLevel ? 16 : 10) ? name.substring(0, isFirstLevel ? 16 : 10) + '...' : name}
                     </text>
                   </Link>
                 </g>
