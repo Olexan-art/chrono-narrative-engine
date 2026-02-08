@@ -25,6 +25,7 @@ interface WikiEntity {
   description_en: string | null;
   image_url: string | null;
   search_count: number;
+  slug: string | null;
   news_count?: number;
 }
 
