@@ -18,9 +18,9 @@ const translations: Record<Language, Record<string, string>> = {
     'header.subtitle': 'КРОТОВИНА ІСТОРІЇ',
     
     // Hero
-    'hero.badge': 'AI-ГЕНЕРОВАНА НАУКОВА ФАНТАСТИКА',
+    'hero.badge': 'SMART NEWS',
     'hero.title': 'Точка Синхронізації',
-    'hero.description': 'Книга, що пише сама себе. Архіватор структурує хаос людської історії через призму наукової фантастики.',
+    'hero.description': 'Книга, що пише сама себе. Архіватор структурує хаос людської історії через призму новин, генеруючи щоденні історії з реальних подій.',
     'hero.archive': 'Переглянути архів',
     'hero.latest': 'Читати останнє',
     'hero.allUsNews': 'Усі новини USA',
