@@ -181,9 +181,12 @@ export function SEOHead({
       schemas.push(organizationSchema);
 
       // Main content schema - enhanced for LLM understanding
+      const baseSchemaType = type === 'article' ? 'NewsArticle' : 'WebSite';
+      const effectiveSchemaType = schemaType ?? (baseSchemaType as SEOHeadProps['schemaType']);
+
       const mainSchema: Record<string, unknown> = {
         '@context': 'https://schema.org',
-        '@type': type === 'article' ? 'NewsArticle' : 'WebSite',
+        '@type': effectiveSchemaType,
         name: fullTitle,
         headline: fullTitle,
         description,
@@ -243,6 +246,10 @@ export function SEOHead({
         };
       }
 
+      if (schemaExtra) {
+        Object.assign(mainSchema, schemaExtra);
+      }
+
       schemas.push(mainSchema);
 
       // BreadcrumbList schema
@@ -260,9 +267,13 @@ export function SEOHead({
         schemas.push(breadcrumbSchema);
       }
 
+      if (additionalSchemas && additionalSchemas.length > 0) {
+        schemas.push(...additionalSchemas);
+      }
+
       // Remove existing and add new JSON-LD
       document.querySelectorAll('script[type="application/ld+json"]').forEach(el => el.remove());
-      
+
       schemas.forEach(schema => {
         const ldJson = document.createElement('script');
         ldJson.setAttribute('type', 'application/ld+json');
