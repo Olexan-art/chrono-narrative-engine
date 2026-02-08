@@ -154,9 +154,9 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
         )}
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="relative w-full aspect-square max-w-[450px] mx-auto">
+        <div className="relative w-full aspect-square max-w-[500px] mx-auto">
           <svg 
-            viewBox="0 0 400 400" 
+            viewBox="0 0 440 440" 
             className="w-full h-full"
             style={{ overflow: 'visible' }}
           >
