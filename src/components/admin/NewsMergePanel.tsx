@@ -45,6 +45,9 @@ interface ScanResult {
     titles: string[];
     feeds: string[];
     similarity: string;
+    news_ids?: string[];
+    slugs?: string[];
+    country_codes?: string[];
   }[];
 }
 
