@@ -21,4 +21,7 @@
   <sitemap>
     <loc>https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap?country=in</loc>
   </sitemap>
+  <sitemap>
+    <loc>https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap?country=gb</loc>
+  </sitemap>
 </sitemapindex>
