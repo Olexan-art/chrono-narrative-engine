@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
 
     const { data: recentNews, error } = await supabase
       .from('news_rss_items')
-      .select('id, title, title_en, slug, country_id, feed_id, published_at, image_url, news_rss_feeds(name)')
+      .select('id, title, title_en, slug, country_id, feed_id, published_at, image_url, news_rss_feeds(name), country:news_countries(code)')
       .eq('is_archived', false)
       .gte('fetched_at', since)
       .not('slug', 'is', null)
