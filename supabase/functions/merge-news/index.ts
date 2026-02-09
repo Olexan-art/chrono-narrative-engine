@@ -164,13 +164,8 @@ Deno.serve(async (req) => {
       let created = 0;
 
       for (const cluster of clusters) {
-        // Primary = the one with the most content (prefer content_en)
-        const sorted = [...cluster].sort((a, b) => {
-          const lenA = (a.content_en || a.content || '').length;
-          const lenB = (b.content_en || b.content || '').length;
-          return lenB - lenA;
-        });
-        const primary = sorted[0];
+        // Primary = first item (already sorted by published_at desc)
+        const primary = cluster[0];
 
         // Build source feeds info
         const sourceFeedsInfo = cluster.map(n => ({
