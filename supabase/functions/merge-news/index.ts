@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
         supabase.from('news_merged_groups').select('*', { count: 'exact', head: true }),
         supabase.from('news_merged_items').select('*', { count: 'exact', head: true }),
         supabase.from('news_merged_groups')
-          .select('id, title, title_en, merged_count, source_feeds, created_at')
+          .select('id, title, title_en, slug, merged_count, source_feeds, created_at')
           .order('created_at', { ascending: false })
           .limit(20),
       ]);
