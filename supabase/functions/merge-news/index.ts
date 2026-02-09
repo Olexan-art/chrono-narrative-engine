@@ -90,12 +90,12 @@ Deno.serve(async (req) => {
 
     const { data: recentNews, error } = await supabase
       .from('news_rss_items')
-      .select('id, title, title_en, slug, country_id, feed_id, published_at, content_en, content, image_url, news_rss_feeds(name)')
+      .select('id, title, title_en, slug, country_id, feed_id, published_at, image_url, news_rss_feeds(name)')
       .eq('is_archived', false)
       .gte('fetched_at', since)
       .not('slug', 'is', null)
       .order('published_at', { ascending: false })
-      .limit(500);
+      .limit(200);
 
     if (error) throw error;
     if (!recentNews || recentNews.length === 0) {
