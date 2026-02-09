@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, memo } from "react";
+import { Newspaper } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface OptimizedImageProps {
