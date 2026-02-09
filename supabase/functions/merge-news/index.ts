@@ -90,12 +90,12 @@ Deno.serve(async (req) => {
 
     const { data: recentNews, error } = await supabase
       .from('news_rss_items')
-      .select('id, title, title_en, slug, country_id, feed_id, published_at, content_en, content, image_url, news_rss_feeds(name)')
+      .select('id, title, title_en, slug, country_id, feed_id, published_at, image_url, news_rss_feeds(name)')
       .eq('is_archived', false)
       .gte('fetched_at', since)
       .not('slug', 'is', null)
       .order('published_at', { ascending: false })
-      .limit(500);
+      .limit(200);
 
     if (error) throw error;
     if (!recentNews || recentNews.length === 0) {
@@ -164,13 +164,8 @@ Deno.serve(async (req) => {
       let created = 0;
 
       for (const cluster of clusters) {
-        // Primary = the one with the most content (prefer content_en)
-        const sorted = [...cluster].sort((a, b) => {
-          const lenA = (a.content_en || a.content || '').length;
-          const lenB = (b.content_en || b.content || '').length;
-          return lenB - lenA;
-        });
-        const primary = sorted[0];
+        // Primary = first item (already sorted by published_at desc)
+        const primary = cluster[0];
 
         // Build source feeds info
         const sourceFeedsInfo = cluster.map(n => ({

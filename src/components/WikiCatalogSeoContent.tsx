@@ -131,8 +131,33 @@ export function WikiCatalogSeoContent() {
     },
   ] as const;
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: content.mainTitle,
+    description: content.mainDescription,
+    url: 'https://echoes2.com/wiki',
+    isPartOf: { '@type': 'WebSite', name: 'Echoes', url: 'https://echoes2.com' },
+    breadcrumb: {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: language === 'uk' ? 'Головна' : 'Home', item: 'https://echoes2.com/' },
+        { '@type': 'ListItem', position: 2, name: content.mainTitle, item: 'https://echoes2.com/wiki' },
+      ],
+    },
+    about: [
+      { '@type': 'Thing', name: content.personsTitle, description: content.personsDescription },
+      { '@type': 'Thing', name: content.corporationsTitle, description: content.corporationsDescription },
+      { '@type': 'Thing', name: content.organizationsTitle, description: content.organizationsDescription },
+    ],
+  };
+
   return (
     <section className="mt-16 pt-12 border-t border-border/50">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="text-center mb-12">
         <h2 className="text-2xl md:text-3xl font-bold mb-4 flex items-center justify-center gap-3">
           <Sparkles className="w-7 h-7 text-primary" />
