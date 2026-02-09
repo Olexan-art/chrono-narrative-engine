@@ -113,16 +113,16 @@ export default function NewsHubPage() {
   };
 
   const pageTitle = language === 'en' 
-    ? 'World News & Events Digest: USA, Ukraine, Poland, India' 
+    ? 'World News & Events Digest: USA, UK, Ukraine, Poland, India' 
     : language === 'pl'
-    ? 'Przegląd Wiadomości Światowych: USA, Ukraina, Polska, Indie'
-    : 'Дайджест Світових Новин: США, Україна, Польща, Індія';
+    ? 'Przegląd Wiadomości Światowych: USA, UK, Ukraina, Polska, Indie'
+    : 'Дайджест Світових Новин: США, UK, Україна, Польща, Індія';
 
   const pageDescription = language === 'en'
-    ? 'Read the latest world news on Synchronization Point. A daily digest of events from the USA, Ukraine, Poland, and India. Real facts and structured updates serving as the foundation for the AI Archive of Human History.'
+    ? 'Read the latest world news on Synchronization Point. A daily digest of events from the USA, UK, Ukraine, Poland, and India. Real facts and structured updates serving as the foundation for the AI Archive of Human History.'
     : language === 'pl'
-    ? 'Przegląd wiadomości ze świata z AI-streszczeniami i dialogami postaci z USA, Ukrainy, Polski i Indii.'
-    : 'AI-дайджест новин з усього світу з переказом та діалогами персонажів зі США, України, Польщі та Індії.';
+    ? 'Przegląd wiadomości ze świata z AI-streszczeniami i dialogami postaci z USA, UK, Ukrainy, Polski i Indii.'
+    : 'AI-дайджест новин з усього світу з переказом та діалогами персонажів зі США, UK, України, Польщі та Індії.';
 
   if (isLoading) {
     return (
