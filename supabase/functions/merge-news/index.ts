@@ -174,6 +174,7 @@ Deno.serve(async (req) => {
         const sourceFeedsInfo = cluster.map(n => ({
           name: (n as any).news_rss_feeds?.name || 'Unknown',
           news_id: n.id,
+          country_code: (n as any).country?.code?.toLowerCase() || 'us',
         }));
 
         // Create group
