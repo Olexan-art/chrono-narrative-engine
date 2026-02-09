@@ -492,6 +492,89 @@ export type Database = {
           },
         ]
       }
+      news_merged_groups: {
+        Row: {
+          created_at: string
+          id: string
+          merged_count: number
+          primary_news_id: string
+          slug: string | null
+          source_feeds: Json
+          title: string
+          title_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          merged_count?: number
+          primary_news_id: string
+          slug?: string | null
+          source_feeds?: Json
+          title: string
+          title_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          merged_count?: number
+          primary_news_id?: string
+          slug?: string | null
+          source_feeds?: Json
+          title?: string
+          title_en?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_merged_groups_primary_news_id_fkey"
+            columns: ["primary_news_id"]
+            isOneToOne: false
+            referencedRelation: "news_rss_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_merged_items: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          news_item_id: string
+          similarity_score: number
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          news_item_id: string
+          similarity_score?: number
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          news_item_id?: string
+          similarity_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_merged_items_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "news_merged_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_merged_items_news_item_id_fkey"
+            columns: ["news_item_id"]
+            isOneToOne: false
+            referencedRelation: "news_rss_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       news_rss_feeds: {
         Row: {
           category: string
