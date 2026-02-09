@@ -43,6 +43,7 @@ interface DailyStats {
   retold: number;
   dialogues: number;
   tweets: number;
+  entities: number;
 }
 
 interface AutoGenStats {

@@ -351,7 +351,7 @@ serve(async (req) => {
       case 'getAutoGenStats': {
         // Helper to get stats for a specific period
         async function getStatsForPeriod(since: string) {
-          const [retoldResult, dialogueResult, tweetResult] = await Promise.all([
+          const [retoldResult, dialogueResult, tweetResult, entitiesResult] = await Promise.all([
             supabase
               .from('news_rss_items')
               .select('id', { count: 'exact', head: true })
@@ -369,13 +369,18 @@ serve(async (req) => {
               .select('id', { count: 'exact', head: true })
               .gte('created_at', since)
               .not('tweets', 'is', null)
-              .neq('tweets', '[]')
+              .neq('tweets', '[]'),
+            supabase
+              .from('wiki_entities')
+              .select('id', { count: 'exact', head: true })
+              .gte('created_at', since)
           ]);
           
           return {
             retold: retoldResult.count || 0,
             dialogues: dialogueResult.count || 0,
-            tweets: tweetResult.count || 0
+            tweets: tweetResult.count || 0,
+            entities: entitiesResult.count || 0
           };
         }
         
@@ -384,7 +389,7 @@ serve(async (req) => {
           const startISO = startDate.toISOString();
           const endISO = endDate.toISOString();
           
-          const [retoldResult, dialogueResult, tweetResult] = await Promise.all([
+          const [retoldResult, dialogueResult, tweetResult, entitiesResult] = await Promise.all([
             supabase
               .from('news_rss_items')
               .select('id', { count: 'exact', head: true })
@@ -405,13 +410,19 @@ serve(async (req) => {
               .gte('created_at', startISO)
               .lt('created_at', endISO)
               .not('tweets', 'is', null)
-              .neq('tweets', '[]')
+              .neq('tweets', '[]'),
+            supabase
+              .from('wiki_entities')
+              .select('id', { count: 'exact', head: true })
+              .gte('created_at', startISO)
+              .lt('created_at', endISO)
           ]);
           
           return {
             retold: retoldResult.count || 0,
             dialogues: dialogueResult.count || 0,
-            tweets: tweetResult.count || 0
+            tweets: tweetResult.count || 0,
+            entities: entitiesResult.count || 0
           };
         }
         

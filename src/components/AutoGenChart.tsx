@@ -8,6 +8,7 @@ interface DailyStats {
   retold: number;
   dialogues: number;
   tweets: number;
+  entities: number;
 }
 
 interface Props {
@@ -43,6 +44,10 @@ export function AutoGenChart({ data }: Props) {
                   <stop offset="5%" stopColor="hsl(199, 89%, 48%)" stopOpacity={0.4} />
                   <stop offset="95%" stopColor="hsl(199, 89%, 48%)" stopOpacity={0} />
                 </linearGradient>
+                <linearGradient id="colorEntities" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(280, 87%, 60%)" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="hsl(280, 87%, 60%)" stopOpacity={0} />
+                </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis 
@@ -69,7 +74,8 @@ export function AutoGenChart({ data }: Props) {
                   const labels: Record<string, string> = {
                     retold: 'Переказів',
                     dialogues: 'Діалогів',
-                    tweets: 'Твітів'
+                    tweets: 'Твітів',
+                    entities: 'Сутностей'
                   };
                   return labels[value] || value;
                 }}
@@ -96,6 +102,14 @@ export function AutoGenChart({ data }: Props) {
                 stroke="hsl(199, 89%, 48%)" 
                 fillOpacity={1} 
                 fill="url(#colorTweets)"
+                strokeWidth={2}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="entities" 
+                stroke="hsl(280, 87%, 60%)" 
+                fillOpacity={1} 
+                fill="url(#colorEntities)"
                 strokeWidth={2}
               />
             </AreaChart>
