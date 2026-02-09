@@ -112,3 +112,6 @@ verify_jwt = false
 
 [functions.structure-text]
 verify_jwt = false
+
+[functions.merge-news]
+verify_jwt = false
