@@ -226,8 +226,11 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
                         src={item.image_url} 
                         alt="" 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={() => {}}
+                        fallbackSrc=""
                       />
-                    ) : (
+                    ) : null}
+                    {(!item.image_url) && (
                       <div className="w-full h-full bg-gradient-to-br from-muted/30 via-muted/10 to-muted/30 flex items-center justify-center">
                         <Newspaper className="w-10 h-10 text-muted-foreground/30" />
                       </div>

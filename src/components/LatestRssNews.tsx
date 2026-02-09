@@ -76,12 +76,16 @@ export function LatestRssNews() {
                     src={news.image_url} 
                     alt="" 
                     className="w-16 h-16 object-cover rounded shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      const fallback = (e.target as HTMLImageElement).nextElementSibling;
+                      if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                    }}
                   />
-                ) : (
-                  <div className="w-16 h-16 shrink-0 rounded bg-gradient-to-br from-primary/10 to-muted/50 flex items-center justify-center border border-border/50">
-                    <Newspaper className="w-6 h-6 text-muted-foreground/60" />
-                  </div>
-                )}
+                ) : null}
+                <div className={`w-16 h-16 shrink-0 rounded bg-gradient-to-br from-primary/10 to-muted/50 items-center justify-center border border-border/50 ${news.image_url ? 'hidden' : 'flex'}`}>
+                  <Newspaper className="w-6 h-6 text-muted-foreground/60" />
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-sm">{country.flag}</span>

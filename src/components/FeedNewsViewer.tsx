@@ -99,9 +99,16 @@ export function FeedNewsViewer({ feedId, feedName, isOpen, onClose }: FeedNewsVi
                         alt="" 
                         className="w-20 h-20 object-cover rounded-md flex-shrink-0"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const fallback = target.nextElementSibling;
+                          if (fallback) (fallback as HTMLElement).style.display = 'flex';
                         }}
                       />
+                    ) : null}
+                    <div className={`w-20 h-20 bg-muted rounded-md items-center justify-center flex-shrink-0 ${item.image_url ? 'hidden' : 'flex'}`}>
+                      <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                    </div>
                     ) : (
                       <div className="w-20 h-20 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
                         <ImageIcon className="w-6 h-6 text-muted-foreground" />
