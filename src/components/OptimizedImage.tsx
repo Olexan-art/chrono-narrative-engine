@@ -99,9 +99,10 @@ export const OptimizedImage = memo(function OptimizedImage({
     onError?.();
   };
 
+  const showIconFallback = hasError && !fallbackSrc;
   const imageSrc = hasError ? fallbackSrc : (src || fallbackSrc);
-  const optimizedSrc = isInView ? getOptimizedUrl(imageSrc) : undefined;
-  const srcSet = isInView ? getSrcSet(imageSrc) : undefined;
+  const optimizedSrc = isInView ? (imageSrc ? getOptimizedUrl(imageSrc) : undefined) : undefined;
+  const srcSet = isInView && imageSrc ? getSrcSet(imageSrc) : undefined;
 
   const aspectRatioClass = {
     auto: "",
@@ -119,15 +120,22 @@ export const OptimizedImage = memo(function OptimizedImage({
         containerClassName
       )}
     >
+      {/* Icon fallback for broken images with no fallbackSrc */}
+      {showIconFallback && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted/30 via-muted/10 to-muted/30">
+          <Newspaper className="w-1/3 h-1/3 max-w-10 max-h-10 text-muted-foreground/30" />
+        </div>
+      )}
+
       {/* Blur placeholder */}
-      {placeholder === "blur" && !isLoaded && (
+      {placeholder === "blur" && !isLoaded && !showIconFallback && (
         <div 
           className="absolute inset-0 animate-pulse bg-gradient-to-br from-muted/50 via-muted/30 to-muted/50"
         />
       )}
 
       {/* Main image */}
-      {isInView && (
+      {isInView && !showIconFallback && imageSrc && (
         <img
           ref={imgRef}
           src={optimizedSrc}
