@@ -127,8 +127,11 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
                     alt="" 
                     className="w-16 h-16 object-cover rounded shrink-0"
                     containerClassName="w-16 h-16 shrink-0 rounded"
+                    onError={() => {}}
+                    fallbackSrc=""
                   />
-                ) : (
+                ) : null}
+                {(!item.image_url) && (
                   <div className="w-16 h-16 shrink-0 rounded bg-gradient-to-br from-primary/10 to-muted/50 flex items-center justify-center border border-border/50">
                     <Newspaper className="w-6 h-6 text-muted-foreground/60" />
                   </div>

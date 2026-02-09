@@ -249,14 +249,23 @@ export function NewsMergePanel() {
                     {group.merged_count}
                   </Badge>
                   <div className="flex-1 min-w-0">
-                    <a
-                      href={`/news/${(group.source_feeds as any)?.[0]?.country_code || 'us'}/${group.slug || group.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-medium line-clamp-1 hover:text-primary hover:underline"
-                    >
-                      {group.title_en || group.title}
-                    </a>
+                    {(() => {
+                      const countryCode = (group.source_feeds as any)?.[0]?.country_code;
+                      const primarySlug = group.slug || group.id;
+                      const href = countryCode 
+                        ? `/news/${countryCode.toLowerCase()}/${primarySlug}`
+                        : `/news/us/${primarySlug}`;
+                      return (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium line-clamp-1 hover:text-primary hover:underline"
+                        >
+                          {group.title_en || group.title}
+                        </a>
+                      );
+                    })()}
                     <div className="flex gap-1 mt-0.5">
                       {group.source_feeds.map((sf: any, i: number) => (
                         <Badge key={i} variant="outline" className="text-[10px] px-1">
