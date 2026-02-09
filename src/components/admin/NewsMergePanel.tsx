@@ -1,14 +1,26 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, GitMerge, RefreshCw, Play, Eye, Newspaper } from "lucide-react";
+import { Loader2, GitMerge, Play, Eye, Newspaper } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { callEdgeFunction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
 import { toast } from "sonner";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+async function callMergeApi(password: string, params: Record<string, string>) {
+  const qs = new URLSearchParams({ password, ...params }).toString();
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/merge-news?${qs}`, {
+    headers: { Authorization: `Bearer ${SUPABASE_KEY}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
 
 interface MergeStats {
   total_groups: number;
@@ -43,27 +55,17 @@ export function NewsMergePanel() {
   const [hoursBack, setHoursBack] = useState(72);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
 
-  // Fetch stats
   const { data: stats, isLoading: statsLoading } = useQuery<MergeStats>({
     queryKey: ['merge-stats'],
-    queryFn: async () => {
-      const res = await callEdgeFunction('merge-news', password, {
-        action: 'stats',
-      });
-      return res;
-    },
+    queryFn: () => callMergeApi(password, { action: 'stats' }) as Promise<MergeStats>,
   });
 
-  // Scan mutation
   const scanMutation = useMutation({
-    mutationFn: async () => {
-      const res = await callEdgeFunction('merge-news', password, {
-        action: 'scan',
-        threshold: threshold.toString(),
-        hours: hoursBack.toString(),
-      });
-      return res as ScanResult;
-    },
+    mutationFn: () => callMergeApi(password, {
+      action: 'scan',
+      threshold: threshold.toString(),
+      hours: hoursBack.toString(),
+    }) as Promise<ScanResult>,
     onSuccess: (data) => {
       setScanResult(data);
       toast.success(`Знайдено ${data.groups?.length || 0} груп дублікатів`);
@@ -71,17 +73,13 @@ export function NewsMergePanel() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Merge mutation
   const mergeMutation = useMutation({
-    mutationFn: async () => {
-      const res = await callEdgeFunction('merge-news', password, {
-        action: 'merge',
-        threshold: threshold.toString(),
-        hours: hoursBack.toString(),
-      });
-      return res;
-    },
-    onSuccess: (data) => {
+    mutationFn: () => callMergeApi(password, {
+      action: 'merge',
+      threshold: threshold.toString(),
+      hours: hoursBack.toString(),
+    }),
+    onSuccess: (data: any) => {
       toast.success(`Створено ${data.groups_created} об'єднаних груп`);
       queryClient.invalidateQueries({ queryKey: ['merge-stats'] });
       setScanResult(null);
@@ -236,7 +234,7 @@ export function NewsMergePanel() {
                       {group.title_en || group.title}
                     </p>
                     <div className="flex gap-1 mt-0.5">
-                      {group.source_feeds.map((sf, i) => (
+                      {group.source_feeds.map((sf: any, i: number) => (
                         <Badge key={i} variant="outline" className="text-[10px] px-1">
                           {sf.name}
                         </Badge>
