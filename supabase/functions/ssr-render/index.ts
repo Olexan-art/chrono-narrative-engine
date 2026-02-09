@@ -1107,9 +1107,42 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
         </section>
       ` : ""}
       
-      <div class="story-content" itemprop="articleBody">
-        ${escapeHtml(content)}
-      </div>
+      ${content.length > 100 ? `
+        <section>
+          <h3>📖 Full Retelling</h3>
+          <div class="story-content" itemprop="articleBody">
+            ${escapeHtml(content)}
+          </div>
+        </section>
+      ` : `
+        <div class="story-content" itemprop="articleBody">
+          ${escapeHtml(content)}
+        </div>
+      `}
+      
+      ${parsedTweets.length > 0 ? `
+        <section>
+          <h3>🐦 Character Reactions (Tweets)</h3>
+          ${parsedTweets.map((tweet: any) => `
+            <blockquote style="border-left:3px solid #1DA1F2;padding:8px 12px;margin:8px 0;">
+              <strong>${escapeHtml(tweet.character || tweet.author || 'Character')}</strong>
+              <p>${escapeHtml(tweet.text || tweet.content || '')}</p>
+            </blockquote>
+          `).join("")}
+        </section>
+      ` : ""}
+      
+      ${parsedDialogue.length > 0 ? `
+        <section>
+          <h3>💬 Character Dialogue</h3>
+          ${parsedDialogue.map((msg: any) => `
+            <div style="margin:4px 0;padding:6px 10px;background:${msg.role === 'user' || msg.character ? '#f0f4ff' : '#f5f5f5'};border-radius:8px;">
+              <strong>${escapeHtml(msg.character || msg.role || 'Character')}:</strong>
+              <span>${escapeHtml(msg.text || msg.content || msg.message || '')}</span>
+            </div>
+          `).join("")}
+        </section>
+      ` : ""}
       
       ${parsedThemes.length > 0 ? `
         <section>

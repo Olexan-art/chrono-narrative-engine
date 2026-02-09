@@ -29,8 +29,9 @@ interface MergeStats {
     id: string;
     title: string;
     title_en: string | null;
+    slug: string | null;
     merged_count: number;
-    source_feeds: { name: string; news_id: string }[];
+    source_feeds: { name: string; news_id: string; country_code?: string }[];
     created_at: string;
   }[];
 }
@@ -45,6 +46,9 @@ interface ScanResult {
     titles: string[];
     feeds: string[];
     similarity: string;
+    news_ids?: string[];
+    slugs?: string[];
+    country_codes?: string[];
   }[];
 }
 
@@ -206,6 +210,21 @@ export function NewsMergePanel() {
                       <span className="text-muted-foreground line-clamp-1">{title}</span>
                     </div>
                   ))}
+                  {group.news_ids && group.news_ids.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {group.news_ids.map((nid: string, ni: number) => (
+                        <a
+                          key={ni}
+                          href={`/news/${group.country_codes?.[ni] || 'us'}/${group.slugs?.[ni] || nid}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-primary hover:underline"
+                        >
+                          🔗 {group.feeds[ni] || `#${ni + 1}`}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -230,9 +249,14 @@ export function NewsMergePanel() {
                     {group.merged_count}
                   </Badge>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium line-clamp-1">
+                    <a
+                      href={`/news/${(group.source_feeds as any)?.[0]?.country_code || 'us'}/${group.slug || group.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium line-clamp-1 hover:text-primary hover:underline"
+                    >
                       {group.title_en || group.title}
-                    </p>
+                    </a>
                     <div className="flex gap-1 mt-0.5">
                       {group.source_feeds.map((sf: any, i: number) => (
                         <Badge key={i} variant="outline" className="text-[10px] px-1">
