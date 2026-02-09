@@ -35,6 +35,7 @@ import { NewsCalendarPanel } from "@/components/admin/NewsCalendarPanel";
 import { ImagesManagementPanel } from "@/components/admin/ImagesManagementPanel";
 import { BulkScrapePanel } from "@/components/admin/BulkScrapePanel";
 import { ViralityPanel } from "@/components/admin/ViralityPanel";
+import { NewsMergePanel } from "@/components/admin/NewsMergePanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
