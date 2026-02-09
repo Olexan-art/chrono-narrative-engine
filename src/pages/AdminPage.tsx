@@ -976,6 +976,10 @@ export default function AdminPage() {
           <TabsContent value="virality" className="mt-6">
             <ViralityPanel password={password} />
           </TabsContent>
+
+          <TabsContent value="merge-news" className="mt-6">
+            <NewsMergePanel />
+          </TabsContent>
         </Tabs>
       </main>
     </div>
