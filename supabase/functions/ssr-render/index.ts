@@ -1745,7 +1745,7 @@ function generateInkAbyssHTML(items: any[], lang: string) {
   `;
 }
 
-function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string) {
+function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string, topTopics: [string, number][] = [], topKeywords: [string, number][] = [], totalLikes = 0, totalDislikes = 0) {
   const name = entity.name_en || entity.name;
   const description = entity.description_en || entity.description || '';
   const extract = entity.extract_en || entity.extract || '';
@@ -1761,22 +1761,45 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
       </header>
       
       <section>
-        <h2>Key Information</h2>
+        <h2>📊 Rating</h2>
+        <p>${linkedNews.length} news mentions · 👍 ${totalLikes} likes · 👎 ${totalDislikes} dislikes</p>
+      </section>
+      
+      ${topTopics.length > 0 ? `
+        <section>
+          <h2>📌 Topics</h2>
+          <ul>
+            ${topTopics.map(([topic, count]) => `<li>${escapeHtml(topic)} (${count})</li>`).join("")}
+          </ul>
+        </section>
+      ` : ''}
+      
+      ${topKeywords.length > 0 ? `
+        <section>
+          <h2>🏷️ Keywords</h2>
+          <p>${topKeywords.map(([kw, count]) => `<span>${escapeHtml(kw)} (${count})</span>`).join(" · ")}</p>
+        </section>
+      ` : ''}
+      
+      <section>
+        <h2>📖 Key Information</h2>
         ${extract ? `<div itemprop="description">${escapeHtml(extract)}</div>` : '<p>Information not yet loaded.</p>'}
       </section>
       
       ${linkedNews.length > 0 ? `
         <section>
-          <h2>Related News (${linkedNews.length})</h2>
+          <h2>📰 Related News (${linkedNews.length})</h2>
           <ul>
             ${linkedNews.map((news: any) => {
               const newsTitle = news.title_en || news.title;
               const countryCode = (news.country as any)?.code?.toLowerCase() || 'us';
-              const newsUrl = news.slug ? `https://echoes2.com/news/${countryCode}/${news.slug}` : null;
+              const countryFlag = (news.country as any)?.flag || '';
+              const newsUrl = news.slug ? `${BASE_URL}/news/${countryCode}/${news.slug}` : null;
               return `
                 <li>
-                  ${newsUrl ? `<a href="${newsUrl}">${escapeHtml(newsTitle)}</a>` : escapeHtml(newsTitle)}
+                  ${countryFlag} ${newsUrl ? `<a href="${newsUrl}">${escapeHtml(newsTitle)}</a>` : escapeHtml(newsTitle)}
                   ${news.published_at ? `<time>(${news.published_at.split('T')[0]})</time>` : ''}
+                  ${news.description_en ? `<p>${escapeHtml(news.description_en.substring(0, 150))}...</p>` : ''}
                 </li>
               `;
             }).join("")}
@@ -1795,7 +1818,7 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
               const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
               return `
                 <li>
-                  ${typeIcon} <a href="https://echoes2.com/wiki/${eSlug}">${escapeHtml(eName)}</a>
+                  ${typeIcon} <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
                   <span>(${e.shared_news_count} shared articles)</span>
                 </li>
               `;
@@ -1804,10 +1827,20 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
         </section>
       ` : ''}
       
+      ${entity.wiki_url ? `
+        <section>
+          <h2>🔗 External Links</h2>
+          <ul>
+            <li><a href="${escapeHtml(entity.wiki_url)}" rel="noopener">Wikipedia</a></li>
+            ${entity.wiki_url_en ? `<li><a href="${escapeHtml(entity.wiki_url_en)}" rel="noopener">Wikipedia (English)</a></li>` : ''}
+          </ul>
+        </section>
+      ` : ''}
+      
       <nav>
-        <a href="https://echoes2.com/wiki">← Entity Catalog</a> |
-        <a href="https://echoes2.com/news">📰 News</a> |
-        <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+        <a href="${BASE_URL}/wiki">← Entity Catalog</a> |
+        <a href="${BASE_URL}/news">📰 News</a> |
+        <a href="${BASE_URL}/sitemap">🗺️ Sitemap</a>
       </nav>
     </article>
   `;
