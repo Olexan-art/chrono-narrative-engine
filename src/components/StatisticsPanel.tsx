@@ -24,6 +24,7 @@ interface PeriodStats {
   retold: number;
   dialogues: number;
   tweets: number;
+  entities: number;
 }
 
 interface DailyStats {
@@ -32,6 +33,7 @@ interface DailyStats {
   retold: number;
   dialogues: number;
   tweets: number;
+  entities: number;
 }
 
 interface AutoGenStats {
