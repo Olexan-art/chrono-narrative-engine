@@ -586,19 +586,31 @@ Deno.serve(async (req) => {
         image = entity.image_url || image;
         canonicalUrl = `${BASE_URL}/wiki/${entity.slug || entity.id}`;
         
-        // Fetch related news
+        // Fetch related news (with themes + keywords for topic aggregation)
         const { data: newsLinks } = await supabase
           .from("news_wiki_entities")
           .select(`
-            news_item:news_rss_items(id, slug, title, title_en, published_at, country:news_countries(code, flag, name_en))
+            news_item:news_rss_items(id, slug, title, title_en, description_en, published_at, themes, themes_en, keywords, likes, dislikes, country:news_countries(code, flag, name_en))
           `)
           .eq("wiki_entity_id", entity.id)
           .order("created_at", { ascending: false })
-          .limit(20);
+          .limit(30);
         
         const linkedNews = (newsLinks || [])
           .map((l: any) => l.news_item)
           .filter(Boolean);
+        
+        // Aggregate topics and keywords from linked news
+        const topicCounts: Record<string, number> = {};
+        const keywordCounts: Record<string, number> = {};
+        for (const news of linkedNews) {
+          const themes = news.themes_en || news.themes || [];
+          for (const t of themes) { topicCounts[t] = (topicCounts[t] || 0) + 1; }
+          const kws = news.keywords || [];
+          for (const k of kws) { keywordCounts[k] = (keywordCounts[k] || 0) + 1; }
+        }
+        const topTopics = Object.entries(topicCounts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+        const topKeywords = Object.entries(keywordCounts).sort((a, b) => b[1] - a[1]).slice(0, 20);
         
         // Fetch related entities
         const newsIdsForEntity = linkedNews.map((n: any) => n.id);
@@ -623,11 +635,15 @@ Deno.serve(async (req) => {
           
           relatedEntities = Array.from(entityCounts.values())
             .sort((a, b) => b.count - a.count)
-            .slice(0, 8)
+            .slice(0, 10)
             .map(({ entity: e, count }) => ({ ...e, shared_news_count: count }));
         }
         
-        html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl);
+        // Aggregate stats
+        const totalLikes = linkedNews.reduce((s: number, n: any) => s + (n.likes || 0), 0);
+        const totalDislikes = linkedNews.reduce((s: number, n: any) => s + (n.dislikes || 0), 0);
+        
+        html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl, topTopics, topKeywords, totalLikes, totalDislikes);
       }
     } else if (dateMatch) {
       // Date stories page
