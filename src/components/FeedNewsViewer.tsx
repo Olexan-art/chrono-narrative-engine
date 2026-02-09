@@ -109,11 +109,6 @@ export function FeedNewsViewer({ feedId, feedName, isOpen, onClose }: FeedNewsVi
                     <div className={`w-20 h-20 bg-muted rounded-md items-center justify-center flex-shrink-0 ${item.image_url ? 'hidden' : 'flex'}`}>
                       <ImageIcon className="w-6 h-6 text-muted-foreground" />
                     </div>
-                    ) : (
-                      <div className="w-20 h-20 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
-                        <ImageIcon className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                    )}
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-start justify-between gap-2">
                         <h4 className="font-medium text-sm line-clamp-2">{item.title}</h4>
