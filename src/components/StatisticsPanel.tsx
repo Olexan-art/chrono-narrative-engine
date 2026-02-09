@@ -274,10 +274,10 @@ export function StatisticsPanel({ password }: Props) {
     queryFn: async () => {
       const result = await adminAction<{ success: boolean; stats: AutoGenStats }>('getAutoGenStats', password, { periods: true, daily: true });
       return result.stats ?? {
-        h24: { retold: 0, dialogues: 0, tweets: 0 },
-        d3: { retold: 0, dialogues: 0, tweets: 0 },
-        d7: { retold: 0, dialogues: 0, tweets: 0 },
-        d30: { retold: 0, dialogues: 0, tweets: 0 },
+        h24: { retold: 0, dialogues: 0, tweets: 0, entities: 0 },
+        d3: { retold: 0, dialogues: 0, tweets: 0, entities: 0 },
+        d7: { retold: 0, dialogues: 0, tweets: 0, entities: 0 },
+        d30: { retold: 0, dialogues: 0, tweets: 0, entities: 0 },
         daily: [],
       };
     }
