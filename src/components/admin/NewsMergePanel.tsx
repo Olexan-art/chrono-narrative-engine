@@ -29,8 +29,9 @@ interface MergeStats {
     id: string;
     title: string;
     title_en: string | null;
+    slug: string | null;
     merged_count: number;
-    source_feeds: { name: string; news_id: string }[];
+    source_feeds: { name: string; news_id: string; country_code?: string }[];
     created_at: string;
   }[];
 }
