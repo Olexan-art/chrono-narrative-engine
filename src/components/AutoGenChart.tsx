@@ -44,6 +44,10 @@ export function AutoGenChart({ data }: Props) {
                   <stop offset="5%" stopColor="hsl(199, 89%, 48%)" stopOpacity={0.4} />
                   <stop offset="95%" stopColor="hsl(199, 89%, 48%)" stopOpacity={0} />
                 </linearGradient>
+                <linearGradient id="colorEntities" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(280, 87%, 60%)" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="hsl(280, 87%, 60%)" stopOpacity={0} />
+                </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis 
