@@ -49,6 +49,14 @@ export const COUNTRY_CONTENT_CONFIG: Record<string, CountryContentConfig> = {
     retoldMinLength: 300,
     dialogueField: 'chat_dialogue',
   },
+  
+  // United Kingdom - retold content stored in content_en (same as US)
+  GB: {
+    code: 'GB',
+    retoldFields: ['content_en'],
+    retoldMinLength: 300,
+    dialogueField: 'chat_dialogue',
+  },
 };
 
 /**
