@@ -145,6 +145,9 @@ Deno.serve(async (req) => {
         count: cluster.length,
         titles: cluster.map(n => n.title_en || n.title),
         feeds: cluster.map(n => (n as any).news_rss_feeds?.name || 'Unknown'),
+        news_ids: cluster.map(n => n.id),
+        slugs: cluster.map(n => n.slug),
+        country_codes: cluster.map(n => (n as any).country?.code?.toLowerCase() || 'us'),
         similarity: cluster.length > 1 ? bestSimilarity(cluster[0], cluster[1]).toFixed(2) : '1.00',
       }));
 
