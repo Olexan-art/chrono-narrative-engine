@@ -104,6 +104,14 @@ export function AutoGenChart({ data }: Props) {
                 fill="url(#colorTweets)"
                 strokeWidth={2}
               />
+              <Area 
+                type="monotone" 
+                dataKey="entities" 
+                stroke="hsl(280, 87%, 60%)" 
+                fillOpacity={1} 
+                fill="url(#colorEntities)"
+                strokeWidth={2}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>

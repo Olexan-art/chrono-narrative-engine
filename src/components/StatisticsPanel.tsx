@@ -481,7 +481,7 @@ export function StatisticsPanel({ password }: Props) {
                     <td className="text-center py-2 px-3 font-medium">{autoGenStats.d7.dialogues}</td>
                     <td className="text-center py-2 px-3 font-medium">{autoGenStats.d30.dialogues}</td>
                   </tr>
-                  <tr>
+                  <tr className="border-b border-border/30">
                     <td className="py-2 pr-4">
                       <div className="flex items-center gap-2">
                         <Twitter className="w-4 h-4 text-sky-500" />
@@ -492,6 +492,18 @@ export function StatisticsPanel({ password }: Props) {
                     <td className="text-center py-2 px-3 font-medium">{autoGenStats.d3.tweets}</td>
                     <td className="text-center py-2 px-3 font-medium">{autoGenStats.d7.tweets}</td>
                     <td className="text-center py-2 px-3 font-medium">{autoGenStats.d30.tweets}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-purple-500" />
+                        <span>Сутностей</span>
+                      </div>
+                    </td>
+                    <td className="text-center py-2 px-3 font-bold text-purple-500">{autoGenStats.h24.entities}</td>
+                    <td className="text-center py-2 px-3 font-medium">{autoGenStats.d3.entities}</td>
+                    <td className="text-center py-2 px-3 font-medium">{autoGenStats.d7.entities}</td>
+                    <td className="text-center py-2 px-3 font-medium">{autoGenStats.d30.entities}</td>
                   </tr>
                 </tbody>
               </table>
