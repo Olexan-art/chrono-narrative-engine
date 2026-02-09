@@ -867,6 +867,10 @@ export default function AdminPage() {
               <Flame className="w-4 h-4 text-orange-500" />
               Віральність
             </TabsTrigger>
+            <TabsTrigger value="merge-news" className="gap-2">
+              <GitMerge className="w-4 h-4 text-teal-500" />
+              Дедуплікація
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               Налаштування
