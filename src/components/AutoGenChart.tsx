@@ -74,7 +74,8 @@ export function AutoGenChart({ data }: Props) {
                   const labels: Record<string, string> = {
                     retold: 'Переказів',
                     dialogues: 'Діалогів',
-                    tweets: 'Твітів'
+                    tweets: 'Твітів',
+                    entities: 'Сутностей'
                   };
                   return labels[value] || value;
                 }}
