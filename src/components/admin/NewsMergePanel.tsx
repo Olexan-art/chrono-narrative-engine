@@ -245,9 +245,14 @@ export function NewsMergePanel() {
                     {group.merged_count}
                   </Badge>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium line-clamp-1">
+                    <a
+                      href={`/news/${(group.source_feeds as any)?.[0]?.country_code || 'us'}/${group.slug || group.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium line-clamp-1 hover:text-primary hover:underline"
+                    >
                       {group.title_en || group.title}
-                    </p>
+                    </a>
                     <div className="flex gap-1 mt-0.5">
                       {group.source_feeds.map((sf: any, i: number) => (
                         <Badge key={i} variant="outline" className="text-[10px] px-1">
