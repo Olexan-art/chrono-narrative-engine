@@ -115,3 +115,6 @@ verify_jwt = false
 
 [functions.merge-news]
 verify_jwt = false
+
+[functions.wiki-sitemap]
+verify_jwt = false
