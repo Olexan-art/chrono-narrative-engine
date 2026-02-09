@@ -206,6 +206,21 @@ export function NewsMergePanel() {
                       <span className="text-muted-foreground line-clamp-1">{title}</span>
                     </div>
                   ))}
+                  {group.news_ids && group.news_ids.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {group.news_ids.map((nid: string, ni: number) => (
+                        <a
+                          key={ni}
+                          href={`/news/${group.country_codes?.[ni] || 'us'}/${group.slugs?.[ni] || nid}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-primary hover:underline"
+                        >
+                          🔗 {group.feeds[ni] || `#${ni + 1}`}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
