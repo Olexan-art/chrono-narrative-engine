@@ -1286,12 +1286,14 @@ export default function NewsArticlePage() {
               isAdmin={isAdminAuthenticated}
             />
 
-            {/* Wikipedia Entities */}
+            {/* Wikipedia Entities with Narrative indicators */}
             <NewsWikiEntities 
               newsId={article.id}
               title={getLocalizedField('title')}
               keywords={articleKeywords}
               showSearchButton
+              entityNarratives={entityNarratives}
+            />
             />
 
 
