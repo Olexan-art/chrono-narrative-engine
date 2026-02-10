@@ -586,19 +586,51 @@ Deno.serve(async (req) => {
         image = entity.image_url || image;
         canonicalUrl = `${BASE_URL}/wiki/${entity.slug || entity.id}`;
         
-        // Fetch related news (with themes + keywords for topic aggregation)
-        const { data: newsLinks } = await supabase
-          .from("news_wiki_entities")
-          .select(`
-            news_item:news_rss_items(id, slug, title, title_en, description_en, published_at, themes, themes_en, keywords, likes, dislikes, country:news_countries(code, flag, name_en))
-          `)
-          .eq("wiki_entity_id", entity.id)
-          .order("created_at", { ascending: false })
-          .limit(30);
+        // Fetch related news, wiki entity links, and narrative analysis in parallel
+        const [{ data: newsLinks }, { data: wikiLinksOut }, { data: wikiLinksIn }, { data: narrativeData }] = await Promise.all([
+          supabase
+            .from("news_wiki_entities")
+            .select(`
+              news_item:news_rss_items(id, slug, title, title_en, description_en, published_at, themes, themes_en, keywords, likes, dislikes, country:news_countries(code, flag, name_en))
+            `)
+            .eq("wiki_entity_id", entity.id)
+            .order("created_at", { ascending: false })
+            .limit(30),
+          supabase
+            .from("wiki_entity_links")
+            .select("target_entity:wiki_entities!wiki_entity_links_target_entity_id_fkey(id, name, name_en, slug, image_url, entity_type, description_en, description)")
+            .eq("source_entity_id", entity.id),
+          supabase
+            .from("wiki_entity_links")
+            .select("source_entity:wiki_entities!wiki_entity_links_source_entity_id_fkey(id, name, name_en, slug, image_url, entity_type, description_en, description)")
+            .eq("target_entity_id", entity.id),
+          supabase
+            .from("narrative_analyses")
+            .select("analysis, year_month, language, news_count")
+            .eq("entity_id", entity.id)
+            .eq("language", "en")
+            .order("year_month", { ascending: false })
+            .limit(1)
+        ]);
         
         const linkedNews = (newsLinks || [])
           .map((l: any) => l.news_item)
           .filter(Boolean);
+        
+        // Merge wiki entity links (both directions, deduped)
+        const wikiLinkedEntities: any[] = [];
+        const seenIds = new Set<string>();
+        for (const link of (wikiLinksOut || [])) {
+          const e = (link as any).target_entity;
+          if (e && !seenIds.has(e.id)) { seenIds.add(e.id); wikiLinkedEntities.push(e); }
+        }
+        for (const link of (wikiLinksIn || [])) {
+          const e = (link as any).source_entity;
+          if (e && !seenIds.has(e.id)) { seenIds.add(e.id); wikiLinkedEntities.push(e); }
+        }
+        
+        // Latest narrative analysis
+        const latestNarrative = narrativeData?.[0] || null;
         
         // Aggregate topics and keywords from linked news
         const topicCounts: Record<string, number> = {};
