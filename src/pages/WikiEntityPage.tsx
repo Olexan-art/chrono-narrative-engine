@@ -617,11 +617,15 @@ export default function WikiEntityPage() {
     if (!entity) return;
     setIsCaching(true);
     try {
-      const result = await callEdgeFunction<any>('cache-pages', {}, {
-        action: 'refresh-single',
-        path: entityCachePath,
-        password: useAdminStore.getState().password || '',
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const adminPwd = useAdminStore.getState().password || '';
+      const url = `${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(entityCachePath)}&password=${encodeURIComponent(adminPwd)}`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
       });
+      const result = await response.json();
       if (result.success) {
         toast.success(language === 'uk' ? `HTML кеш створено (${result.timeMs}ms)` : `HTML cache generated (${result.timeMs}ms)`);
         refetchCacheStatus();
