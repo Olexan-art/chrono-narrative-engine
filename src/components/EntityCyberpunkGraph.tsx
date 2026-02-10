@@ -39,6 +39,7 @@ interface Props {
   mainEntity: MainEntityInfo;
   relatedEntities: RelatedEntity[];
   secondaryConnections?: SecondaryConnection[];
+  wikiLinkedIds?: Set<string>;
   className?: string;
 }
 
