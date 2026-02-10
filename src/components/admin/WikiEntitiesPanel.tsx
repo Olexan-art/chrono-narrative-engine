@@ -184,7 +184,7 @@ export function WikiEntitiesPanel() {
 
   // Fetch entities with search and filter
   const { data: entities, isLoading } = useQuery({
-    queryKey: ['admin-wiki-entities', searchTerm, filterType],
+    queryKey: ['admin-wiki-entities', searchTerm, filterType, mentionFilter],
     queryFn: async () => {
       let query = supabase
         .from('wiki_entities')
