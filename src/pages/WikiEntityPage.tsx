@@ -1172,23 +1172,63 @@ export default function WikiEntityPage() {
               )}
 
 
-              {/* Entity Intersection Graph */}
+              {/* Entity Intersection Graph with variant toggle */}
               {relatedEntities.length > 0 && (
-                <EntityIntersectionGraph 
-                  mainEntity={{
-                    id: entity.id,
-                    slug: entity.slug,
-                    name: entity.name,
-                    name_en: entity.name_en,
-                    description: entity.description,
-                    description_en: entity.description_en,
-                    image_url: entity.image_url,
-                    entity_type: entity.entity_type,
-                    shared_news_count: totalMentions,
-                  }}
-                  relatedEntities={relatedEntities}
-                  secondaryConnections={secondaryConnections}
-                />
+                <>
+                  <div className="flex items-center gap-2 justify-end">
+                    <Button
+                      variant={graphVariant === 'tree' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setGraphVariant('tree')}
+                      className="gap-1.5 text-xs"
+                    >
+                      <Network className="w-3.5 h-3.5" />
+                      {language === 'uk' ? 'Дерево' : 'Tree'}
+                    </Button>
+                    <Button
+                      variant={graphVariant === 'ghostly' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setGraphVariant('ghostly')}
+                      className="gap-1.5 text-xs"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      {language === 'uk' ? 'Примарні' : 'Ghostly'}
+                    </Button>
+                  </div>
+                  {graphVariant === 'tree' ? (
+                    <EntityIntersectionGraph 
+                      mainEntity={{
+                        id: entity.id,
+                        slug: entity.slug,
+                        name: entity.name,
+                        name_en: entity.name_en,
+                        description: entity.description,
+                        description_en: entity.description_en,
+                        image_url: entity.image_url,
+                        entity_type: entity.entity_type,
+                        shared_news_count: totalMentions,
+                      }}
+                      relatedEntities={relatedEntities}
+                      secondaryConnections={secondaryConnections}
+                    />
+                  ) : (
+                    <EntityGhostlyGraph 
+                      mainEntity={{
+                        id: entity.id,
+                        slug: entity.slug,
+                        name: entity.name,
+                        name_en: entity.name_en,
+                        description: entity.description,
+                        description_en: entity.description_en,
+                        image_url: entity.image_url,
+                        entity_type: entity.entity_type,
+                        shared_news_count: totalMentions,
+                      }}
+                      relatedEntities={relatedEntities}
+                      secondaryConnections={secondaryConnections}
+                    />
+                  )}
+                </>
               )}
 
               {/* Compact Rating Block */}
