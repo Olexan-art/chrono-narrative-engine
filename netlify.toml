@@ -41,6 +41,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/api/rss-feed"
+  to = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/rss-feed"
+  status = 200
+  force = true
+
 # SPA fallback
 [[redirects]]
   from = "/*"
