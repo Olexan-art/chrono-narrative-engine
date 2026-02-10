@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { entityId, yearMonth, language = 'uk' } = await req.json();
+    const { entityId, yearMonth, language = 'uk', regenerate = false } = await req.json();
     
     if (!entityId || !yearMonth) {
       return new Response(JSON.stringify({ error: "entityId and yearMonth required" }), {
@@ -23,10 +23,34 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse yearMonth (e.g., "2025-01")
+    // Check if we already have a saved analysis (unless regenerating)
+    if (!regenerate) {
+      const { data: existing } = await supabase
+        .from("narrative_analyses")
+        .select("*")
+        .eq("entity_id", entityId)
+        .eq("year_month", yearMonth)
+        .eq("language", language)
+        .single();
+
+      if (existing) {
+        return new Response(JSON.stringify({
+          success: true,
+          yearMonth,
+          entityName: existing.analysis?.entityName || '',
+          newsCount: existing.news_count,
+          analysis: existing.analysis,
+          relatedEntities: existing.related_entities,
+          is_regenerated: existing.is_regenerated,
+          saved_at: existing.updated_at,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    // Parse yearMonth
     const [year, month] = yearMonth.split("-").map(Number);
     const startDate = `${yearMonth}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split("T")[0]; // last day of month
+    const endDate = new Date(year, month, 0).toISOString().split("T")[0];
 
     // Get entity info
     const { data: entity } = await supabase
@@ -37,8 +61,7 @@ serve(async (req) => {
 
     if (!entity) {
       return new Response(JSON.stringify({ error: "Entity not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -50,14 +73,12 @@ serve(async (req) => {
 
     if (!newsLinks?.length) {
       return new Response(JSON.stringify({ error: "No news found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const newsItemIds = newsLinks.map((l) => l.news_item_id);
 
-    // Get news items for this month
     const { data: newsItems } = await supabase
       .from("news_rss_items")
       .select("id, title, title_en, description, description_en, slug, published_at, themes, themes_en, keywords, country_id, country:news_countries(code, name)")
@@ -68,12 +89,11 @@ serve(async (req) => {
 
     if (!newsItems?.length) {
       return new Response(JSON.stringify({ error: "No news in this period" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Get related entities for these news items
+    // Get related entities
     const { data: relatedLinks } = await supabase
       .from("news_wiki_entities")
       .select("wiki_entity_id, news_item_id, wiki_entity:wiki_entities(id, name, name_en, slug)")
@@ -95,17 +115,14 @@ serve(async (req) => {
       .slice(0, 8)
       .map(([id, data]) => ({ id, ...data }));
 
-    // Build context for AI
+    // Build AI context
     const entityName = language === "en" && entity.name_en ? entity.name_en : entity.name;
-    const newsContext = newsItems
-      .slice(0, 30)
-      .map((n, i) => {
-        const title = language === "en" && n.title_en ? n.title_en : n.title;
-        const desc = language === "en" && n.description_en ? n.description_en : n.description;
-        const country = (n.country as any)?.name || "";
-        return `${i + 1}. [${n.published_at?.slice(0, 10)}] ${title}${desc ? ` — ${desc}` : ""} (${country})`;
-      })
-      .join("\n");
+    const newsContext = newsItems.slice(0, 30).map((n, i) => {
+      const title = language === "en" && n.title_en ? n.title_en : n.title;
+      const desc = language === "en" && n.description_en ? n.description_en : n.description;
+      const country = (n.country as any)?.name || "";
+      return `${i + 1}. [${n.published_at?.slice(0, 10)}] ${title}${desc ? ` — ${desc}` : ""} (${country})`;
+    }).join("\n");
 
     const relatedContext = topRelated
       .map((r) => `${language === "en" && r.name_en ? r.name_en : r.name} (${r.count} mentions)`)
@@ -114,8 +131,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -124,38 +140,8 @@ serve(async (req) => {
       : `You are a narrative analyst. Analyze how entity "${entityName}" is mentioned in news for ${yearMonth}. Create a structured analysis.`;
 
     const userPrompt = language === "uk"
-      ? `Сутність: ${entityName} (${entity.entity_type})
-Період: ${yearMonth}
-Новин: ${newsItems.length}
-
-Пов'язані сутності: ${relatedContext}
-
-Новини:
-${newsContext}
-
-Створи JSON з полями:
-- key_takeaways: масив об'єктів {point: "текст тези", news_indices: [номери новин 1-based]}
-- narrative_summary: короткий опис загальної наративної лінії (2-3 речення)
-- sentiment: "positive" | "negative" | "neutral" | "mixed"
-- related_entity_roles: масив {name: "ім'я", role: "роль у наративі"}
-
-Відповідай ТІЛЬКИ валідним JSON без markdown.`
-      : `Entity: ${entityName} (${entity.entity_type})
-Period: ${yearMonth}
-News count: ${newsItems.length}
-
-Related entities: ${relatedContext}
-
-News:
-${newsContext}
-
-Create JSON with fields:
-- key_takeaways: array of {point: "takeaway text", news_indices: [1-based news indices]}
-- narrative_summary: brief summary of the narrative arc (2-3 sentences)
-- sentiment: "positive" | "negative" | "neutral" | "mixed"
-- related_entity_roles: array of {name: "entity name", role: "role in narrative"}
-
-Respond with VALID JSON only, no markdown.`;
+      ? `Сутність: ${entityName} (${entity.entity_type})\nПеріод: ${yearMonth}\nНовин: ${newsItems.length}\n\nПов'язані сутності: ${relatedContext}\n\nНовини:\n${newsContext}\n\nСтвори JSON з полями:\n- key_takeaways: масив об'єктів {point: "текст тези", news_indices: [номери новин 1-based]}\n- narrative_summary: короткий опис загальної наративної лінії (2-3 речення)\n- sentiment: "positive" | "negative" | "neutral" | "mixed"\n- related_entity_roles: масив {name: "ім'я", role: "роль у наративі"}\n\nВідповідай ТІЛЬКИ валідним JSON без markdown.`
+      : `Entity: ${entityName} (${entity.entity_type})\nPeriod: ${yearMonth}\nNews count: ${newsItems.length}\n\nRelated entities: ${relatedContext}\n\nNews:\n${newsContext}\n\nCreate JSON with fields:\n- key_takeaways: array of {point: "takeaway text", news_indices: [1-based news indices]}\n- narrative_summary: brief summary of the narrative arc (2-3 sentences)\n- sentiment: "positive" | "negative" | "neutral" | "mixed"\n- related_entity_roles: array of {name: "entity name", role: "role in narrative"}\n\nRespond with VALID JSON only, no markdown.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -176,29 +162,25 @@ Respond with VALID JSON only, no markdown.`;
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);
       return new Response(JSON.stringify({ error: `AI error: ${aiResponse.status}` }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const aiData = await aiResponse.json();
     const content = aiData.choices?.[0]?.message?.content || "";
 
-    // Parse JSON from response
     let analysis;
     try {
-      // Try to extract JSON from possible markdown wrapping
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       analysis = JSON.parse(jsonMatch ? jsonMatch[0] : content);
     } catch {
       console.error("Failed to parse AI response:", content);
       return new Response(JSON.stringify({ error: "Failed to parse AI response" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Map news_indices to actual news slugs/ids
+    // Enrich takeaways with news links
     const enrichedTakeaways = (analysis.key_takeaways || []).map((kt: any) => ({
       point: kt.point,
       newsLinks: (kt.news_indices || [])
@@ -215,17 +197,40 @@ Respond with VALID JSON only, no markdown.`;
         }),
     }));
 
+    const fullAnalysis = {
+      ...analysis,
+      key_takeaways: enrichedTakeaways,
+      entityName,
+    };
+
+    // Save to database (upsert)
+    const isRegenerated = regenerate;
+    const { error: upsertError } = await supabase
+      .from("narrative_analyses")
+      .upsert({
+        entity_id: entityId,
+        year_month: yearMonth,
+        language,
+        news_count: newsItems.length,
+        analysis: fullAnalysis,
+        related_entities: topRelated,
+        is_regenerated: isRegenerated,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "entity_id,year_month,language" });
+
+    if (upsertError) {
+      console.error("DB save error:", upsertError);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         yearMonth,
         entityName,
         newsCount: newsItems.length,
-        analysis: {
-          ...analysis,
-          key_takeaways: enrichedTakeaways,
-        },
+        analysis: fullAnalysis,
         relatedEntities: topRelated,
+        is_regenerated: isRegenerated,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
