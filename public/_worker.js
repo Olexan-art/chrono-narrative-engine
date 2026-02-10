@@ -88,6 +88,7 @@ const EXCLUDED_PATHS = [
 const API_REWRITES = {
   '/api/sitemap': `${SSR_ENDPOINT.replace('/ssr-render', '/sitemap')}`,
   '/api/news-sitemap': `${SSR_ENDPOINT.replace('/ssr-render', '/news-sitemap')}`,
+  '/api/wiki-sitemap': `${SSR_ENDPOINT.replace('/ssr-render', '/wiki-sitemap')}`,
   '/api/ssr-render': SSR_ENDPOINT,
   '/api/llms-txt': `${SSR_ENDPOINT.replace('/ssr-render', '/llms-txt')}`,
 };
