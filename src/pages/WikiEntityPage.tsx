@@ -161,6 +161,9 @@ export default function WikiEntityPage() {
   const [newsPage, setNewsPage] = useState(1);
   const [selectedCaricature, setSelectedCaricature] = useState<CaricatureLightbox | null>(null);
   const [graphVariant, setGraphVariant] = useState<'tree' | 'ghostly' | 'cyberpunk'>('cyberpunk');
+  const [narrativeAnalyses, setNarrativeAnalyses] = useState<Record<string, any>>({});
+  const [analyzingMonth, setAnalyzingMonth] = useState<string | null>(null);
+  const [expandedNarrativeMonths, setExpandedNarrativeMonths] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
 
   // Fetch entity data - support both slug and id
