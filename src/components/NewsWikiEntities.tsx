@@ -40,6 +40,7 @@ interface NewsWikiEntitiesProps {
   title?: string;
   keywords?: string[];
   showSearchButton?: boolean;
+  entityNarratives?: Record<string, any>;
 }
 
 export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = false }: NewsWikiEntitiesProps) {
