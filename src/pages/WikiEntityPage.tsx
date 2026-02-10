@@ -1980,7 +1980,7 @@ export default function WikiEntityPage() {
                     </div>
                   ) : extract ? (
                     <div className="space-y-6">
-                      <AdminTextSelectionPopover onEntityAdded={() => queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] })}>
+                      <AdminTextSelectionPopover entityId={entity?.id} onEntityAdded={() => { queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] }); queryClient.invalidateQueries({ queryKey: ['wiki-linked-entities', entity?.id] }); }}>
                         <EntityLinkedContent content={extract} excludeEntityId={entity?.id} />
                       </AdminTextSelectionPopover>
                       
