@@ -1320,6 +1320,7 @@ export default function WikiEntityPage() {
                       }}
                       relatedEntities={relatedEntities}
                       secondaryConnections={secondaryConnections}
+                      feedSources={feedSources.slice(0, 6).map(f => ({ id: f.id, name: f.name, favicon: f.favicon }))}
                     />
                   ) : (
                     <EntityGhostlyGraph 
