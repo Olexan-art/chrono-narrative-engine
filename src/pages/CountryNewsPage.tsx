@@ -43,6 +43,8 @@ interface NewsItem {
   published_at: string | null;
   chat_dialogue: any;
   tweets: any;
+  themes: string[] | null;
+  themes_en: string[] | null;
   news_rss_feeds: {
     name: string;
   };
