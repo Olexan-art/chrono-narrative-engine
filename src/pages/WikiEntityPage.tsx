@@ -863,8 +863,48 @@ export default function WikiEntityPage() {
     setIsEditingInfo(true);
   };
 
+  // Load saved narrative analyses from DB
+  const { data: savedNarratives = [] } = useQuery({
+    queryKey: ['narrative-analyses', entity?.id, language],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('narrative_analyses')
+        .select('*')
+        .eq('entity_id', entity?.id)
+        .eq('language', language === 'uk' ? 'uk' : 'en')
+        .order('year_month', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!entity?.id,
+  });
+
+  // Merge saved narratives into state on load
+  useMemo(() => {
+    if (savedNarratives.length > 0) {
+      const merged: Record<string, any> = { ...narrativeAnalyses };
+      savedNarratives.forEach(n => {
+        if (!merged[n.year_month]) {
+          merged[n.year_month] = {
+            success: true,
+            yearMonth: n.year_month,
+            newsCount: n.news_count,
+            analysis: n.analysis,
+            relatedEntities: n.related_entities,
+            is_regenerated: n.is_regenerated,
+            saved_at: n.updated_at,
+          };
+        }
+      });
+      // Only update if different
+      if (Object.keys(merged).length !== Object.keys(narrativeAnalyses).length) {
+        setNarrativeAnalyses(merged);
+      }
+    }
+  }, [savedNarratives]);
+
   // Analyze narratives for a specific month
-  const analyzeNarratives = async (yearMonth: string) => {
+  const analyzeNarratives = async (yearMonth: string, regenerate = false) => {
     if (!entity) return;
     setAnalyzingMonth(yearMonth);
     try {
@@ -872,11 +912,13 @@ export default function WikiEntityPage() {
         entityId: entity.id,
         yearMonth,
         language: language === 'uk' ? 'uk' : 'en',
+        regenerate,
       });
       if (result.success) {
         setNarrativeAnalyses(prev => ({ ...prev, [yearMonth]: result }));
         setExpandedNarrativeMonths(prev => new Set(prev).add(yearMonth));
-        toast.success(language === 'uk' ? 'Аналіз завершено' : 'Analysis complete');
+        queryClient.invalidateQueries({ queryKey: ['narrative-analyses', entity.id] });
+        toast.success(language === 'uk' ? (regenerate ? 'Перегенеровано' : 'Аналіз завершено') : (regenerate ? 'Regenerated' : 'Analysis complete'));
       } else {
         throw new Error(result.error || 'Analysis failed');
       }
