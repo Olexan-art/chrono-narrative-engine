@@ -22,6 +22,12 @@ interface SecondaryConnection {
   weight: number;
 }
 
+interface FeedSource {
+  id: string;
+  name: string;
+  favicon: string;
+}
+
 interface MainEntityInfo {
   id?: string;
   slug?: string | null;
@@ -38,6 +44,7 @@ interface EntityIntersectionGraphProps {
   mainEntity: MainEntityInfo;
   relatedEntities: RelatedEntity[];
   secondaryConnections?: SecondaryConnection[];
+  feedSources?: FeedSource[];
   className?: string;
 }
 
