@@ -64,19 +64,40 @@ export function EntityLinkedContent({ content, excludeEntityId, className, extra
     staleTime: 1000 * 60 * 10,
   });
 
-  // Build entity lookup map
+  // Build entity lookup map — merge DB entities with extraEntities
   const entityMap = useMemo(() => {
     const map = new Map<string, WikiEntity>();
+    // Add extra entities first (higher priority for directly linked)
+    for (const extra of extraEntities) {
+      if (extra.id === excludeEntityId) continue;
+      const asWiki: WikiEntity = {
+        id: extra.id,
+        name: extra.name,
+        name_en: extra.name_en || null,
+        description: extra.description || null,
+        description_en: extra.description_en || null,
+        image_url: extra.image_url || null,
+        entity_type: extra.entity_type || 'other',
+        slug: extra.slug || null,
+      };
+      if (asWiki.name && asWiki.name.length >= 3) {
+        map.set(asWiki.name.toLowerCase(), asWiki);
+      }
+      if (asWiki.name_en && asWiki.name_en !== asWiki.name && asWiki.name_en.length >= 3) {
+        map.set(asWiki.name_en.toLowerCase(), asWiki);
+      }
+    }
+    // Add DB entities (won't overwrite extra ones)
     for (const entity of entities) {
-      if (entity.name && entity.name.length >= 3) {
+      if (entity.name && entity.name.length >= 3 && !map.has(entity.name.toLowerCase())) {
         map.set(entity.name.toLowerCase(), entity);
       }
-      if (entity.name_en && entity.name_en !== entity.name && entity.name_en.length >= 3) {
+      if (entity.name_en && entity.name_en !== entity.name && entity.name_en.length >= 3 && !map.has(entity.name_en.toLowerCase())) {
         map.set(entity.name_en.toLowerCase(), entity);
       }
     }
     return map;
-  }, [entities]);
+  }, [entities, extraEntities, excludeEntityId]);
 
   // Helper to get entity icon
   const getEntityIcon = (entityType: string) => {
