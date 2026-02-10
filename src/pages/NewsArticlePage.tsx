@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
-import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages, Share2, Trash2, Download } from "lucide-react";
+import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages, Share2, Trash2, Download, BrainCircuit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
