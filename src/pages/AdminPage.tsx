@@ -985,6 +985,10 @@ export default function AdminPage() {
           <TabsContent value="merge-news" className="mt-6">
             <NewsMergePanel />
           </TabsContent>
+
+          <TabsContent value="rss-feed" className="mt-6">
+            <RSSFeedPanel password={password} />
+          </TabsContent>
         </Tabs>
       </main>
     </div>
