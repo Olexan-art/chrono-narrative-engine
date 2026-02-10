@@ -2372,6 +2372,40 @@ export default function WikiEntityPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Aliases section - admin only */}
+                  {isAdmin && (
+                    <div className="mt-4 pt-4 border-t border-border/50">
+                      <h4 className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
+                        <Tag className="w-3.5 h-3.5" />
+                        Aliases
+                      </h4>
+                      {entityAliases.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {entityAliases.map(a => (
+                            <Badge key={a.id} variant="secondary" className="text-[10px] gap-1">
+                              {a.alias}
+                              <button onClick={() => removeAlias(a.id)} className="ml-0.5 hover:text-destructive">
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-1">
+                        <Input
+                          value={newAlias}
+                          onChange={e => setNewAlias(e.target.value)}
+                          placeholder="Add alias..."
+                          className="h-7 text-xs"
+                          onKeyDown={e => e.key === 'Enter' && addAlias()}
+                        />
+                        <Button size="sm" variant="outline" className="h-7 px-2" onClick={addAlias} disabled={!newAlias.trim()}>
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
