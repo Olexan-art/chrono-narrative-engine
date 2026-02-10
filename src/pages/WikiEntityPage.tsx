@@ -1153,10 +1153,33 @@ export default function WikiEntityPage() {
                       <>
                         <div className="flex items-start justify-between gap-4 relative">
                           <div>
-                            <Badge variant="secondary" className="mb-2">
-                              {getEntityIcon(entity.entity_type)}
-                              <span className="ml-1">{entityTypeLabel}</span>
-                            </Badge>
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <Badge variant="secondary">
+                                {getEntityIcon(entity.entity_type)}
+                                <span className="ml-1">{entityTypeLabel}</span>
+                              </Badge>
+                              {/* Sentiment badge from latest narrative */}
+                              {(() => {
+                                const sortedMonths = Object.keys(narrativeAnalyses).sort((a, b) => b.localeCompare(a));
+                                if (sortedMonths.length === 0) return null;
+                                const latest = narrativeAnalyses[sortedMonths[0]];
+                                const sentiment = latest?.analysis?.sentiment || 'neutral';
+                                const sMap: Record<string, { bg: string; border: string; text: string; icon: string; label: string }> = {
+                                  positive: { bg: 'bg-emerald-500/15', border: 'border-emerald-500/40', text: 'text-emerald-400', icon: '🟢', label: language === 'uk' ? 'Позитивний' : 'Positive' },
+                                  negative: { bg: 'bg-red-500/15', border: 'border-red-500/40', text: 'text-red-400', icon: '🔴', label: language === 'uk' ? 'Негативний' : 'Negative' },
+                                  mixed: { bg: 'bg-amber-500/15', border: 'border-amber-500/40', text: 'text-amber-400', icon: '🟡', label: language === 'uk' ? 'Змішаний' : 'Mixed' },
+                                  neutral: { bg: 'bg-blue-500/15', border: 'border-blue-500/40', text: 'text-blue-400', icon: '⚪', label: language === 'uk' ? 'Нейтральний' : 'Neutral' },
+                                };
+                                const s = sMap[sentiment] || sMap.neutral;
+                                return (
+                                  <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full ${s.bg} ${s.border} border animate-in fade-in duration-500`}>
+                                    <span className="text-xs">{s.icon}</span>
+                                    <span className={`text-[10px] font-bold uppercase ${s.text}`}>{s.label}</span>
+                                    <span className="text-[9px] text-muted-foreground ml-1">{sortedMonths[0]}</span>
+                                  </div>
+                                );
+                              })()}
+                            </div>
                             <h1 className="text-2xl font-bold">{name}</h1>
                             {description && (
                               <p className="text-muted-foreground mt-1">{description}</p>
