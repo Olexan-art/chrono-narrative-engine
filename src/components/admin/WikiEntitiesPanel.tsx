@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -180,6 +180,7 @@ export function WikiEntitiesPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string | null>(null);
   const [mentionFilter, setMentionFilter] = useState<'all' | 'with' | 'without'>('all');
+  const [mentionMonth, setMentionMonth] = useState<string>('');
   const [aiFormattingId, setAiFormattingId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const { language } = useLanguage();
@@ -259,16 +260,25 @@ export function WikiEntitiesPanel() {
     },
   });
 
-  // Fetch actual mention counts from news_wiki_entities
+  // Fetch actual mention counts from news_wiki_entities (with optional month filter)
   const { data: mentionCounts = {} } = useQuery({
-    queryKey: ['admin-wiki-mention-counts', entities?.map(e => e.id)],
+    queryKey: ['admin-wiki-mention-counts', entities?.map(e => e.id), mentionMonth],
     queryFn: async () => {
       if (!entities?.length) return {};
       const ids = entities.map(e => e.id);
-      const { data, error } = await supabase
+      let query = supabase
         .from('news_wiki_entities')
-        .select('wiki_entity_id')
+        .select('wiki_entity_id, created_at')
         .in('wiki_entity_id', ids);
+      
+      if (mentionMonth) {
+        const [year, month] = mentionMonth.split('-').map(Number);
+        const startDate = new Date(year, month - 1, 1).toISOString();
+        const endDate = new Date(year, month, 1).toISOString();
+        query = query.gte('created_at', startDate).lt('created_at', endDate);
+      }
+
+      const { data, error } = await query;
       if (error) return {};
       const counts: Record<string, number> = {};
       for (const row of data) {
@@ -278,6 +288,19 @@ export function WikiEntitiesPanel() {
     },
     enabled: !!entities?.length,
   });
+
+  // Generate month options for filter (last 12 months)
+  const monthOptions = useMemo(() => {
+    const options: { value: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' });
+      options.push({ value, label });
+    }
+    return options;
+  }, []);
 
   // Delete entity mutation
   const deleteMutation = useMutation({
@@ -475,6 +498,19 @@ export function WikiEntitiesPanel() {
               >
                 Без згадок ({withoutMentionsCount})
               </Button>
+            </div>
+            <div className="flex items-center gap-1">
+              <CalendarDays className="w-4 h-4 text-muted-foreground" />
+              <select
+                value={mentionMonth}
+                onChange={(e) => setMentionMonth(e.target.value)}
+                className="h-8 px-2 text-sm rounded-md border border-input bg-background"
+              >
+                <option value="">Всі місяці</option>
+                {monthOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </div>
           </div>
 
