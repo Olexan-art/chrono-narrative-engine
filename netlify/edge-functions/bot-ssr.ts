@@ -4,11 +4,11 @@ const SUPABASE_FUNCTIONS_URL = 'https://bgdwxnoildvvepsoaxrf.supabase.co/functio
 const SSR_ENDPOINT = `${SUPABASE_FUNCTIONS_URL}/ssr-render`;
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZHd4bm9pbGR2dmVwc29heHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTM2MzQsImV4cCI6MjA4NDc2OTYzNH0.FaLsz1zWVZMLCWizBnKG1ARFFO3N_I1Vmri9xMVVXFk';
 
-// API routes that proxy to Supabase Edge Functions
+// API routes that proxy to Supabase Edge Functions (order matters - more specific first)
 const API_REWRITES: Record<string, string> = {
-  '/api/sitemap': `${SUPABASE_FUNCTIONS_URL}/sitemap`,
   '/api/news-sitemap': `${SUPABASE_FUNCTIONS_URL}/news-sitemap`,
   '/api/wiki-sitemap': `${SUPABASE_FUNCTIONS_URL}/wiki-sitemap`,
+  '/api/sitemap': `${SUPABASE_FUNCTIONS_URL}/sitemap`,
   '/api/ssr-render': SSR_ENDPOINT,
   '/api/llms-txt': `${SUPABASE_FUNCTIONS_URL}/llms-txt`,
 };

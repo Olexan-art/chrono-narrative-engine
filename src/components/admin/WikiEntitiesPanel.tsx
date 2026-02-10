@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles } from "lucide-react";
+import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +55,8 @@ interface NewsLinkWithCountry extends NewsLink {
     name: string;
   };
 }
+
+const PAGE_SIZE = 50;
 
 // Component to show linked news for an entity
 function EntityNewsDialog({ entity }: { entity: WikiEntity }) {
@@ -179,23 +181,43 @@ export function WikiEntitiesPanel() {
   const [filterType, setFilterType] = useState<string | null>(null);
   const [mentionFilter, setMentionFilter] = useState<'all' | 'with' | 'without'>('all');
   const [aiFormattingId, setAiFormattingId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
   const { language } = useLanguage();
   const queryClient = useQueryClient();
 
-  // Fetch entities with search and filter
+  // Fetch total count for pagination
+  const { data: totalCount = 0 } = useQuery({
+    queryKey: ['admin-wiki-total', searchTerm, filterType],
+    queryFn: async () => {
+      let query = supabase
+        .from('wiki_entities')
+        .select('*', { count: 'exact', head: true });
+
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%`);
+      }
+      if (filterType) {
+        query = query.eq('entity_type', filterType);
+      }
+
+      const { count } = await query;
+      return count || 0;
+    },
+  });
+
+  // Fetch entities with pagination
   const { data: entities, isLoading } = useQuery({
-    queryKey: ['admin-wiki-entities', searchTerm, filterType, mentionFilter],
+    queryKey: ['admin-wiki-entities', searchTerm, filterType, page],
     queryFn: async () => {
       let query = supabase
         .from('wiki_entities')
         .select('*')
         .order('search_count', { ascending: false })
-        .limit(100);
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%`);
       }
-
       if (filterType) {
         query = query.eq('entity_type', filterType);
       }
@@ -328,6 +350,18 @@ export function WikiEntitiesPanel() {
     return variants[type] || 'outline';
   };
 
+  // Filter entities by mention filter
+  const filteredEntities = (entities || []).filter(entity => {
+    if (mentionFilter === 'with') return (mentionCounts[entity.id] || 0) > 0;
+    if (mentionFilter === 'without') return (mentionCounts[entity.id] || 0) === 0;
+    return true;
+  });
+
+  const withMentionsCount = (entities || []).filter(e => (mentionCounts[e.id] || 0) > 0).length;
+  const withoutMentionsCount = (entities || []).filter(e => (mentionCounts[e.id] || 0) === 0).length;
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
   return (
     <div className="space-y-6">
       {/* Stats */}
@@ -382,7 +416,7 @@ export function WikiEntitiesPanel() {
               <Input
                 placeholder="Пошук за назвою..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
                 className="pl-8"
               />
             </div>
@@ -390,14 +424,14 @@ export function WikiEntitiesPanel() {
               <Button 
                 variant={filterType === null ? "default" : "outline"} 
                 size="sm"
-                onClick={() => setFilterType(null)}
+                onClick={() => { setFilterType(null); setPage(0); }}
               >
                 Всі
               </Button>
               <Button 
                 variant={filterType === 'person' ? "default" : "outline"} 
                 size="sm"
-                onClick={() => setFilterType('person')}
+                onClick={() => { setFilterType('person'); setPage(0); }}
               >
                 <User className="w-3 h-3 mr-1" />
                 Персони
@@ -405,7 +439,7 @@ export function WikiEntitiesPanel() {
               <Button 
                 variant={filterType === 'company' ? "default" : "outline"} 
                 size="sm"
-                onClick={() => setFilterType('company')}
+                onClick={() => { setFilterType('company'); setPage(0); }}
               >
                 <Building2 className="w-3 h-3 mr-1" />
                 Компанії
@@ -413,7 +447,7 @@ export function WikiEntitiesPanel() {
               <Button 
                 variant={filterType === 'organization' ? "default" : "outline"} 
                 size="sm"
-                onClick={() => setFilterType('organization')}
+                onClick={() => { setFilterType('organization'); setPage(0); }}
               >
                 <Globe className="w-3 h-3 mr-1" />
                 Організації
@@ -432,24 +466,24 @@ export function WikiEntitiesPanel() {
                 size="sm"
                 onClick={() => setMentionFilter('with')}
               >
-                Зі згадками ({entities?.filter(e => (mentionCounts[e.id] || 0) > 0).length || 0})
+                Зі згадками ({withMentionsCount})
               </Button>
               <Button
                 variant={mentionFilter === 'without' ? "default" : "outline"}
                 size="sm"
                 onClick={() => setMentionFilter('without')}
               >
-                Без згадок ({entities?.filter(e => (mentionCounts[e.id] || 0) === 0).length || 0})
+                Без згадок ({withoutMentionsCount})
               </Button>
             </div>
           </div>
 
-          <ScrollArea className="h-[500px]">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin" />
-              </div>
-            ) : entities && entities.length > 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+          ) : filteredEntities.length > 0 ? (
+            <>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -463,11 +497,7 @@ export function WikiEntitiesPanel() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {entities.filter(entity => {
-                    if (mentionFilter === 'with') return (mentionCounts[entity.id] || 0) > 0;
-                    if (mentionFilter === 'without') return (mentionCounts[entity.id] || 0) === 0;
-                    return true;
-                  }).map((entity) => (
+                  {filteredEntities.map((entity) => (
                     <TableRow key={entity.id}>
                       <TableCell>
                         {entity.image_url ? (
@@ -568,12 +598,39 @@ export function WikiEntitiesPanel() {
                   ))}
                 </TableBody>
               </Table>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                {searchTerm || filterType ? 'Нічого не знайдено' : 'Сутності ще не додані'}
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Сторінка {page + 1} з {totalPages} ({totalCount} сутностей)
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Назад
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                    disabled={page >= totalPages - 1}
+                  >
+                    Далі
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
               </div>
-            )}
-          </ScrollArea>
+            </>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm || filterType ? 'Нічого не знайдено' : 'Сутності ще не додані'}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

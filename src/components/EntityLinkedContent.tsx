@@ -134,6 +134,22 @@ export function EntityLinkedContent({ content, excludeEntityId, className }: Ent
     });
   };
 
+  // Render text that may contain <ITALIC> tags + entity links
+  const renderWithItalicAndEntities = (text: string, keyPrefix: string): JSX.Element => {
+    const italicParts = text.split(/(<ITALIC>.*?<\/ITALIC>)/g);
+    return (
+      <span>
+        {italicParts.map((part, idx) => {
+          if (part.startsWith('<ITALIC>')) {
+            const innerText = part.replace(/<\/?ITALIC>/g, '');
+            return <em key={idx} className="italic">{parseInlineWithEntities(innerText, `${keyPrefix}-i${idx}`)}</em>;
+          }
+          return <span key={idx}>{parseInlineWithEntities(part, `${keyPrefix}-t${idx}`)}</span>;
+        })}
+      </span>
+    );
+  };
+
   // Parse inline markdown (bold, italic) with entity linking
   const parseInlineMarkdown = (text: string, keyPrefix: string): JSX.Element => {
     // Process bold first **text**
@@ -141,20 +157,16 @@ export function EntityLinkedContent({ content, excludeEntityId, className }: Ent
     // Process italic *text*
     processed = processed.replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, '<ITALIC>$1</ITALIC>');
 
-    const parts = processed.split(/(<BOLD>.*?<\/BOLD>|<ITALIC>.*?<\/ITALIC>)/g);
+    const parts = processed.split(/(<BOLD>.*?<\/BOLD>)/g);
 
     return (
       <span>
         {parts.map((part, idx) => {
           if (part.startsWith('<BOLD>')) {
             const innerText = part.replace(/<\/?BOLD>/g, '');
-            return <strong key={idx} className="font-semibold text-foreground">{parseInlineWithEntities(innerText, `${keyPrefix}-b${idx}`)}</strong>;
+            return <strong key={idx} className="font-semibold text-foreground">{renderWithItalicAndEntities(innerText, `${keyPrefix}-b${idx}`)}</strong>;
           }
-          if (part.startsWith('<ITALIC>')) {
-            const innerText = part.replace(/<\/?ITALIC>/g, '');
-            return <em key={idx} className="italic">{parseInlineWithEntities(innerText, `${keyPrefix}-i${idx}`)}</em>;
-          }
-          return <span key={idx}>{parseInlineWithEntities(part, `${keyPrefix}-t${idx}`)}</span>;
+          return <span key={idx}>{renderWithItalicAndEntities(part, `${keyPrefix}-p${idx}`)}</span>;
         })}
       </span>
     );
