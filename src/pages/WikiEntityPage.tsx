@@ -2222,6 +2222,52 @@ export default function WikiEntityPage() {
                       {language === 'uk' ? "Пов'язаних сутностей не знайдено" : 'No related entities found'}
                     </p>
                   )}
+
+                  {/* World Wide Web subsection - wiki-linked entities */}
+                  {wikiLinkedEntities.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-border/50">
+                      <h4 className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">
+                        <Globe className="w-3.5 h-3.5" />
+                        World Wide Web
+                      </h4>
+                      <div className="space-y-2">
+                        {wikiLinkedEntities
+                          .filter(w => !relatedEntities.some(r => r.id === w.id))
+                          .map((linked) => (
+                          <Link
+                            key={linked.id}
+                            to={`/wiki/${linked.slug || linked.id}`}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors border border-dashed border-border/50"
+                          >
+                            {linked.image_url ? (
+                              <img
+                                src={linked.image_url}
+                                alt=""
+                                className="w-8 h-8 rounded-full object-cover opacity-80"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
+                                {linked.entity_type === 'person' ? (
+                                  <User className="w-3 h-3 text-muted-foreground" />
+                                ) : (
+                                  <Globe className="w-3 h-3 text-muted-foreground" />
+                                )}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-xs line-clamp-1">
+                                {language === 'en' && linked.name_en ? linked.name_en : linked.name}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground capitalize">
+                                {linked.entity_type}
+                              </p>
+                            </div>
+                            <Link2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
