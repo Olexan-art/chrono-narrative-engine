@@ -83,7 +83,10 @@ export function EntityLinkedContent({ content, excludeEntityId, className }: Ent
     if (terms.length === 0) return [text];
 
     const escapedTerms = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const pattern = new RegExp(`\\b(${escapedTerms.join('|')})\\b`, 'gi');
+    // Use Unicode-aware boundaries since \b doesn't work with Cyrillic
+    const boundary = '(?<![\\p{L}\\p{N}])';
+    const boundaryEnd = '(?![\\p{L}\\p{N}])';
+    const pattern = new RegExp(`${boundary}(${escapedTerms.join('|')})${boundaryEnd}`, 'giu');
 
     const parts = text.split(pattern);
     const linkedIds = new Set<string>();
