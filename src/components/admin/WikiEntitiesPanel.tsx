@@ -483,6 +483,19 @@ export function WikiEntitiesPanel() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handleFormatWithAi(entity)}
+                            disabled={aiFormattingId === entity.id}
+                            title="Format with AI & Save"
+                          >
+                            {aiFormattingId === entity.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-4 h-4 text-primary" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             asChild
                             title="Сторінка сутності"
                           >
