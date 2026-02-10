@@ -463,7 +463,11 @@ export function WikiEntitiesPanel() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {entities.map((entity) => (
+                  {entities.filter(entity => {
+                    if (mentionFilter === 'with') return (mentionCounts[entity.id] || 0) > 0;
+                    if (mentionFilter === 'without') return (mentionCounts[entity.id] || 0) === 0;
+                    return true;
+                  }).map((entity) => (
                     <TableRow key={entity.id}>
                       <TableCell>
                         {entity.image_url ? (
