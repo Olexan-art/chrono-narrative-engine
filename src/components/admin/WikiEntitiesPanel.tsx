@@ -501,6 +501,18 @@ export function WikiEntitiesPanel() {
                       <TableCell className="text-center">
                         <Badge variant="outline">{mentionCounts[entity.id] || 0}</Badge>
                       </TableCell>
+                      <TableCell className="text-center text-xs text-muted-foreground">
+                        {(() => {
+                          const ext = entity.extract_en || entity.extract || '';
+                          const len = ext.length;
+                          return len > 0 ? (
+                            <span className={len < 200 ? 'text-destructive' : len < 500 ? 'text-yellow-600' : 'text-green-600'}>
+                              {len}
+                            </span>
+                          ) : '—';
+                        })()}
+                      </TableCell>
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {entity.last_searched_at 
                           ? format(new Date(entity.last_searched_at), 'dd.MM.yyyy HH:mm')
