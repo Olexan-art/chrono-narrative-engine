@@ -1,0 +1,4 @@
+# Memory: technical/seo/ssr-architecture
+Updated: now
+
+SEO-архітектура базується на `react-helmet-async` з `HelmetProvider` у `App.tsx`. Ендпоінт `ssr-render` забезпечує повну індексацію для ботів (без JS) не лише новин, а й сторінок Wiki-сутностей. Для новин SSR включає: повний переказ (Full Retelling), Key Takeaways, згадані сутності, граф пересічень та блок "More from...". Для Wiki-сутностей SSR включає: рейтинг, теми, ключові слова, опис (Key Information), список пов'язаних новин, Entity Intersection Graph, блок "World Wide Web" (прямі wiki_entity_links), наративний аналіз (sentiment, trends), та зовнішні посилання. Твіти та діалоги персонажів виключені з SSR, оскільки вони вимкнені в усьому проекті. Пріоритетні сторінки (новини та топ-500 сутностей) кешуються у `cached_pages` на 24 години.
