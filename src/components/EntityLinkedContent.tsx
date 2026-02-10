@@ -29,6 +29,11 @@ interface ExtraEntity {
   slug?: string | null;
 }
 
+interface EntityAlias {
+  entity_id: string;
+  alias: string;
+}
+
 interface EntityLinkedContentProps {
   content: string;
   excludeEntityId?: string;
