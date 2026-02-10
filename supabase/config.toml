@@ -118,3 +118,6 @@ verify_jwt = false
 
 [functions.wiki-sitemap]
 verify_jwt = false
+
+[functions.analyze-narratives]
+verify_jwt = false
