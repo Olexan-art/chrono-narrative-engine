@@ -119,48 +119,8 @@ export default async function handler(request: Request, context: Context) {
   const pathname = url.pathname;
   const userAgent = request.headers.get('user-agent') || '';
 
-  // Handle API/sitemap routes - serve from cached_pages first, proxy as fallback
-  for (const [apiPath, getCachePath] of Object.entries(SITEMAP_CACHE_PATHS)) {
-    if (pathname.startsWith(apiPath)) {
-      const cachePath = getCachePath(url.searchParams);
-      
-      // Try cached_pages first (direct DB read - fast & reliable)
-      const cachedHtml = await fetchFromCachedPages(cachePath);
-      if (cachedHtml) {
-        const isXml = apiPath.includes('sitemap');
-        return new Response(cachedHtml, {
-          status: 200,
-          headers: {
-            'Content-Type': isXml ? 'application/xml; charset=utf-8' : 'text/plain; charset=utf-8',
-            'Cache-Control': 'public, max-age=3600, s-maxage=86400',
-            'Access-Control-Allow-Origin': '*',
-            'X-Source': 'cached-pages',
-          },
-        });
-      }
-
-      // Fallback: proxy to edge function
-      const targetUrlObj = new URL(`${SUPABASE_FUNCTIONS_URL}/${apiPath.replace('/api/', '')}`);
-      url.searchParams.forEach((value, key) => {
-        targetUrlObj.searchParams.set(key, value);
-      });
-      
-      const proxyResult = await proxyToEdgeFunction(targetUrlObj.toString(), userAgent);
-      if (proxyResult) return proxyResult;
-
-      // If both fail, fall through to SPA
-      return context.next();
-    }
-  }
-
-  // Also handle /api/ssr-render as direct proxy (not cacheable in same way)
-  if (pathname.startsWith('/api/ssr-render')) {
-    const targetUrlObj = new URL(SSR_ENDPOINT);
-    url.searchParams.forEach((value, key) => {
-      targetUrlObj.searchParams.set(key, value);
-    });
-    const proxyResult = await proxyToEdgeFunction(targetUrlObj.toString(), userAgent);
-    if (proxyResult) return proxyResult;
+  // Skip /api/* routes entirely — handled by Netlify [[redirects]] proxy
+  if (pathname.startsWith('/api/')) {
     return context.next();
   }
 

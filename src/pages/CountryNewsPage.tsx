@@ -43,6 +43,8 @@ interface NewsItem {
   published_at: string | null;
   chat_dialogue: any;
   tweets: any;
+  themes: string[] | null;
+  themes_en: string[] | null;
   news_rss_feeds: {
     name: string;
   };
@@ -117,6 +119,7 @@ export default function CountryNewsPage() {
           id, title, title_en, description, description_en, 
           content, content_en, content_hi, content_ta, content_te, content_bn,
           url, slug, image_url, category, published_at, chat_dialogue, tweets,
+          themes, themes_en,
           news_rss_feeds!inner(name)
         `)
         .eq('country_id', country.id)
@@ -416,10 +419,26 @@ export default function CountryNewsPage() {
                     </CardHeader>
                     <CardContent>
                       {localizedDescription && (
-                        <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
+                        <p className="text-sm text-muted-foreground line-clamp-3 mb-2">
                           {localizedDescription}
                         </p>
                       )}
+                      {(() => {
+                        const topics = language === 'en' ? (item.themes_en || item.themes) : item.themes;
+                        if (!topics || topics.length === 0) return null;
+                        return (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {topics.slice(0, 4).map((topic, tIdx) => (
+                              <span
+                                key={tIdx}
+                                className="inline-block text-[10px] px-1.5 py-0.5 rounded-sm bg-secondary text-secondary-foreground"
+                              >
+                                {topic}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         {item.published_at && (
                           <div className="flex items-center gap-1">
