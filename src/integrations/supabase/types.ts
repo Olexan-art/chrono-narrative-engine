@@ -1562,6 +1562,38 @@ export type Database = {
         }
         Relationships: []
       }
+      wiki_entity_aliases: {
+        Row: {
+          alias: string
+          created_at: string
+          entity_id: string
+          id: string
+          language: string
+        }
+        Insert: {
+          alias: string
+          created_at?: string
+          entity_id: string
+          id?: string
+          language?: string
+        }
+        Update: {
+          alias?: string
+          created_at?: string
+          entity_id?: string
+          id?: string
+          language?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wiki_entity_aliases_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "wiki_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wiki_entity_links: {
         Row: {
           created_at: string

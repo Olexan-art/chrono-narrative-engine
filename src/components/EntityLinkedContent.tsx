@@ -29,6 +29,11 @@ interface ExtraEntity {
   slug?: string | null;
 }
 
+interface EntityAlias {
+  entity_id: string;
+  alias: string;
+}
+
 interface EntityLinkedContentProps {
   content: string;
   excludeEntityId?: string;
@@ -64,6 +69,23 @@ export function EntityLinkedContent({ content, excludeEntityId, className, extra
     staleTime: 1000 * 60 * 10,
   });
 
+  // Fetch aliases for extra entities (priority linked entities)
+  const extraEntityIds = useMemo(() => extraEntities.filter(e => e.id !== excludeEntityId).map(e => e.id), [extraEntities, excludeEntityId]);
+  const { data: aliases = [] } = useQuery({
+    queryKey: ['entity-aliases-for-linking', extraEntityIds],
+    queryFn: async () => {
+      if (extraEntityIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('wiki_entity_aliases')
+        .select('entity_id, alias')
+        .in('entity_id', extraEntityIds);
+      if (error) return [];
+      return (data || []) as EntityAlias[];
+    },
+    enabled: extraEntityIds.length > 0,
+    staleTime: 1000 * 60 * 10,
+  });
+
   // Build entity lookup map — merge DB entities with extraEntities
   const entityMap = useMemo(() => {
     const map = new Map<string, WikiEntity>();
@@ -86,6 +108,12 @@ export function EntityLinkedContent({ content, excludeEntityId, className, extra
       if (asWiki.name_en && asWiki.name_en !== asWiki.name && asWiki.name_en.length >= 3) {
         map.set(asWiki.name_en.toLowerCase(), asWiki);
       }
+      // Add aliases for this extra entity
+      for (const alias of aliases) {
+        if (alias.entity_id === extra.id && alias.alias.length >= 3 && !map.has(alias.alias.toLowerCase())) {
+          map.set(alias.alias.toLowerCase(), asWiki);
+        }
+      }
     }
     // Add DB entities (won't overwrite extra ones)
     for (const entity of entities) {
@@ -97,7 +125,7 @@ export function EntityLinkedContent({ content, excludeEntityId, className, extra
       }
     }
     return map;
-  }, [entities, extraEntities, excludeEntityId]);
+  }, [entities, extraEntities, aliases, excludeEntityId]);
 
   // Helper to get entity icon
   const getEntityIcon = (entityType: string) => {
@@ -117,8 +145,12 @@ export function EntityLinkedContent({ content, excludeEntityId, className, extra
       if (extra.name && extra.name.length >= 3) set.add(extra.name.toLowerCase());
       if (extra.name_en && extra.name_en.length >= 3) set.add(extra.name_en.toLowerCase());
     }
+    // Include aliases as priority terms too
+    for (const alias of aliases) {
+      if (alias.alias.length >= 3) set.add(alias.alias.toLowerCase());
+    }
     return set;
-  }, [extraEntities, excludeEntityId]);
+  }, [extraEntities, aliases, excludeEntityId]);
 
   const parseInlineWithEntities = (text: string, keyPrefix: string): (string | JSX.Element)[] => {
     if (!text || !entityMap.size) return [text];
