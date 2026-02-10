@@ -136,7 +136,7 @@ function getTreeConnectionPath(
   return `M ${fromX} ${fromY} C ${fromX} ${midY}, ${toX} ${midY}, ${toX} ${toY}`;
 }
 
-export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondaryConnections = [], className }: EntityIntersectionGraphProps) {
+export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondaryConnections = [], feedSources = [], className }: EntityIntersectionGraphProps) {
   const { language } = useLanguage();
   const [showAll, setShowAll] = useState(false);
   const [showSecondary, setShowSecondary] = useState(true);
