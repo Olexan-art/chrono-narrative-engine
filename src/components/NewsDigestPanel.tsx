@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Globe, Plus, Trash2, RefreshCw, Loader2, CheckCircle2, XCircle, ExternalLink, Rss, AlertCircle, Download, Search, Eye, Languages, BarChart3, Clock, FileText, Calendar, MessageSquare } from "lucide-react";
+import { Globe, Plus, Trash2, RefreshCw, Loader2, CheckCircle2, XCircle, ExternalLink, Rss, AlertCircle, Download, Search, Eye, Languages, BarChart3, Clock, FileText, Calendar, MessageSquare, ImageIcon, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
