@@ -26,6 +26,7 @@ interface WikiEntity {
   wiki_url_en: string | null;
   extract: string | null;
   extract_en: string | null;
+  slug?: string | null;
 }
 
 interface NewsWikiLink {
