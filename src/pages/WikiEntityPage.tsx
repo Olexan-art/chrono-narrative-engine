@@ -29,6 +29,7 @@ import { EntityLinkedContent } from "@/components/EntityLinkedContent";
 import { EntityIntersectionGraph } from "@/components/EntityIntersectionGraph";
 import { EntityGhostlyGraph } from "@/components/EntityGhostlyGraph";
 import { EntityCyberpunkGraph } from "@/components/EntityCyberpunkGraph";
+import { AdminTextSelectionPopover } from "@/components/AdminTextSelectionPopover";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminStore } from "@/stores/adminStore";
@@ -1944,7 +1945,9 @@ export default function WikiEntityPage() {
                     </div>
                   ) : extract ? (
                     <div className="space-y-6">
-                      <EntityLinkedContent content={extract} excludeEntityId={entity?.id} />
+                      <AdminTextSelectionPopover onEntityAdded={() => queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] })}>
+                        <EntityLinkedContent content={extract} excludeEntityId={entity?.id} />
+                      </AdminTextSelectionPopover>
                       
                       {/* Categories Sub-block */}
                       {wikiCategories.length > 0 && (
