@@ -1777,11 +1777,35 @@ function generateInkAbyssHTML(items: any[], lang: string) {
   `;
 }
 
-function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string, topTopics: [string, number][] = [], topKeywords: [string, number][] = [], totalLikes = 0, totalDislikes = 0) {
+function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string, topTopics: [string, number][] = [], topKeywords: [string, number][] = [], totalLikes = 0, totalDislikes = 0, wikiLinkedEntities: any[] = [], latestNarrative: any = null) {
   const name = entity.name_en || entity.name;
   const description = entity.description_en || entity.description || '';
   const extract = entity.extract_en || entity.extract || '';
   const entityTypeLabel = entity.entity_type === 'person' ? '👤 Person' : entity.entity_type === 'company' ? '🏢 Company' : '🌐 Entity';
+  
+  // Parse narrative analysis
+  let narrativeHtml = '';
+  if (latestNarrative) {
+    try {
+      const analysis = typeof latestNarrative.analysis === 'string' ? JSON.parse(latestNarrative.analysis) : latestNarrative.analysis;
+      const sentiment = analysis?.sentiment || analysis?.overall_sentiment || '';
+      const summary = analysis?.summary || analysis?.narrative_summary || '';
+      const trends = analysis?.key_trends || analysis?.trends || [];
+      
+      narrativeHtml = `
+        <section>
+          <h2>📊 Narrative Analysis (${latestNarrative.year_month})</h2>
+          ${sentiment ? `<p><strong>Sentiment:</strong> ${escapeHtml(sentiment)}</p>` : ''}
+          ${summary ? `<p>${escapeHtml(summary)}</p>` : ''}
+          ${Array.isArray(trends) && trends.length > 0 ? `
+            <h4>Key Trends</h4>
+            <ul>${trends.map((t: any) => `<li>${escapeHtml(typeof t === 'string' ? t : t.trend || t.title || JSON.stringify(t))}</li>`).join('')}</ul>
+          ` : ''}
+          <p><small>Based on ${latestNarrative.news_count} news articles</small></p>
+        </section>
+      `;
+    } catch { /* ignore parse errors */ }
+  }
   
   return `
     <article itemscope itemtype="https://schema.org/${entity.entity_type === 'person' ? 'Person' : 'Organization'}">
@@ -1796,6 +1820,8 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
         <h2>📊 Rating</h2>
         <p>${linkedNews.length} news mentions · 👍 ${totalLikes} likes · 👎 ${totalDislikes} dislikes</p>
       </section>
+      
+      ${narrativeHtml}
       
       ${topTopics.length > 0 ? `
         <section>
@@ -1852,6 +1878,27 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
                 <li>
                   ${typeIcon} <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
                   <span>(${e.shared_news_count} shared articles)</span>
+                </li>
+              `;
+            }).join("")}
+          </ul>
+        </section>
+      ` : ''}
+      
+      ${wikiLinkedEntities.length > 0 ? `
+        <section>
+          <h2>🌐 World Wide Web (Direct Links)</h2>
+          <p>Entities directly linked to <strong>${escapeHtml(name)}</strong>:</p>
+          <ul>
+            ${wikiLinkedEntities.map((e: any) => {
+              const eName = e.name_en || e.name;
+              const eSlug = e.slug || e.id;
+              const eDesc = e.description_en || e.description || '';
+              const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
+              return `
+                <li>
+                  ${typeIcon} <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
+                  ${eDesc ? `<span> — ${escapeHtml(eDesc.substring(0, 100))}</span>` : ''}
                 </li>
               `;
             }).join("")}
