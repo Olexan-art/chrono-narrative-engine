@@ -8,7 +8,7 @@ import {
   Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight,
   Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit,
   Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone, 
-  Swords, FolderOpen, Rss
+  Swords, FolderOpen, Rss, BrainCircuit, ChevronDown, ChevronUp, Lightbulb
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { EntityViewsChart } from "@/components/EntityViewsChart";
 import { MarkdownContent } from "@/components/MarkdownContent";
@@ -160,6 +161,9 @@ export default function WikiEntityPage() {
   const [newsPage, setNewsPage] = useState(1);
   const [selectedCaricature, setSelectedCaricature] = useState<CaricatureLightbox | null>(null);
   const [graphVariant, setGraphVariant] = useState<'tree' | 'ghostly' | 'cyberpunk'>('cyberpunk');
+  const [narrativeAnalyses, setNarrativeAnalyses] = useState<Record<string, any>>({});
+  const [analyzingMonth, setAnalyzingMonth] = useState<string | null>(null);
+  const [expandedNarrativeMonths, setExpandedNarrativeMonths] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
 
   // Fetch entity data - support both slug and id
@@ -858,6 +862,30 @@ export default function WikiEntityPage() {
     setIsEditingInfo(true);
   };
 
+  // Analyze narratives for a specific month
+  const analyzeNarratives = async (yearMonth: string) => {
+    if (!entity) return;
+    setAnalyzingMonth(yearMonth);
+    try {
+      const result = await callEdgeFunction<any>('analyze-narratives', {
+        entityId: entity.id,
+        yearMonth,
+        language: language === 'uk' ? 'uk' : 'en',
+      });
+      if (result.success) {
+        setNarrativeAnalyses(prev => ({ ...prev, [yearMonth]: result }));
+        setExpandedNarrativeMonths(prev => new Set(prev).add(yearMonth));
+        toast.success(language === 'uk' ? 'Аналіз завершено' : 'Analysis complete');
+      } else {
+        throw new Error(result.error || 'Analysis failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setAnalyzingMonth(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -1250,6 +1278,136 @@ export default function WikiEntityPage() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Narrative Timeline Block — only show if analyses exist */}
+              {Object.keys(narrativeAnalyses).length > 0 && (() => {
+                const sortedMonths = Object.keys(narrativeAnalyses).sort((a, b) => b.localeCompare(a));
+                const latestMonth = sortedMonths[0];
+                return (
+                  <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <BrainCircuit className="w-5 h-5 text-primary" />
+                        {language === 'uk' ? 'Наративний аналіз' : 'Narrative Analysis'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {sortedMonths.map((month, monthIdx) => {
+                        const data = narrativeAnalyses[month];
+                        const analysis = data.analysis;
+                        const isLatest = month === latestMonth;
+                        const isExpanded = expandedNarrativeMonths.has(month);
+
+                        if (!isLatest && !isExpanded) {
+                          return (
+                            <Collapsible key={month}>
+                              <CollapsibleTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full justify-between text-xs font-mono"
+                                  onClick={() => setExpandedNarrativeMonths(prev => {
+                                    const s = new Set(prev);
+                                    s.add(month);
+                                    return s;
+                                  })}
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <Lightbulb className="w-3.5 h-3.5 text-primary" />
+                                    {month} — {data.newsCount} {language === 'uk' ? 'новин' : 'news'}
+                                  </span>
+                                  <ChevronDown className="w-4 h-4" />
+                                </Button>
+                              </CollapsibleTrigger>
+                            </Collapsible>
+                          );
+                        }
+
+                        return (
+                          <div key={month} className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Badge variant="outline" className="font-mono text-xs gap-1.5 bg-primary/10 border-primary/30">
+                                {month}
+                                <span className="text-muted-foreground">• {data.newsCount} {language === 'uk' ? 'новин' : 'news'}</span>
+                              </Badge>
+                              {analysis.sentiment && (
+                                <Badge variant="secondary" className="text-[10px] capitalize">
+                                  {analysis.sentiment}
+                                </Badge>
+                              )}
+                              {!isLatest && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2"
+                                  onClick={() => setExpandedNarrativeMonths(prev => {
+                                    const s = new Set(prev);
+                                    s.delete(month);
+                                    return s;
+                                  })}
+                                >
+                                  <ChevronUp className="w-3.5 h-3.5" />
+                                </Button>
+                              )}
+                            </div>
+
+                            {/* Summary */}
+                            {analysis.narrative_summary && (
+                              <p className="text-sm text-muted-foreground italic border-l-2 border-primary/30 pl-3">
+                                {analysis.narrative_summary}
+                              </p>
+                            )}
+
+                            {/* Key Takeaways */}
+                            {analysis.key_takeaways?.length > 0 && (
+                              <ul className="space-y-2">
+                                {analysis.key_takeaways.map((kt: any, i: number) => (
+                                  <li key={i} className="flex items-start gap-3 text-sm">
+                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                                      {i + 1}
+                                    </span>
+                                    <div className="flex-1">
+                                      <span className="text-foreground/90 leading-relaxed">{kt.point}</span>
+                                      {kt.newsLinks?.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          {kt.newsLinks.map((nl: any, j: number) => (
+                                            <Link
+                                              key={j}
+                                              to={nl.url}
+                                              className="text-[10px] text-primary hover:underline truncate max-w-[180px] inline-flex items-center gap-0.5"
+                                            >
+                                              <Newspaper className="w-2.5 h-2.5 flex-shrink-0" />
+                                              {nl.title}
+                                            </Link>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+
+                            {/* Related entity roles */}
+                            {analysis.related_entity_roles?.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/30">
+                                {analysis.related_entity_roles.map((r: any, i: number) => (
+                                  <Badge key={i} variant="outline" className="text-[10px] gap-1">
+                                    <User className="w-2.5 h-2.5" />
+                                    {r.name}: {r.role}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+
+                            {monthIdx < sortedMonths.length - 1 && <div className="border-b border-border/30" />}
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })()}
 
               {/* Views Chart */}
               {dailyViews.some(d => d.views > 0) && (
@@ -1847,11 +2005,29 @@ export default function WikiEntityPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                      <div className="space-y-1 max-h-64 overflow-y-auto">
                         {archiveEntries.slice(0, 24).map(([month, count]) => (
-                          <div key={month} className="flex justify-between text-xs py-1 border-b border-border/30 last:border-0">
+                          <div key={month} className="flex items-center justify-between text-xs py-1.5 border-b border-border/30 last:border-0 gap-1">
                             <span className="font-mono text-muted-foreground">{month}</span>
-                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{count}</Badge>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{count}</Badge>
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 px-1.5 text-[10px] gap-1 text-primary hover:text-primary"
+                                  onClick={() => analyzeNarratives(month)}
+                                  disabled={analyzingMonth === month}
+                                >
+                                  {analyzingMonth === month ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <BrainCircuit className="w-3 h-3" />
+                                  )}
+                                  {language === 'uk' ? 'Аналіз' : 'Analyze'}
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>

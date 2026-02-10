@@ -846,8 +846,21 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               )}
             </g>
             
-            {/* Entity name to the right of root */}
+            {/* Entity name to the right of root with background */}
             <g>
+              {/* Background panel behind name and logos */}
+              <rect
+                x={rootX + NODE_SIZES.root.base * 1.1 + 10}
+                y={rootY - 22}
+                width={Math.max(mainName.length * 10 + 20, feedSources.length * 22 + 20)}
+                height={62}
+                rx={8}
+                ry={8}
+                fill="hsl(var(--card))"
+                stroke="hsl(var(--border))"
+                strokeWidth={1}
+                opacity={0.85}
+              />
               <text
                 x={rootX + NODE_SIZES.root.base * 1.1 + 20}
                 y={rootY - 5}
@@ -869,19 +882,22 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               >
                 {mainEntity.entity_type}
               </text>
-              {/* RSS feed logos next to root name */}
+              {/* RSS feed logos next to root name with tooltips */}
               {feedSources.slice(0, 6).map((feed, i) => (
-                <image
-                  key={feed.id}
-                  x={rootX + NODE_SIZES.root.base * 1.1 + 20 + i * 22}
-                  y={rootY + 20}
-                  width={18}
-                  height={18}
-                  href={feed.favicon}
-                  preserveAspectRatio="xMidYMid slice"
-                  opacity={0.8}
-                  className="transition-opacity"
-                />
+                <g key={feed.id}>
+                  <image
+                    x={rootX + NODE_SIZES.root.base * 1.1 + 20 + i * 22}
+                    y={rootY + 20}
+                    width={18}
+                    height={18}
+                    href={feed.favicon}
+                    preserveAspectRatio="xMidYMid slice"
+                    opacity={0.8}
+                    className="transition-opacity"
+                  >
+                    <title>{feed.name}</title>
+                  </image>
+                </g>
               ))}
             </g>
 
