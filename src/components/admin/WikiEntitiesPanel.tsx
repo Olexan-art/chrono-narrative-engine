@@ -180,6 +180,7 @@ export function WikiEntitiesPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string | null>(null);
   const [mentionFilter, setMentionFilter] = useState<'all' | 'with' | 'without'>('all');
+  const [mentionMonth, setMentionMonth] = useState<string>('');
   const [aiFormattingId, setAiFormattingId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const { language } = useLanguage();
