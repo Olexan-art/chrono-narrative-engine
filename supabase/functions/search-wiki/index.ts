@@ -35,22 +35,24 @@ function detectEntityType(result: WikiSearchResult): string {
   const desc = (result.description || '').toLowerCase();
   const title = result.title.toLowerCase();
   
-  // Person indicators
   const personKeywords = ['born', 'politician', 'actor', 'actress', 'singer', 'musician', 'athlete', 
     'president', 'minister', 'ceo', 'founder', 'author', 'writer', 'director', 'businessman',
     'businesswoman', 'entrepreneur', 'journalist', 'scientist', 'professor', 'footballer', 
     'basketball', 'tennis', 'celebrity', 'artist', 'comedian', 'politician'];
   
-  // Company/organization indicators
   const companyKeywords = ['company', 'corporation', 'inc.', 'ltd', 'llc', 'enterprise', 'group',
     'organization', 'organisation', 'foundation', 'institute', 'association', 'agency',
     'firm', 'brand', 'manufacturer', 'tech company', 'technology company', 'bank', 'airline',
     'automotive', 'multinational', 'conglomerate'];
   
+  const countryKeywords = ['country', 'sovereign state', 'republic', 'kingdom', 'nation', 'island country', 'federal'];
+  const placeKeywords = ['city', 'borough', 'district', 'province', 'state', 'region', 'capital', 'town', 'village', 'municipality', 'county'];
+  
   if (personKeywords.some(kw => desc.includes(kw))) return 'person';
   if (companyKeywords.some(kw => desc.includes(kw) || title.includes(kw))) return 'company';
+  if (countryKeywords.some(kw => desc.includes(kw))) return 'country';
+  if (placeKeywords.some(kw => desc.includes(kw))) return 'place';
   
-  // Check if it's a proper noun (likely a named entity)
   if (result.title.match(/^[A-Z][a-z]+(\s+[A-Z][a-z]+)+$/)) return 'person';
   
   return 'organization';
@@ -83,12 +85,63 @@ async function searchWikipedia(term: string, language: string = 'en'): Promise<W
     if (!pages) return null;
     
     const pageId = Object.keys(pages)[0];
-    if (pageId === '-1') return null; // Not found
+    if (pageId === '-1') return null;
     
     return { ...pages[pageId], pageid: parseInt(pageId) };
   } catch (error) {
     console.error(`Error searching Wikipedia for "${term}":`, error);
     return null;
+  }
+}
+
+// Search Wikipedia with opensearch (returns multiple results)
+async function searchWikipediaMultiple(term: string, language: string = 'en', limit: number = 10): Promise<WikiSearchResult[]> {
+  const baseUrl = language === 'en' 
+    ? 'https://en.wikipedia.org/w/api.php'
+    : `https://${language}.wikipedia.org/w/api.php`;
+  
+  // First get suggestions via opensearch
+  const openSearchParams = new URLSearchParams({
+    action: 'opensearch',
+    format: 'json',
+    search: term,
+    limit: String(limit),
+    namespace: '0',
+  });
+
+  try {
+    const osResponse = await fetch(`${baseUrl}?${openSearchParams}`);
+    const osData = await osResponse.json();
+    const titles: string[] = osData[1] || [];
+    
+    if (titles.length === 0) return [];
+    
+    // Now fetch details for all found titles
+    const detailParams = new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      prop: 'extracts|pageimages|description|pageprops',
+      exintro: 'true',
+      explaintext: 'true',
+      exsentences: '3',
+      piprop: 'thumbnail',
+      pithumbsize: '300',
+      titles: titles.join('|'),
+      redirects: '1',
+    });
+
+    const detailResponse = await fetch(`${baseUrl}?${detailParams}`);
+    const detailData = await detailResponse.json();
+    
+    const pages = detailData.query?.pages;
+    if (!pages) return [];
+    
+    return Object.values(pages)
+      .filter((p: any) => p.pageid && p.pageid > 0)
+      .map((p: any) => ({ ...p, pageid: p.pageid })) as WikiSearchResult[];
+  } catch (error) {
+    console.error(`Error searching Wikipedia multiple for "${term}":`, error);
+    return [];
   }
 }
 
@@ -120,32 +173,27 @@ function wikiResultToEntity(result: WikiSearchResult, language: string): WikiEnt
 function extractSearchTerms(title: string, keywords: string[]): string[] {
   const terms = new Set<string>();
   
-  // From keywords - filter likely entity names (proper nouns, capitalized)
   keywords.forEach(kw => {
     const cleaned = kw.trim();
-    // Check if it's likely a proper noun (starts with capital, multiple words)
     if (cleaned.match(/^[A-Z][a-zA-Z]+(\s+[A-Z]?[a-zA-Z]+)*$/)) {
       terms.add(cleaned);
     }
-    // Check for known patterns
-    if (cleaned.match(/^[A-Z]{2,}$/)) { // Acronyms like "NASA", "FBI"
+    if (cleaned.match(/^[A-Z]{2,}$/)) {
       terms.add(cleaned);
     }
   });
   
-  // From title - extract capitalized phrases (likely names/companies)
   const titleMatches = title.match(/[A-Z][a-z]+(\s+[A-Z][a-z]+)+/g) || [];
   titleMatches.forEach(match => {
     if (match.length > 3) terms.add(match);
   });
   
-  // Extract quoted phrases from title
   const quotedMatches = title.match(/"([^"]+)"/g) || [];
   quotedMatches.forEach(match => {
     terms.add(match.replace(/"/g, ''));
   });
   
-  return Array.from(terms).slice(0, 5); // Limit to 5 terms
+  return Array.from(terms).slice(0, 5);
 }
 
 serve(async (req) => {
@@ -225,20 +273,17 @@ serve(async (req) => {
       }
 
       try {
-        // Extract title from URL
         const urlMatch = wikiUrl.match(/\/wiki\/(.+)$/);
         if (!urlMatch) {
           throw new Error('Invalid Wikipedia URL');
         }
         const pageTitle = decodeURIComponent(urlMatch[1].replace(/_/g, ' '));
         
-        // Determine Wikipedia language from URL
         const langMatch = wikiUrl.match(/https?:\/\/([a-z]+)\.wikipedia\.org/);
         const wikiLang = langMatch ? langMatch[1] : 'en';
         
         const baseUrl = `https://${wikiLang}.wikipedia.org/w/api.php`;
         
-        // Fetch extended page data
         const params = new URLSearchParams({
           action: 'query',
           format: 'json',
@@ -267,7 +312,6 @@ serve(async (req) => {
         
         const page = pages[pageId];
         
-        // Extract categories
         const categories = page.categories?.map((c: any) => 
           c.title.replace(/^Category:/, '').replace(/^Категорія:/, '')
         ) || [];
@@ -294,8 +338,210 @@ serve(async (req) => {
         });
       }
     }
+
+    // Handle multi-result Wikipedia search (for admin add entity)
+    if (action === 'search_multiple') {
+      const { query, language: lang = 'en', limit = 10 } = body;
+      
+      if (!query) {
+        return new Response(JSON.stringify({ success: true, results: [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const results = await searchWikipediaMultiple(query, lang, limit);
+      const entities = results.map(r => wikiResultToEntity(r, lang));
+
+      return new Response(JSON.stringify({ success: true, results: entities }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Handle save entity (from admin)
+    if (action === 'save_entity') {
+      const { entity } = body;
+      
+      if (!entity || !entity.wiki_id) {
+        return new Response(JSON.stringify({ success: false, error: 'entity required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Check if exists
+      const { data: existing } = await supabase
+        .from('wiki_entities')
+        .select('id')
+        .eq('wiki_id', entity.wiki_id)
+        .maybeSingle();
+
+      if (existing) {
+        return new Response(JSON.stringify({ success: false, error: 'Ця сутність вже існує', existingId: existing.id }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { data: inserted, error } = await supabase
+        .from('wiki_entities')
+        .insert({
+          wiki_id: entity.wiki_id,
+          entity_type: entity.entity_type || 'unknown',
+          name: entity.name,
+          name_en: entity.name_en,
+          description: entity.description,
+          description_en: entity.description_en,
+          image_url: entity.image_url,
+          wiki_url: entity.wiki_url,
+          wiki_url_en: entity.wiki_url_en,
+          extract: entity.extract,
+          extract_en: entity.extract_en,
+          raw_data: entity.raw_data || {},
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('Error saving entity:', error);
+        return new Response(JSON.stringify({ success: false, error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, id: inserted.id }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Handle find related entities via shared news
+    if (action === 'find_related_news') {
+      const { entityId } = body;
+      
+      if (!entityId) {
+        return new Response(JSON.stringify({ success: false, error: 'entityId required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Get all news IDs linked to this entity
+      const { data: entityNews, error: enError } = await supabase
+        .from('news_wiki_entities')
+        .select('news_item_id')
+        .eq('wiki_entity_id', entityId);
+
+      if (enError) throw enError;
+      if (!entityNews || entityNews.length === 0) {
+        return new Response(JSON.stringify({ success: true, related: [], message: 'No news links found' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const newsIds = entityNews.map(n => n.news_item_id);
+
+      // Find other entities linked to same news
+      const { data: relatedLinks, error: rlError } = await supabase
+        .from('news_wiki_entities')
+        .select('wiki_entity_id')
+        .in('news_item_id', newsIds)
+        .neq('wiki_entity_id', entityId);
+
+      if (rlError) throw rlError;
+
+      // Count occurrences
+      const counts: Record<string, number> = {};
+      for (const link of relatedLinks || []) {
+        counts[link.wiki_entity_id] = (counts[link.wiki_entity_id] || 0) + 1;
+      }
+
+      // Get top related entities
+      const topIds = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 20)
+        .map(([id]) => id);
+
+      if (topIds.length === 0) {
+        return new Response(JSON.stringify({ success: true, related: [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { data: relatedEntities } = await supabase
+        .from('wiki_entities')
+        .select('id, name, name_en, entity_type, image_url, slug')
+        .in('id', topIds);
+
+      const related = (relatedEntities || []).map(e => ({
+        ...e,
+        sharedNewsCount: counts[e.id] || 0,
+      })).sort((a, b) => b.sharedNewsCount - a.sharedNewsCount);
+
+      return new Response(JSON.stringify({ success: true, related }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Handle find related from Wikipedia links
+    if (action === 'find_related_wiki') {
+      const { entityName, language: lang = 'en' } = body;
+      
+      if (!entityName) {
+        return new Response(JSON.stringify({ success: false, error: 'entityName required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const baseUrl = lang === 'en' 
+        ? 'https://en.wikipedia.org/w/api.php'
+        : `https://${lang}.wikipedia.org/w/api.php`;
+
+      // Get Wikipedia links from the entity's page
+      const params = new URLSearchParams({
+        action: 'query',
+        format: 'json',
+        prop: 'links',
+        pllimit: '50',
+        plnamespace: '0',
+        titles: entityName,
+        redirects: '1',
+      });
+
+      const response = await fetch(`${baseUrl}?${params}`);
+      const data = await response.json();
+      const pages = data.query?.pages;
+      if (!pages) {
+        return new Response(JSON.stringify({ success: true, wikiLinks: [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const pageId = Object.keys(pages)[0];
+      const links = pages[pageId]?.links || [];
+      const linkTitles = links.map((l: any) => l.title).slice(0, 30);
+
+      // Check which of these already exist in our DB
+      const { data: existingEntities } = await supabase
+        .from('wiki_entities')
+        .select('name, name_en, id, slug')
+        .or(linkTitles.map((t: string) => `name.eq.${t},name_en.eq.${t}`).join(','));
+
+      const existingNames = new Set((existingEntities || []).flatMap(e => [e.name, e.name_en].filter(Boolean)));
+
+      const wikiLinks = linkTitles.map((t: string) => ({
+        title: t,
+        existsInDb: existingNames.has(t),
+        entityId: existingEntities?.find(e => e.name === t || e.name_en === t)?.id || null,
+        slug: existingEntities?.find(e => e.name === t || e.name_en === t)?.slug || null,
+      }));
+
+      return new Response(JSON.stringify({ success: true, wikiLinks }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
-    // Determine search terms
+    // Original search flow
     let searchTerms: string[] = terms || [];
     if (searchTerms.length === 0 && (title || keywords)) {
       searchTerms = extractSearchTerms(title || '', keywords || []);
@@ -315,12 +561,9 @@ serve(async (req) => {
 
     const foundEntities: Array<{ entity: WikiEntity; matchTerm: string }> = [];
 
-    // Search for each term
     for (const term of searchTerms) {
-      // First try English Wikipedia
       let result = await searchWikipedia(term, 'en');
       
-      // If not found in English and language is different, try that language
       if (!result && language !== 'en') {
         result = await searchWikipedia(term, language);
       }
@@ -342,10 +585,8 @@ serve(async (req) => {
       });
     }
 
-    // Save entities to database
     const savedEntities = [];
     for (const { entity, matchTerm } of foundEntities) {
-      // Check if entity already exists
       const { data: existing } = await supabase
         .from('wiki_entities')
         .select('id')
@@ -355,7 +596,6 @@ serve(async (req) => {
       let entityId: string;
 
       if (existing) {
-        // Update search count
         await supabase
           .from('wiki_entities')
           .update({ 
@@ -365,7 +605,6 @@ serve(async (req) => {
           .eq('id', existing.id);
         entityId = existing.id;
       } else {
-        // Insert new entity
         const { data: inserted, error } = await supabase
           .from('wiki_entities')
           .insert(entity)
@@ -379,7 +618,6 @@ serve(async (req) => {
         entityId = inserted.id;
       }
 
-      // Link to news if newsId provided
       if (newsId) {
         const { error: linkError } = await supabase
           .from('news_wiki_entities')
