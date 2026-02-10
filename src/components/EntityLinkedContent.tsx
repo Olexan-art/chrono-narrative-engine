@@ -69,6 +69,23 @@ export function EntityLinkedContent({ content, excludeEntityId, className, extra
     staleTime: 1000 * 60 * 10,
   });
 
+  // Fetch aliases for extra entities (priority linked entities)
+  const extraEntityIds = useMemo(() => extraEntities.filter(e => e.id !== excludeEntityId).map(e => e.id), [extraEntities, excludeEntityId]);
+  const { data: aliases = [] } = useQuery({
+    queryKey: ['entity-aliases-for-linking', extraEntityIds],
+    queryFn: async () => {
+      if (extraEntityIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('wiki_entity_aliases')
+        .select('entity_id, alias')
+        .in('entity_id', extraEntityIds);
+      if (error) return [];
+      return (data || []) as EntityAlias[];
+    },
+    enabled: extraEntityIds.length > 0,
+    staleTime: 1000 * 60 * 10,
+  });
+
   // Build entity lookup map — merge DB entities with extraEntities
   const entityMap = useMemo(() => {
     const map = new Map<string, WikiEntity>();
