@@ -107,7 +107,7 @@ async function updatePingStatus(
     .eq('sitemap_type', sitemapType);
 }
 
-declare const EdgeRuntime: { waitUntil: (promise: Promise<any>) => void };
+// Background task helper - use globalThis if available
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -177,11 +177,10 @@ Deno.serve(async (req) => {
       const sitemapUrl = `${functionsBaseUrl}/news-sitemap?country=${countryCode}`;
       const sitemapType = `news-${countryCode}`;
       
-      EdgeRuntime.waitUntil(
-        pingSitemapToSearchEngines(sitemapUrl).then(results => 
-          updatePingStatus(supabase, sitemapType, results)
-        )
-      );
+      // Fire and forget - don't await
+      pingSitemapToSearchEngines(sitemapUrl).then(results => 
+        updatePingStatus(supabase, sitemapType, results)
+      ).catch(err => console.error('Ping failed:', err));
     }
 
     const generationTime = Date.now() - startTime;
