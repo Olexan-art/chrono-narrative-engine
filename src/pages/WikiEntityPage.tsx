@@ -595,6 +595,46 @@ export default function WikiEntityPage() {
     enabled: !!entity?.id,
   });
 
+  // Fetch cache status for this entity page
+  const entitySlugForCache = entity?.slug || entity?.id;
+  const entityCachePath = `/wiki/${entitySlugForCache}`;
+  const { data: cacheStatus, refetch: refetchCacheStatus } = useQuery({
+    queryKey: ['entity-cache-status', entity?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cached_pages')
+        .select('updated_at, expires_at, html_size_bytes, generation_time_ms')
+        .eq('path', entityCachePath)
+        .maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!entity?.id && isAdmin,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const generateEntityCache = async () => {
+    if (!entity) return;
+    setIsCaching(true);
+    try {
+      const result = await callEdgeFunction<any>('cache-pages', {}, {
+        action: 'refresh-single',
+        path: entityCachePath,
+        password: useAdminStore.getState().password || '',
+      });
+      if (result.success) {
+        toast.success(language === 'uk' ? `HTML кеш створено (${result.timeMs}ms)` : `HTML cache generated (${result.timeMs}ms)`);
+        refetchCacheStatus();
+      } else {
+        toast.error(result.error || 'Cache generation failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsCaching(false);
+    }
+  };
+
   // Fetch secondary connections (connections between related entities)
   const { data: secondaryConnections = [] } = useQuery({
     queryKey: ['secondary-connections', entity?.id, relatedEntities.length],
