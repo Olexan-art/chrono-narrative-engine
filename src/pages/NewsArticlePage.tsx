@@ -18,6 +18,7 @@ import { NewsKeyPoints, NewsKeywords } from "@/components/NewsKeyPoints";
 import { NewsWikiEntities } from "@/components/NewsWikiEntities";
 import { RelatedEntitiesNews } from "@/components/RelatedEntitiesNews";
 import { EntityHighlightedContent } from "@/components/EntityHighlightedContent";
+import { AdminTextSelectionPopover } from "@/components/AdminTextSelectionPopover";
 import { EntityIntersectionGraph } from "@/components/EntityIntersectionGraph";
 import { OutrageInkBlock } from "@/components/OutrageInkBlock";
 import { OriginalSourceBlock } from "@/components/OriginalSourceBlock";
