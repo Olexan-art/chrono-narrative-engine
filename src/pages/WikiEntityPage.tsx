@@ -1879,14 +1879,18 @@ export default function WikiEntityPage() {
                     <CardContent className="pt-0 space-y-3">
                       {/* Country sources */}
                       {sources.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-1 gap-2">
                           {sources.map(([source, count]) => {
                             const country = allLinkedNews.find(n => n.country?.name === source)?.country;
                             return (
-                              <div key={source} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/50 text-xs">
-                                {country?.flag && <span>{country.flag}</span>}
-                                <span className="font-medium">{source}</span>
-                                <Badge variant="secondary" className="text-[10px] h-4 px-1">{count}</Badge>
+                              <div key={source} className="group/source flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-muted/60 to-muted/20 border border-border/40 hover:border-primary/30 hover:from-primary/10 hover:to-transparent transition-all duration-300">
+                                {country?.flag && <span className="text-xl">{country.flag}</span>}
+                                <div className="flex-1 min-w-0">
+                                  <span className="font-semibold text-sm">{source}</span>
+                                </div>
+                                <Badge variant="outline" className="font-mono text-xs border-primary/30 bg-primary/5 text-primary">
+                                  {count}
+                                </Badge>
                               </div>
                             );
                           })}
@@ -1894,22 +1898,30 @@ export default function WikiEntityPage() {
                       )}
                       {/* RSS Feed sources */}
                       {feedSources.length > 0 && (
-                        <div className="space-y-1.5">
-                          <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                        <div className="space-y-2.5">
+                          <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                             <Rss className="w-3 h-3" />
                             RSS Feeds
                           </p>
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="grid grid-cols-1 gap-2">
                             {feedSources.map(feed => (
-                              <div key={feed.id} className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30 border border-border/30 text-[11px]">
+                              <div key={feed.id} className="group/feed flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-card to-muted/10 border border-border/30 hover:border-[hsl(var(--chart-4))]/40 hover:shadow-[0_0_12px_hsl(var(--chart-4)/0.1)] transition-all duration-300 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-r from-[hsl(var(--chart-4))]/0 to-[hsl(var(--chart-4))]/5 opacity-0 group-hover/feed:opacity-100 transition-opacity" />
                                 <img
                                   src={feed.favicon}
                                   alt=""
-                                  className="w-4 h-4 rounded-sm"
-                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                  className="w-6 h-6 rounded relative z-10"
+                                  onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
                                 />
-                                <span className="font-medium truncate max-w-[100px]">{feed.name}</span>
-                                <Badge variant="secondary" className="text-[9px] h-3.5 px-1">{feed.count}</Badge>
+                                <div className="flex-1 min-w-0 relative z-10">
+                                  <span className="font-medium text-sm truncate block">{feed.name}</span>
+                                  {feed.country && (
+                                    <span className="text-[10px] text-muted-foreground">{feed.country.flag} {feed.country.name}</span>
+                                  )}
+                                </div>
+                                <Badge variant="outline" className="font-mono text-xs border-[hsl(var(--chart-4))]/30 bg-[hsl(var(--chart-4))]/5 text-[hsl(var(--chart-4))] relative z-10">
+                                  {feed.count}
+                                </Badge>
                               </div>
                             ))}
                           </div>
