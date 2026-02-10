@@ -586,19 +586,51 @@ Deno.serve(async (req) => {
         image = entity.image_url || image;
         canonicalUrl = `${BASE_URL}/wiki/${entity.slug || entity.id}`;
         
-        // Fetch related news (with themes + keywords for topic aggregation)
-        const { data: newsLinks } = await supabase
-          .from("news_wiki_entities")
-          .select(`
-            news_item:news_rss_items(id, slug, title, title_en, description_en, published_at, themes, themes_en, keywords, likes, dislikes, country:news_countries(code, flag, name_en))
-          `)
-          .eq("wiki_entity_id", entity.id)
-          .order("created_at", { ascending: false })
-          .limit(30);
+        // Fetch related news, wiki entity links, and narrative analysis in parallel
+        const [{ data: newsLinks }, { data: wikiLinksOut }, { data: wikiLinksIn }, { data: narrativeData }] = await Promise.all([
+          supabase
+            .from("news_wiki_entities")
+            .select(`
+              news_item:news_rss_items(id, slug, title, title_en, description_en, published_at, themes, themes_en, keywords, likes, dislikes, country:news_countries(code, flag, name_en))
+            `)
+            .eq("wiki_entity_id", entity.id)
+            .order("created_at", { ascending: false })
+            .limit(30),
+          supabase
+            .from("wiki_entity_links")
+            .select("target_entity:wiki_entities!wiki_entity_links_target_entity_id_fkey(id, name, name_en, slug, image_url, entity_type, description_en, description)")
+            .eq("source_entity_id", entity.id),
+          supabase
+            .from("wiki_entity_links")
+            .select("source_entity:wiki_entities!wiki_entity_links_source_entity_id_fkey(id, name, name_en, slug, image_url, entity_type, description_en, description)")
+            .eq("target_entity_id", entity.id),
+          supabase
+            .from("narrative_analyses")
+            .select("analysis, year_month, language, news_count")
+            .eq("entity_id", entity.id)
+            .eq("language", "en")
+            .order("year_month", { ascending: false })
+            .limit(1)
+        ]);
         
         const linkedNews = (newsLinks || [])
           .map((l: any) => l.news_item)
           .filter(Boolean);
+        
+        // Merge wiki entity links (both directions, deduped)
+        const wikiLinkedEntities: any[] = [];
+        const seenIds = new Set<string>();
+        for (const link of (wikiLinksOut || [])) {
+          const e = (link as any).target_entity;
+          if (e && !seenIds.has(e.id)) { seenIds.add(e.id); wikiLinkedEntities.push(e); }
+        }
+        for (const link of (wikiLinksIn || [])) {
+          const e = (link as any).source_entity;
+          if (e && !seenIds.has(e.id)) { seenIds.add(e.id); wikiLinkedEntities.push(e); }
+        }
+        
+        // Latest narrative analysis
+        const latestNarrative = narrativeData?.[0] || null;
         
         // Aggregate topics and keywords from linked news
         const topicCounts: Record<string, number> = {};
@@ -643,7 +675,7 @@ Deno.serve(async (req) => {
         const totalLikes = linkedNews.reduce((s: number, n: any) => s + (n.likes || 0), 0);
         const totalDislikes = linkedNews.reduce((s: number, n: any) => s + (n.dislikes || 0), 0);
         
-        html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl, topTopics, topKeywords, totalLikes, totalDislikes);
+        html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl, topTopics, topKeywords, totalLikes, totalDislikes, wikiLinkedEntities, latestNarrative);
       }
     } else if (dateMatch) {
       // Date stories page
@@ -1745,11 +1777,35 @@ function generateInkAbyssHTML(items: any[], lang: string) {
   `;
 }
 
-function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string, topTopics: [string, number][] = [], topKeywords: [string, number][] = [], totalLikes = 0, totalDislikes = 0) {
+function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string, topTopics: [string, number][] = [], topKeywords: [string, number][] = [], totalLikes = 0, totalDislikes = 0, wikiLinkedEntities: any[] = [], latestNarrative: any = null) {
   const name = entity.name_en || entity.name;
   const description = entity.description_en || entity.description || '';
   const extract = entity.extract_en || entity.extract || '';
   const entityTypeLabel = entity.entity_type === 'person' ? '👤 Person' : entity.entity_type === 'company' ? '🏢 Company' : '🌐 Entity';
+  
+  // Parse narrative analysis
+  let narrativeHtml = '';
+  if (latestNarrative) {
+    try {
+      const analysis = typeof latestNarrative.analysis === 'string' ? JSON.parse(latestNarrative.analysis) : latestNarrative.analysis;
+      const sentiment = analysis?.sentiment || analysis?.overall_sentiment || '';
+      const summary = analysis?.summary || analysis?.narrative_summary || '';
+      const trends = analysis?.key_trends || analysis?.trends || [];
+      
+      narrativeHtml = `
+        <section>
+          <h2>📊 Narrative Analysis (${latestNarrative.year_month})</h2>
+          ${sentiment ? `<p><strong>Sentiment:</strong> ${escapeHtml(sentiment)}</p>` : ''}
+          ${summary ? `<p>${escapeHtml(summary)}</p>` : ''}
+          ${Array.isArray(trends) && trends.length > 0 ? `
+            <h4>Key Trends</h4>
+            <ul>${trends.map((t: any) => `<li>${escapeHtml(typeof t === 'string' ? t : t.trend || t.title || JSON.stringify(t))}</li>`).join('')}</ul>
+          ` : ''}
+          <p><small>Based on ${latestNarrative.news_count} news articles</small></p>
+        </section>
+      `;
+    } catch { /* ignore parse errors */ }
+  }
   
   return `
     <article itemscope itemtype="https://schema.org/${entity.entity_type === 'person' ? 'Person' : 'Organization'}">
@@ -1764,6 +1820,8 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
         <h2>📊 Rating</h2>
         <p>${linkedNews.length} news mentions · 👍 ${totalLikes} likes · 👎 ${totalDislikes} dislikes</p>
       </section>
+      
+      ${narrativeHtml}
       
       ${topTopics.length > 0 ? `
         <section>
@@ -1820,6 +1878,27 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
                 <li>
                   ${typeIcon} <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
                   <span>(${e.shared_news_count} shared articles)</span>
+                </li>
+              `;
+            }).join("")}
+          </ul>
+        </section>
+      ` : ''}
+      
+      ${wikiLinkedEntities.length > 0 ? `
+        <section>
+          <h2>🌐 World Wide Web (Direct Links)</h2>
+          <p>Entities directly linked to <strong>${escapeHtml(name)}</strong>:</p>
+          <ul>
+            ${wikiLinkedEntities.map((e: any) => {
+              const eName = e.name_en || e.name;
+              const eSlug = e.slug || e.id;
+              const eDesc = e.description_en || e.description || '';
+              const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
+              return `
+                <li>
+                  ${typeIcon} <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
+                  ${eDesc ? `<span> — ${escapeHtml(eDesc.substring(0, 100))}</span>` : ''}
                 </li>
               `;
             }).join("")}
