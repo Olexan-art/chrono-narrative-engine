@@ -1390,6 +1390,22 @@ export default function WikiEntityPage() {
                               >
                                 <Link2 className="w-4 h-4" />
                               </Button>
+                              <Button
+                                variant={cacheStatus ? "secondary" : "outline"}
+                                size="icon"
+                                onClick={generateEntityCache}
+                                disabled={isCaching}
+                                title={cacheStatus 
+                                  ? `${language === 'uk' ? 'Перегенерувати HTML' : 'Regenerate HTML'} (${new Date(cacheStatus.updated_at).toLocaleDateString()})` 
+                                  : (language === 'uk' ? 'Створити HTML кеш' : 'Generate HTML cache')
+                                }
+                              >
+                                {isCaching ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <HardDrive className="w-4 h-4" />
+                                )}
+                              </Button>
                             </div>
                           )}
                         </div>
