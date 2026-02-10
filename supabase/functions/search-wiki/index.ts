@@ -359,7 +359,7 @@ serve(async (req) => {
 
     // Handle save entity (from admin)
     if (action === 'save_entity') {
-      const { entity } = body;
+      const { entity, newsId: linkNewsId, sourceEntityId, matchTerm } = body;
       
       if (!entity || !entity.wiki_id) {
         return new Response(JSON.stringify({ success: false, error: 'entity required' }), {
@@ -375,41 +375,70 @@ serve(async (req) => {
         .eq('wiki_id', entity.wiki_id)
         .maybeSingle();
 
+      let entityId: string;
+
       if (existing) {
-        return new Response(JSON.stringify({ success: false, error: 'Ця сутність вже існує', existingId: existing.id }), {
-          status: 409,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        entityId = existing.id;
+      } else {
+        const { data: inserted, error } = await supabase
+          .from('wiki_entities')
+          .insert({
+            wiki_id: entity.wiki_id,
+            entity_type: entity.entity_type || 'unknown',
+            name: entity.name,
+            name_en: entity.name_en,
+            description: entity.description,
+            description_en: entity.description_en,
+            image_url: entity.image_url,
+            wiki_url: entity.wiki_url,
+            wiki_url_en: entity.wiki_url_en,
+            extract: entity.extract,
+            extract_en: entity.extract_en,
+            raw_data: entity.raw_data || {},
+          })
+          .select('id')
+          .single();
+
+        if (error) {
+          console.error('Error saving entity:', error);
+          return new Response(JSON.stringify({ success: false, error: error.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        entityId = inserted.id;
       }
 
-      const { data: inserted, error } = await supabase
-        .from('wiki_entities')
-        .insert({
-          wiki_id: entity.wiki_id,
-          entity_type: entity.entity_type || 'unknown',
-          name: entity.name,
-          name_en: entity.name_en,
-          description: entity.description,
-          description_en: entity.description_en,
-          image_url: entity.image_url,
-          wiki_url: entity.wiki_url,
-          wiki_url_en: entity.wiki_url_en,
-          extract: entity.extract,
-          extract_en: entity.extract_en,
-          raw_data: entity.raw_data || {},
-        })
-        .select('id')
-        .single();
-
-      if (error) {
-        console.error('Error saving entity:', error);
-        return new Response(JSON.stringify({ success: false, error: error.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      // Link to news if newsId provided
+      if (linkNewsId && entityId) {
+        const { error: linkError } = await supabase
+          .from('news_wiki_entities')
+          .upsert({
+            news_item_id: linkNewsId,
+            wiki_entity_id: entityId,
+            match_term: matchTerm || entity.name,
+            match_source: 'manual',
+          }, { onConflict: 'news_item_id,wiki_entity_id' });
+        if (linkError) {
+          console.error('Error linking entity to news:', linkError);
+        }
       }
 
-      return new Response(JSON.stringify({ success: true, id: inserted.id }), {
+      // Link to source entity if sourceEntityId provided (entity-to-entity link)
+      if (sourceEntityId && entityId && sourceEntityId !== entityId) {
+        const { error: linkError } = await supabase
+          .from('wiki_entity_links')
+          .upsert({
+            source_entity_id: sourceEntityId,
+            target_entity_id: entityId,
+            link_type: 'manual',
+          }, { onConflict: 'source_entity_id,target_entity_id' });
+        if (linkError) {
+          console.error('Error linking entities:', linkError);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, id: entityId, existed: !!existing }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
