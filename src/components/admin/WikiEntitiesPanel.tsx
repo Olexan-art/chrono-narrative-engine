@@ -687,6 +687,7 @@ export function WikiEntitiesPanel() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
