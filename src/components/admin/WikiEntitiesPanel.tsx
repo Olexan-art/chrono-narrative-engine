@@ -457,6 +457,7 @@ export function WikiEntitiesPanel() {
                     <TableHead>Назва</TableHead>
                     <TableHead>Тип</TableHead>
                     <TableHead className="text-center">Згадок</TableHead>
+                    <TableHead className="text-center">Символів</TableHead>
                     <TableHead>Останній пошук</TableHead>
                     <TableHead className="w-32"></TableHead>
                   </TableRow>
