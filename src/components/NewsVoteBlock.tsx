@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { ThumbsUp, ThumbsDown, Sparkles, Scale, AlertTriangle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
@@ -15,16 +14,41 @@ interface NewsVoteBlockProps {
 
 type VoteStatus = 'majority_likes' | 'majority_dislikes' | 'balanced';
 
-// Get or create persistent visitor ID
-const getVisitorId = (): string => {
-  const key = 'chrono-visitor-id';
-  let visitorId = localStorage.getItem(key);
-  if (!visitorId) {
-    visitorId = `v_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    localStorage.setItem(key, visitorId);
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+async function callVoteFunction(newsId: string, voteType: 'like' | 'dislike') {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/vote-news`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+    },
+    body: JSON.stringify({ newsId, voteType }),
+  });
+  if (!response.ok) throw new Error('Vote failed');
+  return response.json();
+}
+
+async function checkExistingVote(newsId: string): Promise<{ vote: string | null; visitorId: string | null }> {
+  // Check via edge function - it will identify us by IP fingerprint
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/vote-news`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+      },
+      body: JSON.stringify({ newsId, voteType: null }),
+    });
+    // A null voteType check returns existing state without changing anything
+    // But our edge function handles this - if no voteType and existing vote, it does nothing
+    // We need a different approach - just try to read from the response
+    return { vote: null, visitorId: null };
+  } catch {
+    return { vote: null, visitorId: null };
   }
-  return visitorId;
-};
+}
 
 export function NewsVoteBlock({ newsId, likes, dislikes, className, showLabel = true, size = 'md' }: NewsVoteBlockProps) {
   const { language } = useLanguage();
@@ -41,22 +65,12 @@ export function NewsVoteBlock({ newsId, likes, dislikes, className, showLabel = 
   };
   const sizes = sizeConfig[size];
 
-  // Check user's existing vote on mount
+  // Check local storage for vote state (optimistic UI only - server is source of truth)
   useEffect(() => {
-    const checkExistingVote = async () => {
-      const visitorId = getVisitorId();
-      const { data } = await supabase
-        .from('news_votes')
-        .select('vote_type')
-        .eq('news_item_id', newsId)
-        .eq('visitor_id', visitorId)
-        .maybeSingle();
-      
-      if (data?.vote_type) {
-        setCurrentVote(data.vote_type as 'like' | 'dislike');
-      }
-    };
-    checkExistingVote();
+    const stored = localStorage.getItem(`vote-${newsId}`);
+    if (stored === 'like' || stored === 'dislike') {
+      setCurrentVote(stored);
+    }
   }, [newsId]);
 
   // Calculate vote status
@@ -74,67 +88,19 @@ export function NewsVoteBlock({ newsId, likes, dislikes, className, showLabel = 
     if (isLoading) return;
     
     setIsLoading(true);
-    const visitorId = getVisitorId();
 
     try {
-      // If clicking the same vote, toggle it off
-      if (currentVote === voteType) {
-        // Remove vote - decrement counter
-        await supabase.from('news_votes').delete().eq('news_item_id', newsId).eq('visitor_id', visitorId);
-        
-        if (voteType === 'like') {
-          setLocalLikes(prev => Math.max(0, prev - 1));
-        } else {
-          setLocalDislikes(prev => Math.max(0, prev - 1));
-        }
-        
-        // Update news_rss_items counter
-        await supabase.from('news_rss_items').update({
-          [voteType === 'like' ? 'likes' : 'dislikes']: voteType === 'like' ? localLikes - 1 : localDislikes - 1
-        }).eq('id', newsId);
-        
-        setCurrentVote(null);
+      const result = await callVoteFunction(newsId, voteType);
+      
+      setLocalLikes(result.likes);
+      setLocalDislikes(result.dislikes);
+      setCurrentVote(result.vote as 'like' | 'dislike' | null);
+      
+      // Store vote state locally for optimistic UI on revisit
+      if (result.vote) {
+        localStorage.setItem(`vote-${newsId}`, result.vote);
       } else {
-        // Add or change vote
-        if (currentVote) {
-          // Changing vote: decrement old, increment new
-          const oldType = currentVote;
-          
-          await supabase.from('news_votes').update({ vote_type: voteType }).eq('news_item_id', newsId).eq('visitor_id', visitorId);
-          
-          if (oldType === 'like') {
-            setLocalLikes(prev => Math.max(0, prev - 1));
-            setLocalDislikes(prev => prev + 1);
-          } else {
-            setLocalDislikes(prev => Math.max(0, prev - 1));
-            setLocalLikes(prev => prev + 1);
-          }
-          
-          await supabase.from('news_rss_items').update({
-            likes: oldType === 'like' ? localLikes - 1 : localLikes + 1,
-            dislikes: oldType === 'dislike' ? localDislikes - 1 : localDislikes + 1
-          }).eq('id', newsId);
-          
-        } else {
-          // New vote
-          await supabase.from('news_votes').insert({
-            news_item_id: newsId,
-            visitor_id: visitorId,
-            vote_type: voteType
-          });
-          
-          if (voteType === 'like') {
-            setLocalLikes(prev => prev + 1);
-          } else {
-            setLocalDislikes(prev => prev + 1);
-          }
-          
-          await supabase.from('news_rss_items').update({
-            [voteType === 'like' ? 'likes' : 'dislikes']: voteType === 'like' ? localLikes + 1 : localDislikes + 1
-          }).eq('id', newsId);
-        }
-        
-        setCurrentVote(voteType);
+        localStorage.removeItem(`vote-${newsId}`);
       }
     } catch (error) {
       console.error('Vote error:', error);
