@@ -9,36 +9,8 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Sitemap rewrites to Edge Functions
-[[redirects]]
-  from = "/api/sitemap"
-  to = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/news-sitemap"
-  to = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/ssr-render"
-  to = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/llms-txt"
-  to = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/llms-txt"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/wiki-sitemap"
-  to = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/wiki-sitemap"
-  status = 200
-  force = true
+# API rewrites are handled by the bot-ssr edge function which adds auth headers.
+# Do NOT add [[redirects]] for /api/* routes here — they conflict with the edge function.
 
 # SPA fallback
 [[redirects]]
