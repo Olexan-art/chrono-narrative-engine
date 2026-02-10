@@ -1562,6 +1562,45 @@ export type Database = {
         }
         Relationships: []
       }
+      wiki_entity_links: {
+        Row: {
+          created_at: string
+          id: string
+          link_type: string
+          source_entity_id: string
+          target_entity_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link_type?: string
+          source_entity_id: string
+          target_entity_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link_type?: string
+          source_entity_id?: string
+          target_entity_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wiki_entity_links_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "wiki_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wiki_entity_links_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "wiki_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       news_vote_counts: {
