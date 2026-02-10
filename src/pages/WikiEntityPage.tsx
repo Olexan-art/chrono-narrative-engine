@@ -1102,6 +1102,22 @@ export default function WikiEntityPage() {
                             Wikipedia
                           </a>
                         </div>
+
+                        {/* Topics inline in hero */}
+                        {sortedTopics.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-4">
+                            {sortedTopics.slice(0, 6).map(([topic, count]) => {
+                              const { icon, color } = getTopicIcon(topic);
+                              return (
+                                <Badge key={topic} variant="outline" className={`text-xs gap-1 ${color}`}>
+                                  {icon}
+                                  {topic}
+                                  <span className="text-muted-foreground/70">({count})</span>
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
                       </>
                     )}
                   </CardContent>
