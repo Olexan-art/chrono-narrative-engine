@@ -741,6 +741,7 @@ export default function NewsArticlePage() {
                 keyPointsEn={keyPointsEn}
                 themesEn={themesEn}
               />
+              <AdminTextSelectionPopover newsId={article.id} onEntityAdded={() => queryClient.invalidateQueries({ queryKey: ['news-wiki-entities', article.id] })}>
               <div className="prose prose-invert max-w-none">
                 {getLocalizedField('description') && (
                   <p className="text-lg text-muted-foreground font-serif leading-relaxed">
@@ -779,6 +780,7 @@ export default function NewsArticlePage() {
                   );
                 })()}
               </div>
+              </AdminTextSelectionPopover>
 
               {/* Original Source Block */}
               <OriginalSourceBlock 
