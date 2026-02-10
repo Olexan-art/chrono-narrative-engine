@@ -324,6 +324,18 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
                     compact={entityLinks.length > 2} 
                     showLink={true}
                   />
+                  {/* Narrative indicator */}
+                  {entityNarratives[link.wiki_entity.id] && (
+                    <Link
+                      to={`/wiki/${link.wiki_entity.slug || link.wiki_entity.id}`}
+                      className="flex items-center gap-1.5 mt-1 px-2 py-1 rounded bg-primary/5 border border-primary/15 hover:bg-primary/10 transition-colors"
+                    >
+                      <BrainCircuit className="w-3 h-3 text-primary animate-pulse" />
+                      <span className="text-[10px] text-primary font-mono">
+                        {language === 'uk' ? 'Є наратив' : 'Has narrative'}
+                      </span>
+                    </Link>
+                  )}
                   {isAdmin && (
                     <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
