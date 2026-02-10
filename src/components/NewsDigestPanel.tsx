@@ -315,6 +315,29 @@ export function NewsDigestPanel({ password }: Props) {
     }
   });
 
+  // Update feed default_image_url mutation
+  const updateFeedDefaultImageMutation = useMutation({
+    mutationFn: async ({ feedId, defaultImageUrl }: { feedId: string; defaultImageUrl: string }) => {
+      const { error } = await supabase
+        .from('news_rss_feeds')
+        .update({ default_image_url: defaultImageUrl } as any)
+        .eq('id', feedId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['news-rss-feeds'] });
+      toast({ title: 'Зображення за замовчуванням збережено' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Помилка',
+        description: error instanceof Error ? error.message : 'Не вдалося зберегти',
+        variant: 'destructive'
+      });
+    }
+  });
+
   // Fetch feed mutation
   const fetchFeedMutation = useMutation({
     mutationFn: async (feedId: string) => {
