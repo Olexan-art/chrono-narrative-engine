@@ -171,6 +171,18 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
                 </div>
               </div>
 
+              {/* Sentiment badge for #1 entity with narrative */}
+              {idx === 0 && topNarrative?.analysis && (() => {
+                const sentiment = (topNarrative.analysis as any).sentiment || 'neutral';
+                const s = getSentimentStyleHero(sentiment, language);
+                return (
+                  <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full ${s.bg} ${s.border} border animate-in fade-in duration-500`}>
+                    <span className="text-xs">{s.icon}</span>
+                    <span className={`text-[10px] font-bold uppercase ${s.text}`}>{s.label}</span>
+                  </div>
+                );
+              })()}
+
               {/* Wiki link */}
               <a
                 href={wikiUrl}

@@ -499,6 +499,19 @@ export function WikiEntitiesPanel() {
                 Без згадок ({withoutMentionsCount})
               </Button>
             </div>
+            <div className="flex items-center gap-1">
+              <CalendarDays className="w-4 h-4 text-muted-foreground" />
+              <select
+                value={mentionMonth}
+                onChange={(e) => setMentionMonth(e.target.value)}
+                className="h-8 px-2 text-sm rounded-md border border-input bg-background"
+              >
+                <option value="">Всі місяці</option>
+                {monthOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {isLoading ? (

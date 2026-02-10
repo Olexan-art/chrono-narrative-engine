@@ -325,18 +325,41 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
                     compact={entityLinks.length > 2} 
                     showLink={true}
                   />
-                  {/* Narrative indicator */}
-                  {entityNarratives[link.wiki_entity.id] && (
-                    <Link
-                      to={`/wiki/${link.wiki_entity.slug || link.wiki_entity.id}`}
-                      className="flex items-center gap-1.5 mt-1 px-2 py-1 rounded bg-primary/5 border border-primary/15 hover:bg-primary/10 transition-colors"
-                    >
-                      <BrainCircuit className="w-3 h-3 text-primary animate-pulse" />
-                      <span className="text-[10px] text-primary font-mono">
-                        {language === 'uk' ? 'Є наратив' : 'Has narrative'}
-                      </span>
-                    </Link>
-                  )}
+                  {/* Narrative indicator with summary & sentiment */}
+                  {entityNarratives[link.wiki_entity.id] && (() => {
+                    const narr = entityNarratives[link.wiki_entity.id] as any;
+                    const analysis = narr.analysis || narr;
+                    const sentiment = analysis.sentiment || 'neutral';
+                    const sentimentConfig: Record<string, { icon: string; bg: string; border: string; text: string }> = {
+                      positive: { icon: '🟢', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-600' },
+                      negative: { icon: '🔴', bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-600' },
+                      mixed: { icon: '🟡', bg: 'bg-amber-500/10', border: 'border-amber-500/30', text: 'text-amber-600' },
+                      neutral: { icon: '⚪', bg: 'bg-muted', border: 'border-border', text: 'text-muted-foreground' },
+                    };
+                    const s = sentimentConfig[sentiment] || sentimentConfig.neutral;
+                    const summary = analysis.narrative_summary;
+                    return (
+                      <Link
+                        to={`/wiki/${link.wiki_entity.slug || link.wiki_entity.id}`}
+                        className={`flex flex-col gap-1 mt-1 px-2 py-1.5 rounded ${s.bg} border ${s.border} hover:opacity-80 transition-all`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <BrainCircuit className="w-3 h-3 text-primary animate-pulse" />
+                          <span className="text-[10px] font-mono font-semibold text-primary">
+                            {language === 'uk' ? 'Наратив' : 'Narrative'}
+                          </span>
+                          <span className={`text-[9px] font-semibold uppercase ${s.text} ml-auto`}>
+                            {s.icon} {sentiment}
+                          </span>
+                        </div>
+                        {summary && (
+                          <p className="text-[10px] text-muted-foreground italic line-clamp-2 leading-relaxed">
+                            {summary}
+                          </p>
+                        )}
+                      </Link>
+                    );
+                  })()}
                   {isAdmin && (
                     <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
