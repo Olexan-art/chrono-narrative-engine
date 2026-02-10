@@ -1,6 +1,17 @@
 import type { Context } from "https://edge.netlify.com";
 
-const SSR_ENDPOINT = 'https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render';
+const SUPABASE_FUNCTIONS_URL = 'https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1';
+const SSR_ENDPOINT = `${SUPABASE_FUNCTIONS_URL}/ssr-render`;
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZHd4bm9pbGR2dmVwc29heHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTM2MzQsImV4cCI6MjA4NDc2OTYzNH0.FaLsz1zWVZMLCWizBnKG1ARFFO3N_I1Vmri9xMVVXFk';
+
+// API routes that proxy to Supabase Edge Functions
+const API_REWRITES: Record<string, string> = {
+  '/api/sitemap': `${SUPABASE_FUNCTIONS_URL}/sitemap`,
+  '/api/news-sitemap': `${SUPABASE_FUNCTIONS_URL}/news-sitemap`,
+  '/api/wiki-sitemap': `${SUPABASE_FUNCTIONS_URL}/wiki-sitemap`,
+  '/api/ssr-render': SSR_ENDPOINT,
+  '/api/llms-txt': `${SUPABASE_FUNCTIONS_URL}/llms-txt`,
+};
 
 const BOT_PATTERNS = [
   'googlebot', 'bingbot', 'yandex', 'duckduckbot', 'baiduspider',
@@ -44,6 +55,49 @@ export default async function handler(request: Request, context: Context) {
   const pathname = url.pathname;
   const userAgent = request.headers.get('user-agent') || '';
 
+  // Handle API rewrites to Supabase Edge Functions (with auth headers)
+  for (const [apiPath, targetUrl] of Object.entries(API_REWRITES)) {
+    if (pathname.startsWith(apiPath)) {
+      try {
+        const targetUrlObj = new URL(targetUrl);
+        // Copy query params from original request
+        url.searchParams.forEach((value, key) => {
+          targetUrlObj.searchParams.set(key, value);
+        });
+
+        const proxyResponse = await fetch(targetUrlObj.toString(), {
+          method: request.method,
+          headers: {
+            'User-Agent': userAgent,
+            'Accept': request.headers.get('Accept') || '*/*',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        });
+
+        if (proxyResponse.ok) {
+          const body = await proxyResponse.text();
+          const contentType = proxyResponse.headers.get('Content-Type') || 'application/xml';
+
+          return new Response(body, {
+            status: proxyResponse.status,
+            headers: {
+              'Content-Type': contentType,
+              'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+              'Access-Control-Allow-Origin': '*',
+            },
+          });
+        }
+
+        console.error(`API proxy ${apiPath} returned ${proxyResponse.status}`);
+      } catch (error) {
+        console.error(`API proxy failed for ${apiPath}:`, error);
+      }
+      // Fall through to SPA on error
+      return context.next();
+    }
+  }
+
   // Skip static assets
   if (pathname.startsWith('/assets/') || pathname.includes('.')) {
     return context.next();
@@ -53,17 +107,19 @@ export default async function handler(request: Request, context: Context) {
   if (isBot(userAgent) && shouldSSR(pathname)) {
     try {
       const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en`;
-      
+
       const ssrResponse = await fetch(ssrUrl, {
         headers: {
           'User-Agent': userAgent,
           'Accept': 'text/html',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         },
       });
 
       if (ssrResponse.ok) {
         const html = await ssrResponse.text();
-        
+
         return new Response(html, {
           status: 200,
           headers: {
