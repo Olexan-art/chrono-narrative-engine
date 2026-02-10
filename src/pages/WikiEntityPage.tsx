@@ -1805,6 +1805,7 @@ export default function WikiEntityPage() {
                       relatedEntities={[...relatedEntities, ...wikiLinkedEntities.filter(w => !relatedEntities.some(r => r.id === w.id))]}
                       secondaryConnections={secondaryConnections}
                       wikiLinkedIds={new Set(wikiLinkedEntities.map(w => w.id))}
+                    />
                   ) : graphVariant === 'tree' ? (
                     <EntityIntersectionGraph 
                       mainEntity={{
