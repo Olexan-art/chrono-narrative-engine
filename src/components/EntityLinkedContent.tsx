@@ -108,6 +108,12 @@ export function EntityLinkedContent({ content, excludeEntityId, className, extra
       if (asWiki.name_en && asWiki.name_en !== asWiki.name && asWiki.name_en.length >= 3) {
         map.set(asWiki.name_en.toLowerCase(), asWiki);
       }
+      // Add aliases for this extra entity
+      for (const alias of aliases) {
+        if (alias.entity_id === extra.id && alias.alias.length >= 3 && !map.has(alias.alias.toLowerCase())) {
+          map.set(alias.alias.toLowerCase(), asWiki);
+        }
+      }
     }
     // Add DB entities (won't overwrite extra ones)
     for (const entity of entities) {
@@ -119,7 +125,7 @@ export function EntityLinkedContent({ content, excludeEntityId, className, extra
       }
     }
     return map;
-  }, [entities, extraEntities, excludeEntityId]);
+  }, [entities, extraEntities, aliases, excludeEntityId]);
 
   // Helper to get entity icon
   const getEntityIcon = (entityType: string) => {
