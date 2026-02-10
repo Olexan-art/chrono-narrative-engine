@@ -177,13 +177,14 @@ function EntityNewsDialog({ entity }: { entity: WikiEntity }) {
 export function WikiEntitiesPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string | null>(null);
+  const [mentionFilter, setMentionFilter] = useState<'all' | 'with' | 'without'>('all');
   const [aiFormattingId, setAiFormattingId] = useState<string | null>(null);
   const { language } = useLanguage();
   const queryClient = useQueryClient();
 
   // Fetch entities with search and filter
   const { data: entities, isLoading } = useQuery({
-    queryKey: ['admin-wiki-entities', searchTerm, filterType],
+    queryKey: ['admin-wiki-entities', searchTerm, filterType, mentionFilter],
     queryFn: async () => {
       let query = supabase
         .from('wiki_entities')
@@ -418,6 +419,29 @@ export function WikiEntitiesPanel() {
                 Організації
               </Button>
             </div>
+            <div className="flex gap-1">
+              <Button
+                variant={mentionFilter === 'all' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMentionFilter('all')}
+              >
+                Всі згадки
+              </Button>
+              <Button
+                variant={mentionFilter === 'with' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMentionFilter('with')}
+              >
+                Зі згадками
+              </Button>
+              <Button
+                variant={mentionFilter === 'without' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMentionFilter('without')}
+              >
+                Без згадок
+              </Button>
+            </div>
           </div>
 
           <ScrollArea className="h-[500px]">
@@ -433,12 +457,17 @@ export function WikiEntitiesPanel() {
                     <TableHead>Назва</TableHead>
                     <TableHead>Тип</TableHead>
                     <TableHead className="text-center">Згадок</TableHead>
+                    <TableHead className="text-center">Символів</TableHead>
                     <TableHead>Останній пошук</TableHead>
                     <TableHead className="w-32"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {entities.map((entity) => (
+                  {entities.filter(entity => {
+                    if (mentionFilter === 'with') return (mentionCounts[entity.id] || 0) > 0;
+                    if (mentionFilter === 'without') return (mentionCounts[entity.id] || 0) === 0;
+                    return true;
+                  }).map((entity) => (
                     <TableRow key={entity.id}>
                       <TableCell>
                         {entity.image_url ? (
@@ -471,6 +500,17 @@ export function WikiEntitiesPanel() {
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline">{mentionCounts[entity.id] || 0}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center text-xs text-muted-foreground">
+                        {(() => {
+                          const ext = entity.extract_en || entity.extract || '';
+                          const len = ext.length;
+                          return len > 0 ? (
+                            <span className={len < 200 ? 'text-destructive' : len < 500 ? 'text-yellow-600' : 'text-green-600'}>
+                              {len}
+                            </span>
+                          ) : '—';
+                        })()}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {entity.last_searched_at 
