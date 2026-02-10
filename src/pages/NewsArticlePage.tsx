@@ -256,7 +256,39 @@ export default function NewsArticlePage() {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Detect the language of the news content
+  // Fetch narrative analyses for entities linked to this news
+  const entityIds = useMemo(() => {
+    if (!mainEntityData) return [];
+    const ids = [mainEntityData.mainEntity.id];
+    mainEntityData.relatedEntities?.forEach((e: any) => ids.push(e.id));
+    return ids;
+  }, [mainEntityData]);
+
+  const { data: entityNarratives = {} } = useQuery({
+    queryKey: ['news-entity-narratives', entityIds, language],
+    queryFn: async () => {
+      if (entityIds.length === 0) return {};
+      const { data } = await supabase
+        .from('narrative_analyses')
+        .select('entity_id, analysis, year_month, news_count, is_regenerated')
+        .in('entity_id', entityIds)
+        .eq('language', language === 'uk' ? 'uk' : 'en')
+        .order('year_month', { ascending: false });
+      
+      if (!data) return {};
+      // Group by entity_id, keep only latest per entity
+      const map: Record<string, any> = {};
+      data.forEach(row => {
+        if (!map[row.entity_id]) {
+          map[row.entity_id] = row;
+        }
+      });
+      return map;
+    },
+    enabled: entityIds.length > 0,
+    staleTime: 1000 * 60 * 10,
+  });
+
   const detectNewsLanguage = (): string => {
     if (!article) return 'en';
     
