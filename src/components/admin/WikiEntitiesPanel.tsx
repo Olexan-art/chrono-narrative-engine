@@ -177,6 +177,8 @@ function EntityNewsDialog({ entity }: { entity: WikiEntity }) {
 export function WikiEntitiesPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string | null>(null);
+  const [aiFormattingId, setAiFormattingId] = useState<string | null>(null);
+  const { language } = useLanguage();
   const queryClient = useQueryClient();
 
   // Fetch entities with search and filter
