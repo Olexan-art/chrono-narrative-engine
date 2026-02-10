@@ -1945,7 +1945,9 @@ export default function WikiEntityPage() {
                     </div>
                   ) : extract ? (
                     <div className="space-y-6">
-                      <EntityLinkedContent content={extract} excludeEntityId={entity?.id} />
+                      <AdminTextSelectionPopover onEntityAdded={() => queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] })}>
+                        <EntityLinkedContent content={extract} excludeEntityId={entity?.id} />
+                      </AdminTextSelectionPopover>
                       
                       {/* Categories Sub-block */}
                       {wikiCategories.length > 0 && (
