@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
