@@ -26,6 +26,7 @@ import { MarkdownContent } from "@/components/MarkdownContent";
 import { EntityLinkedContent } from "@/components/EntityLinkedContent";
 import { EntityIntersectionGraph } from "@/components/EntityIntersectionGraph";
 import { EntityGhostlyGraph } from "@/components/EntityGhostlyGraph";
+import { EntityCyberpunkGraph } from "@/components/EntityCyberpunkGraph";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminStore } from "@/stores/adminStore";
@@ -158,7 +159,7 @@ export default function WikiEntityPage() {
   const [selectedSections, setSelectedSections] = useState<Set<string>>(new Set());
   const [newsPage, setNewsPage] = useState(1);
   const [selectedCaricature, setSelectedCaricature] = useState<CaricatureLightbox | null>(null);
-  const [graphVariant, setGraphVariant] = useState<'tree' | 'ghostly'>('tree');
+  const [graphVariant, setGraphVariant] = useState<'tree' | 'ghostly' | 'cyberpunk'>('cyberpunk');
   const queryClient = useQueryClient();
 
   // Fetch entity data - support both slug and id
@@ -878,8 +879,16 @@ export default function WikiEntityPage() {
               {/* Hero Section */}
               <Card className="overflow-hidden">
                 <div className="flex flex-col md:flex-row">
-                  {/* Entity Image */}
+                  {/* Entity Image with Topic overlay */}
                   <div className="md:w-64 flex-shrink-0 relative group">
+                    {/* Background topic text */}
+                    {sortedTopics.length > 0 && (
+                      <div className="absolute top-0 left-0 right-0 z-10 p-2 bg-gradient-to-b from-black/70 to-transparent">
+                        <p className="text-[10px] font-mono uppercase tracking-widest text-primary/80 truncate">
+                          {sortedTopics[0][0]}
+                        </p>
+                      </div>
+                    )}
                     {entity.image_url ? (
                       <img
                         src={entity.image_url}
@@ -1093,6 +1102,22 @@ export default function WikiEntityPage() {
                             Wikipedia
                           </a>
                         </div>
+
+                        {/* Topics inline in hero */}
+                        {sortedTopics.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-4">
+                            {sortedTopics.slice(0, 6).map(([topic, count]) => {
+                              const { icon, color } = getTopicIcon(topic);
+                              return (
+                                <Badge key={topic} variant="outline" className={`text-xs gap-1 ${color}`}>
+                                  {icon}
+                                  {topic}
+                                  <span className="text-muted-foreground/70">({count})</span>
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
                       </>
                     )}
                   </CardContent>
@@ -1177,6 +1202,15 @@ export default function WikiEntityPage() {
                 <>
                   <div className="flex items-center gap-2 justify-end">
                     <Button
+                      variant={graphVariant === 'cyberpunk' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setGraphVariant('cyberpunk')}
+                      className="gap-1.5 text-xs"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      Cyberpunk
+                    </Button>
+                    <Button
                       variant={graphVariant === 'tree' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setGraphVariant('tree')}
@@ -1195,7 +1229,23 @@ export default function WikiEntityPage() {
                       {language === 'uk' ? 'Примарні' : 'Ghostly'}
                     </Button>
                   </div>
-                  {graphVariant === 'tree' ? (
+                  {graphVariant === 'cyberpunk' ? (
+                    <EntityCyberpunkGraph 
+                      mainEntity={{
+                        id: entity.id,
+                        slug: entity.slug,
+                        name: entity.name,
+                        name_en: entity.name_en,
+                        description: entity.description,
+                        description_en: entity.description_en,
+                        image_url: entity.image_url,
+                        entity_type: entity.entity_type,
+                        shared_news_count: totalMentions,
+                      }}
+                      relatedEntities={relatedEntities}
+                      secondaryConnections={secondaryConnections}
+                    />
+                  ) : graphVariant === 'tree' ? (
                     <EntityIntersectionGraph 
                       mainEntity={{
                         id: entity.id,
@@ -1715,6 +1765,82 @@ export default function WikiEntityPage() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Archive Block */}
+              {allLinkedNews.length > 0 && (() => {
+                const archiveMap: Record<string, number> = {};
+                allLinkedNews.forEach(n => {
+                  if (n.published_at) {
+                    const key = format(new Date(n.published_at), 'yyyy-MM');
+                    archiveMap[key] = (archiveMap[key] || 0) + 1;
+                  }
+                });
+                const archiveEntries = Object.entries(archiveMap).sort((a, b) => b[0].localeCompare(a[0]));
+                if (archiveEntries.length === 0) return null;
+                return (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2 text-sm">
+                        <FolderOpen className="w-4 h-4 text-primary" />
+                        {language === 'uk' ? 'Архів' : 'Archive'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {archiveEntries.slice(0, 24).map(([month, count]) => (
+                          <div key={month} className="flex justify-between text-xs py-1 border-b border-border/30 last:border-0">
+                            <span className="font-mono text-muted-foreground">{month}</span>
+                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{count}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
+              {/* Sources Block */}
+              {allLinkedNews.length > 0 && (() => {
+                const sourceMap: Record<string, number> = {};
+                allLinkedNews.forEach(n => {
+                  const source = n.country?.name;
+                  if (source) sourceMap[source] = (sourceMap[source] || 0) + 1;
+                });
+                // Also extract from URL domains
+                const domainMap: Record<string, number> = {};
+                allLinkedNews.forEach(n => {
+                  if (n.country?.code) {
+                    const key = n.country.code.toUpperCase();
+                    domainMap[key] = (domainMap[key] || 0) + 1;
+                  }
+                });
+                const sources = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]);
+                if (sources.length === 0) return null;
+                return (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2 text-sm">
+                        <Globe className="w-4 h-4 text-primary" />
+                        {language === 'uk' ? 'Джерела' : 'Sources'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex flex-wrap gap-2">
+                        {sources.map(([source, count]) => {
+                          const country = allLinkedNews.find(n => n.country?.name === source)?.country;
+                          return (
+                            <div key={source} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/50 text-xs">
+                              {country?.flag && <span>{country.flag}</span>}
+                              <span className="font-medium">{source}</span>
+                              <Badge variant="secondary" className="text-[10px] h-4 px-1">{count}</Badge>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
             </div>
           </div>
         </main>

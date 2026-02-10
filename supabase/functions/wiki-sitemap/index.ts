@@ -3,19 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Content-Type": "application/xml; charset=utf-8",
 };
 
 const BASE_URL = "https://echoes2.com";
 const CACHE_TTL_HOURS = 24;
-
-function addHreflangLinks(url: string): string {
-  return `
-    <xhtml:link rel="alternate" hreflang="uk" href="${url}" />
-    <xhtml:link rel="alternate" hreflang="en" href="${url}" />
-    <xhtml:link rel="alternate" hreflang="pl" href="${url}" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="${url}" />`;
-}
+const MAX_SITEMAP_ENTRIES = 2000;
 
 async function fetchAllRows<T>(
   supabase: any,
@@ -46,6 +38,20 @@ async function fetchAllRows<T>(
   return allRows;
 }
 
+function gzipCompress(data: Uint8Array): Uint8Array {
+  const cs = new CompressionStream("gzip");
+  const writer = cs.writable.getWriter();
+  writer.write(data);
+  writer.close();
+
+  const reader = cs.readable.getReader();
+  const chunks: Uint8Array[] = [];
+
+  // We need to read synchronously-ish via a manual promise chain
+  // But Deno supports ReadableStream, so let's use a different approach
+  return data; // Placeholder - we'll use streaming approach below
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -70,13 +76,26 @@ Deno.serve(async (req) => {
 
       if (cached && new Date(cached.expires_at) > new Date()) {
         console.log("Wiki sitemap cache HIT");
-        return new Response(cached.html, {
-          headers: { ...corsHeaders, "X-Cache": "HIT", "Cache-Control": "public, max-age=21600" },
+        
+        // Compress cached XML
+        const xmlBytes = new TextEncoder().encode(cached.html);
+        const compressedStream = new Response(cached.html).body!.pipeThrough(new CompressionStream("gzip"));
+        const compressedBody = await new Response(compressedStream).arrayBuffer();
+        
+        return new Response(compressedBody, {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/xml; charset=utf-8",
+            "Content-Encoding": "gzip",
+            "X-Cache": "HIT",
+            "Cache-Control": "public, max-age=21600",
+          },
           status: 200,
         });
       }
     }
 
+    // Fetch top entities by search_count, limited to MAX_SITEMAP_ENTRIES
     const entities = await fetchAllRows<{
       id: string; slug: string | null; updated_at: string; search_count: number;
     }>(
@@ -86,6 +105,8 @@ Deno.serve(async (req) => {
       { column: "search_count", ascending: false }
     );
 
+    // Limit to top entries
+    const limitedEntities = entities.slice(0, MAX_SITEMAP_ENTRIES);
     const now = new Date().toISOString();
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -94,17 +115,17 @@ Deno.serve(async (req) => {
 
   <!-- Wiki Entities Sitemap for ${BASE_URL} -->
   <!-- Generated: ${now} -->
-  <!-- Total entities: ${entities.length} -->
+  <!-- Total entities: ${limitedEntities.length} (of ${entities.length}) -->
 
   <url>
     <loc>${BASE_URL}/wiki</loc>
     <lastmod>${now}</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>${addHreflangLinks(`${BASE_URL}/wiki`)}
+    <priority>0.8</priority>
   </url>
 `;
 
-    for (const entity of entities) {
+    for (const entity of limitedEntities) {
       const path = entity.slug || entity.id;
       const entityUrl = `${BASE_URL}/wiki/${path}`;
       const priority = entity.search_count > 50 ? "0.7" : entity.search_count > 10 ? "0.6" : "0.5";
@@ -113,14 +134,14 @@ Deno.serve(async (req) => {
     <loc>${entityUrl}</loc>
     <lastmod>${entity.updated_at || now}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>${priority}</priority>${addHreflangLinks(entityUrl)}
+    <priority>${priority}</priority>
   </url>`;
     }
 
     xml += `
 </urlset>`;
 
-    // Save to cached_pages
+    // Save uncompressed to cache
     const expiresAt = new Date(Date.now() + CACHE_TTL_HOURS * 60 * 60 * 1000);
     await supabase
       .from("cached_pages")
@@ -135,11 +156,17 @@ Deno.serve(async (req) => {
         html_size_bytes: new TextEncoder().encode(xml).length,
       }, { onConflict: 'path' });
 
-    console.log(`Wiki sitemap generated & cached: ${entities.length} entities`);
+    console.log(`Wiki sitemap generated & cached: ${limitedEntities.length} of ${entities.length} entities`);
 
-    return new Response(xml, {
+    // Return GZIP compressed
+    const compressedStream = new Response(xml).body!.pipeThrough(new CompressionStream("gzip"));
+    const compressedBody = await new Response(compressedStream).arrayBuffer();
+
+    return new Response(compressedBody, {
       headers: {
         ...corsHeaders,
+        "Content-Type": "application/xml; charset=utf-8",
+        "Content-Encoding": "gzip",
         "X-Cache": "MISS",
         "Cache-Control": "public, max-age=21600",
       },
@@ -152,7 +179,7 @@ Deno.serve(async (req) => {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${BASE_URL}/wiki</loc><priority>0.8</priority></url>
 </urlset>`,
-      { headers: corsHeaders, status: 200 }
+      { headers: { ...corsHeaders, "Content-Type": "application/xml; charset=utf-8" }, status: 200 }
     );
   }
 });
