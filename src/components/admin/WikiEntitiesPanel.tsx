@@ -470,7 +470,7 @@ export function WikiEntitiesPanel() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="outline">{entity.search_count}</Badge>
+                        <Badge variant="outline">{mentionCounts[entity.id] || 0}</Badge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {entity.last_searched_at 
