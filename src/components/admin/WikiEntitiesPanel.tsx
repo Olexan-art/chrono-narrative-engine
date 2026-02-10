@@ -442,6 +442,7 @@ export function WikiEntitiesPanel() {
                 Без згадок
               </Button>
             </div>
+          </div>
 
           <ScrollArea className="h-[500px]">
             {isLoading ? (
