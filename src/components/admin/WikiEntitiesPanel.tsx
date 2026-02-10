@@ -512,7 +512,6 @@ export function WikiEntitiesPanel() {
                           ) : '—';
                         })()}
                       </TableCell>
-                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {entity.last_searched_at 
                           ? format(new Date(entity.last_searched_at), 'dd.MM.yyyy HH:mm')
