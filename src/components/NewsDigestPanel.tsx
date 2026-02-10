@@ -1061,62 +1061,108 @@ export function NewsDigestPanel({ password }: Props) {
                       <Card key={feed.id} className="cosmic-card">
                         <CardContent className="py-4">
                           <div className="flex items-center justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="font-medium truncate">{feed.name}</h4>
-                                <Badge variant="outline" className="text-xs">
-                                  {CATEGORIES.find(c => c.value === feed.category)?.label || feed.category}
-                                </Badge>
-                                <Badge variant="secondary" className="text-xs">
-                                  <Download className="w-3 h-3 mr-1" />
-                                  {feed.items_count || 0} новин
-                                </Badge>
-                                <Select
-                                  value={(feed.sample_ratio || 1).toString()}
-                                  onValueChange={(v) => updateFeedSampleRatioMutation.mutate({ 
-                                    feedId: feed.id, 
-                                    sampleRatio: parseInt(v) 
-                                  })}
-                                >
-                                  <SelectTrigger className="h-6 w-auto text-xs gap-1 px-2">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {SAMPLE_RATIO_OPTIONS.map(opt => (
-                                      <SelectItem key={opt.value} value={opt.value.toString()}>
-                                        {opt.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                {feed.fetch_error && (
-                                  <Badge variant="destructive" className="text-xs">
-                                    <AlertCircle className="w-3 h-3 mr-1" />
-                                    Помилка
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              {/* Feed logo */}
+                              {(feed as any).default_image_url ? (
+                                <img 
+                                  src={(feed as any).default_image_url} 
+                                  alt={feed.name}
+                                  className="w-8 h-8 rounded object-contain border border-border flex-shrink-0"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded border border-border flex items-center justify-center flex-shrink-0 bg-muted/50">
+                                  <img 
+                                    src={`https://www.google.com/s2/favicons?domain=${new URL(feed.url).hostname}&sz=32`}
+                                    alt=""
+                                    className="w-5 h-5"
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-medium truncate">{feed.name}</h4>
+                                  <Badge variant="outline" className="text-xs">
+                                    {CATEGORIES.find(c => c.value === feed.category)?.label || feed.category}
                                   </Badge>
+                                  <Badge variant="secondary" className="text-xs">
+                                    <Download className="w-3 h-3 mr-1" />
+                                    {feed.items_count || 0} новин
+                                  </Badge>
+                                  <Select
+                                    value={(feed.sample_ratio || 1).toString()}
+                                    onValueChange={(v) => updateFeedSampleRatioMutation.mutate({ 
+                                      feedId: feed.id, 
+                                      sampleRatio: parseInt(v) 
+                                    })}
+                                  >
+                                    <SelectTrigger className="h-6 w-auto text-xs gap-1 px-2">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {SAMPLE_RATIO_OPTIONS.map(opt => (
+                                        <SelectItem key={opt.value} value={opt.value.toString()}>
+                                          {opt.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {feed.fetch_error && (
+                                    <Badge variant="destructive" className="text-xs">
+                                      <AlertCircle className="w-3 h-3 mr-1" />
+                                      Помилка
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <a 
+                                    href={feed.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-muted-foreground hover:text-primary truncate max-w-md"
+                                  >
+                                    {feed.url}
+                                  </a>
+                                  <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                </div>
+                                {feed.last_fetched_at && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Оновлено: {new Date(feed.last_fetched_at).toLocaleString('uk-UA')}
+                                  </p>
+                                )}
+                                {feed.fetch_error && (
+                                  <p className="text-xs text-destructive mt-1">{feed.fetch_error}</p>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <a 
-                                  href={feed.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-muted-foreground hover:text-primary truncate max-w-md"
-                                >
-                                  {feed.url}
-                                </a>
-                                <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                              </div>
-                              {feed.last_fetched_at && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Оновлено: {new Date(feed.last_fetched_at).toLocaleString('uk-UA')}
-                                </p>
-                              )}
-                              {feed.fetch_error && (
-                                <p className="text-xs text-destructive mt-1">{feed.fetch_error}</p>
-                              )}
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* Google logo search */}
+                              <a
+                                href={`https://www.google.com/search?q=${encodeURIComponent(feed.name + ' logo png transparent')}&tbm=isch`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Шукати лого в Google"
+                              >
+                                <Button variant="outline" size="icon">
+                                  <ImageIcon className="w-4 h-4" />
+                                </Button>
+                              </a>
+                              {/* Default image toggle */}
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => {
+                                  if (editingDefaultImage?.feedId === feed.id) {
+                                    setEditingDefaultImage(null);
+                                  } else {
+                                    setEditingDefaultImage({ feedId: feed.id, url: (feed as any).default_image_url || '' });
+                                  }
+                                }}
+                                title="Зображення за замовчуванням"
+                                className={editingDefaultImage?.feedId === feed.id ? 'border-primary' : ''}
+                              >
+                                <LinkIcon className="w-4 h-4" />
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="icon"
@@ -1177,6 +1223,40 @@ export function NewsDigestPanel({ password }: Props) {
                               </AlertDialog>
                             </div>
                           </div>
+                          {/* Default image editor */}
+                          {editingDefaultImage?.feedId === feed.id && (
+                            <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2">
+                              <ImageIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              <Input
+                                placeholder="URL зображення за замовчуванням..."
+                                value={editingDefaultImage.url}
+                                onChange={(e) => setEditingDefaultImage(prev => prev ? { ...prev, url: e.target.value } : null)}
+                                className="flex-1 text-xs h-8"
+                              />
+                              {editingDefaultImage.url && (
+                                <img 
+                                  src={editingDefaultImage.url} 
+                                  alt="Preview" 
+                                  className="w-8 h-8 rounded object-cover border border-border"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                              )}
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  updateFeedDefaultImageMutation.mutate({ 
+                                    feedId: feed.id, 
+                                    defaultImageUrl: editingDefaultImage.url 
+                                  });
+                                  setEditingDefaultImage(null);
+                                }}
+                                disabled={updateFeedDefaultImageMutation.isPending}
+                                className="h-8"
+                              >
+                                Зберегти
+                              </Button>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     ))}
