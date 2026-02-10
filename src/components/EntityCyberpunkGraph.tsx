@@ -619,25 +619,59 @@ export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryCon
 
         {/* Stats footer */}
         <div className="mt-6 pt-4 border-t border-[hsl(var(--chart-4))]/20">
-          <div className="flex items-center justify-center gap-8 text-xs text-muted-foreground flex-wrap font-mono">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-[hsl(var(--chart-4))]" />
-              <span className="text-foreground font-semibold">{sortedEntities.length}</span>
-              <span>NODES</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5 text-[hsl(var(--chart-4))]" />
-              <span className="text-foreground font-semibold">{totalConnections}</span>
-              <span>LINKS</span>
-            </div>
-            {visibleSecondary.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Share2 className="w-3.5 h-3.5 text-[hsl(var(--chart-5))]" />
-                <span className="text-foreground font-semibold">{visibleSecondary.length}</span>
-                <span>CROSS</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
+            <div className="flex flex-col items-center gap-1 p-2 rounded bg-[hsl(var(--chart-4))]/5 border border-[hsl(var(--chart-4))]/20">
+              <div className="flex items-center gap-1.5 text-[hsl(var(--chart-4))]">
+                <div className="w-2 h-2 bg-[hsl(var(--chart-4))]" />
+                <span className="uppercase tracking-wider text-[10px]">Nodes</span>
               </div>
-            )}
+              <span className="text-foreground font-bold text-lg">{sortedEntities.length}</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 p-2 rounded bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-1.5 text-primary">
+                <Zap className="w-3 h-3" />
+                <span className="uppercase tracking-wider text-[10px]">Links</span>
+              </div>
+              <span className="text-foreground font-bold text-lg">{totalConnections}</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 p-2 rounded bg-[hsl(var(--chart-5))]/5 border border-[hsl(var(--chart-5))]/20">
+              <div className="flex items-center gap-1.5 text-[hsl(var(--chart-5))]">
+                <Share2 className="w-3 h-3" />
+                <span className="uppercase tracking-wider text-[10px]">Cross</span>
+              </div>
+              <span className="text-foreground font-bold text-lg">{visibleSecondary.length}</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 p-2 rounded bg-[hsl(var(--accent))]/5 border border-[hsl(var(--accent))]/20">
+              <div className="flex items-center gap-1.5 text-[hsl(var(--accent))]">
+                <TrendingUp className="w-3 h-3" />
+                <span className="uppercase tracking-wider text-[10px]">Avg</span>
+              </div>
+              <span className="text-foreground font-bold text-lg">{sortedEntities.length > 0 ? (totalConnections / sortedEntities.length).toFixed(1) : '0'}</span>
+            </div>
           </div>
+          {/* Density bar */}
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Density</span>
+            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[hsl(var(--chart-4))] to-primary rounded-full transition-all"
+                style={{ width: `${Math.min(100, sortedEntities.length > 1 ? (visibleSecondary.length / (sortedEntities.length * (sortedEntities.length - 1) / 2)) * 100 : 0)}%` }}
+              />
+            </div>
+            <span className="text-[10px] font-mono text-muted-foreground">
+              {sortedEntities.length > 1 ? ((visibleSecondary.length / (sortedEntities.length * (sortedEntities.length - 1) / 2)) * 100).toFixed(1) : '0'}%
+            </span>
+          </div>
+          {/* Top connected node */}
+          {sortedEntities.length > 0 && (
+            <div className="mt-2 flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
+              <span className="uppercase tracking-widest">Top Node:</span>
+              <span className="text-[hsl(var(--chart-4))] font-semibold">
+                {language === 'en' && sortedEntities[0].name_en ? sortedEntities[0].name_en : sortedEntities[0].name}
+              </span>
+              <span>({sortedEntities[0].shared_news_count} links)</span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
