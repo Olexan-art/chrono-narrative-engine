@@ -1765,6 +1765,82 @@ export default function WikiEntityPage() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Archive Block */}
+              {allLinkedNews.length > 0 && (() => {
+                const archiveMap: Record<string, number> = {};
+                allLinkedNews.forEach(n => {
+                  if (n.published_at) {
+                    const key = format(new Date(n.published_at), 'yyyy-MM');
+                    archiveMap[key] = (archiveMap[key] || 0) + 1;
+                  }
+                });
+                const archiveEntries = Object.entries(archiveMap).sort((a, b) => b[0].localeCompare(a[0]));
+                if (archiveEntries.length === 0) return null;
+                return (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2 text-sm">
+                        <FolderOpen className="w-4 h-4 text-primary" />
+                        {language === 'uk' ? 'Архів' : 'Archive'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {archiveEntries.slice(0, 24).map(([month, count]) => (
+                          <div key={month} className="flex justify-between text-xs py-1 border-b border-border/30 last:border-0">
+                            <span className="font-mono text-muted-foreground">{month}</span>
+                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{count}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
+              {/* Sources Block */}
+              {allLinkedNews.length > 0 && (() => {
+                const sourceMap: Record<string, number> = {};
+                allLinkedNews.forEach(n => {
+                  const source = n.country?.name;
+                  if (source) sourceMap[source] = (sourceMap[source] || 0) + 1;
+                });
+                // Also extract from URL domains
+                const domainMap: Record<string, number> = {};
+                allLinkedNews.forEach(n => {
+                  if (n.country?.code) {
+                    const key = n.country.code.toUpperCase();
+                    domainMap[key] = (domainMap[key] || 0) + 1;
+                  }
+                });
+                const sources = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]);
+                if (sources.length === 0) return null;
+                return (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2 text-sm">
+                        <Globe className="w-4 h-4 text-primary" />
+                        {language === 'uk' ? 'Джерела' : 'Sources'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex flex-wrap gap-2">
+                        {sources.map(([source, count]) => {
+                          const country = allLinkedNews.find(n => n.country?.name === source)?.country;
+                          return (
+                            <div key={source} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/50 text-xs">
+                              {country?.flag && <span>{country.flag}</span>}
+                              <span className="font-medium">{source}</span>
+                              <Badge variant="secondary" className="text-[10px] h-4 px-1">{count}</Badge>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
             </div>
           </div>
         </main>
