@@ -107,7 +107,7 @@ async function updatePingStatus(
     .eq('sitemap_type', sitemapType);
 }
 
-declare const EdgeRuntime: { waitUntil: (promise: Promise<any>) => void };
+// Background task helper - use globalThis if available
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
