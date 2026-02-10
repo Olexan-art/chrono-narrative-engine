@@ -260,16 +260,25 @@ export function WikiEntitiesPanel() {
     },
   });
 
-  // Fetch actual mention counts from news_wiki_entities
+  // Fetch actual mention counts from news_wiki_entities (with optional month filter)
   const { data: mentionCounts = {} } = useQuery({
-    queryKey: ['admin-wiki-mention-counts', entities?.map(e => e.id)],
+    queryKey: ['admin-wiki-mention-counts', entities?.map(e => e.id), mentionMonth],
     queryFn: async () => {
       if (!entities?.length) return {};
       const ids = entities.map(e => e.id);
-      const { data, error } = await supabase
+      let query = supabase
         .from('news_wiki_entities')
-        .select('wiki_entity_id')
+        .select('wiki_entity_id, created_at')
         .in('wiki_entity_id', ids);
+      
+      if (mentionMonth) {
+        const [year, month] = mentionMonth.split('-').map(Number);
+        const startDate = new Date(year, month - 1, 1).toISOString();
+        const endDate = new Date(year, month, 1).toISOString();
+        query = query.gte('created_at', startDate).lt('created_at', endDate);
+      }
+
+      const { data, error } = await query;
       if (error) return {};
       const counts: Record<string, number> = {};
       for (const row of data) {
@@ -279,6 +288,19 @@ export function WikiEntitiesPanel() {
     },
     enabled: !!entities?.length,
   });
+
+  // Generate month options for filter (last 12 months)
+  const monthOptions = useMemo(() => {
+    const options: { value: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' });
+      options.push({ value, label });
+    }
+    return options;
+  }, []);
 
   // Delete entity mutation
   const deleteMutation = useMutation({
