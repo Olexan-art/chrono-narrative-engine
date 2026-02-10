@@ -88,8 +88,30 @@ export function AdminTextSelectionPopover({ children, newsId, onEntityAdded }: A
         query: selectedText,
         language: language === 'uk' ? 'uk' : language === 'pl' ? 'pl' : 'en',
       });
-      setResults(result.results || []);
-      if (!result.results?.length) {
+      const entities = result.results || [];
+      
+      // Check which already exist in DB
+      if (entities.length > 0) {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const wikiIds = entities.map((e: any) => e.wiki_id).filter(Boolean);
+        const { data: existing } = await supabase
+          .from('wiki_entities')
+          .select('id, wiki_id, slug')
+          .in('wiki_id', wikiIds);
+        
+        const existingMap = new Map((existing || []).map(e => [e.wiki_id, e]));
+        entities.forEach((e: any) => {
+          const found = existingMap.get(e.wiki_id);
+          if (found) {
+            e.exists_in_db = true;
+            e.id = found.id;
+            e.slug = found.slug;
+          }
+        });
+      }
+      
+      setResults(entities);
+      if (!entities.length) {
         toast.info(language === 'uk' ? 'Нічого не знайдено' : 'No results found');
       }
     } catch (err: any) {
