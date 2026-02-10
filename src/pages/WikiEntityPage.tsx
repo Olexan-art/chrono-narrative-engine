@@ -1422,6 +1422,14 @@ export default function WikiEntityPage() {
                               <span>{caricatures.length} {language === 'uk' ? 'карикатур' : 'caricatures'}</span>
                             </div>
                           )}
+                          {isAdmin && cacheStatus && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <HardDrive className="w-3 h-3" />
+                              <span className="text-[11px]">
+                                HTML: {new Date(cacheStatus.updated_at).toLocaleString()} ({Math.round((cacheStatus.html_size_bytes || 0) / 1024)}KB)
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Wikipedia Link */}
