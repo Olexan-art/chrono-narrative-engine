@@ -400,6 +400,65 @@ export default function WikiEntityPage() {
       .slice(0, 20);
   }, [allLinkedNews]);
 
+  // Fetch RSS feed sources for this entity's news
+  const { data: feedSources = [] } = useQuery({
+    queryKey: ['entity-feed-sources', entity?.id],
+    queryFn: async () => {
+      if (!entity?.id) return [];
+      
+      // Get news item IDs linked to this entity
+      const { data: newsLinks } = await supabase
+        .from('news_wiki_entities')
+        .select('news_item_id')
+        .eq('wiki_entity_id', entity.id);
+      
+      if (!newsLinks?.length) return [];
+      
+      const newsItemIds = newsLinks.map(l => l.news_item_id);
+      
+      // Get feed_id from those news items (batch in chunks of 100)
+      const feedCounts: Record<string, number> = {};
+      for (let i = 0; i < newsItemIds.length; i += 100) {
+        const chunk = newsItemIds.slice(i, i + 100);
+        const { data: items } = await supabase
+          .from('news_rss_items')
+          .select('feed_id')
+          .in('id', chunk);
+        
+        if (items) {
+          items.forEach(item => {
+            feedCounts[item.feed_id] = (feedCounts[item.feed_id] || 0) + 1;
+          });
+        }
+      }
+      
+      const feedIds = Object.keys(feedCounts);
+      if (feedIds.length === 0) return [];
+      
+      // Fetch feed details
+      const { data: feeds } = await supabase
+        .from('news_rss_feeds')
+        .select('id, name, url, default_image_url, country:news_countries(flag, name)')
+        .in('id', feedIds);
+      
+      if (!feeds) return [];
+      
+      return feeds
+        .map(feed => ({
+          id: feed.id,
+          name: feed.name,
+          url: feed.url,
+          default_image_url: feed.default_image_url,
+          country: feed.country as any,
+          count: feedCounts[feed.id] || 0,
+          favicon: `https://www.google.com/s2/favicons?domain=${new URL(feed.url).hostname}&sz=32`,
+        }))
+        .sort((a, b) => b.count - a.count);
+    },
+    enabled: !!entity?.id,
+    staleTime: 1000 * 60 * 10,
+  });
+
   // Fetch Wikipedia categories automatically
   const { data: wikiCategories = [] } = useQuery({
     queryKey: ['wiki-categories', entity?.id, entity?.wiki_url],
