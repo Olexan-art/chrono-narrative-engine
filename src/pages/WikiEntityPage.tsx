@@ -1859,22 +1859,14 @@ export default function WikiEntityPage() {
               })()}
 
               {/* Sources Block */}
-              {allLinkedNews.length > 0 && (() => {
+              {(allLinkedNews.length > 0 || feedSources.length > 0) && (() => {
                 const sourceMap: Record<string, number> = {};
                 allLinkedNews.forEach(n => {
                   const source = n.country?.name;
                   if (source) sourceMap[source] = (sourceMap[source] || 0) + 1;
                 });
-                // Also extract from URL domains
-                const domainMap: Record<string, number> = {};
-                allLinkedNews.forEach(n => {
-                  if (n.country?.code) {
-                    const key = n.country.code.toUpperCase();
-                    domainMap[key] = (domainMap[key] || 0) + 1;
-                  }
-                });
                 const sources = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]);
-                if (sources.length === 0) return null;
+                if (sources.length === 0 && feedSources.length === 0) return null;
                 return (
                   <Card>
                     <CardHeader className="pb-2">
@@ -1883,19 +1875,45 @@ export default function WikiEntityPage() {
                         {language === 'uk' ? 'Джерела' : 'Sources'}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="flex flex-wrap gap-2">
-                        {sources.map(([source, count]) => {
-                          const country = allLinkedNews.find(n => n.country?.name === source)?.country;
-                          return (
-                            <div key={source} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/50 text-xs">
-                              {country?.flag && <span>{country.flag}</span>}
-                              <span className="font-medium">{source}</span>
-                              <Badge variant="secondary" className="text-[10px] h-4 px-1">{count}</Badge>
-                            </div>
-                          );
-                        })}
-                      </div>
+                    <CardContent className="pt-0 space-y-3">
+                      {/* Country sources */}
+                      {sources.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {sources.map(([source, count]) => {
+                            const country = allLinkedNews.find(n => n.country?.name === source)?.country;
+                            return (
+                              <div key={source} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/50 text-xs">
+                                {country?.flag && <span>{country.flag}</span>}
+                                <span className="font-medium">{source}</span>
+                                <Badge variant="secondary" className="text-[10px] h-4 px-1">{count}</Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {/* RSS Feed sources */}
+                      {feedSources.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                            <Rss className="w-3 h-3" />
+                            RSS Feeds
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {feedSources.map(feed => (
+                              <div key={feed.id} className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30 border border-border/30 text-[11px]">
+                                <img
+                                  src={feed.favicon}
+                                  alt=""
+                                  className="w-4 h-4 rounded-sm"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                                <span className="font-medium truncate max-w-[100px]">{feed.name}</span>
+                                <Badge variant="secondary" className="text-[9px] h-3.5 px-1">{feed.count}</Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
