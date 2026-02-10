@@ -18,10 +18,23 @@ interface WikiEntity {
   slug: string | null;
 }
 
+interface ExtraEntity {
+  id: string;
+  name: string;
+  name_en?: string | null;
+  description?: string | null;
+  description_en?: string | null;
+  image_url?: string | null;
+  entity_type?: string;
+  slug?: string | null;
+}
+
 interface EntityLinkedContentProps {
   content: string;
   excludeEntityId?: string;
   className?: string;
+  /** Additional entities to always include in matching (e.g. directly linked entities) */
+  extraEntities?: ExtraEntity[];
 }
 
 /**
