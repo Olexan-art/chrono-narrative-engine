@@ -419,7 +419,29 @@ export function WikiEntitiesPanel() {
                 Організації
               </Button>
             </div>
-          </div>
+            <div className="flex gap-1">
+              <Button
+                variant={mentionFilter === 'all' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMentionFilter('all')}
+              >
+                Всі згадки
+              </Button>
+              <Button
+                variant={mentionFilter === 'with' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMentionFilter('with')}
+              >
+                Зі згадками
+              </Button>
+              <Button
+                variant={mentionFilter === 'without' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMentionFilter('without')}
+              >
+                Без згадок
+              </Button>
+            </div>
 
           <ScrollArea className="h-[500px]">
             {isLoading ? (
