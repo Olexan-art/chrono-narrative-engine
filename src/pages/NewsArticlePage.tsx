@@ -790,6 +790,31 @@ export default function NewsArticlePage() {
                 onContentUpdate={() => queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] })}
               />
 
+              {/* Narrative Analysis Block - under original source */}
+              {mainEntityData?.mainEntity && entityNarratives[mainEntityData.mainEntity.id] && (() => {
+                const n = entityNarratives[mainEntityData.mainEntity.id];
+                const entityName = language === 'en' && mainEntityData.mainEntity.name_en 
+                  ? mainEntityData.mainEntity.name_en : mainEntityData.mainEntity.name;
+                return (
+                  <div className="mt-6 p-4 rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BrainCircuit className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium">
+                        {language === 'uk' ? 'Наративний аналіз' : 'Narrative Analysis'}: {entityName}
+                      </span>
+                    </div>
+                    <NarrativeAnalysisBlock
+                      analysis={n.analysis}
+                      yearMonth={n.year_month}
+                      newsCount={n.news_count}
+                      isRegenerated={n.is_regenerated}
+                      showHeader={true}
+                      animated={true}
+                    />
+                  </div>
+                );
+              })()}
+
               {/* Related Entities News - before original link */}
               <RelatedEntitiesNews 
                 newsId={article.id}
