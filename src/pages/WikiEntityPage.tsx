@@ -29,6 +29,7 @@ import { EntityLinkedContent } from "@/components/EntityLinkedContent";
 import { EntityIntersectionGraph } from "@/components/EntityIntersectionGraph";
 import { EntityGhostlyGraph } from "@/components/EntityGhostlyGraph";
 import { EntityCyberpunkGraph } from "@/components/EntityCyberpunkGraph";
+import { AdminTextSelectionPopover } from "@/components/AdminTextSelectionPopover";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminStore } from "@/stores/adminStore";
