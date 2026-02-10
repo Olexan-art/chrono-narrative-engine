@@ -675,7 +675,7 @@ Deno.serve(async (req) => {
         const totalLikes = linkedNews.reduce((s: number, n: any) => s + (n.likes || 0), 0);
         const totalDislikes = linkedNews.reduce((s: number, n: any) => s + (n.dislikes || 0), 0);
         
-        html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl, topTopics, topKeywords, totalLikes, totalDislikes);
+        html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl, topTopics, topKeywords, totalLikes, totalDislikes, wikiLinkedEntities, latestNarrative);
       }
     } else if (dateMatch) {
       // Date stories page
