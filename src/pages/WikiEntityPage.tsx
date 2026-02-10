@@ -863,6 +863,74 @@ export default function WikiEntityPage() {
     setSelectedSections(newSet);
   };
 
+  // Find related entities via shared news
+  const findRelatedByNews = async () => {
+    if (!entity) return;
+    setRelatedLoading('news');
+    setRelatedResults([]);
+    try {
+      const result = await callEdgeFunction<any>('search-wiki', {
+        action: 'find_related_news',
+        entityId: entity.id,
+      });
+      setRelatedResults(result.related || []);
+      if (!result.related?.length) toast.info('Пов\'язаних сутностей не знайдено');
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setRelatedLoading(null);
+    }
+  };
+
+  // Find related entities via Wikipedia links
+  const findRelatedByWiki = async () => {
+    if (!entity) return;
+    setRelatedLoading('wiki');
+    setRelatedResults([]);
+    try {
+      const result = await callEdgeFunction<any>('search-wiki', {
+        action: 'find_related_wiki',
+        entityId: entity.id,
+        wikiUrl: entity.wiki_url,
+        language: language === 'uk' ? 'uk' : 'en',
+      });
+      setRelatedResults(result.related || []);
+      if (!result.related?.length) toast.info('Пов\'язаних сутностей не знайдено');
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setRelatedLoading(null);
+    }
+  };
+
+  // Add entity by Wikipedia URL
+  const addEntityByUrl = async () => {
+    if (!addingEntityUrl.trim() || !addingEntityUrl.includes('wikipedia.org')) {
+      toast.error('Введіть коректний URL Wikipedia');
+      return;
+    }
+    setAddingEntity(true);
+    try {
+      const result = await callEdgeFunction<any>('search-wiki', {
+        action: 'save_entity',
+        wikiUrl: addingEntityUrl.trim(),
+        language: language === 'uk' ? 'uk' : 'en',
+      });
+      if (result.success) {
+        toast.success('Сутність додано');
+        setAddingEntityUrl("");
+        // Re-search to refresh list
+        findRelatedByNews();
+      } else {
+        throw new Error(result.error || 'Failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setAddingEntity(false);
+    }
+  };
+
   const startEditingInfo = () => {
     if (!entity) return;
     setEditedName(language === 'en' && entity.name_en ? entity.name_en : entity.name);
