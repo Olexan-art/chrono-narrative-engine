@@ -78,8 +78,8 @@ export function EntityLinkedContent({ content, excludeEntityId, className }: Ent
   const parseInlineWithEntities = (text: string, keyPrefix: string): (string | JSX.Element)[] => {
     if (!text || !entityMap.size) return [text];
 
-    // Build regex from entity names
-    const terms = Array.from(entityMap.keys()).sort((a, b) => b.length - a.length).slice(0, 50);
+    // Build regex from entity names — use more terms for better coverage
+    const terms = Array.from(entityMap.keys()).sort((a, b) => b.length - a.length).slice(0, 200);
     if (terms.length === 0) return [text];
 
     const escapedTerms = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -88,26 +88,36 @@ export function EntityLinkedContent({ content, excludeEntityId, className }: Ent
     const boundaryEnd = '(?![\\p{L}\\p{N}])';
     const pattern = new RegExp(`${boundary}(${escapedTerms.join('|')})${boundaryEnd}`, 'giu');
 
-    const parts = text.split(pattern);
+    // Use matchAll instead of split for reliable Unicode matching
+    const result: (string | JSX.Element)[] = [];
     const linkedIds = new Set<string>();
+    let lastIndex = 0;
 
-    return parts.map((part, idx) => {
-      const matchedEntity = entityMap.get(part.toLowerCase());
+    for (const match of text.matchAll(pattern)) {
+      const matchText = match[0];
+      const matchIndex = match.index!;
+
+      // Add text before match
+      if (matchIndex > lastIndex) {
+        result.push(text.slice(lastIndex, matchIndex));
+      }
+
+      const matchedEntity = entityMap.get(matchText.toLowerCase());
 
       if (matchedEntity && !linkedIds.has(matchedEntity.id)) {
         linkedIds.add(matchedEntity.id);
-        const name = language === 'en' && matchedEntity.name_en ? matchedEntity.name_en : matchedEntity.name;
-        const description = language === 'en' && matchedEntity.description_en ? matchedEntity.description_en : matchedEntity.description;
+        const eName = language === 'en' && matchedEntity.name_en ? matchedEntity.name_en : matchedEntity.name;
+        const eDescription = language === 'en' && matchedEntity.description_en ? matchedEntity.description_en : matchedEntity.description;
 
-        return (
-          <TooltipProvider key={`${keyPrefix}-${idx}`} delayDuration={300}>
+        result.push(
+          <TooltipProvider key={`${keyPrefix}-${matchIndex}`} delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link 
                   to={`/wiki/${matchedEntity.slug || matchedEntity.id}`}
                   className="border-b border-dotted border-primary/50 text-primary hover:border-primary hover:text-primary/80 transition-colors"
                 >
-                  {part}
+                  {matchText}
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="top" align="center" className="max-w-xs p-0 overflow-hidden">
@@ -121,9 +131,9 @@ export function EntityLinkedContent({ content, excludeEntityId, className }: Ent
                         <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 gap-0.5">
                           {getEntityIcon(matchedEntity.entity_type)}
                         </Badge>
-                        <span className="font-semibold text-sm">{name}</span>
+                        <span className="font-semibold text-sm">{eName}</span>
                       </div>
-                      {description && <p className="text-xs text-muted-foreground line-clamp-2">{description}</p>}
+                      {eDescription && <p className="text-xs text-muted-foreground line-clamp-2">{eDescription}</p>}
                     </div>
                   </div>
                 </div>
@@ -131,10 +141,20 @@ export function EntityLinkedContent({ content, excludeEntityId, className }: Ent
             </Tooltip>
           </TooltipProvider>
         );
+      } else {
+        // Already linked or not found — render as plain text
+        result.push(matchText);
       }
 
-      return part;
-    });
+      lastIndex = matchIndex + matchText.length;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      result.push(text.slice(lastIndex));
+    }
+
+    return result.length > 0 ? result : [text];
   };
 
   // Render text that may contain <ITALIC> tags + entity links
