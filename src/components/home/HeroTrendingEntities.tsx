@@ -68,6 +68,25 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
+  // Fetch latest narrative for the #1 trending entity
+  const topEntityId = trendingEntities[0]?.id;
+  const { data: topNarrative } = useQuery({
+    queryKey: ['hero-narrative', topEntityId, language],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('narrative_analyses')
+        .select('analysis, year_month, news_count, is_regenerated')
+        .eq('entity_id', topEntityId!)
+        .eq('language', language === 'uk' ? 'uk' : 'en')
+        .order('year_month', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!topEntityId,
+    staleTime: 1000 * 60 * 10,
+  });
+
   if (isLoading) {
     return (
       <div className="space-y-3">
