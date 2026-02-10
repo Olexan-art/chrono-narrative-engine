@@ -109,11 +109,25 @@ export function EntityLinkedContent({ content, excludeEntityId, className, extra
   };
 
   // Parse inline text with entity linking
+  // Build priority set of extra entity names (always included)
+  const extraNameSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const extra of extraEntities) {
+      if (extra.id === excludeEntityId) continue;
+      if (extra.name && extra.name.length >= 3) set.add(extra.name.toLowerCase());
+      if (extra.name_en && extra.name_en.length >= 3) set.add(extra.name_en.toLowerCase());
+    }
+    return set;
+  }, [extraEntities, excludeEntityId]);
+
   const parseInlineWithEntities = (text: string, keyPrefix: string): (string | JSX.Element)[] => {
     if (!text || !entityMap.size) return [text];
 
-    // Build regex from entity names — use more terms for better coverage
-    const terms = Array.from(entityMap.keys()).sort((a, b) => b.length - a.length).slice(0, 200);
+    // Build regex from entity names — extra entities always included, rest up to 200
+    const allKeys = Array.from(entityMap.keys()).sort((a, b) => b.length - a.length);
+    const priorityTerms = allKeys.filter(k => extraNameSet.has(k));
+    const otherTerms = allKeys.filter(k => !extraNameSet.has(k)).slice(0, 200);
+    const terms = [...new Set([...priorityTerms, ...otherTerms])].sort((a, b) => b.length - a.length);
     if (terms.length === 0) return [text];
 
     const escapedTerms = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
