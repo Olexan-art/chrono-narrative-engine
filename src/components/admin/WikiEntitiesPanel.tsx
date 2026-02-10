@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2 } from "lucide-react";
+import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { callEdgeFunction } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface WikiEntity {
   id: string;
@@ -175,6 +177,8 @@ function EntityNewsDialog({ entity }: { entity: WikiEntity }) {
 export function WikiEntitiesPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string | null>(null);
+  const [aiFormattingId, setAiFormattingId] = useState<string | null>(null);
+  const { language } = useLanguage();
   const queryClient = useQueryClient();
 
   // Fetch entities with search and filter
@@ -232,6 +236,26 @@ export function WikiEntitiesPanel() {
     },
   });
 
+  // Fetch actual mention counts from news_wiki_entities
+  const { data: mentionCounts = {} } = useQuery({
+    queryKey: ['admin-wiki-mention-counts', entities?.map(e => e.id)],
+    queryFn: async () => {
+      if (!entities?.length) return {};
+      const ids = entities.map(e => e.id);
+      const { data, error } = await supabase
+        .from('news_wiki_entities')
+        .select('wiki_entity_id')
+        .in('wiki_entity_id', ids);
+      if (error) return {};
+      const counts: Record<string, number> = {};
+      for (const row of data) {
+        counts[row.wiki_entity_id] = (counts[row.wiki_entity_id] || 0) + 1;
+      }
+      return counts;
+    },
+    enabled: !!entities?.length,
+  });
+
   // Delete entity mutation
   const deleteMutation = useMutation({
     mutationFn: async (entityId: string) => {
@@ -250,6 +274,41 @@ export function WikiEntitiesPanel() {
       toast.error(error instanceof Error ? error.message : 'Помилка видалення');
     },
   });
+
+  // Format with AI and save
+  const handleFormatWithAi = async (entity: WikiEntity) => {
+    setAiFormattingId(entity.id);
+    try {
+      const currentExtract = language === 'en' && entity.extract_en ? entity.extract_en : entity.extract;
+      const entityName = language === 'en' && entity.name_en ? entity.name_en : entity.name;
+      
+      const result = await callEdgeFunction<{ success: boolean; formatted?: string; error?: string }>('search-wiki', {
+        action: 'format_extract',
+        entityId: entity.id,
+        currentExtract: currentExtract || '',
+        entityName,
+        language: language === 'uk' ? 'uk' : 'en',
+      });
+
+      if (result.success && result.formatted) {
+        const field = language === 'en' ? 'extract_en' : 'extract';
+        const { error } = await supabase
+          .from('wiki_entities')
+          .update({ [field]: result.formatted })
+          .eq('id', entity.id);
+
+        if (error) throw error;
+        toast.success('Відформатовано та збережено');
+        queryClient.invalidateQueries({ queryKey: ['admin-wiki-entities'] });
+      } else {
+        throw new Error(result.error || 'AI formatting failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Помилка форматування');
+    } finally {
+      setAiFormattingId(null);
+    }
+  };
 
   const getEntityIcon = (type: string) => {
     switch (type) {
@@ -411,7 +470,7 @@ export function WikiEntitiesPanel() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="outline">{entity.search_count}</Badge>
+                        <Badge variant="outline">{mentionCounts[entity.id] || 0}</Badge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {entity.last_searched_at 
@@ -421,6 +480,19 @@ export function WikiEntitiesPanel() {
                       <TableCell>
                         <div className="flex gap-1">
                           <EntityNewsDialog entity={entity} />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleFormatWithAi(entity)}
+                            disabled={aiFormattingId === entity.id}
+                            title="Format with AI & Save"
+                          >
+                            {aiFormattingId === entity.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-4 h-4 text-primary" />
+                            )}
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
