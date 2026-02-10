@@ -1299,7 +1299,15 @@ export default function WikiEntityPage() {
                                 disabled={deleteMutation.isPending}
                                 title="Видалити"
                               >
-                                <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setShowRelatedDialog(true)}
+                                title={language === 'uk' ? 'Пов\'язані сутності' : 'Related entities'}
+                              >
+                                <Link2 className="w-4 h-4" />
                               </Button>
                             </div>
                           )}
