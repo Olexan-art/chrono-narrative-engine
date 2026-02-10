@@ -1178,6 +1178,15 @@ export default function WikiEntityPage() {
                 <>
                   <div className="flex items-center gap-2 justify-end">
                     <Button
+                      variant={graphVariant === 'cyberpunk' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setGraphVariant('cyberpunk')}
+                      className="gap-1.5 text-xs"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      Cyberpunk
+                    </Button>
+                    <Button
                       variant={graphVariant === 'tree' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setGraphVariant('tree')}
@@ -1196,7 +1205,23 @@ export default function WikiEntityPage() {
                       {language === 'uk' ? 'Примарні' : 'Ghostly'}
                     </Button>
                   </div>
-                  {graphVariant === 'tree' ? (
+                  {graphVariant === 'cyberpunk' ? (
+                    <EntityCyberpunkGraph 
+                      mainEntity={{
+                        id: entity.id,
+                        slug: entity.slug,
+                        name: entity.name,
+                        name_en: entity.name_en,
+                        description: entity.description,
+                        description_en: entity.description_en,
+                        image_url: entity.image_url,
+                        entity_type: entity.entity_type,
+                        shared_news_count: totalMentions,
+                      }}
+                      relatedEntities={relatedEntities}
+                      secondaryConnections={secondaryConnections}
+                    />
+                  ) : graphVariant === 'tree' ? (
                     <EntityIntersectionGraph 
                       mainEntity={{
                         id: entity.id,
