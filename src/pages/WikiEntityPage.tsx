@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { 
   ArrowLeft, ExternalLink, User, Building2, Globe, Newspaper, 
-  RefreshCw, Trash2, ImageIcon, Sparkles, Network,
+  RefreshCw, Trash2, ImageIcon, Sparkles, Network, Share2,
   Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight,
   Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit,
   Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone, 
