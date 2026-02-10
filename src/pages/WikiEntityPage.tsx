@@ -9,7 +9,7 @@ import {
   Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit,
   Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone, 
   Swords, FolderOpen, Rss, BrainCircuit, ChevronDown, ChevronUp, Lightbulb,
-  Link2, Plus
+  Link2, Plus, HardDrive
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
