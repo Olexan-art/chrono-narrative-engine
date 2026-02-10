@@ -862,6 +862,30 @@ export default function WikiEntityPage() {
     setIsEditingInfo(true);
   };
 
+  // Analyze narratives for a specific month
+  const analyzeNarratives = async (yearMonth: string) => {
+    if (!entity) return;
+    setAnalyzingMonth(yearMonth);
+    try {
+      const result = await callEdgeFunction<any>('analyze-narratives', {
+        entityId: entity.id,
+        yearMonth,
+        language: language === 'uk' ? 'uk' : 'en',
+      });
+      if (result.success) {
+        setNarrativeAnalyses(prev => ({ ...prev, [yearMonth]: result }));
+        setExpandedNarrativeMonths(prev => new Set(prev).add(yearMonth));
+        toast.success(language === 'uk' ? 'Аналіз завершено' : 'Analysis complete');
+      } else {
+        throw new Error(result.error || 'Analysis failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setAnalyzingMonth(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
