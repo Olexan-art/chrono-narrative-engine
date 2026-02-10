@@ -83,6 +83,7 @@ export function NewsDigestPanel({ password }: Props) {
   const [fetchLimit, setFetchLimit] = useState(10);
   const [showFetchDialog, setShowFetchDialog] = useState(false);
   const [viewingFeed, setViewingFeed] = useState<{ id: string; name: string } | null>(null);
+  const [editingDefaultImage, setEditingDefaultImage] = useState<{ feedId: string; url: string } | null>(null);
 
   // Fetch countries
   const { data: countries, isLoading: countriesLoading } = useQuery({
