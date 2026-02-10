@@ -173,6 +173,7 @@ export default function WikiEntityPage() {
   const [relatedLoading, setRelatedLoading] = useState<'news' | 'wiki' | null>(null);
   const [addingEntityUrl, setAddingEntityUrl] = useState("");
   const [addingEntity, setAddingEntity] = useState(false);
+  const [isCaching, setIsCaching] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch entity data - support both slug and id
