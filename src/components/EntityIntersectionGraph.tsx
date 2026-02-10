@@ -45,6 +45,7 @@ interface EntityIntersectionGraphProps {
   relatedEntities: RelatedEntity[];
   secondaryConnections?: SecondaryConnection[];
   feedSources?: FeedSource[];
+  wikiLinkedIds?: Set<string>;
   className?: string;
 }
 
