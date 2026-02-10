@@ -559,6 +559,41 @@ export default function WikiEntityPage() {
     enabled: !!entity?.id,
   });
 
+  // Fetch wiki-linked entities (entity-to-entity direct links)
+  const { data: wikiLinkedEntities = [] } = useQuery({
+    queryKey: ['wiki-linked-entities', entity?.id],
+    queryFn: async () => {
+      // Get links where this entity is source or target
+      const { data: links, error } = await supabase
+        .from('wiki_entity_links')
+        .select(`
+          source_entity_id,
+          target_entity_id,
+          link_type
+        `)
+        .or(`source_entity_id.eq.${entity?.id},target_entity_id.eq.${entity?.id}`);
+
+      if (error || !links?.length) return [];
+
+      // Get the other entity IDs
+      const otherIds = links.map(l => 
+        l.source_entity_id === entity?.id ? l.target_entity_id : l.source_entity_id
+      );
+
+      const { data: entities } = await supabase
+        .from('wiki_entities')
+        .select('id, name, name_en, image_url, entity_type, slug')
+        .in('id', otherIds);
+
+      return (entities || []).map(e => ({
+        ...e,
+        shared_news_count: 0,
+        isWikiLinked: true,
+      })) as (RelatedEntity & { isWikiLinked: boolean })[];
+    },
+    enabled: !!entity?.id,
+  });
+
   // Fetch secondary connections (connections between related entities)
   const { data: secondaryConnections = [] } = useQuery({
     queryKey: ['secondary-connections', entity?.id, relatedEntities.length],
@@ -1767,8 +1802,9 @@ export default function WikiEntityPage() {
                         entity_type: entity.entity_type,
                         shared_news_count: totalMentions,
                       }}
-                      relatedEntities={relatedEntities}
+                      relatedEntities={[...relatedEntities, ...wikiLinkedEntities.filter(w => !relatedEntities.some(r => r.id === w.id))]}
                       secondaryConnections={secondaryConnections}
+                      wikiLinkedIds={new Set(wikiLinkedEntities.map(w => w.id))}
                     />
                   ) : graphVariant === 'tree' ? (
                     <EntityIntersectionGraph 
@@ -1783,9 +1819,10 @@ export default function WikiEntityPage() {
                         entity_type: entity.entity_type,
                         shared_news_count: totalMentions,
                       }}
-                      relatedEntities={relatedEntities}
+                      relatedEntities={[...relatedEntities, ...wikiLinkedEntities.filter(w => !relatedEntities.some(r => r.id === w.id))]}
                       secondaryConnections={secondaryConnections}
                       feedSources={feedSources.slice(0, 6).map(f => ({ id: f.id, name: f.name, favicon: f.favicon }))}
+                      wikiLinkedIds={new Set(wikiLinkedEntities.map(w => w.id))}
                     />
                   ) : (
                     <EntityGhostlyGraph 
@@ -1800,8 +1837,9 @@ export default function WikiEntityPage() {
                         entity_type: entity.entity_type,
                         shared_news_count: totalMentions,
                       }}
-                      relatedEntities={relatedEntities}
+                      relatedEntities={[...relatedEntities, ...wikiLinkedEntities.filter(w => !relatedEntities.some(r => r.id === w.id))]}
                       secondaryConnections={secondaryConnections}
+                      wikiLinkedIds={new Set(wikiLinkedEntities.map(w => w.id))}
                     />
                   )}
                 </>
@@ -1945,7 +1983,7 @@ export default function WikiEntityPage() {
                     </div>
                   ) : extract ? (
                     <div className="space-y-6">
-                      <AdminTextSelectionPopover onEntityAdded={() => queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] })}>
+                      <AdminTextSelectionPopover entityId={entity?.id} onEntityAdded={() => { queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] }); queryClient.invalidateQueries({ queryKey: ['wiki-linked-entities', entity?.id] }); }}>
                         <EntityLinkedContent content={extract} excludeEntityId={entity?.id} />
                       </AdminTextSelectionPopover>
                       
@@ -2183,6 +2221,52 @@ export default function WikiEntityPage() {
                     <p className="text-muted-foreground text-sm text-center py-4">
                       {language === 'uk' ? "Пов'язаних сутностей не знайдено" : 'No related entities found'}
                     </p>
+                  )}
+
+                  {/* World Wide Web subsection - wiki-linked entities */}
+                  {wikiLinkedEntities.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-border/50">
+                      <h4 className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">
+                        <Globe className="w-3.5 h-3.5" />
+                        World Wide Web
+                      </h4>
+                      <div className="space-y-2">
+                        {wikiLinkedEntities
+                          .filter(w => !relatedEntities.some(r => r.id === w.id))
+                          .map((linked) => (
+                          <Link
+                            key={linked.id}
+                            to={`/wiki/${linked.slug || linked.id}`}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors border border-dashed border-border/50"
+                          >
+                            {linked.image_url ? (
+                              <img
+                                src={linked.image_url}
+                                alt=""
+                                className="w-8 h-8 rounded-full object-cover opacity-80"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
+                                {linked.entity_type === 'person' ? (
+                                  <User className="w-3 h-3 text-muted-foreground" />
+                                ) : (
+                                  <Globe className="w-3 h-3 text-muted-foreground" />
+                                )}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-xs line-clamp-1">
+                                {language === 'en' && linked.name_en ? linked.name_en : linked.name}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground capitalize">
+                                {linked.entity_type}
+                              </p>
+                            </div>
+                            <Link2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>

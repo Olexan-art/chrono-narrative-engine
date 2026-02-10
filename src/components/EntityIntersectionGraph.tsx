@@ -45,6 +45,7 @@ interface EntityIntersectionGraphProps {
   relatedEntities: RelatedEntity[];
   secondaryConnections?: SecondaryConnection[];
   feedSources?: FeedSource[];
+  wikiLinkedIds?: Set<string>;
   className?: string;
 }
 
@@ -136,7 +137,7 @@ function getTreeConnectionPath(
   return `M ${fromX} ${fromY} C ${fromX} ${midY}, ${toX} ${midY}, ${toX} ${toY}`;
 }
 
-export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondaryConnections = [], feedSources = [], className }: EntityIntersectionGraphProps) {
+export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondaryConnections = [], feedSources = [], wikiLinkedIds, className }: EntityIntersectionGraphProps) {
   const { language } = useLanguage();
   const [showAll, setShowAll] = useState(false);
   const [showSecondary, setShowSecondary] = useState(true);

@@ -39,6 +39,7 @@ interface Props {
   mainEntity: MainEntityInfo;
   relatedEntities: RelatedEntity[];
   secondaryConnections?: SecondaryConnection[];
+  wikiLinkedIds?: Set<string>;
   className?: string;
 }
 
@@ -62,7 +63,7 @@ function getOctagonPath(cx: number, cy: number, r: number): string {
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ') + 'Z';
 }
 
-export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryConnections = [], className }: Props) {
+export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryConnections = [], wikiLinkedIds, className }: Props) {
   const { language } = useLanguage();
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<RelatedEntity | MainEntityInfo | null>(null);
@@ -469,7 +470,11 @@ export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryCon
               const pos = entityPositionMap.get(entity.id);
               if (!pos) return null;
               const isHovered = hoveredNode === entity.id;
-              const lineWidth = 1 + (entity.shared_news_count / maxCount) * 3;
+              const isWikiLink = wikiLinkedIds?.has(entity.id);
+              const lineWidth = isWikiLink ? 1 : 1 + (entity.shared_news_count / maxCount) * 3;
+              const lineColor = isWikiLink 
+                ? (isHovered ? "hsl(var(--chart-2))" : "hsl(var(--chart-2))")
+                : (isHovered ? "hsl(var(--chart-4))" : "hsl(var(--primary))");
 
               const pathStr = `M ${cx} ${cy} L ${pos.x} ${pos.y}`;
 
@@ -477,24 +482,24 @@ export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryCon
                 <g key={`line-${entity.id}`}>
                   {/* Glow */}
                   <line x1={cx} y1={cy} x2={pos.x} y2={pos.y}
-                    stroke={isHovered ? "hsl(var(--chart-4))" : "hsl(var(--primary))"}
+                    stroke={lineColor}
                     strokeWidth={lineWidth + 4}
                     opacity={isHovered ? 0.2 : 0.04}
                   />
                   {/* Main line */}
                   <line x1={cx} y1={cy} x2={pos.x} y2={pos.y}
-                    stroke={isHovered ? "hsl(var(--chart-4))" : "hsl(var(--primary))"}
+                    stroke={lineColor}
                     strokeWidth={isHovered ? lineWidth + 1 : lineWidth}
-                    opacity={isHovered ? 0.9 : 0.2 + (entity.shared_news_count / maxCount) * 0.4}
-                    strokeDasharray={isHovered ? "none" : "6 4"}
+                    opacity={isHovered ? 0.9 : isWikiLink ? 0.3 : 0.2 + (entity.shared_news_count / maxCount) * 0.4}
+                    strokeDasharray={isWikiLink ? "3 6 1 6" : (isHovered ? "none" : "6 4")}
                     className={isHovered ? "" : "data-stream"}
                     style={{ animationDelay: `${index * 0.1}s` }}
                   />
                   {/* Data packet */}
-                  {(index % 4 === 0 || isHovered) && (
+                  {!isWikiLink && (index % 4 === 0 || isHovered) && (
                     <rect
                       width={isHovered ? 8 : 6} height={isHovered ? 4 : 3}
-                      fill={isHovered ? "hsl(var(--chart-4))" : "hsl(var(--primary))"}
+                      fill={lineColor}
                       className="data-packet"
                       style={{
                         offsetPath: `path('${pathStr}')`,

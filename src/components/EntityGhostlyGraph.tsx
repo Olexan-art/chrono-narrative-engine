@@ -38,6 +38,7 @@ interface EntityGhostlyGraphProps {
   mainEntity: MainEntityInfo;
   relatedEntities: RelatedEntity[];
   secondaryConnections?: SecondaryConnection[];
+  wikiLinkedIds?: Set<string>;
   className?: string;
 }
 
@@ -52,7 +53,7 @@ function getHexagonPath(cx: number, cy: number, r: number): string {
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ') + 'Z';
 }
 
-export function EntityGhostlyGraph({ mainEntity, relatedEntities, secondaryConnections = [], className }: EntityGhostlyGraphProps) {
+export function EntityGhostlyGraph({ mainEntity, relatedEntities, secondaryConnections = [], wikiLinkedIds, className }: EntityGhostlyGraphProps) {
   const { language } = useLanguage();
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<RelatedEntity | MainEntityInfo | null>(null);

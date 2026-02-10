@@ -12,6 +12,8 @@ interface AdminTextSelectionPopoverProps {
   children: React.ReactNode;
   /** News item ID to link the entity to (optional) */
   newsId?: string;
+  /** Source entity ID for entity-to-entity linking (optional) */
+  entityId?: string;
   /** Callback after entity is added/linked */
   onEntityAdded?: () => void;
 }
@@ -25,9 +27,16 @@ interface SearchResult {
   wiki_url?: string;
   slug?: string;
   exists_in_db?: boolean;
+  wiki_id?: string;
+  name_en?: string;
+  description_en?: string;
+  wiki_url_en?: string;
+  extract?: string;
+  extract_en?: string;
+  raw_data?: Record<string, unknown>;
 }
 
-export function AdminTextSelectionPopover({ children, newsId, onEntityAdded }: AdminTextSelectionPopoverProps) {
+export function AdminTextSelectionPopover({ children, newsId, entityId, onEntityAdded }: AdminTextSelectionPopoverProps) {
   const { isAuthenticated: isAdmin } = useAdminStore();
   const { language } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,7 +60,6 @@ export function AdminTextSelectionPopover({ children, newsId, onEntityAdded }: A
     if (!isAdmin) return;
 
     const handleMouseUp = (e: MouseEvent) => {
-      // Ignore clicks inside the popover itself
       if (popoverRef.current?.contains(e.target as Node)) return;
 
       const selection = window.getSelection();
@@ -125,58 +133,34 @@ export function AdminTextSelectionPopover({ children, newsId, onEntityAdded }: A
     const key = item.wiki_url || item.name;
     setSaving(key);
     try {
-      let entityId = item.id;
+      // Use edge function for everything (service role has write access)
+      const saveResult = await callEdgeFunction<any>('search-wiki', {
+        action: 'save_entity',
+        entity: {
+          wiki_id: item.wiki_id || `manual_${Date.now()}`,
+          name: item.name,
+          name_en: item.name_en,
+          description: item.description,
+          description_en: item.description_en,
+          entity_type: item.entity_type || 'other',
+          image_url: item.image_url,
+          wiki_url: item.wiki_url || '',
+          wiki_url_en: item.wiki_url_en,
+          extract: item.extract,
+          extract_en: item.extract_en,
+          raw_data: item.raw_data || {},
+        },
+        newsId: newsId || undefined,
+        sourceEntityId: entityId || undefined,
+        matchTerm: selectedText,
+        language: language === 'uk' ? 'uk' : language === 'pl' ? 'pl' : 'en',
+      });
 
-      // Save entity to DB if not exists
-      if (!item.exists_in_db) {
-        const saveResult = await callEdgeFunction<any>('search-wiki', {
-          action: 'save_entity',
-          entity: {
-            wiki_id: (item as any).wiki_id || `manual_${Date.now()}`,
-            name: item.name,
-            name_en: (item as any).name_en,
-            description: item.description,
-            description_en: (item as any).description_en,
-            entity_type: item.entity_type || 'other',
-            image_url: item.image_url,
-            wiki_url: item.wiki_url || '',
-            wiki_url_en: (item as any).wiki_url_en,
-            extract: (item as any).extract,
-            extract_en: (item as any).extract_en,
-            raw_data: (item as any).raw_data || {},
-          },
-          language: language === 'uk' ? 'uk' : language === 'pl' ? 'pl' : 'en',
-        });
-        if (!saveResult.success) {
-          // If entity exists, use existing ID
-          if (saveResult.existingId) {
-            entityId = saveResult.existingId;
-          } else {
-            throw new Error(saveResult.error);
-          }
-        } else {
-          entityId = saveResult.id;
-        }
+      if (!saveResult.success) {
+        throw new Error(saveResult.error);
       }
 
-      // Link to news if newsId provided
-      if (newsId && entityId) {
-        const { supabase } = await import("@/integrations/supabase/client");
-        const { error } = await supabase
-          .from('news_wiki_entities')
-          .upsert({
-            news_item_id: newsId,
-            wiki_entity_id: entityId,
-            match_term: selectedText,
-            match_source: 'manual',
-          }, { onConflict: 'news_item_id,wiki_entity_id' });
-        
-        if (error && !error.message.includes('duplicate')) {
-          console.error('Link error:', error);
-        }
-      }
-
-      toast.success(language === 'uk' ? 'Сутність додано' : 'Entity added');
+      toast.success(language === 'uk' ? 'Сутність додано та пов\'язано' : 'Entity added & linked');
       closePopover();
       onEntityAdded?.();
     } catch (err: any) {
