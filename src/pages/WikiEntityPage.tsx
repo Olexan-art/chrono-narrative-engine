@@ -1326,6 +1326,16 @@ export default function WikiEntityPage() {
               {Object.keys(narrativeAnalyses).length > 0 && (() => {
                 const sortedMonths = Object.keys(narrativeAnalyses).sort((a, b) => b.localeCompare(a));
                 const latestMonth = sortedMonths[0];
+
+                const getSentimentStyle = (sentiment: string) => {
+                  switch (sentiment) {
+                    case 'positive': return { bg: 'bg-emerald-500/15', border: 'border-emerald-500/40', text: 'text-emerald-400', icon: '🟢', label: language === 'uk' ? 'Позитивний' : 'Positive' };
+                    case 'negative': return { bg: 'bg-red-500/15', border: 'border-red-500/40', text: 'text-red-400', icon: '🔴', label: language === 'uk' ? 'Негативний' : 'Negative' };
+                    case 'mixed': return { bg: 'bg-amber-500/15', border: 'border-amber-500/40', text: 'text-amber-400', icon: '🟡', label: language === 'uk' ? 'Змішаний' : 'Mixed' };
+                    default: return { bg: 'bg-blue-500/15', border: 'border-blue-500/40', text: 'text-blue-400', icon: '⚪', label: language === 'uk' ? 'Нейтральний' : 'Neutral' };
+                  }
+                };
+
                 return (
                   <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
                     <CardHeader className="pb-3">
@@ -1340,6 +1350,8 @@ export default function WikiEntityPage() {
                         const analysis = data.analysis;
                         const isLatest = month === latestMonth;
                         const isExpanded = expandedNarrativeMonths.has(month);
+                        const isDetailsExpanded = expandedNarrativeDetails.has(month);
+                        const sentimentStyle = getSentimentStyle(analysis.sentiment || 'neutral');
 
                         if (!isLatest && !isExpanded) {
                           return (
@@ -1368,80 +1380,130 @@ export default function WikiEntityPage() {
 
                         return (
                           <div key={month} className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <Badge variant="outline" className="font-mono text-xs gap-1.5 bg-primary/10 border-primary/30">
-                                {month}
-                                <span className="text-muted-foreground">• {data.newsCount} {language === 'uk' ? 'новин' : 'news'}</span>
-                              </Badge>
-                              {analysis.sentiment && (
-                                <Badge variant="secondary" className="text-[10px] capitalize">
-                                  {analysis.sentiment}
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="font-mono text-xs gap-1.5 bg-primary/10 border-primary/30">
+                                  {month}
+                                  <span className="text-muted-foreground">• {data.newsCount} {language === 'uk' ? 'новин' : 'news'}</span>
                                 </Badge>
-                              )}
-                              {!isLatest && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 px-2"
-                                  onClick={() => setExpandedNarrativeMonths(prev => {
-                                    const s = new Set(prev);
-                                    s.delete(month);
-                                    return s;
-                                  })}
-                                >
-                                  <ChevronUp className="w-3.5 h-3.5" />
-                                </Button>
-                              )}
+                                {data.is_regenerated && (
+                                  <Badge variant="secondary" className="text-[10px] gap-1 bg-amber-500/10 text-amber-400 border-amber-500/30">
+                                    <RefreshCw className="w-2.5 h-2.5" />
+                                    {language === 'uk' ? 'Оновлено' : 'Updated'}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {/* Sentiment Badge - Enhanced */}
+                                {analysis.sentiment && (
+                                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${sentimentStyle.bg} ${sentimentStyle.border} border transition-all duration-500 animate-in fade-in slide-in-from-right-2`}>
+                                    <span className="text-sm animate-pulse">{sentimentStyle.icon}</span>
+                                    <span className={`text-xs font-semibold uppercase tracking-wide ${sentimentStyle.text}`}>
+                                      {sentimentStyle.label}
+                                    </span>
+                                  </div>
+                                )}
+                                {isAdmin && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-[10px] gap-1"
+                                    onClick={() => analyzeNarratives(month, true)}
+                                    disabled={analyzingMonth === month}
+                                    title={language === 'uk' ? 'Перегенерувати' : 'Regenerate'}
+                                  >
+                                    {analyzingMonth === month ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <RefreshCw className="w-3 h-3" />
+                                    )}
+                                  </Button>
+                                )}
+                                {!isLatest && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 px-2"
+                                    onClick={() => setExpandedNarrativeMonths(prev => {
+                                      const s = new Set(prev);
+                                      s.delete(month);
+                                      return s;
+                                    })}
+                                  >
+                                    <ChevronUp className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
 
-                            {/* Summary */}
+                            {/* Summary - always visible */}
                             {analysis.narrative_summary && (
                               <p className="text-sm text-muted-foreground italic border-l-2 border-primary/30 pl-3">
                                 {analysis.narrative_summary}
                               </p>
                             )}
 
-                            {/* Key Takeaways */}
-                            {analysis.key_takeaways?.length > 0 && (
-                              <ul className="space-y-2">
-                                {analysis.key_takeaways.map((kt: any, i: number) => (
-                                  <li key={i} className="flex items-start gap-3 text-sm">
-                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
-                                      {i + 1}
-                                    </span>
-                                    <div className="flex-1">
-                                      <span className="text-foreground/90 leading-relaxed">{kt.point}</span>
-                                      {kt.newsLinks?.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                          {kt.newsLinks.map((nl: any, j: number) => (
-                                            <Link
-                                              key={j}
-                                              to={nl.url}
-                                              className="text-[10px] text-primary hover:underline truncate max-w-[180px] inline-flex items-center gap-0.5"
-                                            >
-                                              <Newspaper className="w-2.5 h-2.5 flex-shrink-0" />
-                                              {nl.title}
-                                            </Link>
-                                          ))}
+                            {/* Read more - collapsible details */}
+                            <Collapsible open={isDetailsExpanded} onOpenChange={(open) => {
+                              setExpandedNarrativeDetails(prev => {
+                                const s = new Set(prev);
+                                if (open) s.add(month); else s.delete(month);
+                                return s;
+                              });
+                            }}>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm" className="w-full justify-center text-xs gap-1.5 text-primary hover:text-primary">
+                                  {isDetailsExpanded ? (
+                                    <><ChevronUp className="w-3.5 h-3.5" />{language === 'uk' ? 'Згорнути' : 'Show less'}</>
+                                  ) : (
+                                    <><ChevronDown className="w-3.5 h-3.5" />{language === 'uk' ? 'Читати більше' : 'Read more'}</>
+                                  )}
+                                </Button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="space-y-3 pt-2">
+                                {/* Key Takeaways */}
+                                {analysis.key_takeaways?.length > 0 && (
+                                  <ul className="space-y-2">
+                                    {analysis.key_takeaways.map((kt: any, i: number) => (
+                                      <li key={i} className="flex items-start gap-3 text-sm">
+                                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                                          {i + 1}
+                                        </span>
+                                        <div className="flex-1">
+                                          <span className="text-foreground/90 leading-relaxed">{kt.point}</span>
+                                          {kt.newsLinks?.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {kt.newsLinks.map((nl: any, j: number) => (
+                                                <Link
+                                                  key={j}
+                                                  to={nl.url}
+                                                  className="text-[10px] text-primary hover:underline truncate max-w-[180px] inline-flex items-center gap-0.5"
+                                                >
+                                                  <Newspaper className="w-2.5 h-2.5 flex-shrink-0" />
+                                                  {nl.title}
+                                                </Link>
+                                              ))}
+                                            </div>
+                                          )}
                                         </div>
-                                      )}
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
 
-                            {/* Related entity roles */}
-                            {analysis.related_entity_roles?.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/30">
-                                {analysis.related_entity_roles.map((r: any, i: number) => (
-                                  <Badge key={i} variant="outline" className="text-[10px] gap-1">
-                                    <User className="w-2.5 h-2.5" />
-                                    {r.name}: {r.role}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
+                                {/* Related entity roles */}
+                                {analysis.related_entity_roles?.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/30">
+                                    {analysis.related_entity_roles.map((r: any, i: number) => (
+                                      <Badge key={i} variant="outline" className="text-[10px] gap-1">
+                                        <User className="w-2.5 h-2.5" />
+                                        {r.name}: {r.role}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </CollapsibleContent>
+                            </Collapsible>
 
                             {monthIdx < sortedMonths.length - 1 && <div className="border-b border-border/30" />}
                           </div>
