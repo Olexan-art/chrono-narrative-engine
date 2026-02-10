@@ -103,18 +103,38 @@ export function AdminTextSelectionPopover({ children, newsId, onEntityAdded }: A
     const key = item.wiki_url || item.name;
     setSaving(key);
     try {
+      let entityId = item.id;
+
       // Save entity to DB if not exists
       if (!item.exists_in_db) {
         const saveResult = await callEdgeFunction<any>('search-wiki', {
           action: 'save_entity',
-          wikiUrl: item.wiki_url,
-          name: item.name,
-          description: item.description,
-          entity_type: item.entity_type || 'other',
+          entity: {
+            wiki_id: (item as any).wiki_id || `manual_${Date.now()}`,
+            name: item.name,
+            name_en: (item as any).name_en,
+            description: item.description,
+            description_en: (item as any).description_en,
+            entity_type: item.entity_type || 'other',
+            image_url: item.image_url,
+            wiki_url: item.wiki_url || '',
+            wiki_url_en: (item as any).wiki_url_en,
+            extract: (item as any).extract,
+            extract_en: (item as any).extract_en,
+            raw_data: (item as any).raw_data || {},
+          },
           language: language === 'uk' ? 'uk' : language === 'pl' ? 'pl' : 'en',
         });
-        if (!saveResult.success) throw new Error(saveResult.error);
-        item.id = saveResult.entity?.id || saveResult.id;
+        if (!saveResult.success) {
+          // If entity exists, use existing ID
+          if (saveResult.existingId) {
+            entityId = saveResult.existingId;
+          } else {
+            throw new Error(saveResult.error);
+          }
+        } else {
+          entityId = saveResult.id;
+        }
       }
 
       // Link to news if newsId provided
