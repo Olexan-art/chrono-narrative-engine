@@ -23,6 +23,7 @@ import { OutrageInkBlock } from "@/components/OutrageInkBlock";
 import { OriginalSourceBlock } from "@/components/OriginalSourceBlock";
 import { NewsImageBlock } from "@/components/NewsImageBlock";
 import { NewsVoteBlock } from "@/components/NewsVoteBlock";
+import { NarrativeAnalysisBlock } from "@/components/NarrativeAnalysisBlock";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { adminAction, callEdgeFunction } from "@/lib/api";
