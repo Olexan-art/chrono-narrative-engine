@@ -67,7 +67,7 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
           wiki_entity:wiki_entities(
             id, wiki_id, entity_type, name, name_en,
             description, description_en, image_url,
-            wiki_url, wiki_url_en, extract, extract_en
+            wiki_url, wiki_url_en, extract, extract_en, slug
           )
         `)
         .eq('news_item_id', newsId);
