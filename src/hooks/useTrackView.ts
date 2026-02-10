@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-type EntityType = 'part' | 'chapter' | 'volume';
+type EntityType = 'part' | 'chapter' | 'volume' | 'news' | 'wiki';
 
 export function useTrackView(entityType: EntityType, entityId: string | undefined) {
   useEffect(() => {

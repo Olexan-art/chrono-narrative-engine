@@ -18,7 +18,7 @@ serve(async (req) => {
       throw new Error('entityType and entityId are required');
     }
 
-    if (!['part', 'chapter', 'volume'].includes(entityType)) {
+    if (!['part', 'chapter', 'volume', 'news', 'wiki'].includes(entityType)) {
       throw new Error('Invalid entityType');
     }
 
