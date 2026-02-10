@@ -138,8 +138,9 @@ export function AdminTextSelectionPopover({ children, newsId, onEntityAdded }: A
       }
 
       // Link to news if newsId provided
-      if (newsId && item.id) {
-        const { error } = await (await import("@/integrations/supabase/client")).supabase
+      if (newsId && entityId) {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { error } = await supabase
           .from('news_wiki_entities')
           .upsert({
             news_item_id: newsId,
