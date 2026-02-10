@@ -2562,6 +2562,106 @@ export default function WikiEntityPage() {
           )}
         </DialogContent>
       </Dialog>
+      {/* Related Entities Dialog */}
+      <Dialog open={showRelatedDialog} onOpenChange={setShowRelatedDialog}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="w-5 h-5" />
+              {language === 'uk' ? 'Пов\'язані сутності' : 'Related Entities'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'uk' ? 'Пошук сутностей через спільні новини або Wikipedia' : 'Find entities via shared news or Wikipedia'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex gap-2 mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={findRelatedByNews}
+              disabled={!!relatedLoading}
+            >
+              {relatedLoading === 'news' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Newspaper className="w-3 h-3 mr-1" />}
+              {language === 'uk' ? 'Через новини' : 'Via News'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={findRelatedByWiki}
+              disabled={!!relatedLoading}
+            >
+              {relatedLoading === 'wiki' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Globe className="w-3 h-3 mr-1" />}
+              {language === 'uk' ? 'Через Wikipedia' : 'Via Wikipedia'}
+            </Button>
+          </div>
+
+          {/* Add by URL */}
+          <div className="flex gap-2 mb-4">
+            <Input
+              value={addingEntityUrl}
+              onChange={(e) => setAddingEntityUrl(e.target.value)}
+              placeholder={language === 'uk' ? 'URL Wikipedia для додавання...' : 'Wikipedia URL to add...'}
+              className="h-8 text-xs"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={addEntityByUrl}
+              disabled={addingEntity}
+            >
+              {addingEntity ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+            </Button>
+          </div>
+
+          {/* Results */}
+          {relatedLoading && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {!relatedLoading && relatedResults.length > 0 && (
+            <div className="space-y-2">
+              {relatedResults.map((rel: any, i: number) => (
+                <Link
+                  key={rel.id || i}
+                  to={rel.slug ? `/wiki/${rel.slug}` : `/wiki/${rel.id}`}
+                  className="flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                  onClick={() => setShowRelatedDialog(false)}
+                >
+                  {rel.image_url ? (
+                    <img src={rel.image_url} alt={rel.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                      {rel.entity_type === 'person' ? <User className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{rel.name}</p>
+                    <p className="text-xs text-muted-foreground">{rel.entity_type}</p>
+                  </div>
+                  {rel.shared_news_count != null && (
+                    <Badge variant="secondary" className="text-xs">{rel.shared_news_count}</Badge>
+                  )}
+                  {rel.exists_in_db === false && (
+                    <Badge variant="outline" className="text-xs">new</Badge>
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {!relatedLoading && relatedResults.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">
+              {language === 'uk' ? 'Натисніть кнопку пошуку' : 'Click a search button'}
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
