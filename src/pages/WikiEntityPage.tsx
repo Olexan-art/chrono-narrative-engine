@@ -165,6 +165,7 @@ export default function WikiEntityPage() {
   const [analyzingMonth, setAnalyzingMonth] = useState<string | null>(null);
   const [expandedNarrativeMonths, setExpandedNarrativeMonths] = useState<Set<string>>(new Set());
   const [expandedNarrativeDetails, setExpandedNarrativeDetails] = useState<Set<string>>(new Set());
+  const [compareMonths, setCompareMonths] = useState<[string, string] | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch entity data - support both slug and id
@@ -1509,6 +1510,101 @@ export default function WikiEntityPage() {
                           </div>
                         );
                       })}
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
+              {/* Narrative Comparison */}
+              {Object.keys(narrativeAnalyses).length >= 2 && (() => {
+                const months = Object.keys(narrativeAnalyses).sort((a, b) => b.localeCompare(a));
+                
+                return (
+                  <Card className="border-secondary/20 bg-gradient-to-br from-secondary/5 to-transparent">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-sm">
+                        <Scale className="w-4 h-4 text-secondary" />
+                        {language === 'uk' ? 'Порівняти наративи' : 'Compare Narratives'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-muted-foreground uppercase mb-1 block">{language === 'uk' ? 'Місяць A' : 'Month A'}</label>
+                          <select
+                            className="w-full h-8 text-xs bg-muted rounded px-2 border border-border"
+                            value={compareMonths?.[0] || ''}
+                            onChange={(e) => setCompareMonths(prev => [e.target.value, prev?.[1] || months[1] || ''])}
+                          >
+                            <option value="">—</option>
+                            {months.map(m => <option key={m} value={m}>{m}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground uppercase mb-1 block">{language === 'uk' ? 'Місяць B' : 'Month B'}</label>
+                          <select
+                            className="w-full h-8 text-xs bg-muted rounded px-2 border border-border"
+                            value={compareMonths?.[1] || ''}
+                            onChange={(e) => setCompareMonths(prev => [prev?.[0] || months[0] || '', e.target.value])}
+                          >
+                            <option value="">—</option>
+                            {months.map(m => <option key={m} value={m}>{m}</option>)}
+                          </select>
+                        </div>
+                      </div>
+
+                      {compareMonths && compareMonths[0] && compareMonths[1] && compareMonths[0] !== compareMonths[1] && (() => {
+                        const a = narrativeAnalyses[compareMonths[0]]?.analysis;
+                        const b = narrativeAnalyses[compareMonths[1]]?.analysis;
+                        if (!a || !b) return null;
+
+                        const getSentStyle = (s: string) => {
+                          switch (s) {
+                            case 'positive': return { bg: 'bg-emerald-500/15', text: 'text-emerald-400', icon: '🟢' };
+                            case 'negative': return { bg: 'bg-red-500/15', text: 'text-red-400', icon: '🔴' };
+                            case 'mixed': return { bg: 'bg-amber-500/15', text: 'text-amber-400', icon: '🟡' };
+                            default: return { bg: 'bg-blue-500/15', text: 'text-blue-400', icon: '⚪' };
+                          }
+                        };
+
+                        const sA = getSentStyle(a.sentiment || 'neutral');
+                        const sB = getSentStyle(b.sentiment || 'neutral');
+
+                        return (
+                          <div className="space-y-4 pt-3 border-t border-border/30">
+                            {/* Sentiment comparison */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className={`p-2 rounded-lg ${sA.bg} text-center`}>
+                                <span className="text-lg">{sA.icon}</span>
+                                <p className={`text-[10px] font-semibold uppercase ${sA.text}`}>{compareMonths[0]}</p>
+                                <p className={`text-xs ${sA.text}`}>{a.sentiment}</p>
+                              </div>
+                              <div className={`p-2 rounded-lg ${sB.bg} text-center`}>
+                                <span className="text-lg">{sB.icon}</span>
+                                <p className={`text-[10px] font-semibold uppercase ${sB.text}`}>{compareMonths[1]}</p>
+                                <p className={`text-xs ${sB.text}`}>{b.sentiment}</p>
+                              </div>
+                            </div>
+
+                            {/* Summary comparison */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="text-xs text-muted-foreground italic border-l-2 border-primary/30 pl-2">
+                                {a.narrative_summary}
+                              </div>
+                              <div className="text-xs text-muted-foreground italic border-l-2 border-secondary/30 pl-2">
+                                {b.narrative_summary}
+                              </div>
+                            </div>
+
+                            {/* Takeaways count comparison */}
+                            <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+                              <span>{compareMonths[0]}: {a.key_takeaways?.length || 0} {language === 'uk' ? 'тез' : 'takeaways'}</span>
+                              <span className="text-border">vs</span>
+                              <span>{compareMonths[1]}: {b.key_takeaways?.length || 0} {language === 'uk' ? 'тез' : 'takeaways'}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 );

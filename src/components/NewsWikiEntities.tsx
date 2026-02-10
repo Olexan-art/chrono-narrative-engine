@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Search, Sparkles, X, Pencil, Plus, Check, Link2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Loader2, Search, Sparkles, X, Pencil, Plus, Check, Link2, BrainCircuit } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ interface WikiEntity {
   wiki_url_en: string | null;
   extract: string | null;
   extract_en: string | null;
+  slug?: string | null;
 }
 
 interface NewsWikiLink {
@@ -39,9 +41,10 @@ interface NewsWikiEntitiesProps {
   title?: string;
   keywords?: string[];
   showSearchButton?: boolean;
+  entityNarratives?: Record<string, any>;
 }
 
-export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = false }: NewsWikiEntitiesProps) {
+export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = false, entityNarratives = {} }: NewsWikiEntitiesProps) {
   const { language } = useLanguage();
   const queryClient = useQueryClient();
   const { isAuthenticated: isAdmin } = useAdminStore();
@@ -64,7 +67,7 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
           wiki_entity:wiki_entities(
             id, wiki_id, entity_type, name, name_en,
             description, description_en, image_url,
-            wiki_url, wiki_url_en, extract, extract_en
+            wiki_url, wiki_url_en, extract, extract_en, slug
           )
         `)
         .eq('news_item_id', newsId);
@@ -322,6 +325,18 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
                     compact={entityLinks.length > 2} 
                     showLink={true}
                   />
+                  {/* Narrative indicator */}
+                  {entityNarratives[link.wiki_entity.id] && (
+                    <Link
+                      to={`/wiki/${link.wiki_entity.slug || link.wiki_entity.id}`}
+                      className="flex items-center gap-1.5 mt-1 px-2 py-1 rounded bg-primary/5 border border-primary/15 hover:bg-primary/10 transition-colors"
+                    >
+                      <BrainCircuit className="w-3 h-3 text-primary animate-pulse" />
+                      <span className="text-[10px] text-primary font-mono">
+                        {language === 'uk' ? 'Є наратив' : 'Has narrative'}
+                      </span>
+                    </Link>
+                  )}
                   {isAdmin && (
                     <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button

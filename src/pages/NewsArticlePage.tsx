@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
-import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages, Share2, Trash2, Download } from "lucide-react";
+import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages, Share2, Trash2, Download, BrainCircuit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import { OutrageInkBlock } from "@/components/OutrageInkBlock";
 import { OriginalSourceBlock } from "@/components/OriginalSourceBlock";
 import { NewsImageBlock } from "@/components/NewsImageBlock";
 import { NewsVoteBlock } from "@/components/NewsVoteBlock";
+import { NarrativeAnalysisBlock } from "@/components/NarrativeAnalysisBlock";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { adminAction, callEdgeFunction } from "@/lib/api";
@@ -255,7 +256,39 @@ export default function NewsArticlePage() {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Detect the language of the news content
+  // Fetch narrative analyses for entities linked to this news
+  const entityIds = useMemo(() => {
+    if (!mainEntityData) return [];
+    const ids = [mainEntityData.mainEntity.id];
+    mainEntityData.relatedEntities?.forEach((e: any) => ids.push(e.id));
+    return ids;
+  }, [mainEntityData]);
+
+  const { data: entityNarratives = {} } = useQuery({
+    queryKey: ['news-entity-narratives', entityIds, language],
+    queryFn: async () => {
+      if (entityIds.length === 0) return {};
+      const { data } = await supabase
+        .from('narrative_analyses')
+        .select('entity_id, analysis, year_month, news_count, is_regenerated')
+        .in('entity_id', entityIds)
+        .eq('language', language === 'uk' ? 'uk' : 'en')
+        .order('year_month', { ascending: false });
+      
+      if (!data) return {};
+      // Group by entity_id, keep only latest per entity
+      const map: Record<string, any> = {};
+      data.forEach(row => {
+        if (!map[row.entity_id]) {
+          map[row.entity_id] = row;
+        }
+      });
+      return map;
+    },
+    enabled: entityIds.length > 0,
+    staleTime: 1000 * 60 * 10,
+  });
+
   const detectNewsLanguage = (): string => {
     if (!article) return 'en';
     
@@ -757,6 +790,31 @@ export default function NewsArticlePage() {
                 onContentUpdate={() => queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] })}
               />
 
+              {/* Narrative Analysis Block - under original source */}
+              {mainEntityData?.mainEntity && entityNarratives[mainEntityData.mainEntity.id] && (() => {
+                const n = entityNarratives[mainEntityData.mainEntity.id];
+                const entityName = language === 'en' && mainEntityData.mainEntity.name_en 
+                  ? mainEntityData.mainEntity.name_en : mainEntityData.mainEntity.name;
+                return (
+                  <div className="mt-6 p-4 rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BrainCircuit className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium">
+                        {language === 'uk' ? 'Наративний аналіз' : 'Narrative Analysis'}: {entityName}
+                      </span>
+                    </div>
+                    <NarrativeAnalysisBlock
+                      analysis={n.analysis}
+                      yearMonth={n.year_month}
+                      newsCount={n.news_count}
+                      isRegenerated={n.is_regenerated}
+                      showHeader={true}
+                      animated={true}
+                    />
+                  </div>
+                );
+              })()}
+
               {/* Related Entities News - before original link */}
               <RelatedEntitiesNews 
                 newsId={article.id}
@@ -1228,12 +1286,13 @@ export default function NewsArticlePage() {
               isAdmin={isAdminAuthenticated}
             />
 
-            {/* Wikipedia Entities */}
+            {/* Wikipedia Entities with Narrative indicators */}
             <NewsWikiEntities 
               newsId={article.id}
               title={getLocalizedField('title')}
               keywords={articleKeywords}
               showSearchButton
+              entityNarratives={entityNarratives}
             />
 
 

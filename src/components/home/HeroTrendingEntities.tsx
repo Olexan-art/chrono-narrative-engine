@@ -1,8 +1,9 @@
 import { memo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, ExternalLink, User, Building2 } from "lucide-react";
+import { TrendingUp, ExternalLink, User, Building2, BrainCircuit } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -58,6 +59,15 @@ async function fetchTrendingEntities24h(): Promise<TrendingEntity[]> {
     }));
 }
 
+const getSentimentStyleHero = (sentiment: string, lang: string) => {
+  switch (sentiment) {
+    case 'positive': return { bg: 'bg-emerald-500/15', border: 'border-emerald-500/40', text: 'text-emerald-400', icon: '🟢', label: lang === 'uk' ? 'Позитивний' : 'Positive' };
+    case 'negative': return { bg: 'bg-red-500/15', border: 'border-red-500/40', text: 'text-red-400', icon: '🔴', label: lang === 'uk' ? 'Негативний' : 'Negative' };
+    case 'mixed': return { bg: 'bg-amber-500/15', border: 'border-amber-500/40', text: 'text-amber-400', icon: '🟡', label: lang === 'uk' ? 'Змішаний' : 'Mixed' };
+    default: return { bg: 'bg-blue-500/15', border: 'border-blue-500/40', text: 'text-blue-400', icon: '⚪', label: lang === 'uk' ? 'Нейтральний' : 'Neutral' };
+  }
+};
+
 export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
   const { language } = useLanguage();
 
@@ -65,6 +75,25 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
     queryKey: ['hero-trending-entities-24h', language],
     queryFn: fetchTrendingEntities24h,
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Fetch latest narrative for the #1 trending entity
+  const topEntityId = trendingEntities[0]?.id;
+  const { data: topNarrative } = useQuery({
+    queryKey: ['hero-narrative', topEntityId, language],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('narrative_analyses')
+        .select('analysis, year_month, news_count, is_regenerated')
+        .eq('entity_id', topEntityId!)
+        .eq('language', language === 'uk' ? 'uk' : 'en')
+        .order('year_month', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!topEntityId,
+    staleTime: 1000 * 60 * 10,
   });
 
   if (isLoading) {
@@ -94,59 +123,92 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
         const wikiUrl = language === 'en' && entity.wiki_url_en ? entity.wiki_url_en : entity.wiki_url;
         
         return (
-          <Link
-            key={entity.id}
-            to={`/wiki/${entity.slug || entity.id}`}
-            className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-primary/5 hover:border-primary/30 transition-all duration-300 group animate-fade-in"
-            style={{ animationDelay: `${idx * 100}ms` }}
-          >
-            {/* Entity Image */}
-            <div className="relative shrink-0">
-              {entity.image_url ? (
-                <img
-                  src={entity.image_url}
-                  alt={name}
-                  className="w-12 h-12 rounded-full object-cover border-2 border-primary/20 group-hover:border-primary/50 transition-colors"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center border-2 border-border">
-                  {entity.entity_type === 'person' ? (
-                    <User className="w-5 h-5 text-muted-foreground" />
-                  ) : (
-                    <Building2 className="w-5 h-5 text-muted-foreground" />
+          <div key={entity.id} className="space-y-0">
+            <Link
+              to={`/wiki/${entity.slug || entity.id}`}
+              className={`flex items-center gap-3 p-3 rounded-lg border bg-card/50 hover:bg-primary/5 transition-all duration-300 group animate-fade-in ${
+                idx === 0 && topNarrative
+                  ? 'border-primary/40 shadow-[0_0_15px_hsl(var(--primary)/0.15)]'
+                  : 'border-border/50 hover:border-primary/30'
+              }`}
+              style={{ animationDelay: `${idx * 100}ms` }}
+            >
+              {/* Entity Image */}
+              <div className="relative shrink-0">
+                {entity.image_url ? (
+                  <img
+                    src={entity.image_url}
+                    alt={name}
+                    className={`w-12 h-12 rounded-full object-cover border-2 group-hover:border-primary/50 transition-colors ${
+                      idx === 0 && topNarrative ? 'border-primary/40' : 'border-primary/20'
+                    }`}
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center border-2 border-border">
+                    {entity.entity_type === 'person' ? (
+                      <User className="w-5 h-5 text-muted-foreground" />
+                    ) : (
+                      <Building2 className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </div>
+                )}
+                {/* Rank badge */}
+                <div className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shadow-md">
+                  {idx + 1}
+                </div>
+              </div>
+
+              {/* Entity Info */}
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">
+                  {name}
+                </h4>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <TrendingUp className="w-3 h-3 text-primary" />
+                  <span className="text-[11px] text-primary font-medium">
+                    {entity.mentionCount} {language === 'uk' ? 'згадок' : language === 'pl' ? 'wzmianek' : 'mentions'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Wiki link */}
+              <a
+                href={wikiUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            </Link>
+
+            {/* Narrative overlay for #1 entity */}
+            {idx === 0 && topNarrative?.analysis && (() => {
+              const a = topNarrative.analysis as any;
+              const sentiment = a.sentiment || 'neutral';
+              const sStyle = getSentimentStyleHero(sentiment, language);
+              return (
+                <div className="mx-2 -mt-1 p-2.5 rounded-b-lg border border-t-0 border-primary/20 bg-gradient-to-b from-primary/5 to-card/80 animate-in fade-in slide-in-from-top-1 duration-700">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <BrainCircuit className="w-3.5 h-3.5 text-primary animate-pulse" />
+                    <span className="text-[10px] font-mono text-primary uppercase tracking-wider">
+                      {language === 'uk' ? 'Наратив' : 'Narrative'} {topNarrative.year_month}
+                    </span>
+                    <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${sStyle.bg} ${sStyle.border} border`}>
+                      <span className="text-[10px]">{sStyle.icon}</span>
+                      <span className={`text-[9px] font-semibold uppercase ${sStyle.text}`}>{sStyle.label}</span>
+                    </div>
+                  </div>
+                  {a.narrative_summary && (
+                    <p className="text-[11px] text-muted-foreground italic line-clamp-2 leading-relaxed">
+                      {a.narrative_summary}
+                    </p>
                   )}
                 </div>
-              )}
-              {/* Rank badge */}
-              <div className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shadow-md">
-                {idx + 1}
-              </div>
-            </div>
-
-            {/* Entity Info */}
-            <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">
-                {name}
-              </h4>
-              <div className="flex items-center gap-2 mt-0.5">
-                <TrendingUp className="w-3 h-3 text-primary" />
-                <span className="text-[11px] text-primary font-medium">
-                  {entity.mentionCount} {language === 'uk' ? 'згадок' : language === 'pl' ? 'wzmianek' : 'mentions'}
-                </span>
-              </div>
-            </div>
-
-            {/* Wiki link */}
-            <a
-              href={wikiUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-            >
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          </Link>
+              );
+            })()}
+          </div>
         );
       })}
     </div>
