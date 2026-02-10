@@ -41,7 +41,7 @@ interface EntityLinkedContentProps {
  * Renders markdown content with automatic highlighting of entity names.
  * Parses markdown syntax (headers, bold, italic, lists) AND links entity mentions.
  */
-export function EntityLinkedContent({ content, excludeEntityId, className }: EntityLinkedContentProps) {
+export function EntityLinkedContent({ content, excludeEntityId, className, extraEntities = [] }: EntityLinkedContentProps) {
   const { language } = useLanguage();
 
   // Fetch all entities for matching
