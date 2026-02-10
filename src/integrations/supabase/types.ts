@@ -381,6 +381,53 @@ export type Database = {
           },
         ]
       }
+      narrative_analyses: {
+        Row: {
+          analysis: Json
+          created_at: string
+          entity_id: string
+          id: string
+          is_regenerated: boolean
+          language: string
+          news_count: number
+          related_entities: Json | null
+          updated_at: string
+          year_month: string
+        }
+        Insert: {
+          analysis?: Json
+          created_at?: string
+          entity_id: string
+          id?: string
+          is_regenerated?: boolean
+          language?: string
+          news_count?: number
+          related_entities?: Json | null
+          updated_at?: string
+          year_month: string
+        }
+        Update: {
+          analysis?: Json
+          created_at?: string
+          entity_id?: string
+          id?: string
+          is_regenerated?: boolean
+          language?: string
+          news_count?: number
+          related_entities?: Json | null
+          updated_at?: string
+          year_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_analyses_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "wiki_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       news_countries: {
         Row: {
           code: string
