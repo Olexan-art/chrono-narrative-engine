@@ -25,6 +25,7 @@ import { EntityViewsChart } from "@/components/EntityViewsChart";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { EntityLinkedContent } from "@/components/EntityLinkedContent";
 import { EntityIntersectionGraph } from "@/components/EntityIntersectionGraph";
+import { EntityGhostlyGraph } from "@/components/EntityGhostlyGraph";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminStore } from "@/stores/adminStore";
