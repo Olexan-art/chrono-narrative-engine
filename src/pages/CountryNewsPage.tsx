@@ -419,10 +419,26 @@ export default function CountryNewsPage() {
                     </CardHeader>
                     <CardContent>
                       {localizedDescription && (
-                        <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
+                        <p className="text-sm text-muted-foreground line-clamp-3 mb-2">
                           {localizedDescription}
                         </p>
                       )}
+                      {(() => {
+                        const topics = language === 'en' ? (item.themes_en || item.themes) : item.themes;
+                        if (!topics || topics.length === 0) return null;
+                        return (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {topics.slice(0, 4).map((topic, tIdx) => (
+                              <span
+                                key={tIdx}
+                                className="inline-block text-[10px] px-1.5 py-0.5 rounded-sm bg-secondary text-secondary-foreground"
+                              >
+                                {topic}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         {item.published_at && (
                           <div className="flex items-center gap-1">
