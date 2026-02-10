@@ -165,6 +165,7 @@ export default function WikiEntityPage() {
   const [analyzingMonth, setAnalyzingMonth] = useState<string | null>(null);
   const [expandedNarrativeMonths, setExpandedNarrativeMonths] = useState<Set<string>>(new Set());
   const [expandedNarrativeDetails, setExpandedNarrativeDetails] = useState<Set<string>>(new Set());
+  const [compareMonths, setCompareMonths] = useState<[string, string] | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch entity data - support both slug and id
