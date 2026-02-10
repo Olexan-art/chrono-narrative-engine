@@ -32,11 +32,19 @@ interface CountryInfo {
   retell_ratio: number;
 }
 
+interface CachedSitemap {
+  path: string;
+  html_size_bytes: number | null;
+  updated_at: string;
+  expires_at: string;
+}
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export function SitemapManagementPanel() {
   const queryClient = useQueryClient();
   const [regeneratingCountry, setRegeneratingCountry] = useState<string | null>(null);
+  const [regeneratingType, setRegeneratingType] = useState<string | null>(null);
 
   // Fetch sitemap metadata
   const { data: sitemapData = [], isLoading: isLoadingMeta } = useQuery({
@@ -46,11 +54,25 @@ export function SitemapManagementPanel() {
         .from('sitemap_metadata')
         .select('*')
         .order('sitemap_type');
-      
       if (error) throw error;
       return data as SitemapMetadata[];
     },
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 60000,
+  });
+
+  // Fetch cached sitemap files
+  const { data: cachedSitemaps = [] } = useQuery({
+    queryKey: ['cached-sitemaps'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cached_pages')
+        .select('path, html_size_bytes, updated_at, expires_at')
+        .or('path.like.%sitemap%,path.like.%llms%')
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      return data as CachedSitemap[];
+    },
+    refetchInterval: 60000,
   });
 
   // Fetch countries
@@ -62,7 +84,6 @@ export function SitemapManagementPanel() {
         .select('id, code, name, flag, retell_ratio')
         .eq('is_active', true)
         .order('sort_order');
-      
       if (error) throw error;
       return data as CountryInfo[];
     },
@@ -74,59 +95,71 @@ export function SitemapManagementPanel() {
       setRegeneratingCountry(countryCode);
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/news-sitemap?country=${countryCode}&action=generate`,
-        {
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-        }
+        { headers: { 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` } }
       );
-      
-      if (!response.ok) {
-        throw new Error('Failed to regenerate sitemap');
-      }
-      
+      if (!response.ok) throw new Error('Failed to regenerate sitemap');
       return response.text();
     },
     onSuccess: (_, countryCode) => {
       toast.success(`Сайтмап для ${countryCode.toUpperCase()} оновлено`);
       queryClient.invalidateQueries({ queryKey: ['sitemap-metadata'] });
+      queryClient.invalidateQueries({ queryKey: ['cached-sitemaps'] });
     },
-    onError: (error) => {
-      toast.error(`Помилка: ${error.message}`);
-    },
-    onSettled: () => {
-      setRegeneratingCountry(null);
-    },
+    onError: (error) => toast.error(`Помилка: ${error.message}`),
+    onSettled: () => setRegeneratingCountry(null),
   });
 
   // Regenerate all sitemaps
   const regenerateAllMutation = useMutation({
     mutationFn: async () => {
-      const results = [];
+      // Generate news sitemaps for all countries
       for (const country of countries) {
         setRegeneratingCountry(country.code.toLowerCase());
-        const response = await fetch(
+        await fetch(
           `${SUPABASE_URL}/functions/v1/news-sitemap?country=${country.code.toLowerCase()}&action=generate`,
-          {
-            headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-          }
+          { headers: { 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` } }
         );
-        results.push({ country: country.code, success: response.ok });
       }
-      return results;
+      // Generate wiki sitemap
+      setRegeneratingType('wiki');
+      await fetch(
+        `${SUPABASE_URL}/functions/v1/wiki-sitemap?refresh=true`,
+        { headers: { 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` } }
+      );
+      // Generate main sitemap
+      setRegeneratingType('main');
+      await fetch(
+        `${SUPABASE_URL}/functions/v1/sitemap?refresh=true`,
+        { headers: { 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` } }
+      );
     },
     onSuccess: () => {
-      toast.success('Всі сайтмапи оновлено');
+      toast.success('Всі сайтмапи оновлено та закешовано');
       queryClient.invalidateQueries({ queryKey: ['sitemap-metadata'] });
+      queryClient.invalidateQueries({ queryKey: ['cached-sitemaps'] });
     },
-    onError: (error) => {
-      toast.error(`Помилка: ${error.message}`);
+    onError: (error) => toast.error(`Помилка: ${error.message}`),
+    onSettled: () => { setRegeneratingCountry(null); setRegeneratingType(null); },
+  });
+
+  // Regenerate specific type
+  const regenerateTypeMutation = useMutation({
+    mutationFn: async (type: 'wiki' | 'main') => {
+      setRegeneratingType(type);
+      const endpoint = type === 'wiki' ? 'wiki-sitemap' : 'sitemap';
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/${endpoint}?refresh=true`,
+        { headers: { 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` } }
+      );
+      if (!response.ok) throw new Error(`Failed to regenerate ${type} sitemap`);
+      return response.text();
     },
-    onSettled: () => {
-      setRegeneratingCountry(null);
+    onSuccess: (_, type) => {
+      toast.success(`${type === 'wiki' ? 'Wiki' : 'Головний'} сайтмап оновлено`);
+      queryClient.invalidateQueries({ queryKey: ['cached-sitemaps'] });
     },
+    onError: (error) => toast.error(`Помилка: ${error.message}`),
+    onSettled: () => setRegeneratingType(null),
   });
 
   // Ping search engines mutation
@@ -140,11 +173,7 @@ export function SitemapManagementPanel() {
         },
         body: JSON.stringify({}),
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to ping search engines');
-      }
-      
+      if (!response.ok) throw new Error('Failed to ping search engines');
       return response.json();
     },
     onSuccess: (result) => {
@@ -153,20 +182,15 @@ export function SitemapManagementPanel() {
       toast.success(`Пінг: Google ${google?.success ? '✓' : '✗'}, Bing ${bing?.success ? '✓' : '✗'}`);
       queryClient.invalidateQueries({ queryKey: ['sitemap-metadata'] });
     },
-    onError: (error) => {
-      toast.error(`Помилка пінгу: ${error.message}`);
-    },
+    onError: (error) => toast.error(`Помилка пінгу: ${error.message}`),
   });
 
-  // Get metadata for a specific country
   const getCountryMeta = (countryCode: string): SitemapMetadata | undefined => {
     return sitemapData.find(m => m.sitemap_type === `news-${countryCode.toLowerCase()}`);
   };
 
-  // Get main sitemap metadata
   const mainSitemapMeta = sitemapData.find(m => m.sitemap_type === 'main');
 
-  // Format file size
   const formatFileSize = (bytes: number | null): string => {
     if (!bytes) return '—';
     if (bytes < 1024) return `${bytes} B`;
@@ -174,7 +198,6 @@ export function SitemapManagementPanel() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Calculate stats
   const totalUrls = sitemapData.reduce((sum, m) => sum + (m.url_count || 0), 0);
   const lastUpdated = sitemapData
     .filter(m => m.last_generated_at)
@@ -270,6 +293,116 @@ export function SitemapManagementPanel() {
         </Card>
       </div>
 
+      {/* Cached XML Files Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <FileText className="w-4 h-4" />
+            Закешовані XML файли (джерело для echoes2.com/api/*)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Main sitemap */}
+            <div className="border border-border rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-sm">Головний sitemap</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => regenerateTypeMutation.mutate('main')}
+                  disabled={regeneratingType === 'main'}
+                >
+                  <RefreshCw className={`w-3 h-3 mr-1 ${regeneratingType === 'main' ? 'animate-spin' : ''}`} />
+                  Генерувати
+                </Button>
+              </div>
+              {(() => {
+                const cached = cachedSitemaps.find(c => c.path === '/api/sitemap');
+                if (!cached) return <p className="text-xs text-muted-foreground">Не закешовано</p>;
+                const isExpired = new Date(cached.expires_at) < new Date();
+                return (
+                  <div className="text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Розмір:</span>
+                      <span>{formatFileSize(cached.html_size_bytes)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Оновлено:</span>
+                      <span>{formatDistanceToNow(new Date(cached.updated_at), { addSuffix: true, locale: uk })}</span>
+                    </div>
+                    <Badge variant={isExpired ? "destructive" : "outline"} className="text-xs">
+                      {isExpired ? 'Протермінований' : 'Актуальний'}
+                    </Badge>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Wiki sitemap */}
+            <div className="border border-border rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-sm">Wiki sitemap</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => regenerateTypeMutation.mutate('wiki')}
+                  disabled={regeneratingType === 'wiki'}
+                >
+                  <RefreshCw className={`w-3 h-3 mr-1 ${regeneratingType === 'wiki' ? 'animate-spin' : ''}`} />
+                  Генерувати
+                </Button>
+              </div>
+              {(() => {
+                const cached = cachedSitemaps.find(c => c.path === '/api/wiki-sitemap');
+                if (!cached) return <p className="text-xs text-muted-foreground">Не закешовано</p>;
+                const isExpired = new Date(cached.expires_at) < new Date();
+                return (
+                  <div className="text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Розмір:</span>
+                      <span>{formatFileSize(cached.html_size_bytes)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Оновлено:</span>
+                      <span>{formatDistanceToNow(new Date(cached.updated_at), { addSuffix: true, locale: uk })}</span>
+                    </div>
+                    <Badge variant={isExpired ? "destructive" : "outline"} className="text-xs">
+                      {isExpired ? 'Протермінований' : 'Актуальний'}
+                    </Badge>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Sitemap index link */}
+            <div className="border border-border rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-sm">Перевірка</span>
+              </div>
+              <div className="text-xs space-y-2">
+                <a href="https://echoes2.com/api/sitemap" target="_blank" rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center gap-1">
+                  /api/sitemap <ExternalLink className="w-3 h-3" />
+                </a>
+                <a href="https://echoes2.com/api/wiki-sitemap" target="_blank" rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center gap-1">
+                  /api/wiki-sitemap <ExternalLink className="w-3 h-3" />
+                </a>
+                <a href="https://echoes2.com/api/news-sitemap?country=us" target="_blank" rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center gap-1">
+                  /api/news-sitemap?country=us <ExternalLink className="w-3 h-3" />
+                </a>
+                <a href="https://echoes2.com/sitemap.xml" target="_blank" rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center gap-1">
+                  /sitemap.xml <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Sitemaps Table */}
       <Card>
         <CardHeader>
@@ -287,18 +420,18 @@ export function SitemapManagementPanel() {
                 <TableHead className="text-center">URL</TableHead>
                 <TableHead className="text-center">Розмір</TableHead>
                 <TableHead>Оновлено</TableHead>
+                <TableHead className="text-center">Кеш</TableHead>
                 <TableHead className="text-center">Пінг</TableHead>
-                <TableHead className="text-center">Статус</TableHead>
                 <TableHead className="text-right">Дії</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {countries.map((country) => {
                 const meta = getCountryMeta(country.code);
-                const isStale = meta?.last_generated_at 
-                  ? (Date.now() - new Date(meta.last_generated_at).getTime()) > 24 * 60 * 60 * 1000
-                  : true;
-                const isRegenerating = regeneratingCountry === country.code.toLowerCase();
+                const countryLower = country.code.toLowerCase();
+                const cached = cachedSitemaps.find(c => c.path === `/news-sitemap?country=${countryLower}`);
+                const isCacheExpired = cached ? new Date(cached.expires_at) < new Date() : true;
+                const isRegenerating = regeneratingCountry === countryLower;
 
                 return (
                   <TableRow key={country.id}>
@@ -306,70 +439,53 @@ export function SitemapManagementPanel() {
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{country.flag}</span>
                         <span className="font-medium">{country.name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {country.code}
-                        </Badge>
+                        <Badge variant="outline" className="text-xs">{country.code}</Badge>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge 
-                        variant={country.retell_ratio === 100 ? "default" : "secondary"} 
-                        className="text-xs"
-                      >
+                      <Badge variant={country.retell_ratio === 100 ? "default" : "secondary"} className="text-xs">
                         {country.retell_ratio}%
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="secondary">
-                        {meta?.url_count?.toLocaleString() || 0}
-                      </Badge>
+                      <Badge variant="secondary">{meta?.url_count?.toLocaleString() || 0}</Badge>
                     </TableCell>
                     <TableCell className="text-center text-sm text-muted-foreground">
-                      {formatFileSize(meta?.file_size_bytes || null)}
+                      {formatFileSize(cached?.html_size_bytes || meta?.file_size_bytes || null)}
                     </TableCell>
                     <TableCell>
-                      {meta?.last_generated_at ? (
+                      {cached ? (
                         <div className="text-sm">
-                          <div>{format(new Date(meta.last_generated_at), 'dd.MM.yyyy HH:mm')}</div>
+                          <div>{format(new Date(cached.updated_at), 'dd.MM HH:mm')}</div>
                           <div className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(meta.last_generated_at), { addSuffix: true, locale: uk })}
+                            {formatDistanceToNow(new Date(cached.updated_at), { addSuffix: true, locale: uk })}
                           </div>
                         </div>
+                      ) : meta?.last_generated_at ? (
+                        <div className="text-sm">
+                          <div>{format(new Date(meta.last_generated_at), 'dd.MM HH:mm')}</div>
+                        </div>
                       ) : (
-                        <span className="text-muted-foreground text-sm">Не генерувався</span>
+                        <span className="text-muted-foreground text-sm">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {cached ? (
+                        <Badge variant={isCacheExpired ? "destructive" : "outline"} className="text-xs">
+                          {isCacheExpired ? '✗' : '✓'}
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive" className="text-xs">—</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-center">
                       {meta?.last_ping_at ? (
                         <div className="flex gap-1 justify-center">
-                          <Badge 
-                            variant={meta.google_ping_success ? "outline" : "destructive"} 
-                            className="text-xs px-1"
-                          >
-                            G
-                          </Badge>
-                          <Badge 
-                            variant={meta.bing_ping_success ? "outline" : "destructive"} 
-                            className="text-xs px-1"
-                          >
-                            B
-                          </Badge>
+                          <Badge variant={meta.google_ping_success ? "outline" : "destructive"} className="text-xs px-1">G</Badge>
+                          <Badge variant={meta.bing_ping_success ? "outline" : "destructive"} className="text-xs px-1">B</Badge>
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-xs">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {isStale ? (
-                        <Badge variant="outline" className="text-yellow-600 border-yellow-300">
-                          <AlertCircle className="w-3 h-3 mr-1" />
-                          Застарів
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-green-600 border-green-300">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Актуальний
-                        </Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -377,19 +493,15 @@ export function SitemapManagementPanel() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => regenerateMutation.mutate(country.code.toLowerCase())}
+                          onClick={() => regenerateMutation.mutate(countryLower)}
                           disabled={isRegenerating}
                         >
                           <RefreshCw className={`w-3 h-3 mr-1 ${isRegenerating ? 'animate-spin' : ''}`} />
                           Оновити
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          asChild
-                        >
-                          <a 
-                            href={`${SUPABASE_URL}/functions/v1/news-sitemap?country=${country.code.toLowerCase()}`}
+                        <Button variant="ghost" size="sm" asChild>
+                          <a
+                            href={`https://echoes2.com/api/news-sitemap?country=${countryLower}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
@@ -406,39 +518,19 @@ export function SitemapManagementPanel() {
         </CardContent>
       </Card>
 
-      {/* Main Sitemap Info */}
+      {/* Footer */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Основний сайтмап</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">
-                Індексний файл всіх сайтмапів
-              </p>
-              <a 
-                href={`${SUPABASE_URL}/functions/v1/news-sitemap`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary text-sm hover:underline flex items-center gap-1"
-              >
-                Відкрити sitemap index
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-            <div className="text-right text-sm text-muted-foreground">
-              <p>Головний сайтмап сайту:</p>
-              <a 
-                href="https://echoes2.com/sitemap.xml"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline flex items-center gap-1 justify-end"
-              >
-                echoes2.com/sitemap.xml
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
+        <CardContent className="pt-4">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <p>XML кешуються в базі та віддаються через Netlify Edge Function з echoes2.com/api/*</p>
+            <a 
+              href="https://echoes2.com/sitemap.xml"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline flex items-center gap-1"
+            >
+              sitemap.xml <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
         </CardContent>
       </Card>

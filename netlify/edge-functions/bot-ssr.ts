@@ -1,16 +1,19 @@
 import type { Context } from "https://edge.netlify.com";
 
-const SUPABASE_FUNCTIONS_URL = 'https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1';
+const SUPABASE_URL = 'https://bgdwxnoildvvepsoaxrf.supabase.co';
+const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 const SSR_ENDPOINT = `${SUPABASE_FUNCTIONS_URL}/ssr-render`;
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZHd4bm9pbGR2dmVwc29heHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTM2MzQsImV4cCI6MjA4NDc2OTYzNH0.FaLsz1zWVZMLCWizBnKG1ARFFO3N_I1Vmri9xMVVXFk';
 
-// API routes that proxy to Supabase Edge Functions (order matters - more specific first)
-const API_REWRITES: Record<string, string> = {
-  '/api/news-sitemap': `${SUPABASE_FUNCTIONS_URL}/news-sitemap`,
-  '/api/wiki-sitemap': `${SUPABASE_FUNCTIONS_URL}/wiki-sitemap`,
-  '/api/sitemap': `${SUPABASE_FUNCTIONS_URL}/sitemap`,
-  '/api/ssr-render': SSR_ENDPOINT,
-  '/api/llms-txt': `${SUPABASE_FUNCTIONS_URL}/llms-txt`,
+// Mapping: URL path -> cached_pages path in DB
+const SITEMAP_CACHE_PATHS: Record<string, (searchParams: URLSearchParams) => string> = {
+  '/api/sitemap': () => '/api/sitemap',
+  '/api/news-sitemap': (params) => {
+    const country = params.get('country');
+    return country ? `/news-sitemap?country=${country}` : '/news-sitemap-index';
+  },
+  '/api/wiki-sitemap': () => '/api/wiki-sitemap',
+  '/api/llms-txt': () => '/api/llms-txt',
 };
 
 const BOT_PATTERNS = [
@@ -50,52 +53,115 @@ function shouldSSR(pathname: string): boolean {
   return SSR_PATTERNS.some(pattern => pattern.test(pathname));
 }
 
+// Fetch cached content from cached_pages table via Supabase REST API
+async function fetchFromCachedPages(cachePath: string): Promise<string | null> {
+  try {
+    const restUrl = `${SUPABASE_URL}/rest/v1/cached_pages?path=eq.${encodeURIComponent(cachePath)}&select=html,expires_at&limit=1`;
+    
+    const response = await fetch(restUrl, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`cached_pages fetch failed: ${response.status}`);
+      return null;
+    }
+
+    const rows = await response.json();
+    if (!rows || rows.length === 0) return null;
+
+    const row = rows[0];
+    // Return even if expired - stale is better than nothing
+    return row.html || null;
+  } catch (error) {
+    console.error('fetchFromCachedPages error:', error);
+    return null;
+  }
+}
+
+// Proxy to Supabase Edge Function as fallback
+async function proxyToEdgeFunction(targetUrl: string, userAgent: string): Promise<Response | null> {
+  try {
+    const proxyResponse = await fetch(targetUrl, {
+      headers: {
+        'User-Agent': userAgent,
+        'Accept': '*/*',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    });
+
+    if (proxyResponse.ok) {
+      const body = await proxyResponse.text();
+      const contentType = proxyResponse.headers.get('Content-Type') || 'application/xml';
+      return new Response(body, {
+        status: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
+    console.error(`Proxy returned ${proxyResponse.status} for ${targetUrl}`);
+  } catch (error) {
+    console.error(`Proxy failed for ${targetUrl}:`, error);
+  }
+  return null;
+}
+
 export default async function handler(request: Request, context: Context) {
   const url = new URL(request.url);
   const pathname = url.pathname;
   const userAgent = request.headers.get('user-agent') || '';
 
-  // Handle API rewrites to Supabase Edge Functions (with auth headers)
-  for (const [apiPath, targetUrl] of Object.entries(API_REWRITES)) {
+  // Handle API/sitemap routes - serve from cached_pages first, proxy as fallback
+  for (const [apiPath, getCachePath] of Object.entries(SITEMAP_CACHE_PATHS)) {
     if (pathname.startsWith(apiPath)) {
-      try {
-        const targetUrlObj = new URL(targetUrl);
-        // Copy query params from original request
-        url.searchParams.forEach((value, key) => {
-          targetUrlObj.searchParams.set(key, value);
-        });
-
-        const proxyResponse = await fetch(targetUrlObj.toString(), {
-          method: request.method,
+      const cachePath = getCachePath(url.searchParams);
+      
+      // Try cached_pages first (direct DB read - fast & reliable)
+      const cachedHtml = await fetchFromCachedPages(cachePath);
+      if (cachedHtml) {
+        const isXml = apiPath.includes('sitemap');
+        return new Response(cachedHtml, {
+          status: 200,
           headers: {
-            'User-Agent': userAgent,
-            'Accept': request.headers.get('Accept') || '*/*',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': isXml ? 'application/xml; charset=utf-8' : 'text/plain; charset=utf-8',
+            'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+            'Access-Control-Allow-Origin': '*',
+            'X-Source': 'cached-pages',
           },
         });
-
-        if (proxyResponse.ok) {
-          const body = await proxyResponse.text();
-          const contentType = proxyResponse.headers.get('Content-Type') || 'application/xml';
-
-          return new Response(body, {
-            status: proxyResponse.status,
-            headers: {
-              'Content-Type': contentType,
-              'Cache-Control': 'public, max-age=3600, s-maxage=86400',
-              'Access-Control-Allow-Origin': '*',
-            },
-          });
-        }
-
-        console.error(`API proxy ${apiPath} returned ${proxyResponse.status}`);
-      } catch (error) {
-        console.error(`API proxy failed for ${apiPath}:`, error);
       }
-      // Fall through to SPA on error
+
+      // Fallback: proxy to edge function
+      const targetUrlObj = new URL(`${SUPABASE_FUNCTIONS_URL}/${apiPath.replace('/api/', '')}`);
+      url.searchParams.forEach((value, key) => {
+        targetUrlObj.searchParams.set(key, value);
+      });
+      
+      const proxyResult = await proxyToEdgeFunction(targetUrlObj.toString(), userAgent);
+      if (proxyResult) return proxyResult;
+
+      // If both fail, fall through to SPA
       return context.next();
     }
+  }
+
+  // Also handle /api/ssr-render as direct proxy (not cacheable in same way)
+  if (pathname.startsWith('/api/ssr-render')) {
+    const targetUrlObj = new URL(SSR_ENDPOINT);
+    url.searchParams.forEach((value, key) => {
+      targetUrlObj.searchParams.set(key, value);
+    });
+    const proxyResult = await proxyToEdgeFunction(targetUrlObj.toString(), userAgent);
+    if (proxyResult) return proxyResult;
+    return context.next();
   }
 
   // Skip static assets
@@ -119,7 +185,6 @@ export default async function handler(request: Request, context: Context) {
 
       if (ssrResponse.ok) {
         const html = await ssrResponse.text();
-
         return new Response(html, {
           status: 200,
           headers: {

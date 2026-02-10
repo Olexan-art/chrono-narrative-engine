@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const BASE_URL = "https://echoes2.com";
+const CACHE_TTL_HOURS = 24;
 
 function addHreflangLinks(url: string): string {
   return `
@@ -55,6 +56,27 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const url = new URL(req.url);
+    const forceRefresh = url.searchParams.get("refresh") === "true";
+    const cachePath = "/api/wiki-sitemap";
+
+    // Check cache first
+    if (!forceRefresh) {
+      const { data: cached } = await supabase
+        .from("cached_pages")
+        .select("html, expires_at")
+        .eq("path", cachePath)
+        .single();
+
+      if (cached && new Date(cached.expires_at) > new Date()) {
+        console.log("Wiki sitemap cache HIT");
+        return new Response(cached.html, {
+          headers: { ...corsHeaders, "X-Cache": "HIT", "Cache-Control": "public, max-age=21600" },
+          status: 200,
+        });
+      }
+    }
+
     const entities = await fetchAllRows<{
       id: string; slug: string | null; updated_at: string; search_count: number;
     }>(
@@ -84,25 +106,41 @@ Deno.serve(async (req) => {
 
     for (const entity of entities) {
       const path = entity.slug || entity.id;
-      const url = `${BASE_URL}/wiki/${path}`;
+      const entityUrl = `${BASE_URL}/wiki/${path}`;
       const priority = entity.search_count > 50 ? "0.7" : entity.search_count > 10 ? "0.6" : "0.5";
       xml += `
   <url>
-    <loc>${url}</loc>
+    <loc>${entityUrl}</loc>
     <lastmod>${entity.updated_at || now}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>${priority}</priority>${addHreflangLinks(url)}
+    <priority>${priority}</priority>${addHreflangLinks(entityUrl)}
   </url>`;
     }
 
     xml += `
 </urlset>`;
 
-    console.log(`Wiki sitemap generated: ${entities.length} entities`);
+    // Save to cached_pages
+    const expiresAt = new Date(Date.now() + CACHE_TTL_HOURS * 60 * 60 * 1000);
+    await supabase
+      .from("cached_pages")
+      .upsert({
+        path: cachePath,
+        html: xml,
+        title: `Wiki Sitemap`,
+        description: `XML Wiki Sitemap for ${BASE_URL}`,
+        canonical_url: `${BASE_URL}${cachePath}`,
+        expires_at: expiresAt.toISOString(),
+        updated_at: now,
+        html_size_bytes: new TextEncoder().encode(xml).length,
+      }, { onConflict: 'path' });
+
+    console.log(`Wiki sitemap generated & cached: ${entities.length} entities`);
 
     return new Response(xml, {
       headers: {
         ...corsHeaders,
+        "X-Cache": "MISS",
         "Cache-Control": "public, max-age=21600",
       },
       status: 200,
