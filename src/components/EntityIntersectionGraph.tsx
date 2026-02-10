@@ -22,6 +22,12 @@ interface SecondaryConnection {
   weight: number;
 }
 
+interface FeedSource {
+  id: string;
+  name: string;
+  favicon: string;
+}
+
 interface MainEntityInfo {
   id?: string;
   slug?: string | null;
@@ -38,6 +44,7 @@ interface EntityIntersectionGraphProps {
   mainEntity: MainEntityInfo;
   relatedEntities: RelatedEntity[];
   secondaryConnections?: SecondaryConnection[];
+  feedSources?: FeedSource[];
   className?: string;
 }
 
@@ -98,7 +105,7 @@ function calculateTreePositions(entityCount: number, containerWidth: number, con
   }
   
   const levelCount = levels.length;
-  const startY = 210; // Increased to avoid overlap with root node
+  const startY = 280; // Increased to avoid overlap with root node
   const endY = containerHeight - 60;
   const levelHeight = levelCount > 1 ? (endY - startY) / (levelCount - 1) : 0;
   
@@ -129,7 +136,7 @@ function getTreeConnectionPath(
   return `M ${fromX} ${fromY} C ${fromX} ${midY}, ${toX} ${midY}, ${toX} ${toY}`;
 }
 
-export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondaryConnections = [], className }: EntityIntersectionGraphProps) {
+export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondaryConnections = [], feedSources = [], className }: EntityIntersectionGraphProps) {
   const { language } = useLanguage();
   const [showAll, setShowAll] = useState(false);
   const [showSecondary, setShowSecondary] = useState(true);
@@ -151,9 +158,9 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const remainingCount = Math.min(sortedEntities.length, MAX_DISPLAYED_ENTITIES) - INITIAL_DISPLAYED;
 
   const containerWidth = 720;
-  const containerHeight = 780;
+  const containerHeight = 850;
   const rootX = containerWidth / 2;
-  const rootY = 55;
+  const rootY = 90;
 
   const positions = useMemo(() => 
     calculateTreePositions(displayedEntities.length, containerWidth, containerHeight),
@@ -839,12 +846,12 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               )}
             </g>
             
-            {/* Entity name below root */}
+            {/* Entity name to the right of root */}
             <g>
               <text
-                x={rootX}
-                y={rootY + NODE_SIZES.root.base * 1.1 + 55}
-                textAnchor="middle"
+                x={rootX + NODE_SIZES.root.base * 1.1 + 20}
+                y={rootY - 5}
+                textAnchor="start"
                 fill="hsl(var(--foreground))"
                 fontSize="17"
                 fontWeight="700"
@@ -853,15 +860,29 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                 {mainName}
               </text>
               <text
-                x={rootX}
-                y={rootY + NODE_SIZES.root.base * 1.1 + 72}
-                textAnchor="middle"
+                x={rootX + NODE_SIZES.root.base * 1.1 + 20}
+                y={rootY + 12}
+                textAnchor="start"
                 fill="hsl(var(--muted-foreground))"
                 fontSize="11"
                 className="uppercase tracking-widest"
               >
                 {mainEntity.entity_type}
               </text>
+              {/* RSS feed logos next to root name */}
+              {feedSources.slice(0, 6).map((feed, i) => (
+                <image
+                  key={feed.id}
+                  x={rootX + NODE_SIZES.root.base * 1.1 + 20 + i * 22}
+                  y={rootY + 20}
+                  width={18}
+                  height={18}
+                  href={feed.favicon}
+                  preserveAspectRatio="xMidYMid slice"
+                  opacity={0.8}
+                  className="transition-opacity"
+                />
+              ))}
             </g>
 
             {/* Entity nodes */}

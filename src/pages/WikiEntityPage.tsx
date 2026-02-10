@@ -1320,6 +1320,7 @@ export default function WikiEntityPage() {
                       }}
                       relatedEntities={relatedEntities}
                       secondaryConnections={secondaryConnections}
+                      feedSources={feedSources.slice(0, 6).map(f => ({ id: f.id, name: f.name, favicon: f.favicon }))}
                     />
                   ) : (
                     <EntityGhostlyGraph 
@@ -1904,22 +1905,16 @@ export default function WikiEntityPage() {
                             RSS Feeds
                           </p>
                           <div className="grid grid-cols-1 gap-2">
-                            {feedSources.map(feed => (
-                              <div key={feed.id} className="group/feed flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-card to-muted/10 border border-border/30 hover:border-[hsl(var(--chart-4))]/40 hover:shadow-[0_0_12px_hsl(var(--chart-4)/0.1)] transition-all duration-300 relative overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-r from-[hsl(var(--chart-4))]/0 to-[hsl(var(--chart-4))]/5 opacity-0 group-hover/feed:opacity-100 transition-opacity" />
+                      {feedSources.map(feed => (
+                              <div key={feed.id} className="group/feed flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-gradient-to-r from-card to-muted/10 border border-border/30 hover:border-[hsl(var(--chart-4))]/40 transition-all duration-200 relative overflow-hidden">
                                 <img
                                   src={feed.favicon}
                                   alt=""
-                                  className="w-6 h-6 rounded relative z-10"
+                                  className="w-4 h-4 rounded-sm flex-shrink-0"
                                   onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
                                 />
-                                <div className="flex-1 min-w-0 relative z-10">
-                                  <span className="font-medium text-sm truncate block">{feed.name}</span>
-                                  {feed.country && (
-                                    <span className="text-[10px] text-muted-foreground">{feed.country.flag} {feed.country.name}</span>
-                                  )}
-                                </div>
-                                <Badge variant="outline" className="font-mono text-xs border-[hsl(var(--chart-4))]/30 bg-[hsl(var(--chart-4))]/5 text-[hsl(var(--chart-4))] relative z-10">
+                                <span className="font-medium text-xs truncate flex-1 min-w-0">{feed.name}</span>
+                                <Badge variant="outline" className="font-mono text-[10px] h-4 px-1 border-[hsl(var(--chart-4))]/30 bg-[hsl(var(--chart-4))]/5 text-[hsl(var(--chart-4))]">
                                   {feed.count}
                                 </Badge>
                               </div>
