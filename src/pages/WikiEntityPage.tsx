@@ -8,7 +8,7 @@ import {
   Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight,
   Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit,
   Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone, 
-  Swords, FolderOpen
+  Swords, FolderOpen, Rss
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -399,6 +399,65 @@ export default function WikiEntityPage() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 20);
   }, [allLinkedNews]);
+
+  // Fetch RSS feed sources for this entity's news
+  const { data: feedSources = [] } = useQuery({
+    queryKey: ['entity-feed-sources', entity?.id],
+    queryFn: async () => {
+      if (!entity?.id) return [];
+      
+      // Get news item IDs linked to this entity
+      const { data: newsLinks } = await supabase
+        .from('news_wiki_entities')
+        .select('news_item_id')
+        .eq('wiki_entity_id', entity.id);
+      
+      if (!newsLinks?.length) return [];
+      
+      const newsItemIds = newsLinks.map(l => l.news_item_id);
+      
+      // Get feed_id from those news items (batch in chunks of 100)
+      const feedCounts: Record<string, number> = {};
+      for (let i = 0; i < newsItemIds.length; i += 100) {
+        const chunk = newsItemIds.slice(i, i + 100);
+        const { data: items } = await supabase
+          .from('news_rss_items')
+          .select('feed_id')
+          .in('id', chunk);
+        
+        if (items) {
+          items.forEach(item => {
+            feedCounts[item.feed_id] = (feedCounts[item.feed_id] || 0) + 1;
+          });
+        }
+      }
+      
+      const feedIds = Object.keys(feedCounts);
+      if (feedIds.length === 0) return [];
+      
+      // Fetch feed details
+      const { data: feeds } = await supabase
+        .from('news_rss_feeds')
+        .select('id, name, url, default_image_url, country:news_countries(flag, name)')
+        .in('id', feedIds);
+      
+      if (!feeds) return [];
+      
+      return feeds
+        .map(feed => ({
+          id: feed.id,
+          name: feed.name,
+          url: feed.url,
+          default_image_url: feed.default_image_url,
+          country: feed.country as any,
+          count: feedCounts[feed.id] || 0,
+          favicon: `https://www.google.com/s2/favicons?domain=${new URL(feed.url).hostname}&sz=32`,
+        }))
+        .sort((a, b) => b.count - a.count);
+    },
+    enabled: !!entity?.id,
+    staleTime: 1000 * 60 * 10,
+  });
 
   // Fetch Wikipedia categories automatically
   const { data: wikiCategories = [] } = useQuery({
@@ -881,10 +940,10 @@ export default function WikiEntityPage() {
                 <div className="flex flex-col md:flex-row">
                   {/* Entity Image with Topic overlay */}
                   <div className="md:w-64 flex-shrink-0 relative group">
-                    {/* Background topic text */}
+                    {/* Background topic text overlay - top right */}
                     {sortedTopics.length > 0 && (
-                      <div className="absolute top-0 left-0 right-0 z-10 p-2 bg-gradient-to-b from-black/70 to-transparent">
-                        <p className="text-[10px] font-mono uppercase tracking-widest text-primary/80 truncate">
+                      <div className="absolute top-0 right-0 z-10 p-3">
+                        <p className="text-xl md:text-2xl font-bold font-mono uppercase tracking-widest text-primary/30 text-right leading-tight max-w-[120px]">
                           {sortedTopics[0][0]}
                         </p>
                       </div>
@@ -1800,22 +1859,14 @@ export default function WikiEntityPage() {
               })()}
 
               {/* Sources Block */}
-              {allLinkedNews.length > 0 && (() => {
+              {(allLinkedNews.length > 0 || feedSources.length > 0) && (() => {
                 const sourceMap: Record<string, number> = {};
                 allLinkedNews.forEach(n => {
                   const source = n.country?.name;
                   if (source) sourceMap[source] = (sourceMap[source] || 0) + 1;
                 });
-                // Also extract from URL domains
-                const domainMap: Record<string, number> = {};
-                allLinkedNews.forEach(n => {
-                  if (n.country?.code) {
-                    const key = n.country.code.toUpperCase();
-                    domainMap[key] = (domainMap[key] || 0) + 1;
-                  }
-                });
                 const sources = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]);
-                if (sources.length === 0) return null;
+                if (sources.length === 0 && feedSources.length === 0) return null;
                 return (
                   <Card>
                     <CardHeader className="pb-2">
@@ -1824,19 +1875,45 @@ export default function WikiEntityPage() {
                         {language === 'uk' ? 'Джерела' : 'Sources'}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="flex flex-wrap gap-2">
-                        {sources.map(([source, count]) => {
-                          const country = allLinkedNews.find(n => n.country?.name === source)?.country;
-                          return (
-                            <div key={source} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/50 text-xs">
-                              {country?.flag && <span>{country.flag}</span>}
-                              <span className="font-medium">{source}</span>
-                              <Badge variant="secondary" className="text-[10px] h-4 px-1">{count}</Badge>
-                            </div>
-                          );
-                        })}
-                      </div>
+                    <CardContent className="pt-0 space-y-3">
+                      {/* Country sources */}
+                      {sources.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {sources.map(([source, count]) => {
+                            const country = allLinkedNews.find(n => n.country?.name === source)?.country;
+                            return (
+                              <div key={source} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50 border border-border/50 text-xs">
+                                {country?.flag && <span>{country.flag}</span>}
+                                <span className="font-medium">{source}</span>
+                                <Badge variant="secondary" className="text-[10px] h-4 px-1">{count}</Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {/* RSS Feed sources */}
+                      {feedSources.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                            <Rss className="w-3 h-3" />
+                            RSS Feeds
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {feedSources.map(feed => (
+                              <div key={feed.id} className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30 border border-border/30 text-[11px]">
+                                <img
+                                  src={feed.favicon}
+                                  alt=""
+                                  className="w-4 h-4 rounded-sm"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                                <span className="font-medium truncate max-w-[100px]">{feed.name}</span>
+                                <Badge variant="secondary" className="text-[9px] h-3.5 px-1">{feed.count}</Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
