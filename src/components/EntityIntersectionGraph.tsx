@@ -846,12 +846,12 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               )}
             </g>
             
-            {/* Entity name below root */}
+            {/* Entity name to the right of root */}
             <g>
               <text
-                x={rootX}
-                y={rootY + NODE_SIZES.root.base * 1.1 + 55}
-                textAnchor="middle"
+                x={rootX + NODE_SIZES.root.base * 1.1 + 20}
+                y={rootY - 5}
+                textAnchor="start"
                 fill="hsl(var(--foreground))"
                 fontSize="17"
                 fontWeight="700"
@@ -860,15 +860,29 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                 {mainName}
               </text>
               <text
-                x={rootX}
-                y={rootY + NODE_SIZES.root.base * 1.1 + 72}
-                textAnchor="middle"
+                x={rootX + NODE_SIZES.root.base * 1.1 + 20}
+                y={rootY + 12}
+                textAnchor="start"
                 fill="hsl(var(--muted-foreground))"
                 fontSize="11"
                 className="uppercase tracking-widest"
               >
                 {mainEntity.entity_type}
               </text>
+              {/* RSS feed logos next to root name */}
+              {feedSources.slice(0, 6).map((feed, i) => (
+                <image
+                  key={feed.id}
+                  x={rootX + NODE_SIZES.root.base * 1.1 + 20 + i * 22}
+                  y={rootY + 20}
+                  width={18}
+                  height={18}
+                  href={feed.favicon}
+                  preserveAspectRatio="xMidYMid slice"
+                  opacity={0.8}
+                  className="transition-opacity"
+                />
+              ))}
             </g>
 
             {/* Entity nodes */}
