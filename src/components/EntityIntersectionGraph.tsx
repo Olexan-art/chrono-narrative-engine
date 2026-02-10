@@ -158,9 +158,9 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
   const remainingCount = Math.min(sortedEntities.length, MAX_DISPLAYED_ENTITIES) - INITIAL_DISPLAYED;
 
   const containerWidth = 720;
-  const containerHeight = 780;
+  const containerHeight = 850;
   const rootX = containerWidth / 2;
-  const rootY = 55;
+  const rootY = 90;
 
   const positions = useMemo(() => 
     calculateTreePositions(displayedEntities.length, containerWidth, containerHeight),
