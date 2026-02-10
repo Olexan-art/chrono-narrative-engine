@@ -595,7 +595,42 @@ export default function WikiEntityPage() {
     enabled: !!entity?.id,
   });
 
-  // Fetch cache status for this entity page
+  // Fetch aliases for this entity
+  const { data: entityAliases = [], refetch: refetchAliases } = useQuery({
+    queryKey: ['entity-aliases', entity?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('wiki_entity_aliases')
+        .select('id, alias, language')
+        .eq('entity_id', entity!.id)
+        .order('created_at');
+      if (error) return [];
+      return data || [];
+    },
+    enabled: !!entity?.id,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const [newAlias, setNewAlias] = useState('');
+  const addAlias = async () => {
+    if (!entity?.id || !newAlias.trim() || newAlias.trim().length < 2) return;
+    const { error } = await supabase
+      .from('wiki_entity_aliases')
+      .insert({ entity_id: entity.id, alias: newAlias.trim() });
+    if (error) {
+      toast.error(error.message.includes('duplicate') ? 'Alias already exists' : error.message);
+    } else {
+      toast.success('Alias added');
+      setNewAlias('');
+      refetchAliases();
+    }
+  };
+  const removeAlias = async (aliasId: string) => {
+    await supabase.from('wiki_entity_aliases').delete().eq('id', aliasId);
+    refetchAliases();
+  };
+
+
   const entitySlugForCache = entity?.slug || entity?.id;
   const entityCachePath = `/wiki/${entitySlugForCache}`;
   const { data: cacheStatus, refetch: refetchCacheStatus } = useQuery({
