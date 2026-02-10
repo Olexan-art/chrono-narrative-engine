@@ -580,6 +580,7 @@ export type Database = {
           category: string
           country_id: string
           created_at: string
+          default_image_url: string | null
           fetch_error: string | null
           id: string
           is_active: boolean
@@ -593,6 +594,7 @@ export type Database = {
           category?: string
           country_id: string
           created_at?: string
+          default_image_url?: string | null
           fetch_error?: string | null
           id?: string
           is_active?: boolean
@@ -606,6 +608,7 @@ export type Database = {
           category?: string
           country_id?: string
           created_at?: string
+          default_image_url?: string | null
           fetch_error?: string | null
           id?: string
           is_active?: boolean
