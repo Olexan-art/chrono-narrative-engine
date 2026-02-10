@@ -105,7 +105,7 @@ function calculateTreePositions(entityCount: number, containerWidth: number, con
   }
   
   const levelCount = levels.length;
-  const startY = 210; // Increased to avoid overlap with root node
+  const startY = 280; // Increased to avoid overlap with root node
   const endY = containerHeight - 60;
   const levelHeight = levelCount > 1 ? (endY - startY) / (levelCount - 1) : 0;
   
