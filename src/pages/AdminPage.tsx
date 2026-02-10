@@ -872,6 +872,10 @@ export default function AdminPage() {
               <GitMerge className="w-4 h-4 text-teal-500" />
               Дедуплікація
             </TabsTrigger>
+            <TabsTrigger value="rss-feed" className="gap-2">
+              <Rss className="w-4 h-4 text-orange-500" />
+              RSS Feed
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               Налаштування
