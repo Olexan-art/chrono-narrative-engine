@@ -145,8 +145,12 @@ export function EntityLinkedContent({ content, excludeEntityId, className, extra
       if (extra.name && extra.name.length >= 3) set.add(extra.name.toLowerCase());
       if (extra.name_en && extra.name_en.length >= 3) set.add(extra.name_en.toLowerCase());
     }
+    // Include aliases as priority terms too
+    for (const alias of aliases) {
+      if (alias.alias.length >= 3) set.add(alias.alias.toLowerCase());
+    }
     return set;
-  }, [extraEntities, excludeEntityId]);
+  }, [extraEntities, aliases, excludeEntityId]);
 
   const parseInlineWithEntities = (text: string, keyPrefix: string): (string | JSX.Element)[] => {
     if (!text || !entityMap.size) return [text];
