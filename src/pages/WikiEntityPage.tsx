@@ -559,6 +559,41 @@ export default function WikiEntityPage() {
     enabled: !!entity?.id,
   });
 
+  // Fetch wiki-linked entities (entity-to-entity direct links)
+  const { data: wikiLinkedEntities = [] } = useQuery({
+    queryKey: ['wiki-linked-entities', entity?.id],
+    queryFn: async () => {
+      // Get links where this entity is source or target
+      const { data: links, error } = await supabase
+        .from('wiki_entity_links')
+        .select(`
+          source_entity_id,
+          target_entity_id,
+          link_type
+        `)
+        .or(`source_entity_id.eq.${entity?.id},target_entity_id.eq.${entity?.id}`);
+
+      if (error || !links?.length) return [];
+
+      // Get the other entity IDs
+      const otherIds = links.map(l => 
+        l.source_entity_id === entity?.id ? l.target_entity_id : l.source_entity_id
+      );
+
+      const { data: entities } = await supabase
+        .from('wiki_entities')
+        .select('id, name, name_en, image_url, entity_type, slug')
+        .in('id', otherIds);
+
+      return (entities || []).map(e => ({
+        ...e,
+        shared_news_count: 0,
+        isWikiLinked: true,
+      })) as (RelatedEntity & { isWikiLinked: boolean })[];
+    },
+    enabled: !!entity?.id,
+  });
+
   // Fetch secondary connections (connections between related entities)
   const { data: secondaryConnections = [] } = useQuery({
     queryKey: ['secondary-connections', entity?.id, relatedEntities.length],
