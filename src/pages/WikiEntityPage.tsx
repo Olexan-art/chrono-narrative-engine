@@ -940,14 +940,7 @@ export default function WikiEntityPage() {
                 <div className="flex flex-col md:flex-row">
                   {/* Entity Image with Topic overlay */}
                   <div className="md:w-64 flex-shrink-0 relative group">
-                    {/* Background topic text overlay - top right */}
-                    {sortedTopics.length > 0 && (
-                      <div className="absolute top-0 right-0 z-10 p-3">
-                        <p className="text-xl md:text-2xl font-bold font-mono uppercase tracking-widest text-primary/30 text-right leading-tight max-w-[120px]">
-                          {sortedTopics[0][0]}
-                        </p>
-                      </div>
-                    )}
+                    {/* Topic overlay removed from image — moved to info block */}
                     {entity.image_url ? (
                       <img
                         src={entity.image_url}
