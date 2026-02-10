@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles, ChevronLeft, ChevronRight, CalendarDays, BrainCircuit } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { callEdgeFunction } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { NarrativesAdminPanel } from "./NarrativesAdminPanel";
 
 interface WikiEntity {
   id: string;
