@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Network, User, Building2, Eye, Newspaper, TrendingUp, X, Zap, Share2 } from "lucide-react";
+import { Network, User, Building2, Eye, Newspaper, TrendingUp, X, Zap, Share2, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -89,7 +90,7 @@ export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryCon
   const size = 1000;
   const cx = size / 2;
   const cy = size / 2;
-  const ringRadii = [150, 260, 370, 460];
+  const ringRadii = [190, 300, 400, 470];
 
   const getPositionsOnRing = (count: number, radius: number, offsetAngle = 0) =>
     Array.from({ length: count }, (_, i) => {
@@ -618,61 +619,105 @@ export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryCon
         </div>
 
         {/* Stats footer */}
-        <div className="mt-6 pt-4 border-t border-[hsl(var(--chart-4))]/20">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
-            <div className="flex flex-col items-center gap-1 p-2 rounded bg-[hsl(var(--chart-4))]/5 border border-[hsl(var(--chart-4))]/20">
-              <div className="flex items-center gap-1.5 text-[hsl(var(--chart-4))]">
-                <div className="w-2 h-2 bg-[hsl(var(--chart-4))]" />
-                <span className="uppercase tracking-wider text-[10px]">Nodes</span>
-              </div>
-              <span className="text-foreground font-bold text-lg">{sortedEntities.length}</span>
+        <TooltipProvider delayDuration={200}>
+          <div className="mt-6 pt-4 border-t border-[hsl(var(--chart-4))]/20">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex flex-col items-center gap-1 p-2 rounded bg-[hsl(var(--chart-4))]/5 border border-[hsl(var(--chart-4))]/20 cursor-help">
+                    <div className="flex items-center gap-1.5 text-[hsl(var(--chart-4))]">
+                      <div className="w-2 h-2 bg-[hsl(var(--chart-4))]" />
+                      <span className="uppercase tracking-wider text-[10px]">Nodes</span>
+                    </div>
+                    <span className="text-foreground font-bold text-lg">{sortedEntities.length}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="font-sans text-xs max-w-[200px]">
+                  {language === 'uk' ? 'Кількість пов\'язаних сутностей у графі' : 'Number of related entities displayed in the graph'}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex flex-col items-center gap-1 p-2 rounded bg-primary/5 border border-primary/20 cursor-help">
+                    <div className="flex items-center gap-1.5 text-primary">
+                      <Zap className="w-3 h-3" />
+                      <span className="uppercase tracking-wider text-[10px]">Links</span>
+                    </div>
+                    <span className="text-foreground font-bold text-lg">{totalConnections}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="font-sans text-xs max-w-[200px]">
+                  {language === 'uk' ? 'Загальна кількість спільних згадок у новинах' : 'Total shared news mentions across all connected entities'}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex flex-col items-center gap-1 p-2 rounded bg-[hsl(var(--chart-5))]/5 border border-[hsl(var(--chart-5))]/20 cursor-help">
+                    <div className="flex items-center gap-1.5 text-[hsl(var(--chart-5))]">
+                      <Share2 className="w-3 h-3" />
+                      <span className="uppercase tracking-wider text-[10px]">Cross</span>
+                    </div>
+                    <span className="text-foreground font-bold text-lg">{visibleSecondary.length}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="font-sans text-xs max-w-[200px]">
+                  {language === 'uk' ? 'Кількість перехресних зв\'язків між вузлами (без кореневого)' : 'Cross-connections between nodes (excluding root entity)'}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex flex-col items-center gap-1 p-2 rounded bg-[hsl(var(--accent))]/5 border border-[hsl(var(--accent))]/20 cursor-help">
+                    <div className="flex items-center gap-1.5 text-[hsl(var(--accent))]">
+                      <TrendingUp className="w-3 h-3" />
+                      <span className="uppercase tracking-wider text-[10px]">Avg</span>
+                    </div>
+                    <span className="text-foreground font-bold text-lg">{sortedEntities.length > 0 ? (totalConnections / sortedEntities.length).toFixed(1) : '0'}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="font-sans text-xs max-w-[200px]">
+                  {language === 'uk' ? 'Середня кількість зв\'язків на вузол' : 'Average number of connections per node'}
+                </TooltipContent>
+              </Tooltip>
             </div>
-            <div className="flex flex-col items-center gap-1 p-2 rounded bg-primary/5 border border-primary/20">
-              <div className="flex items-center gap-1.5 text-primary">
-                <Zap className="w-3 h-3" />
-                <span className="uppercase tracking-wider text-[10px]">Links</span>
-              </div>
-              <span className="text-foreground font-bold text-lg">{totalConnections}</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 p-2 rounded bg-[hsl(var(--chart-5))]/5 border border-[hsl(var(--chart-5))]/20">
-              <div className="flex items-center gap-1.5 text-[hsl(var(--chart-5))]">
-                <Share2 className="w-3 h-3" />
-                <span className="uppercase tracking-wider text-[10px]">Cross</span>
-              </div>
-              <span className="text-foreground font-bold text-lg">{visibleSecondary.length}</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 p-2 rounded bg-[hsl(var(--accent))]/5 border border-[hsl(var(--accent))]/20">
-              <div className="flex items-center gap-1.5 text-[hsl(var(--accent))]">
-                <TrendingUp className="w-3 h-3" />
-                <span className="uppercase tracking-wider text-[10px]">Avg</span>
-              </div>
-              <span className="text-foreground font-bold text-lg">{sortedEntities.length > 0 ? (totalConnections / sortedEntities.length).toFixed(1) : '0'}</span>
-            </div>
+            {/* Density bar */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="mt-3 flex items-center gap-2 cursor-help">
+                  <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Density</span>
+                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[hsl(var(--chart-4))] to-primary rounded-full transition-all"
+                      style={{ width: `${Math.min(100, sortedEntities.length > 1 ? (visibleSecondary.length / (sortedEntities.length * (sortedEntities.length - 1) / 2)) * 100 : 0)}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-mono text-muted-foreground">
+                    {sortedEntities.length > 1 ? ((visibleSecondary.length / (sortedEntities.length * (sortedEntities.length - 1) / 2)) * 100).toFixed(1) : '0'}%
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="font-sans text-xs max-w-[220px]">
+                {language === 'uk' ? 'Щільність графу — відсоток реалізованих зв\'язків від максимально можливих' : 'Graph density — percentage of actual connections vs maximum possible'}
+              </TooltipContent>
+            </Tooltip>
+            {/* Top connected node */}
+            {sortedEntities.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="mt-2 flex items-center gap-2 text-[10px] font-mono text-muted-foreground cursor-help">
+                    <span className="uppercase tracking-widest">Top Node:</span>
+                    <span className="text-[hsl(var(--chart-4))] font-semibold">
+                      {language === 'en' && sortedEntities[0].name_en ? sortedEntities[0].name_en : sortedEntities[0].name}
+                    </span>
+                    <span>({sortedEntities[0].shared_news_count} links)</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="font-sans text-xs max-w-[220px]">
+                  {language === 'uk' ? 'Найбільш пов\'язана сутність із найвищою кількістю спільних новин' : 'Most connected entity with the highest number of shared news articles'}
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
-          {/* Density bar */}
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Density</span>
-            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[hsl(var(--chart-4))] to-primary rounded-full transition-all"
-                style={{ width: `${Math.min(100, sortedEntities.length > 1 ? (visibleSecondary.length / (sortedEntities.length * (sortedEntities.length - 1) / 2)) * 100 : 0)}%` }}
-              />
-            </div>
-            <span className="text-[10px] font-mono text-muted-foreground">
-              {sortedEntities.length > 1 ? ((visibleSecondary.length / (sortedEntities.length * (sortedEntities.length - 1) / 2)) * 100).toFixed(1) : '0'}%
-            </span>
-          </div>
-          {/* Top connected node */}
-          {sortedEntities.length > 0 && (
-            <div className="mt-2 flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
-              <span className="uppercase tracking-widest">Top Node:</span>
-              <span className="text-[hsl(var(--chart-4))] font-semibold">
-                {language === 'en' && sortedEntities[0].name_en ? sortedEntities[0].name_en : sortedEntities[0].name}
-              </span>
-              <span>({sortedEntities[0].shared_news_count} links)</span>
-            </div>
-          )}
-        </div>
+        </TooltipProvider>
       </CardContent>
     </Card>
   );
