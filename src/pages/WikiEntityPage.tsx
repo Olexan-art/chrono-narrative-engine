@@ -1079,7 +1079,7 @@ export default function WikiEntityPage() {
                       </div>
                     ) : (
                       <>
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start justify-between gap-4 relative">
                           <div>
                             <Badge variant="secondary" className="mb-2">
                               {getEntityIcon(entity.entity_type)}
@@ -1090,6 +1090,14 @@ export default function WikiEntityPage() {
                               <p className="text-muted-foreground mt-1">{description}</p>
                             )}
                           </div>
+                          {/* Topic #1 overlay — top right of the info block */}
+                          {sortedTopics.length > 0 && (
+                            <div className="absolute -top-2 -right-2 pointer-events-none select-none">
+                              <p className="text-3xl md:text-4xl font-black font-mono uppercase tracking-widest text-primary/20 text-right leading-none whitespace-nowrap">
+                                {sortedTopics[0][0]}
+                              </p>
+                            </div>
+                          )}
                           
                           {/* Admin Actions */}
                           {isAdmin && (
