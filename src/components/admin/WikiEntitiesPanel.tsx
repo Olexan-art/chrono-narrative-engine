@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles, ChevronLeft, ChevronRight, CalendarDays, BrainCircuit } from "lucide-react";
+import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles, ChevronLeft, ChevronRight, CalendarDays, BrainCircuit, Plus, Link2, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +40,7 @@ interface WikiEntity {
   search_count: number;
   created_at: string;
   last_searched_at: string | null;
+  slug?: string | null;
 }
 
 interface NewsLink {
@@ -58,7 +60,41 @@ interface NewsLinkWithCountry extends NewsLink {
   };
 }
 
+interface WikiSearchResult {
+  wiki_id: string;
+  entity_type: string;
+  name: string;
+  name_en?: string;
+  description?: string;
+  description_en?: string;
+  image_url?: string;
+  wiki_url: string;
+  wiki_url_en?: string;
+  extract?: string;
+  extract_en?: string;
+  raw_data?: Record<string, unknown>;
+}
+
+interface RelatedEntity {
+  id: string;
+  name: string;
+  name_en: string | null;
+  entity_type: string;
+  image_url: string | null;
+  slug: string | null;
+  sharedNewsCount: number;
+}
+
+interface WikiLink {
+  title: string;
+  existsInDb: boolean;
+  entityId: string | null;
+  slug: string | null;
+}
+
 const PAGE_SIZE = 50;
+
+const ENTITY_TYPES = ['person', 'company', 'organization', 'country', 'place', 'unknown'];
 
 // Component to show linked news for an entity
 function EntityNewsDialog({ entity }: { entity: WikiEntity }) {
@@ -84,10 +120,7 @@ function EntityNewsDialog({ entity }: { entity: WikiEntity }) {
         .filter(d => d.news_item)
         .map(d => {
           const item = d.news_item as any;
-          return {
-            ...item,
-            country: item.country
-          } as NewsLinkWithCountry;
+          return { ...item, country: item.country } as NewsLinkWithCountry;
         });
     },
   });
@@ -158,7 +191,6 @@ function EntityNewsDialog({ entity }: { entity: WikiEntity }) {
           </ScrollArea>
         </div>
 
-        {/* Entity Details */}
         {entity.extract && (
           <div className="mt-4 pt-4 border-t">
             <h4 className="text-sm font-medium mb-2">Про сутність (Wikipedia)</h4>
@@ -173,6 +205,399 @@ function EntityNewsDialog({ entity }: { entity: WikiEntity }) {
             </a>
           </div>
         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Dialog: Add entity (Wikipedia search + manual)
+function AddEntityDialog({ onAdded }: { onAdded: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<'wiki' | 'manual'>('wiki');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchLang, setSearchLang] = useState('en');
+  const [searchResults, setSearchResults] = useState<WikiSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  // Manual form
+  const [manualName, setManualName] = useState('');
+  const [manualType, setManualType] = useState('organization');
+  const [manualDesc, setManualDesc] = useState('');
+  const [manualWikiUrl, setManualWikiUrl] = useState('');
+  const [manualSaving, setManualSaving] = useState(false);
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    try {
+      const result = await callEdgeFunction<{ success: boolean; results: WikiSearchResult[] }>('search-wiki', {
+        action: 'search_multiple',
+        query: searchQuery,
+        language: searchLang,
+        limit: 10,
+      });
+      setSearchResults(result.results || []);
+      if (!result.results?.length) toast.info('Нічого не знайдено');
+    } catch (err: any) {
+      toast.error(err.message || 'Помилка пошуку');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSaveFromWiki = async (entity: WikiSearchResult) => {
+    setSaving(entity.wiki_id);
+    try {
+      const result = await callEdgeFunction<{ success: boolean; id?: string; error?: string }>('search-wiki', {
+        action: 'save_entity',
+        entity,
+      });
+      if (result.success) {
+        toast.success(`Додано: ${entity.name}`);
+        onAdded();
+      } else {
+        toast.error(result.error || 'Помилка збереження');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Помилка збереження');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleSaveManual = async () => {
+    if (!manualName.trim()) return;
+    setManualSaving(true);
+    try {
+      const wikiId = `manual_${Date.now()}`;
+      const { error } = await supabase.from('wiki_entities').insert({
+        wiki_id: wikiId,
+        name: manualName,
+        entity_type: manualType,
+        description: manualDesc || null,
+        wiki_url: manualWikiUrl || `https://en.wikipedia.org/wiki/${encodeURIComponent(manualName.replace(/ /g, '_'))}`,
+      });
+      if (error) throw error;
+      toast.success(`Додано: ${manualName}`);
+      setManualName('');
+      setManualDesc('');
+      setManualWikiUrl('');
+      onAdded();
+    } catch (err: any) {
+      toast.error(err.message || 'Помилка');
+    } finally {
+      setManualSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <Plus className="w-4 h-4 mr-1" />
+          Додати сутність
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[85vh]">
+        <DialogHeader>
+          <DialogTitle>Додати нову сутність</DialogTitle>
+        </DialogHeader>
+
+        <Tabs value={mode} onValueChange={(v) => setMode(v as 'wiki' | 'manual')}>
+          <TabsList className="w-full">
+            <TabsTrigger value="wiki" className="flex-1">
+              <Globe className="w-4 h-4 mr-1" /> Wikipedia пошук
+            </TabsTrigger>
+            <TabsTrigger value="manual" className="flex-1">
+              <Plus className="w-4 h-4 mr-1" /> Вручну
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="wiki" className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Назва для пошуку..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="flex-1"
+              />
+              <select
+                value={searchLang}
+                onChange={(e) => setSearchLang(e.target.value)}
+                className="h-10 px-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="en">EN</option>
+                <option value="uk">UK</option>
+              </select>
+              <Button onClick={handleSearch} disabled={searching}>
+                {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </Button>
+            </div>
+
+            <ScrollArea className="h-[400px]">
+              {searchResults.length > 0 ? (
+                <div className="space-y-2">
+                  {searchResults.map((r) => (
+                    <div key={r.wiki_id} className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
+                      {r.image_url ? (
+                        <img src={r.image_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                          <Globe className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{r.name}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{r.description || r.description_en}</p>
+                        {r.extract && <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{r.extract}</p>}
+                        <Badge variant="outline" className="mt-1 text-[10px]">{r.entity_type}</Badge>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleSaveFromWiki(r)}
+                        disabled={saving === r.wiki_id}
+                      >
+                        {saving === r.wiki_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : !searching ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Введіть назву та натисніть пошук
+                </p>
+              ) : null}
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="manual" className="space-y-4">
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium">Назва *</label>
+                <Input value={manualName} onChange={(e) => setManualName(e.target.value)} placeholder="Назва сутності" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Тип</label>
+                <select
+                  value={manualType}
+                  onChange={(e) => setManualType(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                >
+                  {ENTITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Опис</label>
+                <Input value={manualDesc} onChange={(e) => setManualDesc(e.target.value)} placeholder="Короткий опис" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Wikipedia URL</label>
+                <Input value={manualWikiUrl} onChange={(e) => setManualWikiUrl(e.target.value)} placeholder="https://en.wikipedia.org/wiki/..." />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleSaveManual} disabled={manualSaving || !manualName.trim()}>
+                {manualSaving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
+                Зберегти
+              </Button>
+            </DialogFooter>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Dialog: Find related entities
+function RelatedEntitiesDialog({ entity }: { entity: WikiEntity }) {
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<'news' | 'wiki'>('news');
+  const [relatedNews, setRelatedNews] = useState<RelatedEntity[]>([]);
+  const [wikiLinks, setWikiLinks] = useState<WikiLink[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [savingWiki, setSavingWiki] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const loadRelatedNews = async () => {
+    setLoading(true);
+    try {
+      const result = await callEdgeFunction<{ success: boolean; related: RelatedEntity[] }>('search-wiki', {
+        action: 'find_related_news',
+        entityId: entity.id,
+      });
+      setRelatedNews(result.related || []);
+    } catch (err: any) {
+      toast.error(err.message || 'Помилка');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadWikiLinks = async () => {
+    setLoading(true);
+    try {
+      const name = entity.name_en || entity.name;
+      const result = await callEdgeFunction<{ success: boolean; wikiLinks: WikiLink[] }>('search-wiki', {
+        action: 'find_related_wiki',
+        entityName: name,
+        language: entity.name_en ? 'en' : 'uk',
+      });
+      setWikiLinks(result.wikiLinks || []);
+    } catch (err: any) {
+      toast.error(err.message || 'Помилка');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpen = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) loadRelatedNews();
+  };
+
+  const handleTabChange = (newTab: string) => {
+    setTab(newTab as 'news' | 'wiki');
+    if (newTab === 'wiki' && wikiLinks.length === 0) loadWikiLinks();
+    if (newTab === 'news' && relatedNews.length === 0) loadRelatedNews();
+  };
+
+  const handleAddFromWiki = async (title: string) => {
+    setSavingWiki(title);
+    try {
+      // Search Wikipedia for this title and save
+      const searchResult = await callEdgeFunction<{ success: boolean; results: WikiSearchResult[] }>('search-wiki', {
+        action: 'search_multiple',
+        query: title,
+        language: 'en',
+        limit: 1,
+      });
+      if (searchResult.results?.length) {
+        const saveResult = await callEdgeFunction<{ success: boolean; id?: string; error?: string }>('search-wiki', {
+          action: 'save_entity',
+          entity: searchResult.results[0],
+        });
+        if (saveResult.success) {
+          toast.success(`Додано: ${title}`);
+          queryClient.invalidateQueries({ queryKey: ['admin-wiki-entities'] });
+          // Update wiki links to reflect the change
+          setWikiLinks(prev => prev.map(l => l.title === title ? { ...l, existsInDb: true, entityId: saveResult.id || null } : l));
+        } else {
+          toast.error(saveResult.error || 'Помилка');
+        }
+      } else {
+        toast.error('Не знайдено у Wikipedia');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Помилка');
+    } finally {
+      setSavingWiki(null);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" title="Знайти пов'язані сутності">
+          <Link2 className="w-4 h-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[85vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Link2 className="w-5 h-5" />
+            Пов'язані з «{entity.name}»
+          </DialogTitle>
+        </DialogHeader>
+
+        <Tabs value={tab} onValueChange={handleTabChange}>
+          <TabsList className="w-full">
+            <TabsTrigger value="news" className="flex-1">
+              <Newspaper className="w-4 h-4 mr-1" /> Через спільні новини
+            </TabsTrigger>
+            <TabsTrigger value="wiki" className="flex-1">
+              <Globe className="w-4 h-4 mr-1" /> З Wikipedia
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="news">
+            <ScrollArea className="h-[400px]">
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                </div>
+              ) : relatedNews.length > 0 ? (
+                <div className="space-y-2">
+                  {relatedNews.map((r) => (
+                    <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/30">
+                      {r.image_url ? (
+                        <img src={r.image_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                          <Globe className="w-4 h-4" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{r.name_en || r.name}</p>
+                        <Badge variant="outline" className="text-[10px]">{r.entity_type}</Badge>
+                      </div>
+                      <Badge variant="secondary">{r.sharedNewsCount} спільних</Badge>
+                      {r.slug && (
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link to={`/wiki/${r.slug}`}><ExternalLink className="w-4 h-4" /></Link>
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Немає пов'язаних сутностей через спільні новини
+                </p>
+              )}
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="wiki">
+            <ScrollArea className="h-[400px]">
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                </div>
+              ) : wikiLinks.length > 0 ? (
+                <div className="space-y-1">
+                  {wikiLinks.map((l) => (
+                    <div key={l.title} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/30">
+                      <span className="flex-1 text-sm">{l.title}</span>
+                      {l.existsInDb ? (
+                        <Badge variant="secondary" className="text-[10px]">✓ в базі</Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleAddFromWiki(l.title)}
+                          disabled={savingWiki === l.title}
+                        >
+                          {savingWiki === l.title ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                        </Button>
+                      )}
+                      {l.slug && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                          <Link to={`/wiki/${l.slug}`}><ExternalLink className="w-3 h-3" /></Link>
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Немає посилань з Wikipedia
+                </p>
+              )}
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
@@ -362,6 +787,8 @@ export function WikiEntitiesPanel() {
     switch (type) {
       case 'person': return <User className="w-4 h-4" />;
       case 'company': return <Building2 className="w-4 h-4" />;
+      case 'country': return <MapPin className="w-4 h-4" />;
+      case 'place': return <MapPin className="w-4 h-4" />;
       default: return <Globe className="w-4 h-4" />;
     }
   };
@@ -386,6 +813,12 @@ export function WikiEntitiesPanel() {
   const withoutMentionsCount = (entities || []).filter(e => (mentionCounts[e.id] || 0) === 0).length;
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  const handleEntityAdded = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-wiki-entities'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-wiki-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-wiki-total'] });
+  };
 
   return (
     <Tabs defaultValue="entities" className="space-y-6">
@@ -443,12 +876,15 @@ export function WikiEntitiesPanel() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Wikipedia сутності</CardTitle>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/wiki">
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Публічний каталог
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <AddEntityDialog onAdded={handleEntityAdded} />
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/wiki">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Публічний каталог
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2 mb-4">
@@ -547,7 +983,7 @@ export function WikiEntitiesPanel() {
                     <TableHead className="text-center">Згадок</TableHead>
                     <TableHead className="text-center">Символів</TableHead>
                     <TableHead>Останній пошук</TableHead>
-                    <TableHead className="w-32"></TableHead>
+                    <TableHead className="w-40"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -604,6 +1040,7 @@ export function WikiEntitiesPanel() {
                       <TableCell>
                         <div className="flex gap-1">
                           <EntityNewsDialog entity={entity} />
+                          <RelatedEntitiesDialog entity={entity} />
                           <Button
                             variant="ghost"
                             size="icon"
@@ -623,7 +1060,7 @@ export function WikiEntitiesPanel() {
                             asChild
                             title="Сторінка сутності"
                           >
-                            <Link to={`/wiki/${entity.id}`}>
+                            <Link to={`/wiki/${entity.slug || entity.id}`}>
                               <ExternalLink className="w-4 h-4 text-primary" />
                             </Link>
                           </Button>
