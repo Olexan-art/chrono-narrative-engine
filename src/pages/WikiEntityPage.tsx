@@ -8,7 +8,8 @@ import {
   Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight,
   Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit,
   Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone, 
-  Swords, FolderOpen, Rss, BrainCircuit, ChevronDown, ChevronUp, Lightbulb
+  Swords, FolderOpen, Rss, BrainCircuit, ChevronDown, ChevronUp, Lightbulb,
+  Link2, Plus
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -166,6 +167,11 @@ export default function WikiEntityPage() {
   const [expandedNarrativeMonths, setExpandedNarrativeMonths] = useState<Set<string>>(new Set());
   const [expandedNarrativeDetails, setExpandedNarrativeDetails] = useState<Set<string>>(new Set());
   const [compareMonths, setCompareMonths] = useState<[string, string] | null>(null);
+  const [showRelatedDialog, setShowRelatedDialog] = useState(false);
+  const [relatedResults, setRelatedResults] = useState<any[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState<'news' | 'wiki' | null>(null);
+  const [addingEntityUrl, setAddingEntityUrl] = useState("");
+  const [addingEntity, setAddingEntity] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch entity data - support both slug and id
@@ -857,6 +863,74 @@ export default function WikiEntityPage() {
     setSelectedSections(newSet);
   };
 
+  // Find related entities via shared news
+  const findRelatedByNews = async () => {
+    if (!entity) return;
+    setRelatedLoading('news');
+    setRelatedResults([]);
+    try {
+      const result = await callEdgeFunction<any>('search-wiki', {
+        action: 'find_related_news',
+        entityId: entity.id,
+      });
+      setRelatedResults(result.related || []);
+      if (!result.related?.length) toast.info('Пов\'язаних сутностей не знайдено');
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setRelatedLoading(null);
+    }
+  };
+
+  // Find related entities via Wikipedia links
+  const findRelatedByWiki = async () => {
+    if (!entity) return;
+    setRelatedLoading('wiki');
+    setRelatedResults([]);
+    try {
+      const result = await callEdgeFunction<any>('search-wiki', {
+        action: 'find_related_wiki',
+        entityId: entity.id,
+        wikiUrl: entity.wiki_url,
+        language: language === 'uk' ? 'uk' : 'en',
+      });
+      setRelatedResults(result.related || []);
+      if (!result.related?.length) toast.info('Пов\'язаних сутностей не знайдено');
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setRelatedLoading(null);
+    }
+  };
+
+  // Add entity by Wikipedia URL
+  const addEntityByUrl = async () => {
+    if (!addingEntityUrl.trim() || !addingEntityUrl.includes('wikipedia.org')) {
+      toast.error('Введіть коректний URL Wikipedia');
+      return;
+    }
+    setAddingEntity(true);
+    try {
+      const result = await callEdgeFunction<any>('search-wiki', {
+        action: 'save_entity',
+        wikiUrl: addingEntityUrl.trim(),
+        language: language === 'uk' ? 'uk' : 'en',
+      });
+      if (result.success) {
+        toast.success('Сутність додано');
+        setAddingEntityUrl("");
+        // Re-search to refresh list
+        findRelatedByNews();
+      } else {
+        throw new Error(result.error || 'Failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setAddingEntity(false);
+    }
+  };
+
   const startEditingInfo = () => {
     if (!entity) return;
     setEditedName(language === 'en' && entity.name_en ? entity.name_en : entity.name);
@@ -1225,7 +1299,15 @@ export default function WikiEntityPage() {
                                 disabled={deleteMutation.isPending}
                                 title="Видалити"
                               >
-                                <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setShowRelatedDialog(true)}
+                                title={language === 'uk' ? 'Пов\'язані сутності' : 'Related entities'}
+                              >
+                                <Link2 className="w-4 h-4" />
                               </Button>
                             </div>
                           )}
@@ -2477,6 +2559,106 @@ export default function WikiEntityPage() {
                 )}
               </div>
             </>
+          )}
+        </DialogContent>
+      </Dialog>
+      {/* Related Entities Dialog */}
+      <Dialog open={showRelatedDialog} onOpenChange={setShowRelatedDialog}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="w-5 h-5" />
+              {language === 'uk' ? 'Пов\'язані сутності' : 'Related Entities'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'uk' ? 'Пошук сутностей через спільні новини або Wikipedia' : 'Find entities via shared news or Wikipedia'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex gap-2 mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={findRelatedByNews}
+              disabled={!!relatedLoading}
+            >
+              {relatedLoading === 'news' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Newspaper className="w-3 h-3 mr-1" />}
+              {language === 'uk' ? 'Через новини' : 'Via News'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={findRelatedByWiki}
+              disabled={!!relatedLoading}
+            >
+              {relatedLoading === 'wiki' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Globe className="w-3 h-3 mr-1" />}
+              {language === 'uk' ? 'Через Wikipedia' : 'Via Wikipedia'}
+            </Button>
+          </div>
+
+          {/* Add by URL */}
+          <div className="flex gap-2 mb-4">
+            <Input
+              value={addingEntityUrl}
+              onChange={(e) => setAddingEntityUrl(e.target.value)}
+              placeholder={language === 'uk' ? 'URL Wikipedia для додавання...' : 'Wikipedia URL to add...'}
+              className="h-8 text-xs"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={addEntityByUrl}
+              disabled={addingEntity}
+            >
+              {addingEntity ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+            </Button>
+          </div>
+
+          {/* Results */}
+          {relatedLoading && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {!relatedLoading && relatedResults.length > 0 && (
+            <div className="space-y-2">
+              {relatedResults.map((rel: any, i: number) => (
+                <Link
+                  key={rel.id || i}
+                  to={rel.slug ? `/wiki/${rel.slug}` : `/wiki/${rel.id}`}
+                  className="flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                  onClick={() => setShowRelatedDialog(false)}
+                >
+                  {rel.image_url ? (
+                    <img src={rel.image_url} alt={rel.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                      {rel.entity_type === 'person' ? <User className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{rel.name}</p>
+                    <p className="text-xs text-muted-foreground">{rel.entity_type}</p>
+                  </div>
+                  {rel.shared_news_count != null && (
+                    <Badge variant="secondary" className="text-xs">{rel.shared_news_count}</Badge>
+                  )}
+                  {rel.exists_in_db === false && (
+                    <Badge variant="outline" className="text-xs">new</Badge>
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {!relatedLoading && relatedResults.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">
+              {language === 'uk' ? 'Натисніть кнопку пошуку' : 'Click a search button'}
+            </p>
           )}
         </DialogContent>
       </Dialog>
