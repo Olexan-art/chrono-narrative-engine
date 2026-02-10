@@ -43,7 +43,7 @@ interface NewsWikiEntitiesProps {
   entityNarratives?: Record<string, any>;
 }
 
-export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = false }: NewsWikiEntitiesProps) {
+export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = false, entityNarratives = {} }: NewsWikiEntitiesProps) {
   const { language } = useLanguage();
   const queryClient = useQueryClient();
   const { isAuthenticated: isAdmin } = useAdminStore();
