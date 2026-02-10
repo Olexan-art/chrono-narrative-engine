@@ -119,6 +119,7 @@ export default function CountryNewsPage() {
           id, title, title_en, description, description_en, 
           content, content_en, content_hi, content_ta, content_te, content_bn,
           url, slug, image_url, category, published_at, chat_dialogue, tweets,
+          themes, themes_en,
           news_rss_feeds!inner(name)
         `)
         .eq('country_id', country.id)
