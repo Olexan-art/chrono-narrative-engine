@@ -18,6 +18,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { callEdgeFunction } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface WikiEntity {
   id: string;
