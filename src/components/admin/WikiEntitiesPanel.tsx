@@ -388,7 +388,23 @@ export function WikiEntitiesPanel() {
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
-    <div className="space-y-6">
+    <Tabs defaultValue="entities" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="entities">
+          <Globe className="w-4 h-4 mr-1" />
+          Сутності
+        </TabsTrigger>
+        <TabsTrigger value="narratives">
+          <BrainCircuit className="w-4 h-4 mr-1" />
+          Наративи
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="narratives">
+        <NarrativesAdminPanel />
+      </TabsContent>
+
+      <TabsContent value="entities" className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
