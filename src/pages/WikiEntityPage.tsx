@@ -1818,9 +1818,10 @@ export default function WikiEntityPage() {
                         entity_type: entity.entity_type,
                         shared_news_count: totalMentions,
                       }}
-                      relatedEntities={relatedEntities}
+                      relatedEntities={[...relatedEntities, ...wikiLinkedEntities.filter(w => !relatedEntities.some(r => r.id === w.id))]}
                       secondaryConnections={secondaryConnections}
                       feedSources={feedSources.slice(0, 6).map(f => ({ id: f.id, name: f.name, favicon: f.favicon }))}
+                      wikiLinkedIds={new Set(wikiLinkedEntities.map(w => w.id))}
                     />
                   ) : (
                     <EntityGhostlyGraph 
