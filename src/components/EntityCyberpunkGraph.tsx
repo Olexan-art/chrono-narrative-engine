@@ -89,7 +89,7 @@ export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryCon
   const size = 1000;
   const cx = size / 2;
   const cy = size / 2;
-  const ringRadii = [150, 260, 370, 460];
+  const ringRadii = [190, 300, 400, 470];
 
   const getPositionsOnRing = (count: number, radius: number, offsetAngle = 0) =>
     Array.from({ length: count }, (_, i) => {
