@@ -1875,11 +1875,29 @@ export default function WikiEntityPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                      <div className="space-y-1 max-h-64 overflow-y-auto">
                         {archiveEntries.slice(0, 24).map(([month, count]) => (
-                          <div key={month} className="flex justify-between text-xs py-1 border-b border-border/30 last:border-0">
+                          <div key={month} className="flex items-center justify-between text-xs py-1.5 border-b border-border/30 last:border-0 gap-1">
                             <span className="font-mono text-muted-foreground">{month}</span>
-                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{count}</Badge>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{count}</Badge>
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 px-1.5 text-[10px] gap-1 text-primary hover:text-primary"
+                                  onClick={() => analyzeNarratives(month)}
+                                  disabled={analyzingMonth === month}
+                                >
+                                  {analyzingMonth === month ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <BrainCircuit className="w-3 h-3" />
+                                  )}
+                                  {language === 'uk' ? 'Аналіз' : 'Analyze'}
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
