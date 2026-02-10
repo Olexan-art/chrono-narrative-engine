@@ -59,6 +59,15 @@ async function fetchTrendingEntities24h(): Promise<TrendingEntity[]> {
     }));
 }
 
+const getSentimentStyleHero = (sentiment: string, lang: string) => {
+  switch (sentiment) {
+    case 'positive': return { bg: 'bg-emerald-500/15', border: 'border-emerald-500/40', text: 'text-emerald-400', icon: '🟢', label: lang === 'uk' ? 'Позитивний' : 'Positive' };
+    case 'negative': return { bg: 'bg-red-500/15', border: 'border-red-500/40', text: 'text-red-400', icon: '🔴', label: lang === 'uk' ? 'Негативний' : 'Negative' };
+    case 'mixed': return { bg: 'bg-amber-500/15', border: 'border-amber-500/40', text: 'text-amber-400', icon: '🟡', label: lang === 'uk' ? 'Змішаний' : 'Mixed' };
+    default: return { bg: 'bg-blue-500/15', border: 'border-blue-500/40', text: 'text-blue-400', icon: '⚪', label: lang === 'uk' ? 'Нейтральний' : 'Neutral' };
+  }
+};
+
 export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
   const { language } = useLanguage();
 
