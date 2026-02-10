@@ -144,7 +144,7 @@ export function AdminTextSelectionPopover({ children, newsId, onEntityAdded }: A
           .from('news_wiki_entities')
           .upsert({
             news_item_id: newsId,
-            wiki_entity_id: item.id,
+            wiki_entity_id: entityId,
             match_term: selectedText,
             match_source: 'manual',
           }, { onConflict: 'news_item_id,wiki_entity_id' });
