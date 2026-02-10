@@ -63,7 +63,7 @@ function getOctagonPath(cx: number, cy: number, r: number): string {
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ') + 'Z';
 }
 
-export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryConnections = [], className }: Props) {
+export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryConnections = [], wikiLinkedIds, className }: Props) {
   const { language } = useLanguage();
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<RelatedEntity | MainEntityInfo | null>(null);
