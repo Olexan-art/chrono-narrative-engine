@@ -432,14 +432,14 @@ export function WikiEntitiesPanel() {
                 size="sm"
                 onClick={() => setMentionFilter('with')}
               >
-                Зі згадками
+                Зі згадками ({entities?.filter(e => (mentionCounts[e.id] || 0) > 0).length || 0})
               </Button>
               <Button
                 variant={mentionFilter === 'without' ? "default" : "outline"}
                 size="sm"
                 onClick={() => setMentionFilter('without')}
               >
-                Без згадок
+                Без згадок ({entities?.filter(e => (mentionCounts[e.id] || 0) === 0).length || 0})
               </Button>
             </div>
           </div>
