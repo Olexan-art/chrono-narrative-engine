@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { Loader2, Search, Globe, User, Building2, ExternalLink, Newspaper, Trash2, Sparkles, ChevronLeft, ChevronRight, CalendarDays, BrainCircuit } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { callEdgeFunction } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { NarrativesAdminPanel } from "./NarrativesAdminPanel";
 
 interface WikiEntity {
   id: string;
@@ -386,7 +388,23 @@ export function WikiEntitiesPanel() {
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
-    <div className="space-y-6">
+    <Tabs defaultValue="entities" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="entities">
+          <Globe className="w-4 h-4 mr-1" />
+          Сутності
+        </TabsTrigger>
+        <TabsTrigger value="narratives">
+          <BrainCircuit className="w-4 h-4 mr-1" />
+          Наративи
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="narratives">
+        <NarrativesAdminPanel />
+      </TabsContent>
+
+      <TabsContent value="entities" className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
@@ -669,6 +687,7 @@ export function WikiEntitiesPanel() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
