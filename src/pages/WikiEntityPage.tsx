@@ -9,7 +9,7 @@ import {
   Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit,
   Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone, 
   Swords, FolderOpen, Rss, BrainCircuit, ChevronDown, ChevronUp, Lightbulb,
-  Link2, Plus
+  Link2, Plus, HardDrive
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -173,6 +173,7 @@ export default function WikiEntityPage() {
   const [relatedLoading, setRelatedLoading] = useState<'news' | 'wiki' | null>(null);
   const [addingEntityUrl, setAddingEntityUrl] = useState("");
   const [addingEntity, setAddingEntity] = useState(false);
+  const [isCaching, setIsCaching] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch entity data - support both slug and id
@@ -593,6 +594,50 @@ export default function WikiEntityPage() {
     },
     enabled: !!entity?.id,
   });
+
+  // Fetch cache status for this entity page
+  const entitySlugForCache = entity?.slug || entity?.id;
+  const entityCachePath = `/wiki/${entitySlugForCache}`;
+  const { data: cacheStatus, refetch: refetchCacheStatus } = useQuery({
+    queryKey: ['entity-cache-status', entity?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cached_pages')
+        .select('updated_at, expires_at, html_size_bytes, generation_time_ms')
+        .eq('path', entityCachePath)
+        .maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!entity?.id && isAdmin,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const generateEntityCache = async () => {
+    if (!entity) return;
+    setIsCaching(true);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const adminPwd = useAdminStore.getState().password || '';
+      const url = `${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(entityCachePath)}&password=${encodeURIComponent(adminPwd)}`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success(language === 'uk' ? `HTML кеш створено (${result.timeMs}ms)` : `HTML cache generated (${result.timeMs}ms)`);
+        refetchCacheStatus();
+      } else {
+        toast.error(result.error || 'Cache generation failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsCaching(false);
+    }
+  };
 
   // Fetch secondary connections (connections between related entities)
   const { data: secondaryConnections = [] } = useQuery({
@@ -1345,6 +1390,22 @@ export default function WikiEntityPage() {
                               >
                                 <Link2 className="w-4 h-4" />
                               </Button>
+                              <Button
+                                variant={cacheStatus ? "secondary" : "outline"}
+                                size="icon"
+                                onClick={generateEntityCache}
+                                disabled={isCaching}
+                                title={cacheStatus 
+                                  ? `${language === 'uk' ? 'Перегенерувати HTML' : 'Regenerate HTML'} (${new Date(cacheStatus.updated_at).toLocaleDateString()})` 
+                                  : (language === 'uk' ? 'Створити HTML кеш' : 'Generate HTML cache')
+                                }
+                              >
+                                {isCaching ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <HardDrive className="w-4 h-4" />
+                                )}
+                              </Button>
                             </div>
                           )}
                         </div>
@@ -1359,6 +1420,14 @@ export default function WikiEntityPage() {
                             <div className="flex items-center gap-1 text-muted-foreground">
                               <ImageIcon className="w-4 h-4" />
                               <span>{caricatures.length} {language === 'uk' ? 'карикатур' : 'caricatures'}</span>
+                            </div>
+                          )}
+                          {isAdmin && cacheStatus && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <HardDrive className="w-3 h-3" />
+                              <span className="text-[11px]">
+                                HTML: {new Date(cacheStatus.updated_at).toLocaleString()} ({Math.round((cacheStatus.html_size_bytes || 0) / 1024)}KB)
+                              </span>
                             </div>
                           )}
                         </div>
