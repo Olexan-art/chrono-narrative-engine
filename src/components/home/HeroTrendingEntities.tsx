@@ -187,7 +187,7 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
             {idx === 0 && topNarrative?.analysis && (() => {
               const a = topNarrative.analysis as any;
               const sentiment = a.sentiment || 'neutral';
-              const sStyle = getSentimentStyle(sentiment, language);
+              const sStyle = getSentimentStyleHero(sentiment, language);
               return (
                 <div className="mx-2 -mt-1 p-2.5 rounded-b-lg border border-t-0 border-primary/20 bg-gradient-to-b from-primary/5 to-card/80 animate-in fade-in slide-in-from-top-1 duration-700">
                   <div className="flex items-center gap-2 mb-1.5">
