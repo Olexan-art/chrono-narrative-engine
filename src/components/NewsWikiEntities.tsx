@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Search, Sparkles, X, Pencil, Plus, Check, Link2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Loader2, Search, Sparkles, X, Pencil, Plus, Check, Link2, BrainCircuit } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
