@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock, Archive, Map, Search, Activity, ChartArea, Database, AlertTriangle, Building2, Flame, GitMerge } from "lucide-react";
+import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock, Archive, Map, Search, Activity, ChartArea, Database, AlertTriangle, Building2, Flame, GitMerge, Rss } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ import { ImagesManagementPanel } from "@/components/admin/ImagesManagementPanel"
 import { BulkScrapePanel } from "@/components/admin/BulkScrapePanel";
 import { ViralityPanel } from "@/components/admin/ViralityPanel";
 import { NewsMergePanel } from "@/components/admin/NewsMergePanel";
+import { RSSFeedPanel } from "@/components/admin/RSSFeedPanel";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -871,6 +872,10 @@ export default function AdminPage() {
               <GitMerge className="w-4 h-4 text-teal-500" />
               Дедуплікація
             </TabsTrigger>
+            <TabsTrigger value="rss-feed" className="gap-2">
+              <Rss className="w-4 h-4 text-orange-500" />
+              RSS Feed
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               Налаштування
@@ -979,6 +984,10 @@ export default function AdminPage() {
 
           <TabsContent value="merge-news" className="mt-6">
             <NewsMergePanel />
+          </TabsContent>
+
+          <TabsContent value="rss-feed" className="mt-6">
+            <RSSFeedPanel password={password} />
           </TabsContent>
         </Tabs>
       </main>
