@@ -167,6 +167,11 @@ export default function WikiEntityPage() {
   const [expandedNarrativeMonths, setExpandedNarrativeMonths] = useState<Set<string>>(new Set());
   const [expandedNarrativeDetails, setExpandedNarrativeDetails] = useState<Set<string>>(new Set());
   const [compareMonths, setCompareMonths] = useState<[string, string] | null>(null);
+  const [showRelatedDialog, setShowRelatedDialog] = useState(false);
+  const [relatedResults, setRelatedResults] = useState<any[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState<'news' | 'wiki' | null>(null);
+  const [addingEntityUrl, setAddingEntityUrl] = useState("");
+  const [addingEntity, setAddingEntity] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch entity data - support both slug and id
