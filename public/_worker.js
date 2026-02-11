@@ -189,29 +189,33 @@ export default {
       return env.ASSETS.fetch(request);
     }
     
-    // Check if this is a bot AND the path should be SSR'd
-    if (isBot(userAgent) && shouldSSR(pathname)) {
+    // Serve SSR HTML for ALL document requests on SSR-able paths.
+    // Reason: users with JS disabled are not bots, but still must receive correct canonical + full content.
+    const accept = request.headers.get('Accept') || '';
+    const secFetchDest = request.headers.get('Sec-Fetch-Dest') || '';
+    const isDocumentRequest = secFetchDest === 'document' || accept.includes('text/html');
+
+    if (isDocumentRequest && shouldSSR(pathname)) {
       try {
-        // Fetch pre-rendered HTML from SSR endpoint
         const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en`;
-        
+
         const ssrResponse = await fetch(ssrUrl, {
           headers: {
             'User-Agent': userAgent,
             'Accept': 'text/html',
           },
         });
-        
+
         if (ssrResponse.ok) {
           const html = await ssrResponse.text();
-          
+
           return new Response(html, {
             status: 200,
             headers: {
               'Content-Type': 'text/html; charset=utf-8',
               'Cache-Control': 'public, max-age=3600, s-maxage=86400',
-              'X-SSR-Bot': 'true',
-              'X-Bot-Detected': userAgent.substring(0, 100),
+              'X-SSR': 'true',
+              'X-SSR-Mode': isBot(userAgent) ? 'bot' : 'user',
             },
           });
         }
@@ -220,8 +224,8 @@ export default {
         // Fall through to serve SPA
       }
     }
-    
-    // Serve the normal SPA for humans or if SSR failed
+
+    // Serve the normal SPA for non-SSR paths or if SSR failed
     return env.ASSETS.fetch(request);
   },
 };
