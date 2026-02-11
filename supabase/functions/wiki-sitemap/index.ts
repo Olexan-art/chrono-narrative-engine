@@ -38,19 +38,7 @@ async function fetchAllRows<T>(
   return allRows;
 }
 
-function gzipCompress(data: Uint8Array): Uint8Array {
-  const cs = new CompressionStream("gzip");
-  const writer = cs.writable.getWriter();
-  writer.write(data);
-  writer.close();
-
-  const reader = cs.readable.getReader();
-  const chunks: Uint8Array[] = [];
-
-  // We need to read synchronously-ish via a manual promise chain
-  // But Deno supports ReadableStream, so let's use a different approach
-  return data; // Placeholder - we'll use streaming approach below
-}
+// gzip compression is done inline via CompressionStream below
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
