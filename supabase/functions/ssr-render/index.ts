@@ -889,11 +889,34 @@ Deno.serve(async (req) => {
       faqItems,
     });
 
+    // Save to cache for paths that benefit from caching (homepage: 30 min, others: 1 hour)
+    const cacheTtlMinutes = (path === "/" || path === "") ? 30 : 60;
+    const expiresAt = new Date(Date.now() + cacheTtlMinutes * 60 * 1000).toISOString();
+    
+    try {
+      await supabase
+        .from("cached_pages")
+        .upsert({
+          path,
+          html: fullHtml,
+          title,
+          description,
+          canonical_url: canonicalUrl,
+          expires_at: expiresAt,
+          generation_time_ms: Date.now() - startTime,
+          html_size_bytes: new TextEncoder().encode(fullHtml).length,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "path" });
+      console.log(`Cached ${path} (TTL: ${cacheTtlMinutes}min)`);
+    } catch (cacheErr) {
+      console.error("Cache save failed:", cacheErr);
+    }
+
     return new Response(fullHtml, {
       headers: {
         ...corsHeaders,
         "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "public, max-age=3600, s-maxage=86400",
+        "Cache-Control": `public, max-age=${cacheTtlMinutes * 60}, s-maxage=86400`,
         "X-Cache": "MISS",
       },
     });
