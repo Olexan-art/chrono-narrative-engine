@@ -103,37 +103,39 @@ export default function Index() {
       />
       <Header />
       
-      {/* Hero Section */}
-      <HeroSection />
-      
-      {/* Latest USA Retold News */}
-      <LatestUsaNews />
-      
-      {/* Latest USA News (simple, no retelling) */}
-      <LatestUsaNewsSimple />
-      
-      <Suspense fallback={<div className="min-h-[200px]" />}>
-        {/* Outrage Ink Section - above Trending */}
-        <OutrageInkSection />
+      <main>
+        {/* Hero Section */}
+        <HeroSection />
         
-        {/* Trending Wiki Entities (12h) */}
-        <TrendingWikiEntities />
+        {/* Latest USA Retold News */}
+        <LatestUsaNews />
         
-        {/* Latest Stories - Grid layout */}
-        <LatestStoriesSection parts={latestParts} />
+        {/* Latest USA News (simple, no retelling) */}
+        <LatestUsaNewsSimple />
         
-        {/* Structure Explainer */}
-        <StructureSection />
-        
-        {/* News by Country - 6 per country */}
-        <CountryNewsSection />
-        
-        {/* Chapters Section */}
-        <ChaptersSection chapters={allChapters} />
-        
-        {/* Infinite News Feed */}
-        <InfiniteNewsFeed />
-      </Suspense>
+        <Suspense fallback={<div className="min-h-[200px]" />}>
+          {/* Outrage Ink Section - above Trending */}
+          <OutrageInkSection />
+          
+          {/* Trending Wiki Entities (12h) */}
+          <TrendingWikiEntities />
+          
+          {/* Latest Stories - Grid layout */}
+          <LatestStoriesSection parts={latestParts} />
+          
+          {/* Structure Explainer */}
+          <StructureSection />
+          
+          {/* News by Country - 6 per country */}
+          <CountryNewsSection />
+          
+          {/* Chapters Section */}
+          <ChaptersSection chapters={allChapters} />
+          
+          {/* Infinite News Feed */}
+          <InfiniteNewsFeed />
+        </Suspense>
+      </main>
       
       {/* Footer */}
       <footer className="py-8 border-t border-border">
