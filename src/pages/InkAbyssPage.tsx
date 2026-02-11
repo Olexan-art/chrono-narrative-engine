@@ -121,7 +121,7 @@ export default function InkAbyssPage() {
       <SEOHead 
         title={pageTitle}
         description={pageDescription}
-        canonicalUrl="https://echoes2.com/ink-abyss"
+        canonicalUrl="https://bravennow.com/ink-abyss"
         keywords={['satire', 'caricature', 'political art', 'cartoon', 'news']}
       />
       <Header />

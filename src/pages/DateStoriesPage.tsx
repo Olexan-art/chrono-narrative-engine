@@ -78,12 +78,12 @@ export default function DateStoriesPage() {
       <SEOHead
         title={pageTitle}
         description={pageDescription}
-        canonicalUrl={`https://echoes2.com/date/${date}`}
+        canonicalUrl={`https://bravennow.com/date/${date}`}
         keywords={['stories', date || '', 'AI', 'science fiction']}
         breadcrumbs={[
-          { name: language === 'en' ? 'Home' : language === 'pl' ? 'Strona główna' : 'Головна', url: 'https://echoes2.com/' },
-          { name: language === 'en' ? 'Calendar' : language === 'pl' ? 'Kalendarz' : 'Календар', url: 'https://echoes2.com/calendar' },
-          { name: formattedDate, url: `https://echoes2.com/date/${date}` }
+          { name: language === 'en' ? 'Home' : language === 'pl' ? 'Strona główna' : 'Головна', url: 'https://bravennow.com/' },
+          { name: language === 'en' ? 'Calendar' : language === 'pl' ? 'Kalendarz' : 'Календар', url: 'https://bravennow.com/calendar' },
+          { name: formattedDate, url: `https://bravennow.com/date/${date}` }
         ]}
       />
       <Header />

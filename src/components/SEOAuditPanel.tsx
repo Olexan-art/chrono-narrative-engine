@@ -27,7 +27,7 @@ interface SEOIssue {
   autoFixable: boolean;
 }
 
-const BASE_URL = 'https://echoes2.com';
+const BASE_URL = 'https://bravennow.com';
 
 const SEO_RULES = {
   title: { min: 30, max: 60 },
@@ -64,7 +64,7 @@ export function SEOAuditPanel({ password }: { password: string }) {
     const results = { robots: false, sitemap: false, ssrRender: false, wikiSitemap: false, newsSitemap: false };
     
     const checks = [
-      fetch('https://echoes2.com/robots.txt').then(r => { results.robots = r.ok; }).catch(() => {}),
+      fetch('https://bravennow.com/robots.txt').then(r => { results.robots = r.ok; }).catch(() => {}),
       fetch('https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap').then(r => { results.sitemap = r.ok; }).catch(() => {}),
       fetch('https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render?path=/&lang=en').then(r => { results.ssrRender = r.ok; }).catch(() => {}),
       fetch('https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/wiki-sitemap').then(r => { results.wikiSitemap = r.ok; }).catch(() => {}),
@@ -397,7 +397,7 @@ export function SEOAuditPanel({ password }: { password: string }) {
       return callEdgeFunction<{ success: boolean; recommendations: string }>(
         'generate-dialogue',
         {
-          storyContext: `SEO Audit Report for echoes2.com:\n\nTotal Pages: ${seoData.stats.totalPages}\nAverage Score: ${seoData.stats.averageScore}%\nErrors: ${seoData.stats.errorCount}\nWarnings: ${seoData.stats.warningCount}\n\nTop Issues:\n${topIssues}\n\nCoverage:\nStories: ${seoData.coverage.stories.total} (${seoData.coverage.stories.withDesc} with desc)\nNews: ${seoData.coverage.news.total} (${seoData.coverage.news.withRetelling} retold)\nWiki: ${seoData.coverage.wiki.total} (${seoData.coverage.wiki.cached} cached)`,
+          storyContext: `SEO Audit Report for bravennow.com:\n\nTotal Pages: ${seoData.stats.totalPages}\nAverage Score: ${seoData.stats.averageScore}%\nErrors: ${seoData.stats.errorCount}\nWarnings: ${seoData.stats.warningCount}\n\nTop Issues:\n${topIssues}\n\nCoverage:\nStories: ${seoData.coverage.stories.total} (${seoData.coverage.stories.withDesc} with desc)\nNews: ${seoData.coverage.news.total} (${seoData.coverage.news.withRetelling} retold)\nWiki: ${seoData.coverage.wiki.total} (${seoData.coverage.wiki.cached} cached)`,
           newsContext: 'Generate SEO recommendations based on Google SEO Starter Guide best practices',
           generateTweets: false,
           messageCount: 1,
@@ -631,7 +631,7 @@ export function SEOAuditPanel({ password }: { password: string }) {
                   </div>
                 ))}
                 <a 
-                  href="https://echoes2.com/sitemap"
+                  href="https://bravennow.com/sitemap"
                   target="_blank" rel="noopener noreferrer"
                   className="text-primary hover:underline flex items-center gap-1 text-sm ml-auto"
                 >
@@ -865,7 +865,7 @@ export function SEOAuditPanel({ password }: { password: string }) {
             <CardContent>
               <div className="space-y-3">
                 {[
-                  { n: 1, title: 'Canonical URLs', desc: 'Всі сторінки мають canonical URL з доменом echoes2.com через react-helmet-async. Це запобігає дублюванню контенту.' },
+                  { n: 1, title: 'Canonical URLs', desc: 'Всі сторінки мають canonical URL з доменом bravennow.com через react-helmet-async. Це запобігає дублюванню контенту.' },
                   { n: 2, title: 'Meta Descriptions', desc: `Кожна сторінка повинна мати унікальний мета-опис ${SEO_RULES.description.min}-${SEO_RULES.description.max} символів. Використовуйте "Масове виправлення" для автогенерації.` },
                   { n: 3, title: 'Open Graph зображення', desc: 'Всі сторінки з контентом повинні мати OG зображення мінімум 1200x630px для коректного шарингу в соц. мережах.' },
                   { n: 4, title: 'Структуровані дані (JSON-LD)', desc: 'SEOHead автоматично генерує Organization, Article/WebSite та BreadcrumbList схеми для кращого розуміння контенту пошуковими системами.' },

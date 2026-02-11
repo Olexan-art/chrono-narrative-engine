@@ -79,7 +79,7 @@ export default function VolumesPage() {
       <SEOHead
         title={pageTitle}
         description={pageDescription}
-        canonicalUrl="https://echoes2.com/volumes"
+        canonicalUrl="https://bravennow.com/volumes"
         keywords={['volumes', 'monthly', 'archive', 'AI', 'science fiction', 'томи', 'архів']}
       />
       <Header />

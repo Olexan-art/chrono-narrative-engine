@@ -1183,7 +1183,7 @@ export default function WikiEntityPage() {
             .slice(0, 160)
             .trim()
         }
-        canonicalUrl={`https://echoes2.com/wiki/${entitySlug}`}
+        canonicalUrl={`https://bravennow.com/wiki/${entitySlug}`}
         image={entity.image_url || undefined}
         type="article"
         keywords={[
@@ -1193,9 +1193,9 @@ export default function WikiEntityPage() {
           ...(sortedTopics.slice(0, 3).map(([t]) => t)),
         ]}
         breadcrumbs={[
-          { name: 'Home', url: 'https://echoes2.com/' },
-          { name: 'Wiki', url: 'https://echoes2.com/wiki' },
-          { name, url: `https://echoes2.com/wiki/${entitySlug}` },
+          { name: 'Home', url: 'https://bravennow.com/' },
+          { name: 'Wiki', url: 'https://bravennow.com/wiki' },
+          { name, url: `https://bravennow.com/wiki/${entitySlug}` },
         ]}
         schemaType="NewsArticle"
         additionalSchemas={[
@@ -1204,11 +1204,11 @@ export default function WikiEntityPage() {
             '@type': entity.entity_type === 'person' ? 'Person' : 'Article',
             name,
             description: (extract || description || '').slice(0, 300),
-            url: `https://echoes2.com/wiki/${entitySlug}`,
+            url: `https://bravennow.com/wiki/${entitySlug}`,
             ...(entity.image_url ? { image: entity.image_url } : {}),
             mainEntityOfPage: {
               '@type': 'WebPage',
-              '@id': `https://echoes2.com/wiki/${entitySlug}`,
+              '@id': `https://bravennow.com/wiki/${entitySlug}`,
             },
             ...(entity.entity_type === 'person' ? {
               sameAs: entity.wiki_url ? [entity.wiki_url, entity.wiki_url_en].filter(Boolean) : [],

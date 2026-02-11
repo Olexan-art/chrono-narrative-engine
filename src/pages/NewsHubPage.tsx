@@ -137,7 +137,7 @@ export default function NewsHubPage() {
       <SEOHead
         title={pageTitle}
         description={pageDescription}
-        canonicalUrl="https://echoes2.com/news"
+        canonicalUrl="https://bravennow.com/news"
       />
       <Header />
       

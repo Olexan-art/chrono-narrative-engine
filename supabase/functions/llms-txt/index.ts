@@ -7,7 +7,7 @@ const corsHeaders = {
   "Cache-Control": "public, max-age=3600, s-maxage=7200",
 };
 
-const BASE_URL = "https://echoes2.com";
+const BASE_URL = "https://bravennow.com";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {

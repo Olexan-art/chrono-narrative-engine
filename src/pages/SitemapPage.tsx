@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SEOHead } from "@/components/SEOHead";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const BASE_URL = 'https://echoes2.com';
+const BASE_URL = 'https://bravennow.com';
 
 export default function SitemapPage() {
   const { language } = useLanguage();
@@ -319,7 +319,7 @@ export default function SitemapPage() {
             <p>
               For search engines: 
               <a 
-                href="https://echoes2.com/sitemap.xml" 
+                href="https://bravennow.com/sitemap.xml" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-primary hover:underline ml-1"

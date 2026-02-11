@@ -298,7 +298,7 @@ export function SitemapManagementPanel() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
             <FileText className="w-4 h-4" />
-            Закешовані XML файли (джерело для echoes2.com/api/*)
+            Закешовані XML файли (джерело для bravennow.com/api/*)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -381,19 +381,19 @@ export function SitemapManagementPanel() {
                 <span className="font-medium text-sm">Перевірка</span>
               </div>
               <div className="text-xs space-y-2">
-                <a href="https://echoes2.com/api/sitemap" target="_blank" rel="noopener noreferrer"
+                <a href="https://bravennow.com/api/sitemap" target="_blank" rel="noopener noreferrer"
                   className="text-primary hover:underline flex items-center gap-1">
                   /api/sitemap <ExternalLink className="w-3 h-3" />
                 </a>
-                <a href="https://echoes2.com/api/wiki-sitemap" target="_blank" rel="noopener noreferrer"
+                <a href="https://bravennow.com/api/wiki-sitemap" target="_blank" rel="noopener noreferrer"
                   className="text-primary hover:underline flex items-center gap-1">
                   /api/wiki-sitemap <ExternalLink className="w-3 h-3" />
                 </a>
-                <a href="https://echoes2.com/api/news-sitemap?country=us" target="_blank" rel="noopener noreferrer"
+                <a href="https://bravennow.com/api/news-sitemap?country=us" target="_blank" rel="noopener noreferrer"
                   className="text-primary hover:underline flex items-center gap-1">
                   /api/news-sitemap?country=us <ExternalLink className="w-3 h-3" />
                 </a>
-                <a href="https://echoes2.com/sitemap.xml" target="_blank" rel="noopener noreferrer"
+                <a href="https://bravennow.com/sitemap.xml" target="_blank" rel="noopener noreferrer"
                   className="text-primary hover:underline flex items-center gap-1">
                   /sitemap.xml <ExternalLink className="w-3 h-3" />
                 </a>
@@ -501,7 +501,7 @@ export function SitemapManagementPanel() {
                         </Button>
                         <Button variant="ghost" size="sm" asChild>
                           <a
-                            href={`https://echoes2.com/api/news-sitemap?country=${countryLower}`}
+                            href={`https://bravennow.com/api/news-sitemap?country=${countryLower}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
@@ -522,9 +522,9 @@ export function SitemapManagementPanel() {
       <Card>
         <CardContent className="pt-4">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <p>XML кешуються в базі та віддаються через Netlify Edge Function з echoes2.com/api/*</p>
+            <p>XML кешуються в базі та віддаються через Netlify Edge Function з bravennow.com/api/*</p>
             <a 
-              href="https://echoes2.com/sitemap.xml"
+              href="https://bravennow.com/sitemap.xml"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline flex items-center gap-1"

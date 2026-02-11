@@ -227,7 +227,7 @@ export default function PublicCalendarPage() {
       <SEOHead
         title={labels.pageTitle}
         description={pageDescription}
-        canonicalUrl="https://echoes2.com/media-calendar"
+        canonicalUrl="https://bravennow.com/media-calendar"
         keywords={['calendar', 'news', 'images', 'satire', 'календар', 'новини']}
       />
       <Header />

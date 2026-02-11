@@ -80,10 +80,10 @@ Disallow: /admin
 Disallow: /edit/
 
 # Resources - Single sitemap index contains all sitemaps
-Sitemap: https://echoes2.com/sitemap.xml
+Sitemap: https://bravennow.com/sitemap.xml
 
 # LLM-optimized documentation (dynamic)
-# See https://echoes2.com/llms.txt for AI-friendly site overview with latest content
+# See https://bravennow.com/llms.txt for AI-friendly site overview with latest content
 
 # SSR for crawlers
 # Use https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render?path=/read/2026-01-24/1&lang=en for pre-rendered content

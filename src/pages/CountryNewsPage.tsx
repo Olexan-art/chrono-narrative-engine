@@ -258,7 +258,7 @@ export default function CountryNewsPage() {
       <SEOHead
         title={pageTitle}
         description={pageDescription}
-        canonicalUrl={`https://echoes2.com/news/${countryCode?.toLowerCase()}`}
+        canonicalUrl={`https://bravennow.com/news/${countryCode?.toLowerCase()}`}
       />
       <Header />
       

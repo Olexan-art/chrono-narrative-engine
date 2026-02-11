@@ -183,7 +183,7 @@ export default function VolumePage() {
   const localizedTitle = getLocalizedTitle(volume);
   const localizedDescription = getLocalizedDescription(volume);
   const localizedSummary = getLocalizedSummary(volume);
-  const canonicalUrl = `https://echoes2.com/volume/${formatYearMonth(volume.year, volume.month)}`;
+  const canonicalUrl = `https://bravennow.com/volume/${formatYearMonth(volume.year, volume.month)}`;
 
   return (
     <div className="min-h-screen bg-background">

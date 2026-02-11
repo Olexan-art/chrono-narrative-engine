@@ -605,14 +605,14 @@ export default function NewsArticlePage() {
   };
 
   // Canonical URL
-  const canonicalUrl = `https://echoes2.com/news/${article.country.code.toLowerCase()}/${slug}`;
+  const canonicalUrl = `https://bravennow.com/news/${article.country.code.toLowerCase()}/${slug}`;
 
   // Breadcrumbs for SEO - structured path: News Digest > All Countries > Country > Article
   const allCountriesLabel = language === 'en' ? 'All Countries' : language === 'pl' ? 'Wszystkie kraje' : 'Усі країни';
   const breadcrumbs = [
-    { name: language === 'en' ? 'News Digest' : language === 'pl' ? 'Przegląd wiadomości' : 'Дайджест новин', url: 'https://echoes2.com/news' },
-    { name: allCountriesLabel, url: 'https://echoes2.com/news' },
-    { name: countryName, url: `https://echoes2.com/news/${article.country.code.toLowerCase()}` },
+    { name: language === 'en' ? 'News Digest' : language === 'pl' ? 'Przegląd wiadomości' : 'Дайджест новин', url: 'https://bravennow.com/news' },
+    { name: allCountriesLabel, url: 'https://bravennow.com/news' },
+    { name: countryName, url: `https://bravennow.com/news/${article.country.code.toLowerCase()}` },
     { name: getLocalizedField('title')?.slice(0, 50) || 'Article', url: canonicalUrl }
   ];
 

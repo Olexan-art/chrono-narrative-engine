@@ -231,18 +231,18 @@ export function RSSFeedPanel({ password }: Props) {
               Інтеграції
             </h4>
             <div className="flex flex-wrap gap-2">
-              <a href="https://validator.w3.org/feed/check.cgi?url=https%3A%2F%2Fechoes2.com%2Fapi%2Frss-feed" target="_blank" rel="noopener noreferrer">
+              <a href="https://validator.w3.org/feed/check.cgi?url=https%3A%2F%2Fbravennow.com%2Fapi%2Frss-feed" target="_blank" rel="noopener noreferrer">
                 <Badge variant="outline" className="cursor-pointer hover:bg-accent gap-1">
                   <CheckCircle2 className="w-3 h-3" />
                   W3C Validator
                 </Badge>
               </a>
-              <a href="https://www.google.com/search?q=site:echoes2.com+rss" target="_blank" rel="noopener noreferrer">
+              <a href="https://www.google.com/search?q=site:bravennow.com+rss" target="_blank" rel="noopener noreferrer">
                 <Badge variant="outline" className="cursor-pointer hover:bg-accent gap-1">
                   Google Index
                 </Badge>
               </a>
-              <a href="https://feedly.com/i/subscription/feed%2Fhttps%3A%2F%2Fechoes2.com%2Fapi%2Frss-feed" target="_blank" rel="noopener noreferrer">
+              <a href="https://feedly.com/i/subscription/feed%2Fhttps%3A%2F%2Fbravennow.com%2Fapi%2Frss-feed" target="_blank" rel="noopener noreferrer">
                 <Badge variant="outline" className="cursor-pointer hover:bg-accent gap-1">
                   Feedly Preview
                 </Badge>

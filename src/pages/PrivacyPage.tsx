@@ -52,7 +52,7 @@ export default function PrivacyPage() {
       <SEOHead 
         title={pageTitle}
         description={t('privacy.intro')}
-        canonicalUrl="https://echoes2.com/privacy"
+        canonicalUrl="https://bravennow.com/privacy"
       />
       <Header />
 

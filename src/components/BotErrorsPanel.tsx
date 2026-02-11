@@ -443,7 +443,7 @@ export function BotErrorsPanel({ password }: { password: string }) {
                           {error.path}
                         </code>
                         <a
-                          href={`https://echoes2.com${error.path}`}
+                          href={`https://bravennow.com${error.path}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-muted-foreground hover:text-primary"

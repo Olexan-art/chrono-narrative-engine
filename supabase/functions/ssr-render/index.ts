@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const BASE_URL = "https://echoes2.com";
+const BASE_URL = "https://bravennow.com";
 
 // Bot detection patterns
 const BOT_PATTERNS: Record<string, { type: string; category: string }> = {
@@ -940,7 +940,7 @@ function generateFullDocument(opts: {
   faqItems?: { question: string; answer: string }[];
 }) {
   const { title, description, image, canonicalUrl, lang, content, path, faqItems } = opts;
-  const BASE_URL = "https://echoes2.com";
+  const BASE_URL = "https://bravennow.com";
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -1159,7 +1159,7 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
 
   return `
     <article itemscope itemtype="https://schema.org/NewsArticle">
-      ${newsItem.image_url ? `<img src="${newsItem.image_url}" alt="${escapeHtml(title)}" itemprop="image">` : `<img src="https://echoes2.com/favicon.png" alt="${escapeHtml(title)}" itemprop="image" style="opacity:0.6;">`}
+      ${newsItem.image_url ? `<img src="${newsItem.image_url}" alt="${escapeHtml(title)}" itemprop="image">` : `<img src="https://bravennow.com/favicon.png" alt="${escapeHtml(title)}" itemprop="image" style="opacity:0.6;">`}
       
       <div class="meta">
         <time datetime="${newsItem.published_at || newsItem.created_at}" itemprop="datePublished">
@@ -1267,13 +1267,13 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
               const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
               return `
                 <li>
-                  ${typeIcon} <a href="https://echoes2.com/wiki/${eSlug}">${escapeHtml(eName)}</a>
+                  ${typeIcon} <a href="https://bravennow.com/wiki/${eSlug}">${escapeHtml(eName)}</a>
                   <span>(${e.shared_news_count} shared articles)</span>
                 </li>
               `;
             }).join("")}
           </ul>
-          <p><a href="https://echoes2.com/wiki/${mainEntityForGraph.slug || mainEntityForGraph.id}">View full profile →</a></p>
+          <p><a href="https://bravennow.com/wiki/${mainEntityForGraph.slug || mainEntityForGraph.id}">View full profile →</a></p>
         </section>
       ` : ""}
       
@@ -1295,7 +1295,7 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
         <h3>More from ${escapeHtml(countryName)}</h3>
         <ul>
           ${moreFromCountry.map(item => `
-            <li><a href="https://echoes2.com/news/${countryCode}/${item.slug}">${escapeHtml(item.title_en || item.title)}</a></li>
+            <li><a href="https://bravennow.com/news/${countryCode}/${item.slug}">${escapeHtml(item.title_en || item.title)}</a></li>
           `).join("")}
         </ul>
       </section>
@@ -1312,7 +1312,7 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
             <h4>${escapeHtml(flag)} ${escapeHtml(name)}</h4>
             <ul>
               ${items.map(item => `
-                <li><a href="https://echoes2.com/news/${code}/${item.slug}">${escapeHtml(item.title_en || item.title)}</a></li>
+                <li><a href="https://bravennow.com/news/${code}/${item.slug}">${escapeHtml(item.title_en || item.title)}</a></li>
               `).join("")}
             </ul>
           `;
@@ -1321,8 +1321,8 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
     ` : ""}
     
     <nav>
-      <a href="https://echoes2.com/news/${countryCode}">← Back to ${escapeHtml(countryName)} News</a> |
-      <a href="https://echoes2.com/news">All Countries</a>
+      <a href="https://bravennow.com/news/${countryCode}">← Back to ${escapeHtml(countryName)} News</a> |
+      <a href="https://bravennow.com/news">All Countries</a>
     </nav>
   `;
 }
@@ -1337,7 +1337,7 @@ function generateDateHTML(parts: any[], date: string, lang: string, canonicalUrl
     <ul>
       ${parts.map((part, index) => `
         <li>
-          <a href="https://echoes2.com/read/${date}/${index + 1}">
+          <a href="https://bravennow.com/read/${date}/${index + 1}">
             ${escapeHtml(part[titleField] || part.title)}
           </a>
           ${part.is_flash_news ? " ⚡" : ""}
@@ -1367,7 +1367,7 @@ function generateHomeHTML(
       ${parts.map((part, index) => `
         <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
           <meta itemprop="position" content="${index + 1}">
-          <a href="https://echoes2.com/read/${part.date}/${part.number}" itemprop="url">
+          <a href="https://bravennow.com/read/${part.date}/${part.number}" itemprop="url">
             <span itemprop="name">${escapeHtml(part[titleField] || part.title)}</span>
           </a>
           <span class="meta">${part.date}</span>
@@ -1382,7 +1382,7 @@ function generateHomeHTML(
         <ul>
           ${latestUsNews.map(item => `
             <li>
-              <a href="https://echoes2.com/news/${item.country?.code || 'us'}/${item.slug}">
+              <a href="https://bravennow.com/news/${item.country?.code || 'us'}/${item.slug}">
                 ${escapeHtml(item.title_en || item.title)}
               </a>
               <span class="meta"> - Full retelling</span>
@@ -1400,14 +1400,14 @@ function generateHomeHTML(
             const countryCode = (item.country as any)?.code?.toLowerCase() || 'us';
             return `
             <li>
-              <a href="https://echoes2.com/news/${countryCode}/${item.slug}">
+              <a href="https://bravennow.com/news/${countryCode}/${item.slug}">
                 ${escapeHtml(item.title_en || item.title)}
               </a>
               ${item.category ? ` <span class="category">[${escapeHtml(item.category)}]</span>` : ""}
             </li>
           `}).join("")}
         </ul>
-        <p><a href="https://echoes2.com/news">→ View all news</a></p>
+        <p><a href="https://bravennow.com/news">→ View all news</a></p>
       </section>
     ` : ""}
     
@@ -1428,7 +1428,7 @@ function generateHomeHTML(
                 <p style="font-size:0.8rem;margin:0.25rem 0;">Related news:</p>
                 <ul style="font-size:0.8rem;margin:0;">
                   ${item.news.map((n: any) => `
-                    <li><a href="https://echoes2.com/news/${n.countryCode}/${n.slug}">${escapeHtml(n.title_en || n.title)}</a></li>
+                    <li><a href="https://bravennow.com/news/${n.countryCode}/${n.slug}">${escapeHtml(n.title_en || n.title)}</a></li>
                   `).join("")}
                 </ul>
               ` : ""}
@@ -1456,7 +1456,7 @@ function generateHomeHTML(
                 <p style="font-size:0.8rem;margin:0.25rem 0;">Related news:</p>
                 <ul style="font-size:0.8rem;margin:0;">
                   ${item.news.map((n: any) => `
-                    <li><a href="https://echoes2.com/news/${n.countryCode}/${n.slug}">${escapeHtml(n.title_en || n.title)}</a></li>
+                    <li><a href="https://bravennow.com/news/${n.countryCode}/${n.slug}">${escapeHtml(n.title_en || n.title)}</a></li>
                   `).join("")}
                 </ul>
               ` : ""}
@@ -1473,7 +1473,7 @@ function generateHomeHTML(
         <ul>
           ${latestChapters.map(ch => `
             <li>
-              <a href="https://echoes2.com/chapter/${ch.number}">
+              <a href="https://bravennow.com/chapter/${ch.number}">
                 Chapter ${ch.number}: ${escapeHtml(ch[titleField] || ch.title)}
               </a>
             </li>
@@ -1488,11 +1488,11 @@ function generateHomeHTML(
         ${countryNewsMap.map(({ country, news }) => {
           if (!news || news.length === 0) return "";
           return `
-            <h3><a href="https://echoes2.com/news/${country.code}">${country.flag || ""} ${escapeHtml(country.name_en || country.name)}</a></h3>
+            <h3><a href="https://bravennow.com/news/${country.code}">${country.flag || ""} ${escapeHtml(country.name_en || country.name)}</a></h3>
             <ul>
               ${news.map(item => `
                 <li>
-                  <a href="https://echoes2.com/news/${item.country?.code || country.code}/${item.slug}">
+                  <a href="https://bravennow.com/news/${item.country?.code || country.code}/${item.slug}">
                     ${escapeHtml(item.title_en || item.title)}
                   </a>
                 </li>
@@ -1512,21 +1512,21 @@ function generateHomeHTML(
             const slug = e.slug || e.id;
             const typeIcon = e.entity_type === 'person' ? '👤' : '🏢';
             return `
-              <li>${typeIcon} <a href="https://echoes2.com/wiki/${slug}">${escapeHtml(name)}</a></li>
+              <li>${typeIcon} <a href="https://bravennow.com/wiki/${slug}">${escapeHtml(name)}</a></li>
             `;
           }).join("")}
         </ul>
-        <p><a href="https://echoes2.com/wiki">→ Browse all entities</a></p>
+        <p><a href="https://bravennow.com/wiki">→ Browse all entities</a></p>
       </section>
     ` : ""}
     
     <nav>
-      <a href="https://echoes2.com/news">📰 News</a> |
-      <a href="https://echoes2.com/wiki">🌐 Wiki</a> |
-      <a href="https://echoes2.com/ink-abyss">🎨 Ink Abyss</a> |
-      <a href="https://echoes2.com/calendar">📅 Calendar</a> |
-      <a href="https://echoes2.com/chapters">📚 Chapters</a> |
-      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+      <a href="https://bravennow.com/news">📰 News</a> |
+      <a href="https://bravennow.com/wiki">🌐 Wiki</a> |
+      <a href="https://bravennow.com/ink-abyss">🎨 Ink Abyss</a> |
+      <a href="https://bravennow.com/calendar">📅 Calendar</a> |
+      <a href="https://bravennow.com/chapters">📚 Chapters</a> |
+      <a href="https://bravennow.com/sitemap">🗺️ Sitemap</a>
     </nav>
   `;
 }
@@ -1557,7 +1557,7 @@ function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, c
         return `
           <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
             <meta itemprop="position" content="${index + 1}">
-            <a href="https://echoes2.com/news/${countryCode}/${slug}" itemprop="url">
+            <a href="https://bravennow.com/news/${countryCode}/${slug}" itemprop="url">
               <span itemprop="name">${escapeHtml(title)}</span>
             </a>
             ${date ? `<span class="meta"> - ${date}</span>` : ""}
@@ -1575,10 +1575,10 @@ function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, c
           const otherFlag = first?.country?.flag || "";
           const otherName = first?.country?.name_en || code;
           return `
-            <h4><a href="https://echoes2.com/news/${code}">${escapeHtml(otherFlag)} ${escapeHtml(otherName)}</a></h4>
+            <h4><a href="https://bravennow.com/news/${code}">${escapeHtml(otherFlag)} ${escapeHtml(otherName)}</a></h4>
             <ul>
               ${items.map(item => `
-                <li><a href="https://echoes2.com/news/${code}/${item.slug}">${escapeHtml(item.title_en || item.title)}</a></li>
+                <li><a href="https://bravennow.com/news/${code}/${item.slug}">${escapeHtml(item.title_en || item.title)}</a></li>
               `).join("")}
             </ul>
           `;
@@ -1587,11 +1587,11 @@ function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, c
     ` : ""}
     
     <nav>
-      <a href="https://echoes2.com/news">← All Countries</a> |
-      <a href="https://echoes2.com/news/us">🇺🇸 USA</a> |
-      <a href="https://echoes2.com/news/ua">🇺🇦 Ukraine</a> |
-      <a href="https://echoes2.com/news/pl">🇵🇱 Poland</a> |
-      <a href="https://echoes2.com/news/in">🇮🇳 India</a>
+      <a href="https://bravennow.com/news">← All Countries</a> |
+      <a href="https://bravennow.com/news/us">🇺🇸 USA</a> |
+      <a href="https://bravennow.com/news/ua">🇺🇦 Ukraine</a> |
+      <a href="https://bravennow.com/news/pl">🇵🇱 Poland</a> |
+      <a href="https://bravennow.com/news/in">🇮🇳 India</a>
     </nav>
   `;
 }
@@ -1608,13 +1608,13 @@ function generateNewsHubHTML(countries: any[], lang: string) {
         const code = c.code;
         const flag = c.flag || "";
         const name = c[nameField] || c.name_en || c.name || code;
-        return `<li><a href="https://echoes2.com/news/${escapeHtml(code)}">${escapeHtml(flag)} ${escapeHtml(name)}</a></li>`;
+        return `<li><a href="https://bravennow.com/news/${escapeHtml(code)}">${escapeHtml(flag)} ${escapeHtml(name)}</a></li>`;
       }).join("")}
     </ul>
 
     <nav>
-      <a href="https://echoes2.com/">← Home</a> |
-      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+      <a href="https://bravennow.com/">← Home</a> |
+      <a href="https://bravennow.com/sitemap">🗺️ Sitemap</a>
     </nav>
   `;
 }
@@ -1629,14 +1629,14 @@ function generateChaptersIndexHTML(chapters: any[], lang: string) {
     <ul>
       ${chapters.map((ch) => {
         const title = ch[titleField] || ch.title;
-        return `<li><a href="https://echoes2.com/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(title)}</a></li>`;
+        return `<li><a href="https://bravennow.com/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(title)}</a></li>`;
       }).join("")}
     </ul>
 
     <nav>
-      <a href="https://echoes2.com/">← Home</a> |
-      <a href="https://echoes2.com/volumes">📖 Volumes</a> |
-      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+      <a href="https://bravennow.com/">← Home</a> |
+      <a href="https://bravennow.com/volumes">📖 Volumes</a> |
+      <a href="https://bravennow.com/sitemap">🗺️ Sitemap</a>
     </nav>
   `;
 }
@@ -1653,14 +1653,14 @@ function generateVolumesIndexHTML(volumes: any[], lang: string) {
         const monthStr = String(v.month).padStart(2, "0");
         const yearMonth = `${v.year}-${monthStr}`;
         const title = v[titleField] || v.title || yearMonth;
-        return `<li><a href="https://echoes2.com/volume/${yearMonth}">${escapeHtml(title)} (${yearMonth})</a></li>`;
+        return `<li><a href="https://bravennow.com/volume/${yearMonth}">${escapeHtml(title)} (${yearMonth})</a></li>`;
       }).join("")}
     </ul>
 
     <nav>
-      <a href="https://echoes2.com/">← Home</a> |
-      <a href="https://echoes2.com/chapters">📚 Chapters</a> |
-      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+      <a href="https://bravennow.com/">← Home</a> |
+      <a href="https://bravennow.com/chapters">📚 Chapters</a> |
+      <a href="https://bravennow.com/sitemap">🗺️ Sitemap</a>
     </nav>
   `;
 }
@@ -1680,13 +1680,13 @@ function generateVolumeHTML(volume: any, chapters: any[], lang: string) {
     <ul>
       ${chapters.map((ch) => {
         const chTitle = ch[titleField] || ch.title;
-        return `<li><a href="https://echoes2.com/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(chTitle)}</a></li>`;
+        return `<li><a href="https://bravennow.com/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(chTitle)}</a></li>`;
       }).join("")}
     </ul>
 
     <nav>
-      <a href="https://echoes2.com/volumes">← Volumes</a> |
-      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+      <a href="https://bravennow.com/volumes">← Volumes</a> |
+      <a href="https://bravennow.com/sitemap">🗺️ Sitemap</a>
     </nav>
   `;
 }
@@ -1699,13 +1699,13 @@ function generateCalendarIndexHTML(dates: string[], lang: string) {
     <ul>
       ${dates.map((d) => {
         const date = escapeHtml(d);
-        return `<li><a href="https://echoes2.com/date/${date}">${date}</a> | <a href="https://echoes2.com/read/${date}">/read/${date}</a></li>`;
+        return `<li><a href="https://bravennow.com/date/${date}">${date}</a> | <a href="https://bravennow.com/read/${date}">/read/${date}</a></li>`;
       }).join("")}
     </ul>
 
     <nav>
-      <a href="https://echoes2.com/">← Home</a> |
-      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+      <a href="https://bravennow.com/">← Home</a> |
+      <a href="https://bravennow.com/sitemap">🗺️ Sitemap</a>
     </nav>
   `;
 }
@@ -1726,16 +1726,16 @@ function generateSitemapHTML(
   return `
     <h2>HTML Sitemap</h2>
     <p>
-      Full XML sitemap: <a href="https://echoes2.com/sitemap.xml">sitemap.xml</a>
+      Full XML sitemap: <a href="https://bravennow.com/sitemap.xml">sitemap.xml</a>
     </p>
 
     <h3>Sections</h3>
     <ul>
-      <li><a href="https://echoes2.com/">Home</a></li>
-      <li><a href="https://echoes2.com/news">News</a></li>
-      <li><a href="https://echoes2.com/calendar">Calendar</a></li>
-      <li><a href="https://echoes2.com/chapters">Chapters</a></li>
-      <li><a href="https://echoes2.com/volumes">Volumes</a></li>
+      <li><a href="https://bravennow.com/">Home</a></li>
+      <li><a href="https://bravennow.com/news">News</a></li>
+      <li><a href="https://bravennow.com/calendar">Calendar</a></li>
+      <li><a href="https://bravennow.com/chapters">Chapters</a></li>
+      <li><a href="https://bravennow.com/volumes">Volumes</a></li>
     </ul>
 
     <h3>Countries</h3>
@@ -1744,7 +1744,7 @@ function generateSitemapHTML(
         const code = c.code;
         const flag = c.flag || "";
         const name = c[nameField] || c.name_en || c.name || code;
-        return `<li><a href="https://echoes2.com/news/${escapeHtml(code)}">${escapeHtml(flag)} ${escapeHtml(name)}</a></li>`;
+        return `<li><a href="https://bravennow.com/news/${escapeHtml(code)}">${escapeHtml(flag)} ${escapeHtml(name)}</a></li>`;
       }).join("")}
     </ul>
 
@@ -1754,7 +1754,7 @@ function generateSitemapHTML(
         const monthStr = String(v.month).padStart(2, "0");
         const yearMonth = `${v.year}-${monthStr}`;
         const title = v[titleField] || v.title || yearMonth;
-        return `<li><a href="https://echoes2.com/volume/${yearMonth}">${escapeHtml(title)}</a></li>`;
+        return `<li><a href="https://bravennow.com/volume/${yearMonth}">${escapeHtml(title)}</a></li>`;
       }).join("")}
     </ul>
 
@@ -1762,21 +1762,21 @@ function generateSitemapHTML(
     <ul>
       ${data.chapters.map((ch) => {
         const title = ch[titleField] || ch.title;
-        return `<li><a href="https://echoes2.com/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(title)}</a></li>`;
+        return `<li><a href="https://bravennow.com/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(title)}</a></li>`;
       }).join("")}
     </ul>
 
     <h3>Dates (recent)</h3>
     <ul>
-      ${data.dates.map((d) => `<li><a href="https://echoes2.com/date/${escapeHtml(d)}">${escapeHtml(d)}</a></li>`).join("")}
+      ${data.dates.map((d) => `<li><a href="https://bravennow.com/date/${escapeHtml(d)}">${escapeHtml(d)}</a></li>`).join("")}
     </ul>
 
     <h3>Stories (latest 1000)</h3>
-    <p>For full coverage, use <a href="https://echoes2.com/sitemap.xml">sitemap.xml</a>.</p>
+    <p>For full coverage, use <a href="https://bravennow.com/sitemap.xml">sitemap.xml</a>.</p>
     <ul>
       ${data.stories.map((p) => {
         const t = p[titleField] || p.title;
-        return `<li><a href="https://echoes2.com/read/${escapeHtml(p.date)}/${p.number}">${escapeHtml(t)}</a></li>`;
+        return `<li><a href="https://bravennow.com/read/${escapeHtml(p.date)}/${p.number}">${escapeHtml(t)}</a></li>`;
       }).join("")}
     </ul>
   `;
@@ -1805,7 +1805,7 @@ function generateInkAbyssHTML(items: any[], lang: string) {
             const newsTitle = item.news_item?.[titleField] || item.news_item?.title || item.title || 'Satirical artwork';
             const countryCode = item.news_item?.country?.code?.toLowerCase() || 'us';
             const newsLink = item.news_item?.slug 
-              ? `https://echoes2.com/news/${countryCode}/${item.news_item.slug}`
+              ? `https://bravennow.com/news/${countryCode}/${item.news_item.slug}`
               : null;
             return `
               <li>
@@ -1820,9 +1820,9 @@ function generateInkAbyssHTML(items: any[], lang: string) {
     `).join("")}
     
     <nav>
-      <a href="https://echoes2.com/">← Home</a> |
-      <a href="https://echoes2.com/news">📰 News</a> |
-      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+      <a href="https://bravennow.com/">← Home</a> |
+      <a href="https://bravennow.com/news">📰 News</a> |
+      <a href="https://bravennow.com/sitemap">🗺️ Sitemap</a>
     </nav>
   `;
 }
@@ -1993,7 +1993,7 @@ function generateWikiCatalogHTML(entities: any[], lang: string) {
           const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
           return `
             <li>
-              <a href="https://echoes2.com/wiki/${slug}">
+              <a href="https://bravennow.com/wiki/${slug}">
                 ${typeIcon} ${escapeHtml(name)}
               </a>
               ${desc ? `<span> - ${escapeHtml(desc.substring(0, 100))}${desc.length > 100 ? '...' : ''}</span>` : ''}
@@ -2004,9 +2004,9 @@ function generateWikiCatalogHTML(entities: any[], lang: string) {
     </section>
     
     <nav>
-      <a href="https://echoes2.com/">← Home</a> |
-      <a href="https://echoes2.com/news">📰 News</a> |
-      <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
+      <a href="https://bravennow.com/">← Home</a> |
+      <a href="https://bravennow.com/news">📰 News</a> |
+      <a href="https://bravennow.com/sitemap">🗺️ Sitemap</a>
     </nav>
   `;
 }

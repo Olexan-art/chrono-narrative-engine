@@ -177,7 +177,7 @@ export default function ReadPage() {
 
   // Build canonical URL
   const storyNum = storyNumber || '1';
-  const baseUrl = 'https://echoes2.com';
+  const baseUrl = 'https://bravennow.com';
   const canonicalUrl = `${baseUrl}/read/${date}/${storyNum}`;
 
   // Build breadcrumbs for SEO

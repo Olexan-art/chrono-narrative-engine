@@ -82,7 +82,7 @@ export default function CalendarPage() {
       <SEOHead
         title={pageTitle}
         description={pageDescription}
-        canonicalUrl="https://echoes2.com/calendar"
+        canonicalUrl="https://bravennow.com/calendar"
         keywords={['calendar', 'daily', 'stories', 'AI', 'science fiction', 'календар', 'історії']}
       />
       <Header />

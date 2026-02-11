@@ -136,13 +136,13 @@ export function WikiCatalogSeoContent() {
     '@type': 'CollectionPage',
     name: content.mainTitle,
     description: content.mainDescription,
-    url: 'https://echoes2.com/wiki',
-    isPartOf: { '@type': 'WebSite', name: 'Echoes', url: 'https://echoes2.com' },
+    url: 'https://bravennow.com/wiki',
+    isPartOf: { '@type': 'WebSite', name: 'Echoes', url: 'https://bravennow.com' },
     breadcrumb: {
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: language === 'uk' ? 'Головна' : 'Home', item: 'https://echoes2.com/' },
-        { '@type': 'ListItem', position: 2, name: content.mainTitle, item: 'https://echoes2.com/wiki' },
+        { '@type': 'ListItem', position: 1, name: language === 'uk' ? 'Головна' : 'Home', item: 'https://bravennow.com/' },
+        { '@type': 'ListItem', position: 2, name: content.mainTitle, item: 'https://bravennow.com/wiki' },
       ],
     },
     about: [

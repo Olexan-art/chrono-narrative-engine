@@ -225,10 +225,10 @@ export default function ChapterPage() {
     .trim()
     .substring(0, 600);
 
-  const canonicalUrl = `https://echoes2.com/chapter/${chapter.number}`;
+  const canonicalUrl = `https://bravennow.com/chapter/${chapter.number}`;
   const volumeUrl = chapter.volume 
-    ? `https://echoes2.com/volume/${(chapter.volume as any).year}-${String((chapter.volume as any).month).padStart(2, '0')}`
-    : `https://echoes2.com/volumes`;
+    ? `https://bravennow.com/volume/${(chapter.volume as any).year}-${String((chapter.volume as any).month).padStart(2, '0')}`
+    : `https://bravennow.com/volumes`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -241,7 +241,7 @@ export default function ChapterPage() {
         publishedAt={chapter.created_at || undefined}
         keywords={chapter.seo_keywords || ['AI', 'science fiction', 'chapter', 'narrative']}
         breadcrumbs={[
-          { name: language === 'en' ? 'Home' : language === 'pl' ? 'Strona główna' : 'Головна', url: 'https://echoes2.com/' },
+          { name: language === 'en' ? 'Home' : language === 'pl' ? 'Strona główna' : 'Головна', url: 'https://bravennow.com/' },
           { name: chapter.volume ? (chapter.volume as any).title : '', url: volumeUrl },
           { name: localizedTitle, url: canonicalUrl }
         ]}

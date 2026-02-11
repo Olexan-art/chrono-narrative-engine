@@ -87,7 +87,7 @@ export default function ChaptersPage() {
       <SEOHead
         title={pageTitle}
         description={pageDescription}
-        canonicalUrl="https://echoes2.com/chapters"
+        canonicalUrl="https://bravennow.com/chapters"
         keywords={['chapters', 'weekly', 'narrative', 'AI', 'science fiction', 'глави', 'тиждень']}
       />
       <Header />

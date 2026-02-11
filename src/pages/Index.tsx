@@ -98,7 +98,7 @@ export default function Index() {
       <SEOHead 
         title={pageTitle}
         description={pageDescription}
-        canonicalUrl="https://echoes2.com/"
+        canonicalUrl="https://bravennow.com/"
         keywords={['AI', 'science fiction', 'news', 'narrative', 'Ukraine', 'наукова фантастика', 'новини', 'ШІ']}
       />
       <Header />

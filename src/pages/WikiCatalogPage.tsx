@@ -184,20 +184,20 @@ export default function WikiCatalogPage() {
       <SEOHead
         title={`${t.title} | Echoes`}
         description={t.description}
-        canonicalUrl="https://echoes2.com/wiki"
+        canonicalUrl="https://bravennow.com/wiki"
         breadcrumbs={[
           {
             name: language === 'uk' ? 'Головна' : 'Home',
-            url: 'https://echoes2.com/',
+            url: 'https://bravennow.com/',
           },
           {
             name: t.title,
-            url: 'https://echoes2.com/wiki',
+            url: 'https://bravennow.com/wiki',
           },
         ]}
         schemaType="CollectionPage"
         schemaExtra={{
-          url: 'https://echoes2.com/wiki',
+          url: 'https://bravennow.com/wiki',
           mainEntity: {
             '@type': 'ItemList',
             name: t.title,
