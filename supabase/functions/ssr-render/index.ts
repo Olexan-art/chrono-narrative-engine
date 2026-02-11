@@ -866,7 +866,15 @@ Deno.serve(async (req) => {
         news: countryNewsResults[i]?.data || []
       }));
 
-      html = generateHomeHTML(latestParts || [], lang, canonicalUrl, latestUsNews || [], latestChapters || [], countryNewsMap, latestNewsProportional, trendingEntities24h, trendingEntitiesWeek);
+      // Fetch top wiki entities for direct links
+      const { data: topWikiEntities } = await supabase
+        .from("wiki_entities")
+        .select("id, slug, name, name_en, entity_type, image_url")
+        .not("slug", "is", null)
+        .order("search_count", { ascending: false })
+        .limit(20);
+
+      html = generateHomeHTML(latestParts || [], lang, canonicalUrl, latestUsNews || [], latestChapters || [], countryNewsMap, latestNewsProportional, trendingEntities24h, trendingEntitiesWeek, topWikiEntities || []);
     }
 
     // Generate full HTML document
