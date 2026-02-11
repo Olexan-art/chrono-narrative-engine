@@ -15,25 +15,47 @@ interface OptimizedImageProps {
   fallbackSrc?: string;
 }
 
-// Generate Cloudflare-compatible image URL with optimizations
-function getOptimizedUrl(src: string, width?: number): string {
-  // If it's already a Supabase storage URL, use their transformations
-  if (src.includes('supabase.co/storage')) {
-    const url = new URL(src);
+// Generate optimized image URL
+export function getOptimizedUrl(src: string, width?: number): string {
+  // If it's a Supabase storage URL, use render/image endpoint for transformations
+  if (src.includes('supabase.co/storage/v1/object/public/')) {
+    const transformed = src.replace(
+      '/storage/v1/object/public/',
+      '/storage/v1/render/image/public/'
+    );
+    const url = new URL(transformed);
     if (width) {
       url.searchParams.set('width', String(width));
     }
-    url.searchParams.set('quality', '80');
+    url.searchParams.set('quality', '75');
+    url.searchParams.set('format', 'origin');
     return url.toString();
   }
-  
-  // For external images, we can't optimize them
+
+  // For Wikipedia images, request smaller thumbnails via thumb URL
+  if (src.includes('upload.wikimedia.org/wikipedia/commons/') && width) {
+    // Already a thumb URL - replace size
+    const thumbMatch = src.match(/\/thumb\/(.+?)\/(\d+)px-/);
+    if (thumbMatch) {
+      return src.replace(/\/(\d+)px-/, `/${width}px-`);
+    }
+    // Full-size URL - convert to thumb
+    const fullMatch = src.match(/\/commons\/(.+)/);
+    if (fullMatch) {
+      const filename = fullMatch[1].split('/').pop();
+      return src.replace(
+        `/commons/${fullMatch[1]}`,
+        `/commons/thumb/${fullMatch[1]}/${width}px-${filename}`
+      );
+    }
+  }
+
   return src;
 }
 
 // Calculate responsive srcset
 function getSrcSet(src: string): string {
-  if (!src || src.includes('supabase.co/storage') === false) {
+  if (!src || (!src.includes('supabase.co/storage') && !src.includes('upload.wikimedia.org'))) {
     return '';
   }
   

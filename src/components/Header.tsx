@@ -14,7 +14,7 @@ export function Header() {
       <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 md:gap-3 group">
           <div className="w-8 h-8 md:w-10 md:h-10 rounded overflow-hidden border border-primary/30 group-hover:border-primary transition-all">
-            <img src="/favicon.png" alt="SP" className="w-full h-full object-cover" />
+            <img src="/favicon.png" alt="SP" className="w-full h-full object-cover" width={40} height={40} />
           </div>
           <div>
             <h1 className="font-sans font-bold text-base md:text-lg tracking-tight text-foreground">
