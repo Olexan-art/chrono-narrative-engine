@@ -1222,14 +1222,17 @@ export default function WikiEntityPage() {
         
         <main className="container mx-auto px-4 py-8">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
+            <Link to="/" className="hover:text-foreground">
+              {language === 'uk' ? 'Головна' : 'Home'}
+            </Link>
+            <span>/</span>
             <Link to="/wiki" className="hover:text-foreground flex items-center gap-1">
-              <ArrowLeft className="w-4 h-4" />
               {language === 'uk' ? 'Каталог сутностей' : 'Entity Catalog'}
             </Link>
             <span>/</span>
-            <span className="text-foreground">{name}</span>
-          </div>
+            <span className="text-foreground" aria-current="page">{name}</span>
+          </nav>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Column */}
