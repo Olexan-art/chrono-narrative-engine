@@ -17,7 +17,7 @@ export default function SitemapPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['html-sitemap'],
     queryFn: async () => {
-      const [partsResult, chaptersResult, volumesResult, countriesResult, newsResult] = await Promise.all([
+      const [partsResult, chaptersResult, volumesResult, countriesResult, newsResult, wikiResult] = await Promise.all([
         supabase
           .from('parts')
           .select('date, title, title_en, number')
@@ -42,7 +42,12 @@ export default function SitemapPage() {
           .select('slug, title, title_en, country_id')
           .not('slug', 'is', null)
           .order('fetched_at', { ascending: false })
-          .limit(100)
+          .limit(100),
+        supabase
+          .from('wiki_entities')
+          .select('id, slug, name, name_en, entity_type, search_count')
+          .order('search_count', { ascending: false })
+          .limit(200)
       ]);
 
       // Group news by country
@@ -65,7 +70,8 @@ export default function SitemapPage() {
         chapters: chaptersResult.data || [],
         volumes: volumesResult.data || [],
         countries: countriesResult.data || [],
-        newsByCountry
+        newsByCountry,
+        wikiEntities: wikiResult.data || []
       };
     }
   });
@@ -201,6 +207,36 @@ export default function SitemapPage() {
                   );
                 })}
               </ul>
+            </section>
+
+            {/* Wiki Entities */}
+            <section className="bg-card border border-border rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                Wiki Entities ({data?.wikiEntities.length || 0})
+              </h2>
+              <ul className="space-y-2 columns-2 md:columns-3 max-h-[400px] overflow-y-auto">
+                {data?.wikiEntities.map(entity => (
+                  <li key={entity.id} className="flex items-center gap-2 break-inside-avoid">
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <Link 
+                      to={`/wiki/${entity.slug || entity.id}`} 
+                      className="text-primary hover:underline truncate"
+                    >
+                      {language === 'en' && entity.name_en ? entity.name_en : entity.name}
+                    </Link>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      ({entity.entity_type})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <Link 
+                to="/wiki" 
+                className="text-sm text-muted-foreground hover:text-primary mt-4 inline-block"
+              >
+                View all entities →
+              </Link>
             </section>
 
             {/* News Countries Hub */}
