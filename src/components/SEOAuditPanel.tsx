@@ -65,10 +65,10 @@ export function SEOAuditPanel({ password }: { password: string }) {
     
     const checks = [
       fetch('https://bravennow.com/robots.txt').then(r => { results.robots = r.ok; }).catch(() => {}),
-      fetch('https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap').then(r => { results.sitemap = r.ok; }).catch(() => {}),
-      fetch('https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render?path=/&lang=en').then(r => { results.ssrRender = r.ok; }).catch(() => {}),
-      fetch('https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/wiki-sitemap').then(r => { results.wikiSitemap = r.ok; }).catch(() => {}),
-      fetch('https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap?country=us').then(r => { results.newsSitemap = r.ok; }).catch(() => {}),
+      fetch('https://tuledxqigzufkecztnlo.supabase.co/functions/v1/sitemap').then(r => { results.sitemap = r.ok; }).catch(() => {}),
+      fetch('https://tuledxqigzufkecztnlo.supabase.co/functions/v1/ssr-render?path=/&lang=en').then(r => { results.ssrRender = r.ok; }).catch(() => {}),
+      fetch('https://tuledxqigzufkecztnlo.supabase.co/functions/v1/wiki-sitemap').then(r => { results.wikiSitemap = r.ok; }).catch(() => {}),
+      fetch('https://tuledxqigzufkecztnlo.supabase.co/functions/v1/news-sitemap?country=us').then(r => { results.newsSitemap = r.ok; }).catch(() => {}),
     ];
     
     await Promise.all(checks);

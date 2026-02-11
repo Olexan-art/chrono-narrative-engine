@@ -772,14 +772,25 @@ export default function AdminPage() {
 
         <Tabs defaultValue="dashboard" className="mt-8">
           <TabsList className="flex flex-wrap gap-1 h-auto py-2">
+            {/* Аналітика */}
             <TabsTrigger value="dashboard" className="gap-2">
               <BarChart3 className="w-4 h-4" />
               Дашборд
             </TabsTrigger>
             <TabsTrigger value="statistics" className="gap-2">
-              <ChartArea className="w-4 h-4 text-primary" />
+              <TrendingUp className="w-4 h-4 text-primary" />
               Статистика
             </TabsTrigger>
+            <TabsTrigger value="bots" className="gap-2">
+              <Bot className="w-4 h-4 text-emerald-500" />
+              Боти
+            </TabsTrigger>
+            <TabsTrigger value="cache-analytics" className="gap-2">
+              <Database className="w-4 h-4 text-cyan-500" />
+              Кеш
+            </TabsTrigger>
+            
+            {/* Генерація контенту */}
             <TabsTrigger value="generate" className="gap-2">
               <Sparkles className="w-4 h-4" />
               День
@@ -793,9 +804,11 @@ export default function AdminPage() {
               Flash
             </TabsTrigger>
             <TabsTrigger value="justbusiness" className="gap-2">
-              <BarChart3 className="w-4 h-4 text-blue-500" />
+              <Building2 className="w-4 h-4 text-blue-500" />
               Business
             </TabsTrigger>
+            
+            {/* Контент */}
             <TabsTrigger value="chapters" className="gap-2">
               <BookOpen className="w-4 h-4" />
               Глави
@@ -812,57 +825,19 @@ export default function AdminPage() {
               <MessageSquare className="w-4 h-4" />
               Діалоги
             </TabsTrigger>
+            
+            {/* Новини */}
             <TabsTrigger value="newsdigest" className="gap-2">
               <Globe className="w-4 h-4 text-cyan-500" />
               Кротовиина
             </TabsTrigger>
-            <TabsTrigger value="cron" className="gap-2">
-              <Clock className="w-4 h-4 text-green-500" />
-              Cron Jobs
-            </TabsTrigger>
-            <TabsTrigger value="archive" className="gap-2">
-              <Archive className="w-4 h-4 text-orange-500" />
-              Архів
-            </TabsTrigger>
-            <TabsTrigger value="sitemaps" className="gap-2">
-              <Map className="w-4 h-4 text-blue-500" />
-              Сайтмапи
-            </TabsTrigger>
-            <TabsTrigger value="seo" className="gap-2">
-              <Search className="w-4 h-4 text-purple-500" />
-              SEO
-            </TabsTrigger>
-            <TabsTrigger value="bots" className="gap-2">
-              <Activity className="w-4 h-4 text-emerald-500" />
-              Боти
-            </TabsTrigger>
-            <TabsTrigger value="cache-analytics" className="gap-2">
-              <Database className="w-4 h-4 text-cyan-500" />
-              Cache HIT
-            </TabsTrigger>
-            <TabsTrigger value="bot-errors" className="gap-2">
-              <AlertTriangle className="w-4 h-4 text-destructive" />
-              Помилки
-            </TabsTrigger>
-            <TabsTrigger value="wiki-entities" className="gap-2">
-              <Building2 className="w-4 h-4 text-violet-500" />
-              Wiki
-            </TabsTrigger>
             <TabsTrigger value="news-search" className="gap-2">
               <Search className="w-4 h-4 text-amber-500" />
-              Пошук новин
+              Пошук
             </TabsTrigger>
             <TabsTrigger value="news-calendar" className="gap-2">
               <Calendar className="w-4 h-4 text-teal-500" />
               Календар
-            </TabsTrigger>
-            <TabsTrigger value="images" className="gap-2">
-              <Image className="w-4 h-4 text-rose-500" />
-              Картинки
-            </TabsTrigger>
-            <TabsTrigger value="bulk-scrape" className="gap-2">
-              <FileText className="w-4 h-4 text-cyan-500" />
-              Парсинг
             </TabsTrigger>
             <TabsTrigger value="virality" className="gap-2">
               <Flame className="w-4 h-4 text-orange-500" />
@@ -872,10 +847,48 @@ export default function AdminPage() {
               <GitMerge className="w-4 h-4 text-teal-500" />
               Дедуплікація
             </TabsTrigger>
+            <TabsTrigger value="archive" className="gap-2">
+              <Archive className="w-4 h-4 text-orange-500" />
+              Архів
+            </TabsTrigger>
             <TabsTrigger value="rss-feed" className="gap-2">
               <Rss className="w-4 h-4 text-orange-500" />
-              RSS Feed
+              RSS
             </TabsTrigger>
+            
+            {/* База даних */}
+            <TabsTrigger value="wiki-entities" className="gap-2">
+              <Building2 className="w-4 h-4 text-violet-500" />
+              Wiki
+            </TabsTrigger>
+            <TabsTrigger value="images" className="gap-2">
+              <Image className="w-4 h-4 text-rose-500" />
+              Картинки
+            </TabsTrigger>
+            <TabsTrigger value="bulk-scrape" className="gap-2">
+              <FileText className="w-4 h-4 text-cyan-500" />
+              Парсинг
+            </TabsTrigger>
+            
+            {/* SEO & Технічне */}
+            <TabsTrigger value="sitemaps" className="gap-2">
+              <Map className="w-4 h-4 text-blue-500" />
+              Сайтмапи
+            </TabsTrigger>
+            <TabsTrigger value="seo" className="gap-2">
+              <Search className="w-4 h-4 text-purple-500" />
+              SEO
+            </TabsTrigger>
+            <TabsTrigger value="cron" className="gap-2">
+              <Clock className="w-4 h-4 text-green-500" />
+              Cron
+            </TabsTrigger>
+            <TabsTrigger value="bot-errors" className="gap-2">
+              <AlertTriangle className="w-4 h-4 text-destructive" />
+              Помилки
+            </TabsTrigger>
+            
+            {/* Налаштування */}
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               Налаштування
