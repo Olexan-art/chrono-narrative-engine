@@ -213,7 +213,9 @@ export default function NewsHubPage() {
                               {item.image_url && (
                                 <img 
                                   src={item.image_url} 
-                                  alt="" 
+                                  alt={language === 'en' ? (item.title_en || item.title) : item.title}
+                                  width={64}
+                                  height={64}
                                   className="w-16 h-16 object-cover rounded shrink-0"
                                   loading="lazy"
                                 />
