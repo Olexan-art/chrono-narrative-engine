@@ -866,7 +866,15 @@ Deno.serve(async (req) => {
         news: countryNewsResults[i]?.data || []
       }));
 
-      html = generateHomeHTML(latestParts || [], lang, canonicalUrl, latestUsNews || [], latestChapters || [], countryNewsMap, latestNewsProportional, trendingEntities24h, trendingEntitiesWeek);
+      // Fetch top wiki entities for direct links
+      const { data: topWikiEntities } = await supabase
+        .from("wiki_entities")
+        .select("id, slug, name, name_en, entity_type, image_url")
+        .not("slug", "is", null)
+        .order("search_count", { ascending: false })
+        .limit(20);
+
+      html = generateHomeHTML(latestParts || [], lang, canonicalUrl, latestUsNews || [], latestChapters || [], countryNewsMap, latestNewsProportional, trendingEntities24h, trendingEntitiesWeek, topWikiEntities || []);
     }
 
     // Generate full HTML document
@@ -881,11 +889,34 @@ Deno.serve(async (req) => {
       faqItems,
     });
 
+    // Save to cache for paths that benefit from caching (homepage: 30 min, others: 1 hour)
+    const cacheTtlMinutes = (path === "/" || path === "") ? 30 : 60;
+    const expiresAt = new Date(Date.now() + cacheTtlMinutes * 60 * 1000).toISOString();
+    
+    try {
+      await supabase
+        .from("cached_pages")
+        .upsert({
+          path,
+          html: fullHtml,
+          title,
+          description,
+          canonical_url: canonicalUrl,
+          expires_at: expiresAt,
+          generation_time_ms: Date.now() - startTime,
+          html_size_bytes: new TextEncoder().encode(fullHtml).length,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "path" });
+      console.log(`Cached ${path} (TTL: ${cacheTtlMinutes}min)`);
+    } catch (cacheErr) {
+      console.error("Cache save failed:", cacheErr);
+    }
+
     return new Response(fullHtml, {
       headers: {
         ...corsHeaders,
         "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "public, max-age=3600, s-maxage=86400",
+        "Cache-Control": `public, max-age=${cacheTtlMinutes * 60}, s-maxage=86400`,
         "X-Cache": "MISS",
       },
     });
@@ -1325,7 +1356,8 @@ function generateHomeHTML(
   countryNewsMap: { country: any; news: any[] }[] = [],
   latestNewsProportional: any[] = [],
   trendingEntities24h: { entity: any; mentionCount: number; news: any[] }[] = [],
-  trendingEntitiesWeek: { entity: any; mentionCount: number; news: any[] }[] = []
+  trendingEntitiesWeek: { entity: any; mentionCount: number; news: any[] }[] = [],
+  topWikiEntities: any[] = []
 ) {
   const titleField = lang === "en" ? "title_en" : lang === "pl" ? "title_pl" : "title";
 
@@ -1471,11 +1503,29 @@ function generateHomeHTML(
       </section>
     ` : ""}
     
+    ${topWikiEntities.length > 0 ? `
+      <section>
+        <h2>🌐 Wiki: People & Organizations</h2>
+        <ul>
+          ${topWikiEntities.map(e => {
+            const name = e.name_en || e.name;
+            const slug = e.slug || e.id;
+            const typeIcon = e.entity_type === 'person' ? '👤' : '🏢';
+            return `
+              <li>${typeIcon} <a href="https://echoes2.com/wiki/${slug}">${escapeHtml(name)}</a></li>
+            `;
+          }).join("")}
+        </ul>
+        <p><a href="https://echoes2.com/wiki">→ Browse all entities</a></p>
+      </section>
+    ` : ""}
+    
     <nav>
       <a href="https://echoes2.com/news">📰 News</a> |
-      <a href="https://echoes2.com/calendar">📅 Calendar Archive</a> |
+      <a href="https://echoes2.com/wiki">🌐 Wiki</a> |
+      <a href="https://echoes2.com/ink-abyss">🎨 Ink Abyss</a> |
+      <a href="https://echoes2.com/calendar">📅 Calendar</a> |
       <a href="https://echoes2.com/chapters">📚 Chapters</a> |
-      <a href="https://echoes2.com/volumes">📖 Volumes</a> |
       <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
     </nav>
   `;
