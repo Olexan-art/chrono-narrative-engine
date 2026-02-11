@@ -87,13 +87,25 @@
     }
     </script>
 
-    <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C05XF9ZX6B"></script>
+    <!-- Google Analytics - deferred to reduce unused JS on initial load -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-C05XF9ZX6B');
+      function loadGA() {
+        if (window._gaLoaded) return;
+        window._gaLoaded = true;
+        gtag('js', new Date());
+        gtag('config', 'G-C05XF9ZX6B');
+        var s = document.createElement('script');
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-C05XF9ZX6B';
+        s.async = true;
+        document.head.appendChild(s);
+      }
+      // Load GA after first user interaction or after 3s idle
+      ['scroll','click','keydown','touchstart'].forEach(function(e){
+        window.addEventListener(e, loadGA, {once:true,passive:true});
+      });
+      setTimeout(loadGA, 3000);
     </script>
   </head>
 
