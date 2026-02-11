@@ -1,20 +1,23 @@
+import { lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, startOfWeek, endOfWeek, getMonth, getYear } from "date-fns";
+import { format, startOfWeek, endOfWeek } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
 import { HeroSection } from "@/components/home/HeroSection";
-import { StructureSection } from "@/components/home/StructureSection";
-import { LatestStoriesSection } from "@/components/home/LatestStoriesSection";
 import { LatestUsaNews } from "@/components/home/LatestUsaNews";
 import { LatestUsaNewsSimple } from "@/components/home/LatestUsaNewsSimple";
-import { TrendingWikiEntities } from "@/components/home/TrendingWikiEntities";
-import { OutrageInkSection } from "@/components/home/OutrageInkSection";
-import { CountryNewsSection } from "@/components/home/CountryNewsSection";
-import { ChaptersSection } from "@/components/home/ChaptersSection";
-import { InfiniteNewsFeed } from "@/components/home/InfiniteNewsFeed";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Part } from "@/types/database";
+
+// Lazy load below-the-fold sections to reduce main-thread work
+const OutrageInkSection = lazy(() => import("@/components/home/OutrageInkSection").then(m => ({ default: m.OutrageInkSection })));
+const TrendingWikiEntities = lazy(() => import("@/components/home/TrendingWikiEntities").then(m => ({ default: m.TrendingWikiEntities })));
+const LatestStoriesSection = lazy(() => import("@/components/home/LatestStoriesSection").then(m => ({ default: m.LatestStoriesSection })));
+const StructureSection = lazy(() => import("@/components/home/StructureSection").then(m => ({ default: m.StructureSection })));
+const CountryNewsSection = lazy(() => import("@/components/home/CountryNewsSection").then(m => ({ default: m.CountryNewsSection })));
+const ChaptersSection = lazy(() => import("@/components/home/ChaptersSection").then(m => ({ default: m.ChaptersSection })));
+const InfiniteNewsFeed = lazy(() => import("@/components/home/InfiniteNewsFeed").then(m => ({ default: m.InfiniteNewsFeed })));
 
 const STORIES_COUNT = 6;
 const CHAPTERS_COUNT = 6;
@@ -109,26 +112,28 @@ export default function Index() {
       {/* Latest USA News (simple, no retelling) */}
       <LatestUsaNewsSimple />
       
-      {/* Outrage Ink Section - above Trending */}
-      <OutrageInkSection />
-      
-      {/* Trending Wiki Entities (12h) */}
-      <TrendingWikiEntities />
-      
-      {/* Latest Stories - Grid layout */}
-      <LatestStoriesSection parts={latestParts} />
-      
-      {/* Structure Explainer */}
-      <StructureSection />
-      
-      {/* News by Country - 6 per country */}
-      <CountryNewsSection />
-      
-      {/* Chapters Section */}
-      <ChaptersSection chapters={allChapters} />
-      
-      {/* Infinite News Feed */}
-      <InfiniteNewsFeed />
+      <Suspense fallback={<div className="min-h-[200px]" />}>
+        {/* Outrage Ink Section - above Trending */}
+        <OutrageInkSection />
+        
+        {/* Trending Wiki Entities (12h) */}
+        <TrendingWikiEntities />
+        
+        {/* Latest Stories - Grid layout */}
+        <LatestStoriesSection parts={latestParts} />
+        
+        {/* Structure Explainer */}
+        <StructureSection />
+        
+        {/* News by Country - 6 per country */}
+        <CountryNewsSection />
+        
+        {/* Chapters Section */}
+        <ChaptersSection chapters={allChapters} />
+        
+        {/* Infinite News Feed */}
+        <InfiniteNewsFeed />
+      </Suspense>
       
       {/* Footer */}
       <footer className="py-8 border-t border-border">
