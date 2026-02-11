@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { getOptimizedUrl } from "@/components/OptimizedImage";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Sparkles, TrendingUp, ExternalLink, Calendar } from "lucide-react";
@@ -150,10 +151,12 @@ export const TrendingWikiEntities = memo(function TrendingWikiEntities() {
           <div className="flex items-start gap-3 p-3">
             {item.entity.image_url && (
               <img 
-                src={item.entity.image_url} 
+                src={getOptimizedUrl(item.entity.image_url, 128)} 
                 alt={name}
                 className="w-16 h-16 object-cover rounded-lg shrink-0"
                 loading="lazy"
+                width={64}
+                height={64}
               />
             )}
             <div className="flex-1 min-w-0">

@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { getOptimizedUrl } from "@/components/OptimizedImage";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, ExternalLink, User, Building2, BrainCircuit } from "lucide-react";
@@ -137,8 +138,10 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
               <div className="relative shrink-0">
                 {entity.image_url ? (
                   <img
-                    src={entity.image_url}
+                    src={getOptimizedUrl(entity.image_url, 96)}
                     alt={name}
+                    width={48}
+                    height={48}
                     className={`w-12 h-12 rounded-full object-cover border-2 group-hover:border-primary/50 transition-colors ${
                       idx === 0 && topNarrative ? 'border-primary/40' : 'border-primary/20'
                     }`}
