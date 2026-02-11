@@ -31,7 +31,8 @@ async function fetchTrendingEntities24h(): Promise<TrendingEntity[]> {
         id, name, name_en, image_url, entity_type, slug, wiki_url, wiki_url_en
       )
     `)
-    .gte('created_at', cutoffTime);
+    .gte('created_at', cutoffTime)
+    .limit(300);
 
   if (!recentMentions || recentMentions.length === 0) return [];
 
