@@ -57,9 +57,17 @@ export const LatestUsaNews = memo(function LatestUsaNews() {
     return (
       <section className="py-4 md:py-6 border-y border-border bg-gradient-to-r from-primary/5 via-transparent to-primary/5">
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-3 overflow-x-auto pb-2 md:pb-0">
-            {[1, 2, 3].map(i => (
-              <Skeleton key={i} className="h-24 w-80 shrink-0" />
+          <Skeleton className="h-5 w-40 mb-3" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="flex h-[120px] border border-border/50 rounded-lg overflow-hidden">
+                <Skeleton className="w-24 md:w-32 shrink-0 rounded-none" />
+                <div className="p-3 flex-1 space-y-2">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+              </div>
             ))}
           </div>
         </div>
