@@ -1356,7 +1356,8 @@ function generateHomeHTML(
   countryNewsMap: { country: any; news: any[] }[] = [],
   latestNewsProportional: any[] = [],
   trendingEntities24h: { entity: any; mentionCount: number; news: any[] }[] = [],
-  trendingEntitiesWeek: { entity: any; mentionCount: number; news: any[] }[] = []
+  trendingEntitiesWeek: { entity: any; mentionCount: number; news: any[] }[] = [],
+  topWikiEntities: any[] = []
 ) {
   const titleField = lang === "en" ? "title_en" : lang === "pl" ? "title_pl" : "title";
 
