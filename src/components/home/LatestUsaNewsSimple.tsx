@@ -72,8 +72,8 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
         <div className="container mx-auto px-4">
           <Skeleton className="h-8 w-48 mb-4" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
-              <Skeleton key={i} className="h-16" />
+            {Array.from({ length: 20 }, (_, i) => (
+              <Skeleton key={i} className="h-[104px]" />
             ))}
           </div>
         </div>
