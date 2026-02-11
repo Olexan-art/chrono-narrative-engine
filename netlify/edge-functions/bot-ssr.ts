@@ -165,25 +165,9 @@ export default async function handler(request: Request, context: Context) {
       } catch (error) {
         console.error('SSR fetch failed for bot:', error);
       }
-    } else {
-      // Regular users: serve from cached_pages only (no edge function call = no latency)
-      // This provides correct canonical/content for noscript users without slowing down JS users
-      try {
-        const cachedHtml = await fetchFromCachedPages(pathname);
-        if (cachedHtml) {
-          return new Response(cachedHtml, {
-            status: 200,
-            headers: {
-              'Content-Type': 'text/html; charset=utf-8',
-              'Cache-Control': 'public, max-age=300',
-              'X-SSR-Cache': 'HIT',
-            },
-          });
-        }
-      } catch (error) {
-        console.error('Cache fetch failed for user:', error);
-      }
     }
+    // Regular users: skip SSR cache entirely - let them load the SPA directly
+    // This ensures they always get fresh content with correct URLs
   }
 
   return context.next();
