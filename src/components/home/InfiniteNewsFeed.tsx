@@ -47,7 +47,7 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
       const { data } = await supabase
         .from('settings')
         .select('news_feed_page_size')
-        .single();
+        .maybeSingle();
       return data?.news_feed_page_size || DEFAULT_PAGE_SIZE;
     },
     staleTime: 1000 * 60 * 10, // 10 minutes
@@ -65,7 +65,7 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
     queryFn: async ({ pageParam = 0 }) => {
       // Fetch more items to allow weighted distribution
       // Target distribution: 50% USA, 20% PL, 20% UA, 10% IN
-      const fetchSize = pageSize * 5; // Fetch more to select from
+      const fetchSize = Math.min(pageSize * 3, 120); // Fetch more to select from, capped to avoid 500s
       const from = pageParam * fetchSize;
       const to = from + fetchSize - 1;
 

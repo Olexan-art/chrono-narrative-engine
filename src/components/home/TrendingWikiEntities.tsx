@@ -47,7 +47,8 @@ async function fetchTrendingEntities(hoursAgo: number): Promise<WikiEntityWithNe
       )
     `)
     .gte('created_at', cutoffTime)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(500);
 
   if (!recentMentions || recentMentions.length === 0) return [];
 
