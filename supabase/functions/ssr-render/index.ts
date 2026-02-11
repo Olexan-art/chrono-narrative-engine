@@ -992,9 +992,9 @@ function generateFullDocument(opts: {
   <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
   ${faqJsonLd ? `<script type="application/ld+json">${JSON.stringify(faqJsonLd)}</script>` : ""}
   
-  <!-- Redirect to SPA after content is indexed -->
+  <!-- Noscript: content stays visible, no redirect needed -->
   <noscript>
-    <meta http-equiv="refresh" content="0; url=${BASE_URL}${path}">
+    <style>.js-redirect-notice { display: none; }</style>
   </noscript>
   
   <style>
