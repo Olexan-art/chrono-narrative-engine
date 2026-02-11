@@ -215,6 +215,7 @@ export default function WikiEntityPage() {
       return data as WikiEntity;
     },
     enabled: !!entityId,
+    staleTime: 1000 * 60 * 10,
   });
 
   // Fetch ALL linked news (no limit for proper counting and pagination)
@@ -244,6 +245,7 @@ export default function WikiEntityPage() {
         });
     },
     enabled: !!entity?.id,
+    staleTime: 1000 * 60 * 5,
   });
 
   // Pagination logic for news
@@ -1174,10 +1176,45 @@ export default function WikiEntityPage() {
   return (
     <>
       <SEOHead
-        title={`${name} | Echoes Wiki`}
-        description={description || extract?.slice(0, 160) || `Information about ${name}`}
+        title={`${name} - Echoes Wiki`}
+        description={
+          (extract || description || `Information about ${name}`)
+            .replace(/[#*_\[\]]/g, '')
+            .slice(0, 160)
+            .trim()
+        }
         canonicalUrl={`https://echoes2.com/wiki/${entitySlug}`}
         image={entity.image_url || undefined}
+        type="article"
+        keywords={[
+          name,
+          entity.entity_type,
+          ...(allKeywords.slice(0, 5).map(([kw]) => kw)),
+          ...(sortedTopics.slice(0, 3).map(([t]) => t)),
+        ]}
+        breadcrumbs={[
+          { name: 'Home', url: 'https://echoes2.com/' },
+          { name: 'Wiki', url: 'https://echoes2.com/wiki' },
+          { name, url: `https://echoes2.com/wiki/${entitySlug}` },
+        ]}
+        schemaType="NewsArticle"
+        additionalSchemas={[
+          {
+            '@context': 'https://schema.org',
+            '@type': entity.entity_type === 'person' ? 'Person' : 'Article',
+            name,
+            description: (extract || description || '').slice(0, 300),
+            url: `https://echoes2.com/wiki/${entitySlug}`,
+            ...(entity.image_url ? { image: entity.image_url } : {}),
+            mainEntityOfPage: {
+              '@type': 'WebPage',
+              '@id': `https://echoes2.com/wiki/${entitySlug}`,
+            },
+            ...(entity.entity_type === 'person' ? {
+              sameAs: entity.wiki_url ? [entity.wiki_url, entity.wiki_url_en].filter(Boolean) : [],
+            } : {}),
+          },
+        ]}
       />
       
       <div className="min-h-screen bg-background">
@@ -1208,6 +1245,9 @@ export default function WikiEntityPage() {
                         src={entity.image_url}
                         alt={name}
                         className="w-full h-64 md:h-full object-cover"
+                        fetchPriority="high"
+                        loading="eager"
+                        decoding="async"
                       />
                     ) : (
                       <div className="w-full h-64 bg-muted flex items-center justify-center">
