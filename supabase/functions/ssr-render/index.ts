@@ -1503,11 +1503,29 @@ function generateHomeHTML(
       </section>
     ` : ""}
     
+    ${topWikiEntities.length > 0 ? `
+      <section>
+        <h2>🌐 Wiki: People & Organizations</h2>
+        <ul>
+          ${topWikiEntities.map(e => {
+            const name = e.name_en || e.name;
+            const slug = e.slug || e.id;
+            const typeIcon = e.entity_type === 'person' ? '👤' : '🏢';
+            return `
+              <li>${typeIcon} <a href="https://echoes2.com/wiki/${slug}">${escapeHtml(name)}</a></li>
+            `;
+          }).join("")}
+        </ul>
+        <p><a href="https://echoes2.com/wiki">→ Browse all entities</a></p>
+      </section>
+    ` : ""}
+    
     <nav>
       <a href="https://echoes2.com/news">📰 News</a> |
-      <a href="https://echoes2.com/calendar">📅 Calendar Archive</a> |
+      <a href="https://echoes2.com/wiki">🌐 Wiki</a> |
+      <a href="https://echoes2.com/ink-abyss">🎨 Ink Abyss</a> |
+      <a href="https://echoes2.com/calendar">📅 Calendar</a> |
       <a href="https://echoes2.com/chapters">📚 Chapters</a> |
-      <a href="https://echoes2.com/volumes">📖 Volumes</a> |
       <a href="https://echoes2.com/sitemap">🗺️ Sitemap</a>
     </nav>
   `;
