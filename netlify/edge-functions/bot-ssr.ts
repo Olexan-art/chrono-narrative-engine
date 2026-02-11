@@ -129,33 +129,60 @@ export default async function handler(request: Request, context: Context) {
     return context.next();
   }
 
-  // Check if bot and SSR-able path
-  if (isBot(userAgent) && shouldSSR(pathname)) {
-    try {
-      const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en`;
+  // Serve SSR for ALL users on SSR-able paths (not just bots).
+  // This ensures correct canonical URLs and content for users with JS disabled.
+  // The SSR page contains a JS redirect that sends real users to the SPA,
+  // so users with JS enabled will seamlessly transition to the React app.
+  if (shouldSSR(pathname)) {
+    const isBotRequest = isBot(userAgent);
+    
+    // For bots: always try SSR (cache + live)
+    // For regular users: only serve from cache (fast path, no latency penalty)
+    if (isBotRequest) {
+      try {
+        const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en`;
 
-      const ssrResponse = await fetch(ssrUrl, {
-        headers: {
-          'User-Agent': userAgent,
-          'Accept': 'text/html',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      });
-
-      if (ssrResponse.ok) {
-        const html = await ssrResponse.text();
-        return new Response(html, {
-          status: 200,
+        const ssrResponse = await fetch(ssrUrl, {
           headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'public, max-age=3600',
-            'X-SSR-Bot': 'true',
+            'User-Agent': userAgent,
+            'Accept': 'text/html',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           },
         });
+
+        if (ssrResponse.ok) {
+          const html = await ssrResponse.text();
+          return new Response(html, {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'public, max-age=3600',
+              'X-SSR-Bot': 'true',
+            },
+          });
+        }
+      } catch (error) {
+        console.error('SSR fetch failed for bot:', error);
       }
-    } catch (error) {
-      console.error('SSR fetch failed:', error);
+    } else {
+      // Regular users: serve from cached_pages only (no edge function call = no latency)
+      // This provides correct canonical/content for noscript users without slowing down JS users
+      try {
+        const cachedHtml = await fetchFromCachedPages(pathname);
+        if (cachedHtml) {
+          return new Response(cachedHtml, {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'public, max-age=300',
+              'X-SSR-Cache': 'HIT',
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Cache fetch failed for user:', error);
+      }
     }
   }
 
