@@ -25,6 +25,7 @@ import { CronJobsPanel } from "@/components/CronJobsPanel";
 import { NewsArchivePanel } from "@/components/NewsArchivePanel";
 import { SitemapManagementPanel } from "@/components/SitemapManagementPanel";
 import { SEOAuditPanel } from "@/components/SEOAuditPanel";
+import { SEOSettingsPanel } from "@/components/SEOSettingsPanel";
 import { BotVisitsPanel } from "@/components/BotVisitsPanel";
 import { BotCacheAnalyticsPanel } from "@/components/BotCacheAnalyticsPanel";
 import { BotErrorsPanel } from "@/components/BotErrorsPanel";
@@ -952,7 +953,10 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="seo" className="mt-6">
-            <SEOAuditPanel password={password} />
+            <div className="space-y-6">
+              <SEOSettingsPanel password={password} />
+              <SEOAuditPanel password={password} />
+            </div>
           </TabsContent>
 
           <TabsContent value="bots" className="mt-6">
