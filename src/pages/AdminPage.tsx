@@ -992,11 +992,11 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="bulk-scrape" className="mt-6">
-            <BulkScrapePanel password={password} />
+            <BulkScrapePanel />
           </TabsContent>
 
           <TabsContent value="virality" className="mt-6">
-            <ViralityPanel password={password} />
+            <ViralityPanel />
           </TabsContent>
 
           <TabsContent value="merge-news" className="mt-6">

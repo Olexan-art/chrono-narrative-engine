@@ -10,9 +10,9 @@ interface NewsItem {
   id: string;
   title: string;
   url: string;
-  published_at: string;
-  source: string;
-  country: string;
+  published_at: string | null;
+  source_name: string | null;
+  category: string | null;
 }
 
 export function NewsSearchPanel() {
@@ -26,8 +26,8 @@ export function NewsSearchPanel() {
 
       const { data, error } = await supabase
         .from("news_items")
-        .select("id, title, url, published_at, source, country")
-        .or(`title.ilike.%${activeSearch}%,source.ilike.%${activeSearch}%`)
+        .select("id, title, url, published_at, source_name, category")
+        .or(`title.ilike.%${activeSearch}%,source_name.ilike.%${activeSearch}%`)
         .order("published_at", { ascending: false })
         .limit(50);
 
@@ -85,10 +85,10 @@ export function NewsSearchPanel() {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {new Date(item.published_at).toLocaleDateString('uk-UA')}
+                      {item.published_at ? new Date(item.published_at).toLocaleDateString('uk-UA') : '—'}
                     </span>
-                    <span>{item.source}</span>
-                    <span className="uppercase">{item.country}</span>
+                    {item.source_name && <span>{item.source_name}</span>}
+                    {item.category && <span className="uppercase">{item.category}</span>}
                   </div>
                   <a
                     href={item.url}
