@@ -139,8 +139,10 @@ export default async function handler(request: Request, context: Context) {
     // For bots: always try SSR (cache + live)
     // For regular users: only serve from cache (fast path, no latency penalty)
     if (isBotRequest) {
+      console.log(`[bot-ssr] Bot detected: ${userAgent}`);
       try {
         const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en`;
+        console.log(`[bot-ssr] Calling SSR endpoint: ${ssrUrl}`);
 
         const ssrResponse = await fetch(ssrUrl, {
           headers: {
@@ -151,16 +153,23 @@ export default async function handler(request: Request, context: Context) {
           },
         });
 
+        console.log(`[bot-ssr] SSR response status: ${ssrResponse.status} for ${pathname}`);
+        
         if (ssrResponse.ok) {
           const html = await ssrResponse.text();
+          console.log(`[bot-ssr] SSR HTML length: ${html.length} chars`);
           return new Response(html, {
             status: 200,
             headers: {
               'Content-Type': 'text/html; charset=utf-8',
               'Cache-Control': 'public, max-age=3600',
               'X-SSR-Bot': 'true',
+              'X-SSR-Source': 'supabase-edge-function',
             },
           });
+        } else {
+          const errorText = await ssrResponse.text();
+          console.error(`[bot-ssr] SSR failed with status ${ssrResponse.status}: ${errorText}`);
         }
       } catch (error) {
         console.error('SSR fetch failed for bot:', error);
