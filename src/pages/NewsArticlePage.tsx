@@ -32,7 +32,8 @@ import { toast } from "sonner";
 import { useAdminStore } from "@/stores/adminStore";
 import { LLM_MODELS, LLMProvider } from "@/types/database";
 
-// Default Lovable AI models (always available)
+// Default ZAI models (always available if ZAI_API_KEY is set)
+const ZAI_MODELS = LLM_MODELS.zai.text;
 const LOVABLE_MODELS = LLM_MODELS.lovable.text;
 
 export default function NewsArticlePage() {
@@ -81,12 +82,13 @@ export default function NewsArticlePage() {
   const availableModels = useMemo(() => {
     const models: { value: string; label: string; provider?: LLMProvider }[] = [];
     
-    // Lovable AI models are always available
-    LOVABLE_MODELS.forEach(m => models.push({ ...m, provider: 'lovable' }));
-    
+    // ZAI models first if available
     if (settings?.hasZai) {
       LLM_MODELS.zai.text.forEach(m => models.push({ ...m, provider: 'zai' }));
     }
+    
+    // Lovable AI models are always available
+    LOVABLE_MODELS.forEach(m => models.push({ ...m, provider: 'lovable' }));
     if (settings?.hasMistral) {
       LLM_MODELS.mistral.text.forEach(m => models.push({ ...m, provider: 'mistral' }));
     }
@@ -106,8 +108,8 @@ export default function NewsArticlePage() {
     return models;
   }, [settings]);
 
-  const [selectedModel, setSelectedModel] = useState(LOVABLE_MODELS[0]?.value || '');
-  const [selectedTweetModel, setSelectedTweetModel] = useState(LOVABLE_MODELS[0]?.value || '');
+  const [selectedModel, setSelectedModel] = useState(ZAI_MODELS[0]?.value || LOVABLE_MODELS[0]?.value || '');
+  const [selectedTweetModel, setSelectedTweetModel] = useState(ZAI_MODELS[0]?.value || LOVABLE_MODELS[0]?.value || '');
 
   // Helper to get localized field - defined early so can be used in mutations
   const getLocalizedField = (field: string, articleData?: any) => {
