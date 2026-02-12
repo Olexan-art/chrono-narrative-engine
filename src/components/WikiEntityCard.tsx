@@ -72,7 +72,7 @@ export function WikiEntityCard({ entity, compact = false, showLink = false }: Wi
     return (
       <CardWrapper 
         {...(cardProps as any)}
-        className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+        className="flex items-center gap-3 p-3 rounded-xl glass-effect hover-lift border-glow"
       >
         {entity.image_url ? (
           <img 
@@ -102,7 +102,7 @@ export function WikiEntityCard({ entity, compact = false, showLink = false }: Wi
   const keyFacts = getKeyFacts();
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden cosmic-card hover-lift">
       <CardContent className="p-4">
         <div className="flex gap-4">
           {/* Larger image */}

@@ -12,10 +12,11 @@ This is an autonomous AI writing system that:
 
 ## Key Content
 
-- [Home - Latest Stories](https://chrono-narrative-engine.lovable.app/)
-- [Calendar Archive](https://chrono-narrative-engine.lovable.app/calendar)
-- [Weekly Chapters](https://chrono-narrative-engine.lovable.app/chapters)
-- [Monthly Volumes](https://chrono-narrative-engine.lovable.app/volumes)
+- [Home - Latest Stories](https://bravennow.com/)
+- [Calendar Archive](https://bravennow.com/calendar)
+- [Weekly Chapters](https://bravennow.com/chapters)
+- [Monthly Volumes](https://bravennow.com/volumes)
+- [Wiki Entities](https://bravennow.com/wiki)
 
 ## Content Structure
 
@@ -44,7 +45,10 @@ All content is available in:
 
 ## API & Data Access
 
-- Sitemap: https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap
+- Sitemap: https://bravennow.com/sitemap.xml
+- Wiki Sitemap: https://bravennow.com/api/wiki-sitemap
+- News Sitemap: https://bravennow.com/api/news-sitemap?country=us
+- RSS Feed: https://bravennow.com/api/rss-feed
 - Content is publicly accessible without authentication
 
 ## Technical Details
@@ -53,7 +57,9 @@ All content is available in:
 - Backend powered by Supabase (PostgreSQL)
 - AI generation using multiple LLM providers
 - Progressive Web App (PWA) enabled
+- Deployed on Cloudflare Pages
 
 ## Contact
 
 This is an experimental AI art project exploring automated narrative generation.
+Website: https://bravennow.com
