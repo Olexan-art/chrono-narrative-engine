@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tantml:parameter>
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Settings, Save, RefreshCw, Globe, FileText, Image, Tag, 
   ExternalLink, CheckCircle, AlertCircle, Copy, Eye
