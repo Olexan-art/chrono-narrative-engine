@@ -89,12 +89,26 @@ serve(async (req) => {
       }
 
       case 'updateSettings': {
+        console.log('updateSettings called with data:', JSON.stringify(data));
+        
+        if (!data || !data.id) {
+          console.error('Missing data or data.id in updateSettings');
+          return new Response(
+            JSON.stringify({ error: 'Missing required fields: data.id' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
         const { error } = await supabase
           .from('settings')
           .update(data)
           .eq('id', data.id);
         
-        if (error) throw error;
+        if (error) {
+          console.error('updateSettings error:', error);
+          throw error;
+        }
+        console.log('updateSettings success');
         return new Response(
           JSON.stringify({ success: true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
