@@ -13,7 +13,7 @@
  * - etc.
  */
 
-const SSR_ENDPOINT = 'https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render';
+const SSR_ENDPOINT = 'https://tuledxqigzufkecztnlo.supabase.co/functions/v1/ssr-render';
 
 // Bot User-Agent patterns (search engines, AI crawlers, social bots)
 const BOT_PATTERNS = [
@@ -160,8 +160,8 @@ export default {
             headers: {
               'User-Agent': userAgent,
               'Accept': request.headers.get('Accept') || '*/*',
-              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZHd4bm9pbGR2dmVwc29heHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTM2MzQsImV4cCI6MjA4NDc2OTYzNH0.FaLsz1zWVZMLCWizBnKG1ARFFO3N_I1Vmri9xMVVXFk',
-              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZHd4bm9pbGR2dmVwc29heHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTM2MzQsImV4cCI6MjA4NDc2OTYzNH0.FaLsz1zWVZMLCWizBnKG1ARFFO3N_I1Vmri9xMVVXFk',
+              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzczNTI0MzcsImV4cCI6MjA1MjkyODQzN30.hhPxGZ2bDNrwPtJnDXa0IILrJsJUgFNJmLFbHKbLUMM',
+              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzczNTI0MzcsImV4cCI6MjA1MjkyODQzN30.hhPxGZ2bDNrwPtJnDXa0IILrJsJUgFNJmLFbHKbLUMM',
             },
           });
           
@@ -203,8 +203,8 @@ export default {
           headers: {
             'User-Agent': userAgent,
             'Accept': 'text/html',
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZHd4bm9pbGR2dmVwc29heHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTM2MzQsImV4cCI6MjA4NDc2OTYzNH0.FaLsz1zWVZMLCWizBnKG1ARFFO3N_I1Vmri9xMVVXFk',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZHd4bm9pbGR2dmVwc29heHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTM2MzQsImV4cCI6MjA4NDc2OTYzNH0.FaLsz1zWVZMLCWizBnKG1ARFFO3N_I1Vmri9xMVVXFk',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzczNTI0MzcsImV4cCI6MjA1MjkyODQzN30.hhPxGZ2bDNrwPtJnDXa0IILrJsJUgFNJmLFbHKbLUMM',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzczNTI0MzcsImV4cCI6MjA1MjkyODQzN30.hhPxGZ2bDNrwPtJnDXa0IILrJsJUgFNJmLFbHKbLUMM',
           },
         });
 
