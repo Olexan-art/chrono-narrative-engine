@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const SSR_ENDPOINT = 'https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render';
+const SSR_ENDPOINT = 'https://tuledxqigzufkecztnlo.supabase.co/functions/v1/ssr-render';
 
 // Bot User-Agent patterns
 const BOT_PATTERNS = [
