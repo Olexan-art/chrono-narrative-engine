@@ -1,0 +1,9 @@
+{
+  "functions": [
+    {
+      "function": "bot-ssr",
+      "path": "/*"
+    }
+  ],
+  "version": 1
+}
