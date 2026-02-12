@@ -8,9 +8,9 @@
 @layer base {
   :root {
     --background: 220 15% 8%;
-    --foreground: 210 20% 92%;
+    --foreground: 210 20% 96%;
 
-    --card: 220 18% 12%;
+    --card: 220 18% 14%;
     --card-foreground: 210 20% 92%;
 
     --popover: 220 18% 10%;
@@ -35,7 +35,7 @@
     --input: 220 20% 18%;
     --ring: 195 100% 50%;
 
-    --radius: 1.25rem;
+    --radius: 1rem;
 
     --sidebar-background: 220 18% 10%;
     --sidebar-foreground: 210 20% 92%;
@@ -68,7 +68,7 @@
 
   .dark {
     --background: 220 15% 5%;
-    --foreground: 210 20% 92%;
+    --foreground: 210 20% 96%;
 
     --card: 220 18% 8%;
     --card-foreground: 210 20% 92%;
@@ -121,6 +121,8 @@
     @apply bg-background text-foreground font-sans;
     background: var(--gradient-cosmic);
     min-height: 100vh;
+    font-size: 16px;
+    line-height: 1.6;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -196,17 +198,19 @@
   }
 
   .cosmic-card {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 1rem;
   }
 
   .cosmic-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 48px rgba(0, 217, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    border-color: rgba(0, 217, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 217, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    border-color: rgba(0, 217, 255, 0.4);
+    background: rgba(255, 255, 255, 0.06);
   }
 
   .narrator-text {
