@@ -2,9 +2,9 @@
   command = "pnpm install && pnpm run build"
   publish = "dist"
 
-# [[edge_functions]]
-#   function = "bot-ssr"
-#   path = "/*"
+[[edge_functions]]
+  function = "bot-ssr"
+  path = "/*"
 
 [build.environment]
   NODE_VERSION = "18"
