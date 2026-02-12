@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface WikiEntity {
   id: string;
   name: string;
-  wikipedia_url: string | null;
+  wiki_url: string | null;
   entity_type: string;
   description: string | null;
   created_at: string;
@@ -32,7 +32,7 @@ export function WikiEntitiesPanel() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as WikiEntity[];
+      return (data || []) as unknown as WikiEntity[];
     }
   });
 
@@ -82,9 +82,9 @@ export function WikiEntitiesPanel() {
                       </p>
                     )}
                   </div>
-                  {entity.wikipedia_url && (
+                  {entity.wiki_url && (
                     <a
-                      href={entity.wikipedia_url}
+                      href={entity.wiki_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary hover:underline flex items-center gap-1"

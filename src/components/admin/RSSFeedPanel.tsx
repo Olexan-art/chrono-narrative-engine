@@ -15,10 +15,11 @@ interface RSSFeed {
   url: string;
   name: string;
   category: string;
-  country: string;
+  country_id: string;
   is_active: boolean;
   last_fetched_at: string | null;
   created_at: string;
+  sample_ratio: number;
 }
 
 const CATEGORIES = [
@@ -61,7 +62,7 @@ export function RSSFeedPanel({ password }: { password: string }) {
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return data as RSSFeed[];
+      return (data || []) as unknown as RSSFeed[];
     }
   });
 
@@ -74,7 +75,7 @@ export function RSSFeedPanel({ password }: { password: string }) {
           url: feed.url,
           name: feed.name,
           category: feed.category,
-          country: feed.country,
+          country_id: feed.country,
           is_active: true
         }])
         .select()
@@ -270,7 +271,7 @@ export function RSSFeedPanel({ password }: { password: string }) {
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{feed.name}</span>
                         <span className="text-xs text-muted-foreground">
-                          {COUNTRIES.find(c => c.code === feed.country)?.flag}
+                          {COUNTRIES.find(c => c.code === feed.country_id)?.flag}
                         </span>
                         <span className="text-xs px-2 py-0.5 bg-primary/10 rounded">
                           {feed.category}
