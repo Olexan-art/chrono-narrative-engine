@@ -82,10 +82,8 @@ export default function NewsArticlePage() {
   const availableModels = useMemo(() => {
     const models: { value: string; label: string; provider?: LLMProvider }[] = [];
     
-    // ZAI models first if available
-    if (settings?.hasZai) {
-      LLM_MODELS.zai.text.forEach(m => models.push({ ...m, provider: 'zai' }));
-    }
+    // ZAI models are always available (ZAI_API_KEY is set as Edge Function secret)
+    ZAI_MODELS.forEach(m => models.push({ ...m, provider: 'zai' }));
     
     // Lovable AI models are always available
     LOVABLE_MODELS.forEach(m => models.push({ ...m, provider: 'lovable' }));
