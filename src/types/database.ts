@@ -6,7 +6,7 @@ export type NarrativeSpecial = 'conspiratorial' | 'transmedia' | 'personal' | 'c
 export type StoryStatus = 'draft' | 'scheduled' | 'published';
 export type PartCategory = 'story' | 'just_business';
 
-export type LLMProvider = 'lovable' | 'openai' | 'gemini' | 'geminiV22' | 'anthropic' | 'zai' | 'mistral';
+export type LLMProvider = 'zai' | 'openai' | 'gemini' | 'geminiV22' | 'anthropic' | 'lovable' | 'mistral';
 
 export interface Settings {
   id: string;

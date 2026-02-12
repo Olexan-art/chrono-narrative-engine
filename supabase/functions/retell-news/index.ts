@@ -50,7 +50,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
   const model = overrideModel || settings.llm_text_model || 'google/gemini-3-flash-preview';
   
   // Determine provider from model name if override model is passed
-  let provider = settings.llm_text_provider || settings.llm_provider || 'lovable';
+  let provider = settings.llm_text_provider || settings.llm_provider || 'zai';
   
   // Auto-detect provider from model prefix to prevent mismatches
   if (overrideModel) {
@@ -99,7 +99,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
     return data.choices?.[0]?.message?.content || '';
   }
   
-  if (provider === 'lovable' || !settings.openai_api_key) {
+  if (provider === 'lovable') {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
 

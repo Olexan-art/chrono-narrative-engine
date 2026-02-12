@@ -167,11 +167,11 @@ function SettingsPanel({ password }: { password: string }) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   }
 
-  const textProvider = (settings.llm_text_provider || settings.llm_provider || 'lovable') as LLMProvider;
-  const imageProvider = (settings.llm_image_provider || settings.llm_provider || 'lovable') as LLMProvider;
+  const textProvider = (settings.llm_text_provider || settings.llm_provider || 'zai') as LLMProvider;
+  const imageProvider = (settings.llm_image_provider || settings.llm_provider || 'zai') as LLMProvider;
   // Safe access to LLM_MODELS - fall back to empty arrays if provider not found
-  const availableTextModels = (LLM_MODELS as Record<string, { text?: { value: string; label: string }[]; image?: { value: string; label: string }[] }>)[textProvider]?.text || LLM_MODELS.lovable?.text || [];
-  const availableImageModels = (LLM_MODELS as Record<string, { text?: { value: string; label: string }[]; image?: { value: string; label: string }[] }>)[imageProvider]?.image || LLM_MODELS.lovable?.image || [];
+  const availableTextModels = (LLM_MODELS as Record<string, { text?: { value: string; label: string }[]; image?: { value: string; label: string }[] }>)[textProvider]?.text || LLM_MODELS.zai?.text || [];
+  const availableImageModels = (LLM_MODELS as Record<string, { text?: { value: string; label: string }[]; image?: { value: string; label: string }[] }>)[imageProvider]?.image || LLM_MODELS.zai?.image || [];
 
   return (
     <div className="space-y-6">
@@ -188,7 +188,7 @@ function SettingsPanel({ password }: { password: string }) {
           {/* Removed single provider - now using separate providers for text and image */}
 
           {/* API Keys - show when any provider needs them */}
-          {(textProvider !== 'lovable' || imageProvider !== 'lovable') && (
+          {(textProvider !== 'zai' || imageProvider !== 'zai') && (
             <div className="space-y-4 p-4 border border-dashed border-primary/30 rounded-lg">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Key className="w-4 h-4" />
@@ -368,16 +368,10 @@ function SettingsPanel({ password }: { password: string }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="lovable">
+                    <SelectItem value="zai">
                       <div className="flex items-center gap-2">
-                        <span className="text-primary">✨</span>
-                        Lovable AI
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="openai">
-                      <div className="flex items-center gap-2">
-                        <span>🤖</span>
-                        OpenAI
+                        <span>🇨🇳</span>
+                        Z.AI (GLM)
                       </div>
                     </SelectItem>
                     <SelectItem value="gemini">
@@ -386,16 +380,22 @@ function SettingsPanel({ password }: { password: string }) {
                         Google Gemini
                       </div>
                     </SelectItem>
+                    <SelectItem value="openai">
+                      <div className="flex items-center gap-2">
+                        <span>🤖</span>
+                        OpenAI
+                      </div>
+                    </SelectItem>
                     <SelectItem value="anthropic">
                       <div className="flex items-center gap-2">
                         <span>🧠</span>
                         Anthropic
                       </div>
                     </SelectItem>
-                    <SelectItem value="zai">
+                    <SelectItem value="lovable">
                       <div className="flex items-center gap-2">
-                        <span>🇨🇳</span>
-                        Z.AI (GLM)
+                        <span className="text-primary">✨</span>
+                        Lovable AI
                       </div>
                     </SelectItem>
                     <SelectItem value="geminiV22">
@@ -432,9 +432,9 @@ function SettingsPanel({ password }: { password: string }) {
                 </Select>
               </div>
             </div>
-            {textProvider === 'lovable' && (
+            {textProvider === 'zai' && (
               <p className="text-xs text-muted-foreground">
-                Використовує вбудований AI шлюз Lovable без потреби в API ключі
+                Використовує Z.AI (GLM) для генерації тексту
               </p>
             )}
           </div>
@@ -506,9 +506,9 @@ function SettingsPanel({ password }: { password: string }) {
                 )}
               </div>
             </div>
-            {imageProvider === 'lovable' && (
+            {imageProvider === 'zai' && (
               <p className="text-xs text-muted-foreground">
-                Використовує вбудований AI шлюз Lovable без потреби в API ключі
+                Z.AI не підтримує генерацію зображень, використовуйте інший провайдер
               </p>
             )}
             {imageProvider === 'anthropic' && (

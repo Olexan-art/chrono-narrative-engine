@@ -86,8 +86,8 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
   const [messageCount, setMessageCount] = useState(8);
   const [tweetCount, setTweetCount] = useState(4);
   const [generateTweets, setGenerateTweets] = useState(true);
-  const [selectedProvider, setSelectedProvider] = useState<LLMProvider>("lovable");
-  const [selectedModel, setSelectedModel] = useState("google/gemini-3-flash-preview");
+  const [selectedProvider, setSelectedProvider] = useState<LLMProvider>("zai");
+  const [selectedModel, setSelectedModel] = useState("GLM-4.7");
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([]);
   
@@ -404,11 +404,11 @@ export default function DialogueManagementPanel({ password }: DialogueManagement
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="lovable">Lovable AI</SelectItem>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="gemini">Google Gemini</SelectItem>
-                  <SelectItem value="anthropic">Anthropic</SelectItem>
                   <SelectItem value="zai">Z.AI (GLM)</SelectItem>
+                  <SelectItem value="gemini">Google Gemini</SelectItem>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="anthropic">Anthropic</SelectItem>
+                  <SelectItem value="lovable">Lovable AI</SelectItem>
                 </SelectContent>
               </Select>
             </div>
