@@ -1,6 +1,6 @@
 # Cloudflare Pages Headers
-# Cache static assets aggressively, but not HTML
 
+# Hashed assets — immutable forever
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
@@ -10,6 +10,7 @@
 /*.css
   Cache-Control: public, max-age=31536000, immutable
 
+# Images
 /*.png
   Cache-Control: public, max-age=604800
 
@@ -19,16 +20,14 @@
 /*.svg
   Cache-Control: public, max-age=604800
 
-/favicon.png
+/*.webp
   Cache-Control: public, max-age=604800
 
-# Don't cache HTML pages (for fresh content)
-/*
-  X-Frame-Options: DENY
-  X-Content-Type-Options: nosniff
-  Referrer-Policy: strict-origin-when-cross-origin
+# Fonts
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
 
-# SEO-critical files should not be cached too long
+# SEO files — moderate cache
 /robots.txt
   Cache-Control: public, max-age=3600
 
@@ -37,3 +36,12 @@
 
 /llms.txt
   Cache-Control: public, max-age=3600
+
+/llms-full.txt
+  Cache-Control: public, max-age=3600
+
+# Security headers for all pages
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
