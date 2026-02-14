@@ -203,11 +203,98 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, newsId, terms, title, keywords, language = 'en' } = body;
+    const { action, newsId, terms, title, keywords, language = 'en', wikiUrl } = body;
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Handle add entity by Wikipedia URL
+    if (wikiUrl && newsId) {
+      try {
+        const urlMatch = wikiUrl.match(/\/wiki\/(.+)$/);
+        if (!urlMatch) {
+          return new Response(JSON.stringify({ success: false, error: 'Invalid Wikipedia URL' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const pageTitle = decodeURIComponent(urlMatch[1].replace(/_/g, ' '));
+        const lang = wikiUrl.includes('en.wikipedia.org') ? 'en' 
+          : wikiUrl.includes('uk.wikipedia.org') ? 'uk'
+          : wikiUrl.includes('pl.wikipedia.org') ? 'pl' : 'en';
+
+        const result = await searchWikipedia(pageTitle, lang);
+        if (!result) {
+          return new Response(JSON.stringify({ success: false, error: 'Wikipedia page not found' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const entity = wikiResultToEntity(result, lang);
+
+        // Check if entity already exists
+        const { data: existing } = await supabase
+          .from('wiki_entities')
+          .select('id')
+          .eq('wiki_id', entity.wiki_id)
+          .maybeSingle();
+
+        let entityId: string;
+
+        if (existing) {
+          entityId = existing.id;
+        } else {
+          const { data: inserted, error } = await supabase
+            .from('wiki_entities')
+            .insert(entity)
+            .select('id')
+            .single();
+
+          if (error) {
+            console.error('Error inserting entity:', error);
+            return new Response(JSON.stringify({ success: false, error: error.message }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          entityId = inserted.id;
+        }
+
+        // Link to news
+        const { error: linkError } = await supabase
+          .from('news_wiki_entities')
+          .upsert({
+            news_item_id: newsId,
+            wiki_entity_id: entityId,
+            match_source: 'manual',
+            match_term: entity.name,
+          }, { onConflict: 'news_item_id,wiki_entity_id' });
+
+        if (linkError) {
+          console.error('Error linking entity to news:', linkError);
+          return new Response(JSON.stringify({ success: false, error: linkError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true, entity: { ...entity, id: entityId } }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (err) {
+        console.error('Error adding entity by URL:', err);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: err instanceof Error ? err.message : 'Failed to add entity' 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     // Handle AI format extract action
     if (action === 'format_extract') {

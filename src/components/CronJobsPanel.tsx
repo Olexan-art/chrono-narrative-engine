@@ -126,6 +126,14 @@ const PAGE_SIZE_OPTIONS = [
   { value: 100, label: '100 новин' },
 ];
 
+const LLM_MODEL_OPTIONS = [
+  { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash' },
+  { value: 'google/gemini-3-pro-preview', label: 'Gemini 3 Pro' },
+  { value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
+  { value: 'openai/gpt-4o', label: 'GPT-4o' },
+  { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini' },
+];
+
 function formatSchedule(schedule: string): string {
   if (schedule === '*/30 * * * *') return 'Кожні 30 хв';
   if (schedule === '0 * * * *') return 'Кожну годину';
@@ -156,6 +164,7 @@ export function CronJobsPanel({ password }: Props) {
   const [processingStartTime, setProcessingStartTime] = useState<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [currentLlmModel, setCurrentLlmModel] = useState<string | null>(null);
+  const [selectedLlmModel, setSelectedLlmModel] = useState<string>('google/gemini-3-flash-preview');
 
   // Fetch current RSS schedule
   const { data: rssSchedule, isLoading: scheduleLoading } = useQuery({
@@ -439,7 +448,7 @@ export function CronJobsPanel({ password }: Props) {
       setCurrentLlmModel(null);
       return callEdgeFunction<PendingProcessResult>(
         'fetch-rss',
-        { action: 'process_pending', limit: 20, batchSize: 5 }
+        { action: 'process_pending', limit: 20, batchSize: 5, llmModel: selectedLlmModel }
       );
     },
     onSuccess: (result) => {
@@ -887,6 +896,26 @@ export function CronJobsPanel({ password }: Props) {
                           ({option.schedule})
                         </span>
                       </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2 flex-1 min-w-[200px]">
+              <Label>LLM Модель</Label>
+              <Select
+                value={selectedLlmModel}
+                onValueChange={setSelectedLlmModel}
+                disabled={triggerPendingMutation.isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LLM_MODEL_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
