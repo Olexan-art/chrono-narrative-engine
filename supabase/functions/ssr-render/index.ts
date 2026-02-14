@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const BASE_URL = "https://echoes2.com";
+const BASE_URL = "https://bravennow.com";
 
 // Bot detection patterns
 const BOT_PATTERNS: Record<string, { type: string; category: string }> = {
@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     // NOTE: Support POST body for tooling/testing; GET+query is still the canonical interface.
     const body = req.method !== "GET" ? await req.json().catch(() => null) : null;
-    const path = url.searchParams.get("path") || body?.path || "/";
+    const path = url.searchParams.get("path") || body?.url || body?.path || "/";
     const lang = url.searchParams.get("lang") || body?.lang || "uk";
     const useCache = (url.searchParams.get("cache") || body?.cache) !== "false"; // Default: use cache
     const userAgent = req.headers.get("user-agent") || "";
@@ -940,7 +940,7 @@ function generateFullDocument(opts: {
   faqItems?: { question: string; answer: string }[];
 }) {
   const { title, description, image, canonicalUrl, lang, content, path, faqItems } = opts;
-  const BASE_URL = "https://echoes2.com";
+  const BASE_URL = "https://bravennow.com";
 
   const jsonLd = {
     "@context": "https://schema.org",
