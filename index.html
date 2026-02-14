@@ -229,22 +229,33 @@
         var seoContent = document.getElementById('seo-content');
         var root = document.getElementById('root');
         if (root && seoContent) {
-          // Use MutationObserver for reliable detection
-          var observer = new MutationObserver(function(mutations) {
+          function hideSeo() {
             if (root.children.length > 0) {
               seoContent.style.display = 'none';
-              observer.disconnect();
+              return true;
             }
-          });
-          observer.observe(root, { childList: true });
+            return false;
+          }
+          // Check immediately in case React already mounted
+          if (!hideSeo()) {
+            // Use MutationObserver for reliable detection
+            var observer = new MutationObserver(function() {
+              if (hideSeo()) {
+                observer.disconnect();
+              }
+            });
+            observer.observe(root, { childList: true, subtree: true });
 
-          // Fallback timeout - but only hide if React actually loaded
-          setTimeout(function() {
-            if (root.children.length > 0) {
-              seoContent.style.display = 'none';
-            }
-            observer.disconnect();
-          }, 5000);
+            // Fallback: poll every 200ms for 10s
+            var attempts = 0;
+            var interval = setInterval(function() {
+              attempts++;
+              if (hideSeo() || attempts > 50) {
+                clearInterval(interval);
+                if (observer) observer.disconnect();
+              }
+            }, 200);
+          }
         }
       })();
     </script>
