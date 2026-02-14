@@ -172,10 +172,10 @@ Deno.serve(async (req) => {
     const chapterUuidMatch = path.match(/^\/chapter\/([a-f0-9-]+)$/);
     const volumeMatch = path.match(/^\/volume\/(\d{4}-\d{2})$/);
     const dateMatch = path.match(/^\/date\/(\d{4}-\d{2}-\d{2})$/);
-    // News article match: /news/us/some-slug
-    const newsArticleMatch = path.match(/^\/news\/([a-z]{2})\/([a-z0-9-]+)$/);
-    // News country list: /news/us or /news/ua
-    const newsCountryMatch = path.match(/^\/news\/([a-z]{2})$/);
+    // News article match: /news/us/some-slug or /news/US/some-slug
+    const newsArticleMatch = path.match(/^\/news\/([a-zA-Z]{2})\/([a-z0-9-]+)$/i);
+    // News country list: /news/us or /news/ua or /news/US
+    const newsCountryMatch = path.match(/^\/news\/([a-zA-Z]{2})$/i);
     // Wiki entity page: /wiki/entity-slug-uuid or /wiki/uuid
     const wikiEntityMatch = path.match(/^\/wiki\/([a-z0-9-]+)$/);
 
