@@ -13,37 +13,37 @@
 # These MUST be before the SPA fallback. Query params are forwarded automatically.
 [[redirects]]
   from = "/api/wiki-sitemap"
-  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/wiki-sitemap"
+  to = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/wiki-sitemap"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/news-sitemap"
-  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/news-sitemap"
+  to = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/news-sitemap"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/sitemap"
-  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/sitemap"
+  to = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/ssr-render"
-  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/ssr-render"
+  to = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/llms-txt"
-  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/llms-txt"
+  to = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/llms-txt"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/rss-feed"
-  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/rss-feed"
+  to = "https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/rss-feed"
   status = 200
   force = true
 

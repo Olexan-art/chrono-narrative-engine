@@ -1,9 +1,9 @@
 import type { Context } from "https://edge.netlify.com";
 
-const SUPABASE_URL = 'https://tuledxqigzufkecztnlo.supabase.co';
+const SUPABASE_URL = 'https://bgdwxnoildvvepsoaxrf.supabase.co';
 const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 const SSR_ENDPOINT = `${SUPABASE_FUNCTIONS_URL}/ssr-render`;
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc1NDM3MzQsImV4cCI6MjA1MzExOTczNH0.7gFP4sPqCWBBvE5y2hWxCgq7pAMvZ2-Oqr9Yfq4OqjI';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZHd4bm9pbGR2dmVwc29heHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTM2MzQsImV4cCI6MjA4NDc2OTYzNH0.FaLsz1zWVZMLCWizBnKG1ARFFO3N_I1Vmri9xMVVXFk';
 
 // Mapping: URL path -> cached_pages path in DB
 const SITEMAP_CACHE_PATHS: Record<string, (searchParams: URLSearchParams) => string> = {

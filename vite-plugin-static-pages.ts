@@ -7,7 +7,7 @@ import type { Plugin } from 'vite';
  * as pure static HTML without JS or edge-function SSR.
  */
 export function staticPagesPlugin(): Plugin {
-  const SUPABASE_URL = 'https://tuledxqigzufkecztnlo.supabase.co';
+  const SUPABASE_URL = 'https://bgdwxnoildvvepsoaxrf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZHd4bm9pbGR2dmVwc29heHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTM2MzQsImV4cCI6MjA4NDc2OTYzNH0.FaLsz1zWVZMLCWizBnKG1ARFFO3N_I1Vmri9xMVVXFk';
 
   return {
