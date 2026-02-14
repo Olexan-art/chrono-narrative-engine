@@ -127,12 +127,15 @@ const PAGE_SIZE_OPTIONS = [
 ];
 
 const LLM_MODEL_OPTIONS = [
+  { value: 'GLM-4.7', label: 'Z.AI GLM-4.7 (найпотужніший)' },
+  { value: 'GLM-4.7-Flash', label: 'Z.AI GLM-4.7-Flash (швидкий)' },
+  { value: 'GLM-4.5-Air', label: 'Z.AI GLM-4.5-Air (легкий)' },
   { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash' },
   { value: 'google/gemini-3-pro-preview', label: 'Gemini 3 Pro' },
   { value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
   { value: 'openai/gpt-4o', label: 'GPT-4o' },
   { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini' },
-];
+};
 
 function formatSchedule(schedule: string): string {
   if (schedule === '*/30 * * * *') return 'Кожні 30 хв';
@@ -164,7 +167,7 @@ export function CronJobsPanel({ password }: Props) {
   const [processingStartTime, setProcessingStartTime] = useState<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [currentLlmModel, setCurrentLlmModel] = useState<string | null>(null);
-  const [selectedLlmModel, setSelectedLlmModel] = useState<string>('google/gemini-3-flash-preview');
+  const [selectedLlmModel, setSelectedLlmModel] = useState<string>('GLM-4.7');
 
   // Fetch current RSS schedule
   const { data: rssSchedule, isLoading: scheduleLoading } = useQuery({
