@@ -394,7 +394,7 @@ export function BotCacheAnalyticsPanel({ password }: { password: string }) {
             </Button>
             <Button 
               variant="outline"
-              onClick={() => window.open(`https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render?path=${encodeURIComponent(testPath)}&lang=en`, '_blank')}
+              onClick={() => window.open(`https://tuledxqigzufkecztnlo.supabase.co/functions/v1/ssr-render?path=${encodeURIComponent(testPath)}&lang=en`, '_blank')}
             >
               <ExternalLink className="w-4 h-4" />
             </Button>

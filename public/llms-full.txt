@@ -127,7 +127,7 @@ Content fields follow naming convention:
 
 ### Sitemap
 Dynamic XML sitemap at:
-`https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap`
+`https://tuledxqigzufkecztnlo.supabase.co/functions/v1/sitemap`
 
 ### Structured Data
 - JSON-LD for Article schema

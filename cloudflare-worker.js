@@ -4,7 +4,7 @@ export default {
     
     // Proxy Supabase API requests
     if (url.pathname.startsWith('/rest/') || url.pathname.startsWith('/functions/')) {
-      const supabaseUrl = 'https://bgdwxnoildvvepsoaxrf.supabase.co';
+      const supabaseUrl = 'https://tuledxqigzufkecztnlo.supabase.co';
       const targetUrl = supabaseUrl + url.pathname + url.search;
       
       return fetch(targetUrl, {
