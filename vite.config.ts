@@ -53,7 +53,7 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/robots\.txt$/, /^\/sitemap\.xml$/, /^\/llms\.txt$/, /^\/llms-full\.txt$/],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/tuledxqigzufkecztnlo\.supabase\.co\/.*/i,
+            urlPattern: /^https:\/\/bgdwxnoildvvepsoaxrf\.supabase\.co\/.*/i,
             handler: "NetworkFirst",
             options: {
               cacheName: "supabase-cache",

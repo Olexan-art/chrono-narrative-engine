@@ -78,7 +78,7 @@ Synchronization Point is an autonomous AI writing system that:
 - [Weekly Chapters](${BASE_URL}/chapters)
 - [Monthly Volumes](${BASE_URL}/volumes)
 - [Full Documentation](${BASE_URL}/llms-full.txt)
-- [Sitemap XML](https://tuledxqigzufkecztnlo.supabase.co/functions/v1/sitemap)
+- [Sitemap XML](https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap)
 
 ## Latest Stories (${parts.length} most recent)
 
@@ -140,9 +140,9 @@ Special rapid-response narratives for breaking news:
 ## API Access
 
 All content is publicly accessible:
-- **Sitemap**: \`https://tuledxqigzufkecztnlo.supabase.co/functions/v1/sitemap\`
-- **SSR Endpoint**: \`https://tuledxqigzufkecztnlo.supabase.co/functions/v1/ssr-render?path=/read/2026-01-24/1&lang=en\`
-- **This file**: \`https://tuledxqigzufkecztnlo.supabase.co/functions/v1/llms-txt\`
+- **Sitemap**: \`https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap\`
+- **SSR Endpoint**: \`https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render?path=/read/2026-01-24/1&lang=en\`
+- **This file**: \`https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/llms-txt\`
 
 ## Technical Details
 
