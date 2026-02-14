@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SEOHead } from "@/components/SEOHead";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const BASE_URL = 'https://bravennow.com';
+const BASE_URL = 'https://echoes2.com';
 
 export default function SitemapPage() {
   const { language } = useLanguage();
