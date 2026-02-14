@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const BASE_URL = "https://bravennow.com";
+const BASE_URL = "https://echoes2.com";
 const CACHE_TTL_HOURS = 1;
 const DEFAULT_FEED_SIZE = 50;
 const MIN_CONTENT_LENGTH = 300; // US news retold threshold

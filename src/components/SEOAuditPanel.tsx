@@ -64,7 +64,7 @@ export function SEOAuditPanel({ password }: { password: string }) {
     const results = { robots: false, sitemap: false, ssrRender: false, wikiSitemap: false, newsSitemap: false };
     
     const checks = [
-      fetch('https://bravennow.com/robots.txt').then(r => { results.robots = r.ok; }).catch(() => {}),
+      fetch('https://echoes2.com/robots.txt').then(r => { results.robots = r.ok; }).catch(() => {}),
       fetch('https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/sitemap').then(r => { results.sitemap = r.ok; }).catch(() => {}),
       fetch('https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/ssr-render?path=/&lang=en').then(r => { results.ssrRender = r.ok; }).catch(() => {}),
       fetch('https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1/wiki-sitemap').then(r => { results.wikiSitemap = r.ok; }).catch(() => {}),

@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SITEMAP_URL = "https://bravennow.com/sitemap.xml";
+const SITEMAP_URL = "https://echoes2.com/sitemap.xml";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {

@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const BASE_URL = "https://bravennow.com";
+const BASE_URL = "https://echoes2.com";
 const CACHE_TTL_HOURS = 24;
 const MAX_SITEMAP_ENTRIES = 2000;
 

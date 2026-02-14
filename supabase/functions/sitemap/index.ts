@@ -6,7 +6,7 @@ const corsHeaders = {
   "Content-Type": "application/xml; charset=utf-8",
 };
 
-const BASE_URL = "https://bravennow.com";
+const BASE_URL = "https://echoes2.com";
 const CACHE_TTL_HOURS = 6; // Cache sitemap for 6 hours
 
 // Helper to add hreflang links for multilingual pages
