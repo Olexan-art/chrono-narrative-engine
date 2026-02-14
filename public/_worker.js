@@ -3,20 +3,22 @@
  * 
  * Strategy:
  * 1. Check Cloudflare edge cache first (instant, 0ms)
- * 2. If MISS → fetch pre-rendered HTML from Supabase cached_pages via ssr-render
- * 3. Store response in Cloudflare edge cache for future requests
- * 4. Serve full HTML to ALL visitors (bots AND users)
+ * 2. If MISS → fetch HTML from cached_pages via REST API (fast, no regeneration)
+ * 3. If cached_pages also empty → try ssr-render (generates fresh HTML)
+ * 4. Store response in Cloudflare edge cache for future requests
+ * 5. Fallback: serve SPA index.html
  */
 
-const SUPABASE_URL = 'https://bgdwxnoildvvepsoaxrf.supabase.co/functions/v1';
-const SSR_ENDPOINT = `${SUPABASE_URL}/ssr-render`;
+const SUPABASE_URL = 'https://bgdwxnoildvvepsoaxrf.supabase.co';
+const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
+const SSR_ENDPOINT = `${SUPABASE_FUNCTIONS_URL}/ssr-render`;
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZHd4bm9pbGR2dmVwc29heHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTM2MzQsImV4cCI6MjA4NDc2OTYzNH0.FaLsz1zWVZMLCWizBnKG1ARFFO3N_I1Vmri9xMVVXFk';
 
 // Cache TTLs (seconds)
 const CACHE_TTL = {
-  ssr: 3600,        // 1 hour for SSR pages
-  api: 3600,        // 1 hour for API responses
-  sitemap: 86400,   // 24 hours for sitemaps
+  ssr: 1800,       // 30 min Cloudflare edge cache for SSR pages
+  api: 3600,       // 1 hour for API responses
+  sitemap: 86400,  // 24 hours for sitemaps
 };
 
 // Bot detection for analytics headers
@@ -83,17 +85,54 @@ function shouldSSR(pathname) {
 }
 
 /**
- * Fetch from Supabase Edge Function with auth headers
+ * Fetch HTML directly from cached_pages table via Supabase REST API.
+ * Returns HTML even if expired (stale-while-revalidate pattern).
  */
-async function fetchFromSupabase(url, userAgent) {
-  return fetch(url, {
-    headers: {
-      'User-Agent': userAgent || 'Cloudflare-Worker',
-      'Accept': 'text/html, application/xml, */*',
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-  });
+async function fetchFromCachedPages(pathname) {
+  try {
+    const restUrl = `${SUPABASE_URL}/rest/v1/cached_pages?path=eq.${encodeURIComponent(pathname)}&select=html,expires_at&limit=1`;
+    const response = await fetch(restUrl, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (!data || data.length === 0 || !data[0].html) return null;
+
+    const isExpired = new Date(data[0].expires_at) < new Date();
+    return { html: data[0].html, isExpired };
+  } catch (error) {
+    console.error('[worker] cached_pages fetch failed:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch from Supabase Edge Function (ssr-render) for fresh generation
+ */
+async function fetchFromSSRRender(pathname, userAgent) {
+  try {
+    const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en`;
+    const response = await fetch(ssrUrl, {
+      headers: {
+        'User-Agent': userAgent || 'Cloudflare-Worker',
+        'Accept': 'text/html',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    });
+
+    if (!response.ok) return null;
+    return await response.text();
+  } catch (error) {
+    console.error('[worker] ssr-render fetch failed:', error);
+    return null;
+  }
 }
 
 /**
@@ -107,10 +146,8 @@ async function handleApiRoute(request, pathname, env) {
   const url = new URL(request.url);
   const cache = caches.default;
 
-  // Build cache key from full URL (includes query params)
   const cacheKey = new Request(request.url, { method: 'GET' });
 
-  // Check cache first
   let cached = await cache.match(cacheKey);
   if (cached) {
     return new Response(cached.body, {
@@ -123,12 +160,18 @@ async function handleApiRoute(request, pathname, env) {
     });
   }
 
-  // Cache MISS → proxy to Supabase
-  const targetUrl = new URL(`${SUPABASE_URL}/${fn}`);
+  const targetUrl = new URL(`${SUPABASE_FUNCTIONS_URL}/${fn}`);
   url.searchParams.forEach((v, k) => targetUrl.searchParams.set(k, v));
 
   const userAgent = request.headers.get('User-Agent') || '';
-  const response = await fetchFromSupabase(targetUrl.toString(), userAgent);
+  const response = await fetch(targetUrl.toString(), {
+    headers: {
+      'User-Agent': userAgent || 'Cloudflare-Worker',
+      'Accept': 'text/html, application/xml, */*',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+  });
 
   if (!response.ok) {
     return new Response('API Error', { status: response.status });
@@ -148,7 +191,6 @@ async function handleApiRoute(request, pathname, env) {
     },
   });
 
-  // Store in Cloudflare cache (non-blocking)
   const cacheResponse = new Response(body, {
     status: 200,
     headers: {
@@ -161,87 +203,101 @@ async function handleApiRoute(request, pathname, env) {
   return result;
 }
 
-// Helper: non-blocking cache.put (we'll call it from the main handler with ctx)
 let _ctx = null;
 function ctx_waitUntil_put(cache, key, response) {
   if (_ctx && _ctx.waitUntil) {
     _ctx.waitUntil(cache.put(key, response));
   } else {
-    cache.put(key, response); // fire and forget
+    cache.put(key, response);
   }
 }
 
 /**
- * Handle SSR pages with Cloudflare edge cache
+ * Handle SSR pages — 3-tier strategy:
+ * 1. Cloudflare edge cache (instant)
+ * 2. cached_pages REST API (fast, serves even stale content)
+ * 3. ssr-render Edge Function (generates fresh, slow)
  */
 async function handleSSR(request, pathname, env) {
   const cache = caches.default;
   const userAgent = request.headers.get('User-Agent') || '';
   const isBotReq = isBot(userAgent);
 
-  // Cache key: normalize to just the pathname (ignore headers/cookies)
   const cacheUrl = new URL(request.url);
-  cacheUrl.search = ''; // SSR pages don't use query params
+  cacheUrl.search = '';
   const cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
 
-  // 1. Check Cloudflare edge cache
+  // 1. Cloudflare edge cache
   let cached = await cache.match(cacheKey);
   if (cached) {
-    // Clone and add cache headers
     const headers = new Headers(cached.headers);
     headers.set('X-Cache', 'HIT');
     headers.set('X-Cache-Source', 'cloudflare-edge');
     headers.set('X-SSR-Bot', isBotReq ? 'true' : 'false');
-
-    return new Response(cached.body, {
-      status: cached.status,
-      headers,
-    });
+    return new Response(cached.body, { status: cached.status, headers });
   }
 
-  // 2. Cache MISS → fetch from Supabase ssr-render
-  try {
-    const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en`;
-    const ssrResponse = await fetchFromSupabase(ssrUrl, userAgent);
+  // 2. Fetch from cached_pages (even stale — better than empty SPA)
+  const dbCached = await fetchFromCachedPages(pathname);
+  
+  let html = null;
+  let cacheSource = '';
 
-    if (ssrResponse.ok) {
-      const html = await ssrResponse.text();
-
-      const responseHeaders = {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': `public, max-age=${CACHE_TTL.ssr}, s-maxage=${CACHE_TTL.ssr}`,
-        'X-Cache': 'MISS',
-        'X-Cache-Source': 'supabase-ssr',
-        'X-SSR': 'true',
-        'X-SSR-Bot': isBotReq ? 'true' : 'false',
-      };
-
-      const result = new Response(html, { status: 200, headers: responseHeaders });
-
-      // Store in Cloudflare edge cache (non-blocking)
-      const cacheResponse = new Response(html, {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-          'Cache-Control': `public, max-age=${CACHE_TTL.ssr}, s-maxage=${CACHE_TTL.ssr}`,
-          'X-SSR': 'true',
-        },
-      });
-      ctx_waitUntil_put(cache, cacheKey, cacheResponse);
-
-      return result;
+  if (dbCached) {
+    html = dbCached.html;
+    cacheSource = dbCached.isExpired ? 'supabase-stale' : 'supabase-fresh';
+    
+    // If stale, trigger background regeneration via ssr-render (fire-and-forget)
+    if (dbCached.isExpired && _ctx && _ctx.waitUntil) {
+      _ctx.waitUntil(
+        fetchFromSSRRender(pathname, userAgent)
+          .then(freshHtml => {
+            if (freshHtml) {
+              console.log(`[worker] Background regeneration complete: ${pathname}`);
+            }
+          })
+          .catch(err => console.error('[worker] Background regen failed:', err))
+      );
     }
-  } catch (error) {
-    console.error('[worker] SSR fetch failed:', error);
   }
 
-  // 3. Fallback: serve SPA
-  return null;
+  // 3. If no cached_pages entry at all, try ssr-render directly
+  if (!html) {
+    html = await fetchFromSSRRender(pathname, userAgent);
+    cacheSource = 'supabase-ssr';
+  }
+
+  if (!html) return null; // Fall through to SPA
+
+  const ttl = CACHE_TTL.ssr;
+  const responseHeaders = {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': `public, max-age=${ttl}, s-maxage=${ttl}`,
+    'X-Cache': 'MISS',
+    'X-Cache-Source': cacheSource,
+    'X-SSR': 'true',
+    'X-SSR-Bot': isBotReq ? 'true' : 'false',
+  };
+
+  const result = new Response(html, { status: 200, headers: responseHeaders });
+
+  // Store in Cloudflare edge cache
+  const cacheResponse = new Response(html, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': `public, max-age=${ttl}, s-maxage=${ttl}`,
+      'X-SSR': 'true',
+    },
+  });
+  ctx_waitUntil_put(cache, cacheKey, cacheResponse);
+
+  return result;
 }
 
 export default {
   async fetch(request, env, ctx) {
-    _ctx = ctx; // store for cache.put waitUntil
+    _ctx = ctx;
     const url = new URL(request.url);
     const pathname = url.pathname;
 
