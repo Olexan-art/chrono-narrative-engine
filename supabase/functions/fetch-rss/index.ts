@@ -38,16 +38,16 @@ async function autoCacheNewsPage(
 }
 
 // Helper to call retell-news for an item
-async function autoRetellNews(newsId: string, supabaseUrl: string): Promise<void> {
+async function autoRetellNews(newsId: string, supabaseUrl: string, model: string = 'GLM-4.7'): Promise<void> {
   try {
-    console.log(`Auto-retelling news item: ${newsId}`);
+    console.log(`Auto-retelling news item: ${newsId} with model: ${model}`);
     const response = await fetch(`${supabaseUrl}/functions/v1/retell-news`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
       },
-      body: JSON.stringify({ newsId, model: 'google/gemini-3-flash-preview' })
+      body: JSON.stringify({ newsId, model })
     });
     
     if (!response.ok) {
@@ -945,7 +945,7 @@ serve(async (req) => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
               },
-              body: JSON.stringify({ newsId, model: 'google/gemini-3-flash-preview' })
+              body: JSON.stringify({ newsId, model: llmModel })
             });
             
             if (response.ok) {
@@ -1118,7 +1118,7 @@ serve(async (req) => {
     // Process pending news items that should have been retold but weren't (catch-up for missed items)
     // Now with batch processing and concurrency control
     if (action === 'process_pending') {
-      const { countryCode, limit: processLimit = 20, batchSize = 5 } = body;
+      const { countryCode, limit: processLimit = 20, batchSize = 5, llmModel: requestedModel } = body;
       
       // Get auto-generation settings including LLM model
       const { data: settings } = await supabase
@@ -1133,9 +1133,8 @@ serve(async (req) => {
       const dialogueCount = settings?.news_dialogue_count ?? 7;
       const tweetCount = settings?.news_tweet_count ?? 4;
 
-      // Determine LLM model name for display
-      const llmProvider = settings?.llm_text_provider || 'lovable';
-      const llmModel = settings?.llm_text_model || 'google/gemini-3-flash-preview';
+      // Use requested model from UI, fallback to settings, then default
+      const llmModel = requestedModel || settings?.llm_text_model || 'GLM-4.7';
       const llmDisplayName = llmModel.split('/').pop() || llmModel;
       
       // Get countries with 100% retell ratio
@@ -1217,7 +1216,7 @@ serve(async (req) => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
               },
-              body: JSON.stringify({ newsId, model: 'google/gemini-3-flash-preview' })
+              body: JSON.stringify({ newsId, model: llmModel })
             });
             
             if (response.ok) {
@@ -1352,7 +1351,16 @@ serve(async (req) => {
       
       const countryCode = countryData?.code || 'unknown';
       
-      console.log(`Bulk fetching ${feeds?.length || 0} feeds for country ${countryCode}...`);
+      // Get LLM settings
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('llm_text_model, llm_text_provider')
+        .limit(1)
+        .single();
+      
+      const llmModel = settings?.llm_text_model || 'GLM-4.7';
+      
+      console.log(`Bulk fetching ${feeds?.length || 0} feeds for country ${countryCode} with model ${llmModel}...`);
       
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const results = [];
@@ -1627,7 +1635,7 @@ serve(async (req) => {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
             },
-            body: JSON.stringify({ newsId, model: 'google/gemini-3-flash-preview' })
+            body: JSON.stringify({ newsId, model: llmModel })
           });
           
           if (response.ok) {
