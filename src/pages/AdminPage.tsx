@@ -37,7 +37,7 @@ import { ImagesManagementPanel } from "@/components/admin/ImagesManagementPanel"
 import { BulkScrapePanel } from "@/components/admin/BulkScrapePanel";
 import { ViralityPanel } from "@/components/admin/ViralityPanel";
 import { NewsMergePanel } from "@/components/admin/NewsMergePanel";
-import { RSSFeedPanel } from "@/components/admin/RSSFeedPanel";
+import { RSSFeedPanel } from "@/components/admin/RSSFeedPanelV2";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -53,7 +53,7 @@ function AdminLogin({ onLogin }: { onLogin: (password: string) => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       await adminAction('verify', password);
       onLogin(password);
@@ -133,7 +133,7 @@ function SettingsPanel({ password }: { password: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
-  
+
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => {
@@ -194,7 +194,7 @@ function SettingsPanel({ password }: { password: string }) {
                 <Key className="w-4 h-4" />
                 API Ключі
               </div>
-              
+
               {(textProvider === 'openai' || imageProvider === 'openai') && (
                 <div className="space-y-2">
                   <Label>OpenAI API Key</Label>
@@ -206,8 +206,8 @@ function SettingsPanel({ password }: { password: string }) {
                       placeholder="sk-..."
                       className="font-mono"
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => toggleApiKeyVisibility('openai')}
                     >
@@ -231,8 +231,8 @@ function SettingsPanel({ password }: { password: string }) {
                       placeholder="AIza..."
                       className="font-mono"
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => toggleApiKeyVisibility('gemini')}
                     >
@@ -256,8 +256,8 @@ function SettingsPanel({ password }: { password: string }) {
                       placeholder="sk-ant-..."
                       className="font-mono"
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => toggleApiKeyVisibility('anthropic')}
                     >
@@ -281,8 +281,8 @@ function SettingsPanel({ password }: { password: string }) {
                       placeholder="..."
                       className="font-mono"
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => toggleApiKeyVisibility('zai')}
                     >
@@ -306,8 +306,8 @@ function SettingsPanel({ password }: { password: string }) {
                       placeholder="AIza..."
                       className="font-mono"
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => toggleApiKeyVisibility('geminiV22')}
                     >
@@ -331,8 +331,8 @@ function SettingsPanel({ password }: { password: string }) {
                       placeholder="..."
                       className="font-mono"
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => toggleApiKeyVisibility('mistral')}
                     >
@@ -358,8 +358,8 @@ function SettingsPanel({ password }: { password: string }) {
                   onValueChange={(v) => {
                     const provider = v as LLMProvider;
                     const defaultModel = LLM_MODELS[provider]?.text[0]?.value || '';
-                    updateMutation.mutate({ 
-                      llm_text_provider: provider, 
+                    updateMutation.mutate({
+                      llm_text_provider: provider,
                       llm_text_model: defaultModel
                     });
                   }}
@@ -450,8 +450,8 @@ function SettingsPanel({ password }: { password: string }) {
                   onValueChange={(v) => {
                     const provider = v as LLMProvider;
                     const defaultModel = LLM_MODELS[provider]?.image[0]?.value || '';
-                    updateMutation.mutate({ 
-                      llm_image_provider: provider, 
+                    updateMutation.mutate({
+                      llm_image_provider: provider,
                       llm_image_model: defaultModel
                     });
                   }}
@@ -560,9 +560,9 @@ function SettingsPanel({ password }: { password: string }) {
             <div key={key} className="space-y-2">
               <Label className="capitalize">{
                 key === 'source' ? 'Джерело' :
-                key === 'structure' ? 'Структура' :
-                key === 'purpose' ? 'Мета' :
-                key === 'plot' ? 'Сюжет' : 'Спеціальний'
+                  key === 'structure' ? 'Структура' :
+                    key === 'purpose' ? 'Мета' :
+                      key === 'plot' ? 'Сюжет' : 'Спеціальний'
               }</Label>
               <Select
                 value={settings[`narrative_${key}` as keyof SettingsType] as string}
@@ -636,7 +636,7 @@ function PartsPanel({ password }: { password: string }) {
         `)
         .order('date', { ascending: false })
         .limit(50);
-      
+
       if (error) throw error;
       return data;
     }
@@ -698,9 +698,9 @@ function PartsPanel({ password }: { password: string }) {
                 </p>
               </div>
               {part.cover_image_url && (
-                <img 
-                  src={part.cover_image_url} 
-                  alt="" 
+                <img
+                  src={part.cover_image_url}
+                  alt=""
                   className={`w-20 h-20 object-cover border ${part.is_flash_news ? 'border-amber-500/30' : 'border-border'}`}
                 />
               )}
@@ -712,9 +712,9 @@ function PartsPanel({ password }: { password: string }) {
               <Link to={`/read/${part.date}`}>
                 <Button size="sm" variant="ghost">Переглянути</Button>
               </Link>
-              <Button 
-                size="sm" 
-                variant="destructive" 
+              <Button
+                size="sm"
+                variant="destructive"
                 onClick={() => handleDelete(part.id, part.title)}
                 disabled={deletingId === part.id}
                 className="ml-auto"
@@ -759,7 +759,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background">
       <SEOHead title="Панель керування" noIndex={true} />
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold chapter-title text-glow">ПАНЕЛЬ КЕРУВАННЯ</h1>
@@ -790,7 +790,7 @@ export default function AdminPage() {
               <Database className="w-4 h-4 text-cyan-500" />
               Кеш
             </TabsTrigger>
-            
+
             {/* Генерація контенту */}
             <TabsTrigger value="generate" className="gap-2">
               <Sparkles className="w-4 h-4" />
@@ -808,7 +808,7 @@ export default function AdminPage() {
               <Building2 className="w-4 h-4 text-blue-500" />
               Business
             </TabsTrigger>
-            
+
             {/* Контент */}
             <TabsTrigger value="chapters" className="gap-2">
               <BookOpen className="w-4 h-4" />
@@ -826,7 +826,7 @@ export default function AdminPage() {
               <MessageSquare className="w-4 h-4" />
               Діалоги
             </TabsTrigger>
-            
+
             {/* Новини */}
             <TabsTrigger value="newsdigest" className="gap-2">
               <Globe className="w-4 h-4 text-cyan-500" />
@@ -856,7 +856,7 @@ export default function AdminPage() {
               <Rss className="w-4 h-4 text-orange-500" />
               RSS
             </TabsTrigger>
-            
+
             {/* База даних */}
             <TabsTrigger value="wiki-entities" className="gap-2">
               <Building2 className="w-4 h-4 text-violet-500" />
@@ -870,7 +870,7 @@ export default function AdminPage() {
               <FileText className="w-4 h-4 text-cyan-500" />
               Парсинг
             </TabsTrigger>
-            
+
             {/* SEO & Технічне */}
             <TabsTrigger value="sitemaps" className="gap-2">
               <Map className="w-4 h-4 text-blue-500" />
@@ -888,7 +888,7 @@ export default function AdminPage() {
               <AlertTriangle className="w-4 h-4 text-destructive" />
               Помилки
             </TabsTrigger>
-            
+
             {/* Налаштування */}
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />

@@ -43,6 +43,7 @@ const COUNTRIES = [
 ];
 
 export function RSSFeedPanel({ password }: { password: string }) {
+  console.log("RSS Feed Panel v2.0 - Loaded");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newFeed, setNewFeed] = useState({
@@ -60,7 +61,7 @@ export function RSSFeedPanel({ password }: { password: string }) {
         .from("news_rss_feeds")
         .select("*")
         .order("created_at", { ascending: false });
-      
+
       if (error) throw error;
       return (data || []) as unknown as RSSFeed[];
     }
@@ -69,20 +70,20 @@ export function RSSFeedPanel({ password }: { password: string }) {
   // Add RSS feed mutation
   const addFeedMutation = useMutation({
     mutationFn: async (feed: typeof newFeed) => {
-      const { data, error } = await supabase
-        .from("news_rss_feeds")
-        .insert([{
+      // Use adminAction to bypass RLS issues
+      const result = await adminAction<{ success: boolean; feed: RSSFeed }>(
+        "createRSSFeed",
+        password,
+        {
           url: feed.url,
           name: feed.name,
           category: feed.category,
           country_id: feed.country,
           is_active: true
-        }])
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+        }
+      );
+
+      return result.feed;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rss-feeds"] });
@@ -101,12 +102,8 @@ export function RSSFeedPanel({ password }: { password: string }) {
   // Delete RSS feed mutation
   const deleteFeedMutation = useMutation({
     mutationFn: async (feedId: string) => {
-      const { error } = await supabase
-        .from("news_rss_feeds")
-        .delete()
-        .eq("id", feedId);
-      
-      if (error) throw error;
+      // Use adminAction to bypass RLS issues
+      await adminAction("deleteRSSFeed", password, { id: feedId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rss-feeds"] });
@@ -180,7 +177,7 @@ export function RSSFeedPanel({ password }: { password: string }) {
           {/* Add New Feed Form */}
           <div className="space-y-4 p-4 border border-primary/20 rounded-lg">
             <h3 className="font-semibold">Додати новий RSS фід</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="feed-url">URL фіду</Label>
@@ -255,7 +252,7 @@ export function RSSFeedPanel({ password }: { password: string }) {
           {/* Feeds List */}
           <div className="space-y-4">
             <h3 className="font-semibold">Активні фіди ({feeds?.length || 0})</h3>
-            
+
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground">
                 Завантаження...

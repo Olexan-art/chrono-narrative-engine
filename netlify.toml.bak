@@ -1,0 +1,97 @@
+[build]
+#   command = "npm install && npm run build"
+  publish = "dist"
+
+# [[edge_functions]]
+#   function = "bot-ssr"
+#   path = "/*"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# API routes — proxied directly to Supabase Edge Functions
+# These MUST be before the SPA fallback. Query params are forwarded automatically.
+[[redirects]]
+  from = "/api/wiki-sitemap"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/wiki-sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/news-sitemap"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/news-sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/sitemap"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/ssr-render"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/ssr-render"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/llms-txt"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/llms-txt"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/rss-feed"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/rss-feed"
+  status = 200
+  force = true
+
+# SPA fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Cache headers for static assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/favicon.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/favicon.ico"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/registerSW.js"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

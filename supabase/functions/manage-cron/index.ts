@@ -10,6 +10,7 @@ const corsHeaders = {
 const ADMIN_PASSWORD = Deno.env.get('ADMIN_PASSWORD');
 
 const RSS_SCHEDULES = {
+  '15min': '*/15 * * * *',
   '30min': '*/30 * * * *',
   '1hour': '0 * * * *',
   '6hours': '0 */6 * * *',
@@ -69,13 +70,13 @@ serve(async (req) => {
       case 'list': {
         // List all cron jobs
         const { data: jobs, error } = await supabase.rpc('get_cron_jobs');
-        
+
         if (error) {
           // Fallback: query cron.job directly
           const { data: jobsData, error: jobsError } = await supabase
             .from('cron.job')
             .select('jobid, jobname, schedule, active, command');
-          
+
           if (jobsError) {
             // Try raw SQL
             const result = await fetch(
@@ -92,7 +93,7 @@ serve(async (req) => {
                 })
               }
             );
-            
+
             // Use direct query approach
             const cronJobs = [
               {
@@ -103,19 +104,19 @@ serve(async (req) => {
                 description: 'Автоматична перевірка RSS кожну годину'
               }
             ];
-            
+
             return new Response(
               JSON.stringify({ success: true, jobs: cronJobs }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
-          
+
           return new Response(
             JSON.stringify({ success: true, jobs: jobsData }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        
+
         return new Response(
           JSON.stringify({ success: true, jobs }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -123,49 +124,63 @@ serve(async (req) => {
       }
 
       case 'get_rss_schedule': {
-        // Get current RSS fetch schedule
-        // Query the cron.job table for our RSS job
+        // Get current RSS fetch schedule from settings table
         try {
-          const { data: result } = await supabase.rpc('exec_sql', {
-            sql: "SELECT schedule FROM cron.job WHERE jobname = 'fetch-rss-feeds-hourly' LIMIT 1"
-          });
-          
-          let currentSchedule = '1hour'; // default
-          
-          // Match schedule to our predefined options
-          if (result && result[0]) {
-            const schedule = result[0].schedule;
-            if (schedule === '*/30 * * * *') currentSchedule = '30min';
-            else if (schedule === '0 * * * *') currentSchedule = '1hour';
-            else if (schedule === '0 */6 * * *') currentSchedule = '6hours';
-          }
-          
+          const { data: settings } = await supabase
+            .from('settings')
+            .select('rss_check_schedule')
+            .limit(1)
+            .single();
+
           return new Response(
-            JSON.stringify({ success: true, schedule: currentSchedule }),
+            JSON.stringify({ success: true, schedule: settings?.rss_check_schedule || '1hour' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch {
-          return new Response(
-            JSON.stringify({ success: true, schedule: '1hour' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          // Fallback to cron job query if settings fetch fails
+          try {
+            const { data: result } = await supabase.rpc('exec_sql', {
+              sql: "SELECT schedule FROM cron.job WHERE jobname = 'fetch-rss-feeds-hourly' LIMIT 1"
+            });
+
+            let currentSchedule = '1hour'; // default
+
+            // Match schedule to our predefined options
+            if (result && result[0]) {
+              const schedule = result[0].schedule;
+              if (schedule === '*/15 * * * *') currentSchedule = '15min';
+              else if (schedule === '*/30 * * * *') currentSchedule = '30min';
+              else if (schedule === '0 * * * *') currentSchedule = '1hour';
+              else if (schedule === '0 */6 * * *') currentSchedule = '6hours';
+            }
+
+            return new Response(
+              JSON.stringify({ success: true, schedule: currentSchedule }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          } catch {
+            return new Response(
+              JSON.stringify({ success: true, schedule: '1hour' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         }
       }
 
       case 'update_rss_schedule': {
         const { frequency } = data;
-        
+
         if (!frequency || !RSS_SCHEDULES[frequency as keyof typeof RSS_SCHEDULES]) {
           return new Response(
             JSON.stringify({ error: 'Invalid frequency' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        
+
         const newSchedule = RSS_SCHEDULES[frequency as keyof typeof RSS_SCHEDULES];
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-        
+
         try {
           // Unschedule existing job
           await supabase.rpc('exec_sql', {
@@ -175,7 +190,7 @@ serve(async (req) => {
           // Job might not exist, continue
           console.log('Could not unschedule existing job, continuing...');
         }
-        
+
         try {
           // Create new job with updated schedule
           const cronCommand = `
@@ -185,13 +200,34 @@ serve(async (req) => {
               body:='{"action": "fetch_all"}'::jsonb
             ) as request_id;
           `;
-          
+
           await supabase.rpc('exec_sql', {
             sql: `SELECT cron.schedule('fetch-rss-feeds-hourly', '${newSchedule}', $$${cronCommand}$$)`
           });
-          
+
+          // Save preference to settings table
+          try {
+            // Get the first row ID to ensure we target a valid row regardless of ID type (UUID vs BigInt)
+            const { data: settingsRow } = await supabase
+              .from('settings')
+              .select('id')
+              .limit(1)
+              .maybeSingle();
+
+            if (settingsRow) {
+              await supabase
+                .from('settings')
+                .update({ rss_check_schedule: frequency })
+                .eq('id', settingsRow.id);
+            } else {
+              console.warn('No settings row found to update persistence');
+            }
+          } catch (e) {
+            console.error('Failed to save persistence setting', e);
+          }
+
           console.log(`RSS schedule updated to: ${frequency} (${newSchedule})`);
-          
+
           return new Response(
             JSON.stringify({ success: true, frequency, schedule: newSchedule }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -211,7 +247,7 @@ serve(async (req) => {
           const { data: result } = await supabase.rpc('exec_sql', {
             sql: "SELECT jobid, jobname, schedule, active, command FROM cron.job ORDER BY jobname"
           });
-          
+
           const jobs = (result || []).map((job: { jobid: number; jobname: string; schedule: string; active: boolean; command: string }) => ({
             id: job.jobid,
             name: job.jobname,
@@ -220,7 +256,7 @@ serve(async (req) => {
             // Parse the command to get a human-readable description
             description: getJobDescription(job.jobname, job.command)
           }));
-          
+
           return new Response(
             JSON.stringify({ success: true, jobs }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -229,8 +265,8 @@ serve(async (req) => {
           console.error('Error listing jobs:', error);
           // Return known jobs as fallback
           return new Response(
-            JSON.stringify({ 
-              success: true, 
+            JSON.stringify({
+              success: true,
               jobs: [],
               error: 'Could not query cron jobs directly'
             }),
@@ -245,7 +281,7 @@ serve(async (req) => {
         const adminPassword = Deno.env.get('ADMIN_PASSWORD') || '1907';
         const frequency = data?.frequency || '6hours';
         const schedule = CACHE_SCHEDULES[frequency] || CACHE_SCHEDULES['6hours'];
-        
+
         try {
           // Try to unschedule existing job first
           await supabase.rpc('exec_sql', {
@@ -254,7 +290,7 @@ serve(async (req) => {
         } catch {
           console.log('No existing cache cron job, continuing...');
         }
-        
+
         try {
           const cronCommand = `
             SELECT net.http_get(
@@ -262,16 +298,16 @@ serve(async (req) => {
               headers:='{"Content-Type": "application/json"}'::jsonb
             ) as request_id;
           `;
-          
+
           await supabase.rpc('exec_sql', {
             sql: `SELECT cron.schedule('refresh-cache-auto', '${schedule}', $$${cronCommand}$$)`
           });
-          
+
           console.log(`Cache cron job scheduled: ${frequency} (${schedule})`);
-          
+
           return new Response(
-            JSON.stringify({ 
-              success: true, 
+            JSON.stringify({
+              success: true,
               message: `Cache refresh scheduled: ${frequency}`,
               frequency,
               schedule
@@ -292,7 +328,7 @@ serve(async (req) => {
           const { data: result } = await supabase.rpc('exec_sql', {
             sql: "SELECT jobname, schedule FROM cron.job WHERE jobname = 'refresh-cache-auto' LIMIT 1"
           });
-          
+
           const jobs = result as Array<{ jobname: string; schedule: string }> | null;
           if (jobs && jobs.length > 0) {
             const schedule = jobs[0].schedule;
@@ -302,13 +338,13 @@ serve(async (req) => {
             else if (schedule === '0 */6 * * *') frequency = '6hours';
             else if (schedule === '0 */12 * * *') frequency = '12hours';
             else if (schedule === '0 0 * * *') frequency = '24hours';
-            
+
             return new Response(
               JSON.stringify({ enabled: true, frequency, schedule }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
-          
+
           return new Response(
             JSON.stringify({ enabled: false }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -326,7 +362,7 @@ serve(async (req) => {
           await supabase.rpc('exec_sql', {
             sql: "SELECT cron.unschedule('refresh-cache-auto')"
           });
-          
+
           return new Response(
             JSON.stringify({ success: true, message: 'Cache cron job removed' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -346,7 +382,7 @@ serve(async (req) => {
         const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         const frequency = data?.frequency || '30min';
         const schedule = PENDING_SCHEDULES[frequency] || PENDING_SCHEDULES['30min'];
-        
+
         try {
           // Try to unschedule existing job first
           await supabase.rpc('exec_sql', {
@@ -355,7 +391,7 @@ serve(async (req) => {
         } catch {
           console.log('No existing pending cron job, continuing...');
         }
-        
+
         try {
           const cronCommand = `
             SELECT net.http_post(
@@ -364,16 +400,16 @@ serve(async (req) => {
               body:='{"action": "process_pending", "limit": 20}'::jsonb
             ) as request_id;
           `;
-          
+
           await supabase.rpc('exec_sql', {
             sql: `SELECT cron.schedule('process-pending-news', '${schedule}', $$${cronCommand}$$)`
           });
-          
+
           console.log(`Pending news cron job scheduled: ${frequency} (${schedule})`);
-          
+
           return new Response(
-            JSON.stringify({ 
-              success: true, 
+            JSON.stringify({
+              success: true,
               message: `Process pending scheduled: ${frequency}`,
               frequency,
               schedule
@@ -394,7 +430,7 @@ serve(async (req) => {
           const { data: result } = await supabase.rpc('exec_sql', {
             sql: "SELECT jobname, schedule FROM cron.job WHERE jobname = 'process-pending-news' LIMIT 1"
           });
-          
+
           const jobs = result as Array<{ jobname: string; schedule: string }> | null;
           if (jobs && jobs.length > 0) {
             const schedule = jobs[0].schedule;
@@ -402,13 +438,13 @@ serve(async (req) => {
             if (schedule === '*/15 * * * *') frequency = '15min';
             else if (schedule === '*/30 * * * *') frequency = '30min';
             else if (schedule === '0 * * * *') frequency = '1hour';
-            
+
             return new Response(
               JSON.stringify({ enabled: true, frequency, schedule }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
-          
+
           return new Response(
             JSON.stringify({ enabled: false }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -526,7 +562,7 @@ serve(async (req) => {
           await supabase.rpc('exec_sql', {
             sql: "SELECT cron.unschedule('process-pending-news')"
           });
-          
+
           return new Response(
             JSON.stringify({ success: true, message: 'Pending cron job removed' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

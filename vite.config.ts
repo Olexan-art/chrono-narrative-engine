@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "inline",
+      filename: "service-worker.js",
       includeAssets: ["favicon.png", "favicon.ico"],
       manifest: {
         name: "Synchronization Point",

@@ -82,15 +82,30 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
     }
   }
 
-  const provider = settings.llm_text_provider || settings.llm_provider || 'lovable';
-  
+  const provider = settings.llm_text_provider || settings.llm_provider || 'zai';
+  const model = settings.llm_text_model || 'google/gemini-3-flash-preview';
+
+  // Auto-detect provider from model prefix to prevent mismatches
+  let effectiveProvider = provider;
+  if (model.startsWith('google/') || model.startsWith('gemini')) {
+    effectiveProvider = 'geminiV22'; // Use Gemini V22 for Google models directly
+  } else if (model.startsWith('openai/') || model.startsWith('gpt')) {
+    effectiveProvider = 'openai'; // Use OpenAI directly
+  } else if (model.startsWith('mistral-') || model.startsWith('codestral')) {
+    effectiveProvider = 'mistral';
+  } else if (model.startsWith('GLM-') || model.startsWith('glm-')) {
+    effectiveProvider = 'zai';
+  } else if (model.startsWith('claude')) {
+    effectiveProvider = 'anthropic';
+  }
+
   // Z.AI provider - OpenAI-compatible API
-  if (provider === 'zai') {
+  if (effectiveProvider === 'zai') {
     const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
     if (!apiKey) throw new Error('Z.AI API key not configured');
 
-    console.log('Using Z.AI with model:', settings.llm_text_model || 'GLM-4.7');
-    
+    console.log('Using Z.AI with model:', model || 'GLM-4.7');
+
     const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
       method: 'POST',
       headers: {
@@ -98,7 +113,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: settings.llm_text_model || 'GLM-4.7',
+        model: model || 'GLM-4.7',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -116,38 +131,8 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
     const data = await response.json();
     return data.choices?.[0]?.message?.content || '';
   }
-  
-  if (provider === 'lovable') {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: settings.llm_text_model || 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        response_format: { type: "json_object" }
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Lovable AI error:', response.status, errorText);
-      throw new Error(`Lovable AI error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
-  }
-
-  if (provider === 'openai') {
+  if (effectiveProvider === 'openai') {
     const apiKey = settings.openai_api_key || Deno.env.get('OPENAI_API_KEY');
     if (!apiKey) throw new Error('OpenAI API key not configured');
 
@@ -158,7 +143,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: settings.llm_text_model || 'gpt-4o',
+        model: model, // Use configured model
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -177,11 +162,11 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
     return data.choices?.[0]?.message?.content || '';
   }
 
-  if (provider === 'gemini') {
-    const apiKey = settings.gemini_api_key;
+  if (effectiveProvider === 'gemini') {
+    const apiKey = settings.gemini_api_key || Deno.env.get('GEMINI_API_KEY');
     if (!apiKey) throw new Error('Gemini API key not configured');
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${settings.llm_text_model || 'gemini-2.0-flash'}:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -202,8 +187,8 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   }
 
-  if (provider === 'anthropic') {
-    const apiKey = settings.anthropic_api_key;
+  if (effectiveProvider === 'anthropic') {
+    const apiKey = settings.anthropic_api_key || Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) throw new Error('Anthropic API key not configured');
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -214,7 +199,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: settings.llm_text_model || 'claude-3-5-sonnet-20241022',
+        model: model, // Use configured model
         max_tokens: 4096,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }]
@@ -232,14 +217,13 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
   }
 
   // Gemini V22 provider - direct Google AI API with v22 key
-  if (provider === 'geminiV22') {
+  if (effectiveProvider === 'geminiV22') {
     const apiKey = settings.gemini_v22_api_key || Deno.env.get('GEMINI_V22_API_KEY');
     if (!apiKey) throw new Error('Gemini V22 API key not configured');
 
-    const modelName = settings.llm_text_model || 'gemini-2.5-flash';
-    console.log('Using Gemini V22 with model:', modelName);
+    console.log('Using Gemini V22 with model:', model);
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -261,12 +245,11 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
   }
 
   // Mistral provider
-  if (provider === 'mistral') {
+  if (effectiveProvider === 'mistral') {
     const apiKey = settings.mistral_api_key;
     if (!apiKey) throw new Error('Mistral API key not configured');
 
-    const modelName = settings.llm_text_model || 'mistral-large-latest';
-    console.log('Using Mistral with model:', modelName);
+    console.log('Using Mistral with model:', model);
 
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
@@ -275,7 +258,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: modelName,
+        model: model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -294,7 +277,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
     return data.choices?.[0]?.message?.content || '';
   }
 
-  throw new Error(`Unknown LLM provider: ${provider}`);
+  throw new Error(`Unknown LLM provider: ${effectiveProvider}`);
 }
 
 function generateRandomLikes(): number {
@@ -313,7 +296,7 @@ serve(async (req) => {
   }
 
   try {
-    const { 
+    const {
       storyContext,
       newsContext,
       narrativeSource,
@@ -344,9 +327,9 @@ serve(async (req) => {
       .single();
 
     const llmSettings: LLMSettings = {
-      llm_provider: settingsData?.llm_provider || 'lovable',
+      llm_provider: settingsData?.llm_provider || 'zai',
       llm_text_provider: settingsData?.llm_text_provider || null,
-      llm_text_model: model || settingsData?.llm_text_model || 'google/gemini-3-flash-preview',
+      llm_text_model: model || settingsData?.llm_text_model || 'GLM-4.7',
       openai_api_key: settingsData?.openai_api_key || null,
       gemini_api_key: settingsData?.gemini_api_key || null,
       gemini_v22_api_key: settingsData?.gemini_v22_api_key || null,
@@ -359,8 +342,8 @@ serve(async (req) => {
     if (model) {
       if (model.startsWith('GLM-')) {
         llmSettings.llm_text_provider = 'zai';
-      } else if (model.startsWith('google/') || model.startsWith('openai/')) {
-        llmSettings.llm_text_provider = 'lovable';
+      } else if (model.startsWith('google/') || model.startsWith('gemini')) {
+        llmSettings.llm_text_provider = 'geminiV22';
       } else if (model.startsWith('gpt-')) {
         llmSettings.llm_text_provider = 'openai';
       } else if (model.startsWith('gemini-')) {
@@ -390,10 +373,10 @@ serve(async (req) => {
     if (selectedCharactersParam && typeof selectedCharactersParam === 'string' && selectedCharactersParam.trim()) {
       // Parse selected characters info - format: "Name (avatar) - style, Name2 (avatar2) - style2"
       const selectedNames = selectedCharactersParam.split(',').map(s => s.trim().split(' ')[0]);
-      const filteredChars = allCharacters.filter(c => 
+      const filteredChars = allCharacters.filter(c =>
         selectedNames.some(name => c.name.toLowerCase().includes(name.toLowerCase()))
       );
-      
+
       if (filteredChars.length >= 2) {
         mainCharacters = filteredChars.slice(0, 2);
         if (filteredChars.length >= 3) {
@@ -441,17 +424,17 @@ serve(async (req) => {
       'te': 'తెలుగు (Telugu)',
       'bn': 'বাংলা (Bengali)'
     };
-    
+
     const primaryLanguageName = languageNames[contentLanguage] || 'українська';
 
-    const charactersList = thirdCharacter 
+    const charactersList = thirdCharacter
       ? [...mainCharacters, thirdCharacter]
       : mainCharacters;
 
     // Build language-aware system prompt
     const isIndianLanguage = ['hi', 'ta', 'te', 'bn'].includes(contentLanguage);
     const primaryFieldName = contentLanguage === 'uk' ? 'dialogue' : `dialogue_${contentLanguage}`;
-    
+
     const systemPrompt = `You are generating character dialogues for the satirical sci-fi project "Synchronization Point".
 
 CHARACTERS:
@@ -502,7 +485,7 @@ ${thirdCharacter ? `Include the unexpected appearance of ${thirdCharacter.name}.
         { character: char.character_id, name: char.name, avatar: char.avatar, message: "Цікаві події сьогодні..." },
         { character: mainCharacters[(idx + 1) % 2].character_id, name: mainCharacters[(idx + 1) % 2].name, avatar: mainCharacters[(idx + 1) % 2].avatar, message: "Так, людство знову здивувало." }
       ]).slice(0, messageCount);
-      
+
       result = {
         dialogue: fallbackDialogue,
         dialogue_en: mainCharacters.flatMap((char, idx) => [
@@ -522,7 +505,7 @@ ${thirdCharacter ? `Include the unexpected appearance of ${thirdCharacter.name}.
         const baseLikes = generateRandomLikes();
         const likeGiversCount = Math.floor(Math.random() * 3) + 1;
         const likeGivers = selectRelatedCharacters(allCharacters, [mainCharacters.find(c => c.character_id === msg.character)!].filter(Boolean), likeGiversCount);
-        
+
         const characterLikes: CharacterLike[] = likeGivers.map(c => ({
           characterId: c.character_id,
           name: c.name,
@@ -566,7 +549,7 @@ ${thirdCharacter ? `Include the unexpected appearance of ${thirdCharacter.name}.
 
     // Update character statistics
     const characterStats: Record<string, { dialogueCount: number; totalLikes: number }> = {};
-    
+
     // Count dialogues and sum likes per character
     for (const msg of dialogueWithLikes) {
       if (!characterStats[msg.character]) {
@@ -588,7 +571,7 @@ ${thirdCharacter ? `Include the unexpected appearance of ${thirdCharacter.name}.
             .select('dialogue_count, total_likes')
             .eq('id', char.id)
             .single();
-          
+
           if (currentChar) {
             await supabase
               .from('characters')
@@ -598,7 +581,7 @@ ${thirdCharacter ? `Include the unexpected appearance of ${thirdCharacter.name}.
                 last_dialogue_at: now
               })
               .eq('id', char.id);
-            
+
             console.log(`Updated stats for ${characterId}: +${stats.dialogueCount} dialogues, +${stats.totalLikes} likes`);
           }
         } catch (err) {
@@ -613,23 +596,23 @@ ${thirdCharacter ? `Include the unexpected appearance of ${thirdCharacter.name}.
     let tweets = null;
     let tweets_en = null;
     let tweets_pl = null;
-    
+
     if (generateTweets && tweetCount > 0) {
       console.log('Generating tweets in language:', contentLanguage, 'hype mode:', isHypeTweet);
-      
+
       // Hype tweet style additions
       const hypeStyleUk = isHypeTweet ? `
 5. Твіти мають бути ВІРУСНИМИ - провокативними, емоційними, з hook на початку
 6. Використовуй смайли 🔥💀🚨😱 для привернення уваги
 7. Короткі речення, максимум впливу
 8. Стиль Twitter/X хайпу - наче це може стати вірусним` : '';
-      
+
       const hypeStyleEn = isHypeTweet ? `
 5. Tweets must be VIRAL - provocative, emotional, with a hook at the start
 6. Use emojis 🔥💀🚨😱 for attention
 7. Short punchy sentences, maximum impact
 8. Twitter/X hype style - like it could go viral` : '';
-      
+
       const hypeStylePl = isHypeTweet ? `
 5. Tweety muszą być WIRALOWE - prowokacyjne, emocjonalne, z haczykiem na początku
 6. Używaj emoji 🔥💀🚨😱 dla przyciągnięcia uwagi
@@ -755,7 +738,7 @@ JSON ফর্ম্যাটে উত্তর:
           user: `এই সংবাদ সম্পর্কে ${tweetCount} অনন্য বাংলা টুইট তৈরি করুন।`
         }
       };
-      
+
       const tweetPrompt = tweetPrompts[contentLanguage] || tweetPrompts['uk'];
 
       const tweetUserPrompt = `CONTEXT:
@@ -769,13 +752,13 @@ ${tweetPrompt.user}`;
       try {
         const tweetContent = await callLLM(llmSettings, tweetPrompt.system, tweetUserPrompt, useOpenAI);
         const tweetResult = JSON.parse(tweetContent);
-        
+
         tweets = (tweetResult.tweets || []).map((t: any) => ({
           ...t,
           likes: t.likes || Math.floor(Math.random() * 2000) + 100,
           retweets: t.retweets || Math.floor(Math.random() * 500) + 50
         }));
-        
+
         // For news, we don't need multilingual tweets - just the language of the news
         // For chapters, we generate all three languages
         if (chapterId) {
@@ -790,7 +773,7 @@ ${tweetPrompt.user}`;
             retweets: t.retweets || Math.floor(Math.random() * 500) + 50
           }));
         }
-        
+
         console.log('Generated', tweets.length, 'tweets in', contentLanguage);
       } catch (tweetError) {
         console.error('Tweet generation failed:', tweetError);
@@ -800,24 +783,24 @@ ${tweetPrompt.user}`;
     // Save to chapter if chapterId provided
     if (chapterId) {
       console.log('Saving dialogue to chapter:', chapterId);
-      
+
       const updateData: Record<string, any> = {
         chat_dialogue: dialogueWithLikes,
         chat_dialogue_en: dialogueEnWithLikes,
         chat_dialogue_pl: dialoguePlWithLikes
       };
-      
+
       if (tweets) {
         updateData.tweets = tweets;
         updateData.tweets_en = tweets_en;
         updateData.tweets_pl = tweets_pl;
       }
-      
+
       const { error: updateError } = await supabase
         .from('chapters')
         .update(updateData)
         .eq('id', chapterId);
-      
+
       if (updateError) {
         console.error('Failed to save dialogue to chapter:', updateError);
       } else {
@@ -826,8 +809,8 @@ ${tweetPrompt.user}`;
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         dialogue: dialogueWithLikes,
         dialogue_en: dialogueEnWithLikes,
         dialogue_pl: dialoguePlWithLikes,

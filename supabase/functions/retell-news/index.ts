@@ -8,21 +8,21 @@ const corsHeaders = {
 
 // Helper to trigger cache update for a news page
 async function updateNewsCache(
-  countryCode: string, 
-  slug: string, 
+  countryCode: string,
+  slug: string,
   supabaseUrl: string
 ): Promise<void> {
   try {
     const path = `/news/${countryCode}/${slug}`;
     console.log(`Updating cache for news page: ${path}`);
-    
+
     const response = await fetch(`${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(path)}&password=${Deno.env.get('ADMIN_PASSWORD')}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
       }
     });
-    
+
     if (!response.ok) {
       console.error(`Failed to update cache for ${path}:`, response.status);
     } else {
@@ -48,16 +48,16 @@ interface LLMSettings {
 
 async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: string, overrideModel?: string): Promise<string> {
   const model = overrideModel || settings.llm_text_model || 'google/gemini-3-flash-preview';
-  
+
   // Determine provider from model name if override model is passed
   let provider = settings.llm_text_provider || settings.llm_provider || 'zai';
-  
+
   // Auto-detect provider from model prefix to prevent mismatches
   if (overrideModel) {
     if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
-      provider = 'lovable'; // Use Lovable AI gateway for Google models
+      provider = 'geminiV22'; // Use Gemini V22 for Google models directly
     } else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) {
-      provider = 'lovable'; // Use Lovable AI gateway for OpenAI models
+      provider = 'openai'; // Use OpenAI directly
     } else if (overrideModel.startsWith('mistral-') || overrideModel.startsWith('codestral')) {
       provider = 'mistral';
     } else if (overrideModel.startsWith('GLM-') || overrideModel.startsWith('glm-')) {
@@ -66,14 +66,14 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
       provider = 'anthropic';
     }
   }
-  
+
   // Z.AI provider - OpenAI-compatible API
   if (provider === 'zai') {
     const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
     if (!apiKey) throw new Error('Z.AI API key not configured');
 
     console.log('Using Z.AI with model:', model || 'GLM-4.7');
-    
+
     const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
       method: 'POST',
       headers: {
@@ -93,43 +93,6 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
       const errorText = await response.text();
       console.error('Z.AI error:', response.status, errorText);
       throw new Error(`Z.AI error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
-  }
-  
-  if (provider === 'lovable') {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
-
-    console.log('Using Lovable AI with model:', model);
-    
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        throw new Error('Rate limit exceeded. Please try again later.');
-      }
-      if (response.status === 402) {
-        throw new Error('Payment required. Please add credits to your workspace.');
-      }
-      const errorText = await response.text();
-      console.error('Lovable AI error:', response.status, errorText);
-      throw new Error(`Lovable AI error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -256,7 +219,7 @@ serve(async (req) => {
 
   try {
     const { newsId, model } = await req.json();
-    
+
     if (!newsId) {
       return new Response(JSON.stringify({ error: 'newsId is required' }), {
         status: 400,
@@ -296,13 +259,13 @@ serve(async (req) => {
       if (news.content_ta || news.title_ta) return { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்' };
       if (news.content_te || news.title_te) return { code: 'te', name: 'Telugu', nativeName: 'తెలుగు' };
       if (news.content_bn || news.title_bn) return { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' };
-      
+
       // Check country code
       const countryCode = news.country?.code?.toLowerCase();
       if (countryCode === 'ua') return { code: 'uk', name: 'Ukrainian', nativeName: 'українська' };
       if (countryCode === 'pl') return { code: 'pl', name: 'Polish', nativeName: 'polski' };
       if (countryCode === 'in') return { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' };
-      
+
       // Default to English
       return { code: 'en', name: 'English', nativeName: 'English' };
     };
@@ -478,7 +441,7 @@ Zasady:
     };
 
     const prompt = prompts[language.code] || prompts['en'];
-    
+
     // Get the appropriate content based on language
     // IMPORTANT: Use original_content for retelling if available (not the AI-generated content)
     const getContent = () => {
@@ -487,7 +450,7 @@ Zasady:
         console.log('Using original_content for retelling:', news.original_content.length, 'chars');
         return news.original_content;
       }
-      
+
       // Fallback to localized content fields (legacy items without original_content)
       if (language.code === 'hi') return news.content_hi || news.content_en || news.content;
       if (language.code === 'ta') return news.content_ta || news.content_en || news.content;
@@ -535,11 +498,11 @@ Category: ${news.category || 'general'}`;
 
     try {
       // Try to extract JSON from response (may be wrapped in markdown code blocks)
-      const jsonMatch = rawResponse.match(/```json\s*([\s\S]*?)\s*```/) || 
-                        rawResponse.match(/```\s*([\s\S]*?)\s*```/) ||
-                        [null, rawResponse];
+      const jsonMatch = rawResponse.match(/```json\s*([\s\S]*?)\s*```/) ||
+        rawResponse.match(/```\s*([\s\S]*?)\s*```/) ||
+        [null, rawResponse];
       const jsonStr = jsonMatch[1] || rawResponse;
-      
+
       // Try to parse as JSON
       const parsed = JSON.parse(jsonStr.trim());
       if (parsed.content) {
@@ -609,7 +572,7 @@ Category: ${news.category || 'general'}`;
     try {
       if (keywords && keywords.length > 0) {
         console.log('Searching Wikipedia for entities from keywords:', keywords);
-        
+
         const wikiResponse = await fetch(`${supabaseUrl}/functions/v1/search-wiki`, {
           method: 'POST',
           headers: {
@@ -644,8 +607,8 @@ Category: ${news.category || 'general'}`;
       await updateNewsCache(countryCode, news.slug, supabaseUrl);
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       content: retoldContent,
       language: language.code,
       field: updateField,
@@ -660,8 +623,8 @@ Category: ${news.category || 'general'}`;
 
   } catch (error) {
     console.error('Error in retell-news:', error);
-    return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return new Response(JSON.stringify({
+      error: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

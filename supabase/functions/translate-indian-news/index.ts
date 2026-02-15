@@ -5,6 +5,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+interface LLMSettings {
+  llm_provider: string;
+  llm_text_provider: string | null;
+  llm_text_model: string;
+  openai_api_key: string | null;
+  gemini_api_key: string | null;
+  anthropic_api_key: string | null;
+  zai_api_key: string | null;
+  mistral_api_key: string | null;
+}
+
 interface TranslationResult {
   title_hi: string;
   title_ta: string;
@@ -20,12 +31,9 @@ interface TranslationResult {
   content_bn?: string;
 }
 
-async function translateWithLovable(text: string, targetLanguages: string[]): Promise<Record<string, string>> {
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  
-  if (!LOVABLE_API_KEY) {
-    throw new Error('LOVABLE_API_KEY not configured');
-  }
+async function translateWithLLM(settings: LLMSettings, text: string, targetLanguages: string[]): Promise<Record<string, string>> {
+  const provider = settings.llm_text_provider || settings.llm_provider || 'zai';
+  const model = settings.llm_text_model || 'google/gemini-3-flash-preview';
 
   const languageNames: Record<string, string> = {
     hi: 'Hindi',
@@ -44,33 +52,96 @@ Provide ONLY the translations in this exact JSON format, no explanation:
 ${targetLanguages.map(l => `  "${l}": "translated text in ${languageNames[l]}"`).join(',\n')}
 }`;
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
-      messages: [
-        { role: 'system', content: 'You are a professional translator specializing in Indian languages. Always respond with valid JSON only.' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.3,
-      max_tokens: 4000
-    })
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    console.error('Lovable API error:', error);
-    throw new Error(`Translation API error: ${response.status}`);
+  // Auto-detect provider from model prefix
+  let effectiveProvider = provider;
+  if (model.startsWith('google/') || model.startsWith('gemini')) {
+    effectiveProvider = 'gemini';
+  } else if (model.startsWith('openai/') || model.startsWith('gpt')) {
+    effectiveProvider = 'openai';
+  } else if (model.startsWith('mistral-')) {
+    effectiveProvider = 'mistral';
+  } else if (model.startsWith('GLM-') || model.startsWith('glm-')) {
+    effectiveProvider = 'zai';
+  } else if (model.startsWith('claude')) {
+    effectiveProvider = 'anthropic';
   }
 
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || '';
-  
-  // Extract JSON from response
+  let content = '';
+
+  if (effectiveProvider === 'zai') {
+    const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
+    if (!apiKey) throw new Error('Z.AI API key not configured');
+
+    const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model || 'GLM-4.7',
+        messages: [
+          { role: 'system', content: 'You are a professional translator specializing in Indian languages. Always respond with valid JSON only.' },
+          { role: 'user', content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Z.AI error: ${response.status}`);
+    const data = await response.json();
+    content = data.choices?.[0]?.message?.content || '';
+  }
+  else if (effectiveProvider === 'openai') {
+    const apiKey = settings.openai_api_key || Deno.env.get('OPENAI_API_KEY');
+    if (!apiKey) throw new Error('OpenAI API key not configured');
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'system', content: 'You are a professional translator specializing in Indian languages. Always respond with valid JSON only.' },
+          { role: 'user', content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    if (!response.ok) throw new Error(`OpenAI error: ${response.status}`);
+    const data = await response.json();
+    content = data.choices?.[0]?.message?.content || '';
+  }
+  else if (effectiveProvider === 'gemini') {
+    const apiKey = settings.gemini_api_key || Deno.env.get('GEMINI_API_KEY');
+    if (!apiKey) throw new Error('Gemini API key not configured');
+
+    const modelName = model.replace('google/', '');
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `You are a professional translator specializing in Indian languages. Always respond with valid JSON only.\n\n${prompt}` }] }],
+        generationConfig: { responseMimeType: "application/json" }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini error: ${response.status} ${errorText}`);
+    }
+    const data = await response.json();
+    content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+  else {
+    throw new Error(`Provider ${effectiveProvider} not implemented in translate-indian-news`);
+  }
+
+  // Extract JSON from response if needed (redundant if response_format worked, but safe)
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     console.error('No JSON found in response:', content);
@@ -95,6 +166,24 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Fetch settings
+    const { data: settingsData } = await supabase
+      .from('settings')
+      .select('llm_provider, llm_text_provider, llm_text_model, openai_api_key, gemini_api_key, zai_api_key')
+      .limit(1)
+      .single();
+
+    const llmSettings: LLMSettings = settingsData || {
+      llm_provider: 'zai',
+      llm_text_provider: null,
+      llm_text_model: 'GLM-4.7',
+      openai_api_key: null,
+      gemini_api_key: null,
+      anthropic_api_key: null,
+      zai_api_key: null,
+      mistral_api_key: null
+    };
+
     const { action, newsItemId, countryCode } = await req.json();
 
     // Action: translate a specific news item
@@ -118,7 +207,7 @@ Deno.serve(async (req) => {
       // Translate title
       if (item.title) {
         console.log('Translating title:', item.title.slice(0, 50));
-        const titleTranslations = await translateWithLovable(item.title, targetLanguages);
+        const titleTranslations = await translateWithLLM(llmSettings, item.title, targetLanguages);
         for (const lang of targetLanguages) {
           (translations as any)[`title_${lang}`] = titleTranslations[lang];
         }
@@ -127,7 +216,7 @@ Deno.serve(async (req) => {
       // Translate description
       if (item.description) {
         console.log('Translating description');
-        const descTranslations = await translateWithLovable(item.description, targetLanguages);
+        const descTranslations = await translateWithLLM(llmSettings, item.description, targetLanguages);
         for (const lang of targetLanguages) {
           (translations as any)[`description_${lang}`] = descTranslations[lang];
         }
@@ -136,7 +225,7 @@ Deno.serve(async (req) => {
       // Translate content (if short enough)
       if (item.content && item.content.length < 2000) {
         console.log('Translating content');
-        const contentTranslations = await translateWithLovable(item.content, targetLanguages);
+        const contentTranslations = await translateWithLLM(llmSettings, item.content, targetLanguages);
         for (const lang of targetLanguages) {
           (translations as any)[`content_${lang}`] = contentTranslations[lang];
         }
@@ -202,14 +291,14 @@ Deno.serve(async (req) => {
           const translations: Record<string, string> = {};
 
           if (item.title) {
-            const titleTranslations = await translateWithLovable(item.title, targetLanguages);
+            const titleTranslations = await translateWithLLM(llmSettings, item.title, targetLanguages);
             for (const lang of targetLanguages) {
               translations[`title_${lang}`] = titleTranslations[lang];
             }
           }
 
           if (item.description) {
-            const descTranslations = await translateWithLovable(item.description, targetLanguages);
+            const descTranslations = await translateWithLLM(llmSettings, item.description, targetLanguages);
             for (const lang of targetLanguages) {
               translations[`description_${lang}`] = descTranslations[lang];
             }

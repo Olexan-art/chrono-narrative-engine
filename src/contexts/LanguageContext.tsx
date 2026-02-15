@@ -16,7 +16,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.calendar': 'Календар',
     'nav.admin': 'Адмінка',
     'header.subtitle': 'КРОТОВИНА ІСТОРІЇ',
-    
+
     // Hero
     'hero.badge': 'SMART NEWS',
     'hero.title': 'Точка Синхронізації',
@@ -24,7 +24,7 @@ const translations: Record<Language, Record<string, string>> = {
     'hero.archive': 'Переглянути архів',
     'hero.latest': 'Читати останнє',
     'hero.allUsNews': 'Усі новини USA',
-    
+
     // Structure
     'structure.month': 'МІСЯЦЬ → ТОМ',
     'structure.month.desc': 'Цілісна сюжетна арка глобального вектора людства',
@@ -32,7 +32,7 @@ const translations: Record<Language, Record<string, string>> = {
     'structure.week.desc': 'Синтез подій з монологом Наратора',
     'structure.day': 'ДЕНЬ → ЧАСТИНА',
     'structure.day.desc': 'Яскравий спалах через метафори та прогнози',
-    
+
     // Content
     'latest.title': 'ОСТАННІ ЗАПИСИ',
     'chapters.title': 'ГЛАВИ ТИЖНІВ',
@@ -48,23 +48,23 @@ const translations: Record<Language, Record<string, string>> = {
     'hot_meat': 'Гаряче м\'ясо',
     'monologue': 'Монолог',
     'commentary': 'Коментар',
-    
+
     // Footer
-    'footer.style': 'З великим натхненням: Рей Бредбері • Артур Кларк • Ніл Гейман',
-    
+    'footer.style': 'З великим натхненням: Рей Бредбері • Артур Кларк • Ніл Гейман • 2026',
+
     // News
     'news.sources': 'Джерела новин',
     'news.read': 'Читати оригінал',
-    
+
     // Chapters
     'chapters.count': 'глав',
-    
+
     // Calendar
     'calendar.title': 'КАЛЕНДАР',
     'calendar.view_full': 'Переглянути повний календар',
     'calendar.latest_chapter': 'ОСТАННЯ ГЛАВА',
     'calendar.read_chapter': 'Читати главу',
-    
+
     // Narrative Chart
     'narrative.title': 'НАРАТИВНА СТРУКТУРА',
     'narrative.elements': 'елементів',
@@ -82,7 +82,7 @@ const translations: Record<Language, Record<string, string>> = {
     'volumes.views': 'Переглядів',
     'volumes.unique': 'Унікальних',
     'volumes.view_chapters': 'Переглянути глави →',
-    
+
     // Calendar Page
     'calendar.stories_on_date': 'оповідань на цю дату',
     'calendar.published': 'ОПУБЛІКОВАНО',
@@ -92,7 +92,7 @@ const translations: Record<Language, Record<string, string>> = {
     'calendar.edit': 'Редагувати',
     'calendar.no_parts': 'Частин для цього дня ще не створено',
     'calendar.go_to_generation': 'Перейти до генерації',
-    
+
     // Month names
     'month.1': 'Січень',
     'month.2': 'Лютий',
@@ -106,7 +106,7 @@ const translations: Record<Language, Record<string, string>> = {
     'month.10': 'Жовтень',
     'month.11': 'Листопад',
     'month.12': 'Грудень',
-    
+
     // Common
     'common.stories': 'оповідань',
 
@@ -209,7 +209,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.calendar': 'Calendar',
     'nav.admin': 'Admin',
     'header.subtitle': 'ARCHIVE OF HUMAN HISTORY',
-    
+
     // Hero
     'hero.badge': 'SMART NEWS',
     'hero.title': 'Synchronization Point',
@@ -217,7 +217,7 @@ const translations: Record<Language, Record<string, string>> = {
     'hero.archive': 'Browse Archive',
     'hero.latest': 'Read Latest',
     'hero.allUsNews': 'All USA News',
-    
+
     // Structure
     'structure.month': 'MONTH → VOLUME',
     'structure.month.desc': 'A complete narrative arc of humanity\'s global vector',
@@ -225,7 +225,7 @@ const translations: Record<Language, Record<string, string>> = {
     'structure.week.desc': 'Synthesis of events with Narrator\'s monologue',
     'structure.day': 'DAY → PART',
     'structure.day.desc': 'A vivid flash through metaphors and forecasts',
-    
+
     // Content
     'latest.title': 'LATEST ENTRIES',
     'chapters.title': 'WEEKLY CHAPTERS',
@@ -241,23 +241,23 @@ const translations: Record<Language, Record<string, string>> = {
     'hot_meat': 'Hot meat',
     'monologue': 'Monologue',
     'commentary': 'Commentary',
-    
+
     // Footer
-    'footer.style': 'Style: Ray Bradbury • Arthur C. Clarke • Neil Gaiman',
-    
+    'footer.style': 'Style: Ray Bradbury • Arthur C. Clarke • Neil Gaiman • 2026',
+
     // News
     'news.sources': 'News Sources',
     'news.read': 'Read Original',
-    
+
     // Chapters
     'chapters.count': 'chapters',
-    
+
     // Calendar
     'calendar.title': 'CALENDAR',
     'calendar.view_full': 'View Full Calendar',
     'calendar.latest_chapter': 'LATEST CHAPTER',
     'calendar.read_chapter': 'Read Chapter',
-    
+
     // Narrative Chart
     'narrative.title': 'NARRATIVE STRUCTURE',
     'narrative.elements': 'elements',
@@ -275,7 +275,7 @@ const translations: Record<Language, Record<string, string>> = {
     'volumes.views': 'Views',
     'volumes.unique': 'Unique',
     'volumes.view_chapters': 'View chapters →',
-    
+
     // Calendar Page
     'calendar.stories_on_date': 'stories on this date',
     'calendar.published': 'PUBLISHED',
@@ -285,7 +285,7 @@ const translations: Record<Language, Record<string, string>> = {
     'calendar.edit': 'Edit',
     'calendar.no_parts': 'No parts created for this day yet',
     'calendar.go_to_generation': 'Go to generation',
-    
+
     // Month names
     'month.1': 'January',
     'month.2': 'February',
@@ -299,7 +299,7 @@ const translations: Record<Language, Record<string, string>> = {
     'month.10': 'October',
     'month.11': 'November',
     'month.12': 'December',
-    
+
     // Common
     'common.stories': 'stories',
 
@@ -402,7 +402,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.calendar': 'Kalendarz',
     'nav.admin': 'Admin',
     'header.subtitle': 'ARCHIVE OF HUMAN HISTORY',
-    
+
     // Hero
     'hero.badge': 'SMART NEWS',
     'hero.title': 'Punkt Synchronizacji',
@@ -410,7 +410,7 @@ const translations: Record<Language, Record<string, string>> = {
     'hero.archive': 'Przeglądaj Archiwum',
     'hero.latest': 'Czytaj Najnowsze',
     'hero.allUsNews': 'Wszystkie wiadomości USA',
-    
+
     // Structure
     'structure.month': 'MIESIĄC → TOM',
     'structure.month.desc': 'Kompletny łuk narracyjny globalnego wektora ludzkości',
@@ -418,7 +418,7 @@ const translations: Record<Language, Record<string, string>> = {
     'structure.week.desc': 'Synteza wydarzeń z monologiem Narratora',
     'structure.day': 'DZIEŃ → CZĘŚĆ',
     'structure.day.desc': 'Żywy błysk przez metafory i prognozy',
-    
+
     // Content
     'latest.title': 'NAJNOWSZE WPISY',
     'chapters.title': 'ROZDZIAŁY TYGODNIOWE',
@@ -434,23 +434,23 @@ const translations: Record<Language, Record<string, string>> = {
     'hot_meat': 'Gorące mięso',
     'monologue': 'Monolog',
     'commentary': 'Komentarz',
-    
+
     // Footer
-    'footer.style': 'Styl: Ray Bradbury • Arthur C. Clarke • Neil Gaiman',
-    
+    'footer.style': 'Styl: Ray Bradbury • Arthur C. Clarke • Neil Gaiman • 2026',
+
     // News
     'news.sources': 'Źródła Wiadomości',
     'news.read': 'Czytaj Oryginał',
-    
+
     // Chapters
     'chapters.count': 'rozdziałów',
-    
+
     // Calendar
     'calendar.title': 'KALENDARZ',
     'calendar.view_full': 'Wyświetl pełny kalendarz',
     'calendar.latest_chapter': 'OSTATNI ROZDZIAŁ',
     'calendar.read_chapter': 'Czytaj rozdział',
-    
+
     // Narrative Chart
     'narrative.title': 'STRUKTURA NARRACYJNA',
     'narrative.elements': 'elementów',
@@ -468,7 +468,7 @@ const translations: Record<Language, Record<string, string>> = {
     'volumes.views': 'Wyświetleń',
     'volumes.unique': 'Unikalnych',
     'volumes.view_chapters': 'Zobacz rozdziały →',
-    
+
     // Calendar Page
     'calendar.stories_on_date': 'opowieści na ten dzień',
     'calendar.published': 'OPUBLIKOWANO',
@@ -478,7 +478,7 @@ const translations: Record<Language, Record<string, string>> = {
     'calendar.edit': 'Edytuj',
     'calendar.no_parts': 'Nie utworzono jeszcze części na ten dzień',
     'calendar.go_to_generation': 'Przejdź do generowania',
-    
+
     // Month names
     'month.1': 'Styczeń',
     'month.2': 'Luty',
@@ -492,7 +492,7 @@ const translations: Record<Language, Record<string, string>> = {
     'month.10': 'Październik',
     'month.11': 'Listopad',
     'month.12': 'Grudzień',
-    
+
     // Common
     'common.stories': 'opowieści',
 

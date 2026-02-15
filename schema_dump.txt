@@ -1,0 +1,280 @@
+--- Dumping Database Schema (News & Wiki Tables) ---
+Found tables: cron_logs, news_countries, news_items, news_merged_groups, news_merged_items, news_rss_feeds, news_rss_items, news_vote_counts, news_votes, news_wiki_entities, settings, wiki_entities, wiki_entity_aliases, wiki_entity_links
+
+Analyzing cron_logs...
+Columns for cron_logs:
+  - id (uuid) NOT NULL DEFAULT gen_random_uuid()
+  - job_name (text) NOT NULL 
+  - status (text) NOT NULL 
+  - message (text) NULL 
+  - details (jsonb) NULL 
+  - created_at (timestamp with time zone) NULL DEFAULT now()
+  - ended_at (timestamp with time zone) NULL 
+  Foreign Keys:
+    - id -> cron_logs.id
+
+Analyzing news_countries...
+Columns for news_countries:
+  - id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  - code (text) NOT NULL 
+  - name (text) NULL 
+  - name_en (text) NULL 
+  - name_pl (text) NULL 
+  - flag (text) NULL 
+  - sort_order (integer) NULL 
+  - is_active (boolean) NULL DEFAULT true
+  - created_at (timestamp with time zone) NULL DEFAULT now()
+  - updated_at (timestamp with time zone) NULL DEFAULT now()
+  - retell_ratio (numeric) NULL 
+  Foreign Keys:
+    - code -> news_countries.code
+    - id -> news_countries.id
+
+Analyzing news_items...
+Columns for news_items:
+  - id (uuid) NULL 
+  - feed_id (uuid) NULL 
+  - country_id (uuid) NULL 
+  - external_id (text) NULL 
+  - title (text) NULL 
+  - description (text) NULL 
+  - content (text) NULL 
+  - url (text) NULL 
+  - image_url (text) NULL 
+  - category (text) NULL 
+  - published_at (timestamp with time zone) NULL 
+  - fetched_at (timestamp with time zone) NULL 
+  - created_at (timestamp with time zone) NULL 
+  - slug (text) NULL 
+  - title_hi (text) NULL 
+  - title_ta (text) NULL 
+  - title_te (text) NULL 
+  - title_bn (text) NULL 
+  - title_en (text) NULL 
+  - description_hi (text) NULL 
+  - description_ta (text) NULL 
+  - description_te (text) NULL 
+  - description_bn (text) NULL 
+  - description_en (text) NULL 
+  - content_hi (text) NULL 
+  - content_ta (text) NULL 
+  - content_te (text) NULL 
+  - content_bn (text) NULL 
+  - content_en (text) NULL 
+  - chat_dialogue (jsonb) NULL 
+  - generated_story_id (uuid) NULL 
+  - key_points (ARRAY) NULL 
+  - themes (ARRAY) NULL 
+  - keywords (ARRAY) NULL 
+  - key_points_en (ARRAY) NULL 
+  - themes_en (ARRAY) NULL 
+  - tweets (jsonb) NULL 
+  - is_archived (boolean) NULL 
+  - archived_at (timestamp with time zone) NULL 
+  - original_content (text) NULL 
+  - likes (integer) NULL 
+  - dislikes (integer) NULL 
+  - viral_simulation_started_at (timestamp with time zone) NULL 
+  - viral_simulation_completed (boolean) NULL 
+
+Analyzing news_merged_groups...
+Columns for news_merged_groups:
+  - id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  - title (text) NULL 
+  - slug (text) NULL 
+  - created_at (timestamp with time zone) NULL DEFAULT now()
+  - updated_at (timestamp with time zone) NULL DEFAULT now()
+  - title_en (text) NULL 
+  - merged_count (integer) NULL DEFAULT 0
+  - source_feeds (jsonb) NULL 
+  - primary_news_id (uuid) NULL 
+  Foreign Keys:
+    - id -> news_merged_groups.id
+    - slug -> news_merged_groups.slug
+
+Analyzing news_merged_items...
+Columns for news_merged_items:
+  - id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  - group_id (uuid) NULL 
+  - news_item_id (uuid) NULL 
+  - created_at (timestamp with time zone) NULL DEFAULT now()
+  - similarity_score (numeric) NULL 
+  Foreign Keys:
+    - group_id -> news_merged_groups.id
+    - news_item_id -> news_rss_items.id
+    - id -> news_merged_items.id
+
+Analyzing news_rss_feeds...
+Columns for news_rss_feeds:
+  - id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  - country_id (uuid) NULL 
+  - name (text) NOT NULL 
+  - url (text) NOT NULL 
+  - category (text) NULL 
+  - is_active (boolean) NULL DEFAULT true
+  - last_fetched_at (timestamp with time zone) NULL 
+  - fetch_error (text) NULL 
+  - created_at (timestamp with time zone) NULL DEFAULT now()
+  - updated_at (timestamp with time zone) NULL DEFAULT now()
+  - sample_ratio (numeric) NULL 
+  - default_image_url (text) NULL 
+  Foreign Keys:
+    - country_id -> news_countries.id
+    - id -> news_rss_feeds.id
+    - url -> news_rss_feeds.url
+
+Analyzing news_rss_items...
+Columns for news_rss_items:
+  - id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  - feed_id (uuid) NULL 
+  - country_id (uuid) NULL 
+  - external_id (text) NULL 
+  - title (text) NOT NULL 
+  - description (text) NULL 
+  - content (text) NULL 
+  - url (text) NOT NULL 
+  - image_url (text) NULL 
+  - category (text) NULL 
+  - published_at (timestamp with time zone) NULL 
+  - fetched_at (timestamp with time zone) NULL 
+  - created_at (timestamp with time zone) NULL DEFAULT now()
+  - slug (text) NULL 
+  - title_hi (text) NULL 
+  - title_ta (text) NULL 
+  - title_te (text) NULL 
+  - title_bn (text) NULL 
+  - title_en (text) NULL 
+  - description_hi (text) NULL 
+  - description_ta (text) NULL 
+  - description_te (text) NULL 
+  - description_bn (text) NULL 
+  - description_en (text) NULL 
+  - content_hi (text) NULL 
+  - content_ta (text) NULL 
+  - content_te (text) NULL 
+  - content_bn (text) NULL 
+  - content_en (text) NULL 
+  - chat_dialogue (jsonb) NULL 
+  - generated_story_id (uuid) NULL 
+  - key_points (ARRAY) NULL 
+  - themes (ARRAY) NULL 
+  - keywords (ARRAY) NULL 
+  - key_points_en (ARRAY) NULL 
+  - themes_en (ARRAY) NULL 
+  - tweets (jsonb) NULL 
+  - is_archived (boolean) NULL DEFAULT false
+  - archived_at (timestamp with time zone) NULL 
+  - original_content (text) NULL 
+  - likes (integer) NULL DEFAULT 0
+  - dislikes (integer) NULL DEFAULT 0
+  - viral_simulation_started_at (timestamp with time zone) NULL 
+  - viral_simulation_completed (boolean) NULL DEFAULT false
+  Foreign Keys:
+    - country_id -> news_countries.id
+    - feed_id -> news_rss_feeds.id
+    - id -> news_rss_items.id
+    - slug -> news_rss_items.slug
+
+Analyzing news_vote_counts...
+Columns for news_vote_counts:
+  - id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  - news_item_id (uuid) NULL 
+  - likes (integer) NULL DEFAULT 0
+  - dislikes (integer) NULL DEFAULT 0
+  - updated_at (timestamp with time zone) NULL DEFAULT now()
+  Foreign Keys:
+    - news_item_id -> news_rss_items.id
+    - news_item_id -> news_vote_counts.news_item_id
+    - id -> news_vote_counts.id
+
+Analyzing news_votes...
+Columns for news_votes:
+  - id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  - news_item_id (uuid) NULL 
+  - visitor_id (text) NULL 
+  - vote_type (text) NULL 
+  - created_at (timestamp with time zone) NULL DEFAULT now()
+  Foreign Keys:
+    - news_item_id -> news_rss_items.id
+    - id -> news_votes.id
+
+Analyzing news_wiki_entities...
+Columns for news_wiki_entities:
+  - id (uuid) NOT NULL DEFAULT gen_random_uuid()
+  - news_item_id (uuid) NOT NULL 
+  - wiki_entity_id (uuid) NOT NULL 
+  - match_source (text) NULL 
+  - match_term (text) NULL 
+  - created_at (timestamp with time zone) NULL DEFAULT now()
+  Foreign Keys:
+    - news_item_id -> news_rss_items.id
+    - news_item_id -> news_wiki_entities.news_item_id
+    - news_item_id -> news_wiki_entities.wiki_entity_id
+    - wiki_entity_id -> news_wiki_entities.news_item_id
+    - wiki_entity_id -> news_wiki_entities.wiki_entity_id
+    - id -> news_wiki_entities.id
+    - wiki_entity_id -> wiki_entities.id
+
+Analyzing settings...
+Columns for settings:
+  - id (bigint) NOT NULL 
+  - created_at (timestamp with time zone) NOT NULL DEFAULT now()
+  - ai_provider (text) NULL DEFAULT '''gemini-v22'''::text
+  - ai_model (text) NULL DEFAULT '''gemini-3-flash-preview'''::text
+  - llm_text_provider (text) NULL 
+  - llm_text_model (text) NULL 
+  - llm_image_provider (text) NULL 
+  - llm_image_model (text) NULL 
+  - llm_provider (text) NULL 
+  - llm_model (text) NULL 
+  - zai_api_key (text) NULL 
+  - rss_check_schedule (text) NULL DEFAULT '1hour'::text
+  Foreign Keys:
+    - id -> settings.id
+
+Analyzing wiki_entities...
+Columns for wiki_entities:
+  - id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  - wiki_id (text) NULL 
+  - entity_type (text) NULL 
+  - name (text) NULL 
+  - name_en (text) NULL 
+  - description (text) NULL 
+  - description_en (text) NULL 
+  - image_url (text) NULL 
+  - wiki_url (text) NULL 
+  - wiki_url_en (text) NULL 
+  - extract (text) NULL 
+  - extract_en (text) NULL 
+  - raw_data (jsonb) NULL 
+  - search_count (integer) NULL DEFAULT 1
+  - last_searched_at (timestamp with time zone) NULL 
+  - created_at (timestamp with time zone) NULL DEFAULT now()
+  - updated_at (timestamp with time zone) NULL DEFAULT now()
+  - slug (text) NULL 
+  Foreign Keys:
+    - id -> wiki_entities.id
+    - slug -> wiki_entities.slug
+
+Analyzing wiki_entity_aliases...
+Columns for wiki_entity_aliases:
+  - id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  - entity_id (uuid) NULL 
+  - alias (text) NOT NULL 
+  - created_at (timestamp with time zone) NULL DEFAULT now()
+  - language (text) NULL 
+  Foreign Keys:
+    - entity_id -> wiki_entities.id
+    - id -> wiki_entity_aliases.id
+
+Analyzing wiki_entity_links...
+Columns for wiki_entity_links:
+  - id (uuid) NOT NULL DEFAULT uuid_generate_v4()
+  - source_entity_id (uuid) NULL 
+  - target_entity_id (uuid) NULL 
+  - link_type (text) NULL DEFAULT 'wiki_link'::text
+  - created_at (timestamp with time zone) NULL DEFAULT now()
+  Foreign Keys:
+    - id -> wiki_entity_links.id
+    - source_entity_id -> wiki_entities.id
+    - target_entity_id -> wiki_entities.id

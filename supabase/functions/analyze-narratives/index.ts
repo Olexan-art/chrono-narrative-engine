@@ -128,8 +128,8 @@ serve(async (req) => {
       .map((r) => `${language === "en" && r.name_en ? r.name_en : r.name} (${r.count} mentions)`)
       .join(", ");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
       return new Response(JSON.stringify({ error: "AI not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -143,14 +143,14 @@ serve(async (req) => {
       ? `Сутність: ${entityName} (${entity.entity_type})\nПеріод: ${yearMonth}\nНовин: ${newsItems.length}\n\nПов'язані сутності: ${relatedContext}\n\nНовини:\n${newsContext}\n\nСтвори JSON з полями:\n- key_takeaways: масив об'єктів {point: "текст тези", news_indices: [номери новин 1-based]}\n- narrative_summary: короткий опис загальної наративної лінії (2-3 речення)\n- sentiment: "positive" | "negative" | "neutral" | "mixed"\n- related_entity_roles: масив {name: "ім'я", role: "роль у наративі"}\n\nВідповідай ТІЛЬКИ валідним JSON без markdown.`
       : `Entity: ${entityName} (${entity.entity_type})\nPeriod: ${yearMonth}\nNews count: ${newsItems.length}\n\nRelated entities: ${relatedContext}\n\nNews:\n${newsContext}\n\nCreate JSON with fields:\n- key_takeaways: array of {point: "takeaway text", news_indices: [1-based news indices]}\n- narrative_summary: brief summary of the narrative arc (2-3 sentences)\n- sentiment: "positive" | "negative" | "neutral" | "mixed"\n- related_entity_roles: array of {name: "entity name", role: "role in narrative"}\n\nRespond with VALID JSON only, no markdown.`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },

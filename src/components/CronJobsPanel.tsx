@@ -84,11 +84,22 @@ interface PendingProcessResult {
   batchSize?: number;
 }
 
+interface CronLog {
+  id: string;
+  job_name: string;
+  status: 'running' | 'success' | 'error';
+  message: string;
+  details: any;
+  created_at: string;
+  ended_at: string | null;
+}
+
 interface Props {
   password: string;
 }
 
 const FREQUENCY_OPTIONS = [
+  { value: '15min', label: 'Кожні 15 хвилин', schedule: '*/15 * * * *' },
   { value: '30min', label: 'Кожні 30 хвилин', schedule: '*/30 * * * *' },
   { value: '1hour', label: 'Кожну годину', schedule: '0 * * * *' },
   { value: '6hours', label: 'Кожні 6 годин', schedule: '0 */6 * * *' },
@@ -266,11 +277,11 @@ export function CronJobsPanel({ password }: Props) {
   const { data: stats } = useQuery<AutoGenStats>({
     queryKey: ['auto-gen-stats'],
     queryFn: async () => {
-      const result = await adminAction<{ 
-        success: boolean; 
+      const result = await adminAction<{
+        success: boolean;
         stats: AutoGenStats;
       }>('getAutoGenStats', password, { periods: true, daily: true });
-      
+
       return result.stats ?? {
         h24: { retold: 0, dialogues: 0, tweets: 0 },
         d3: { retold: 0, dialogues: 0, tweets: 0 },
@@ -318,7 +329,7 @@ export function CronJobsPanel({ password }: Props) {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['rss-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['cron-jobs'] });
-      toast({ 
+      toast({
         title: 'Розклад оновлено',
         description: `RSS буде перевірятися ${FREQUENCY_OPTIONS.find(f => f.value === result.frequency)?.label?.toLowerCase()}`
       });
@@ -357,9 +368,9 @@ export function CronJobsPanel({ password }: Props) {
   // Trigger manual RSS fetch
   const triggerRssMutation = useMutation({
     mutationFn: async () => {
-      return callEdgeFunction<{ 
-        success: boolean; 
-        feedsProcessed: number; 
+      return callEdgeFunction<{
+        success: boolean;
+        feedsProcessed: number;
         autoRetelled: number;
         autoDialogues?: number;
         autoTweets?: number;
@@ -373,14 +384,15 @@ export function CronJobsPanel({ password }: Props) {
       queryClient.invalidateQueries({ queryKey: ['news-rss-items-count'] });
       queryClient.invalidateQueries({ queryKey: ['news-rss-items-stats'] });
       queryClient.invalidateQueries({ queryKey: ['latest-usa-retold-news'] });
-      
+      queryClient.invalidateQueries({ queryKey: ['cron-logs-rss'] }); // Invalidate logs to show new entry
+
       const parts = [`${result.feedsProcessed} каналів`];
       if (result.totalInserted) parts.push(`${result.totalInserted} новин`);
       if (result.autoRetelled) parts.push(`${result.autoRetelled} переказів`);
       if (result.autoDialogues) parts.push(`${result.autoDialogues} діалогів`);
       if (result.autoTweets) parts.push(`${result.autoTweets} твітів`);
-      
-      toast({ 
+
+      toast({
         title: 'RSS оновлено',
         description: `Оброблено: ${parts.join(', ')}`
       });
@@ -392,6 +404,19 @@ export function CronJobsPanel({ password }: Props) {
         variant: 'destructive'
       });
     }
+  });
+
+  // Fetch recent cron logs
+  const { data: recentLogs, refetch: refetchLogs } = useQuery<CronLog[]>({
+    queryKey: ['cron-logs-rss'],
+    queryFn: async () => {
+      const result = await callEdgeFunction<{ success: boolean; logs: CronLog[] }>(
+        'manage-cron',
+        { action: 'get_recent_logs', limit: 2, jobName: 'fetch_rss_all', password }
+      );
+      return result.logs || [];
+    },
+    refetchInterval: 30000
   });
 
   // Setup pending cron job
@@ -406,7 +431,7 @@ export function CronJobsPanel({ password }: Props) {
       queryClient.invalidateQueries({ queryKey: ['pending-cron-status'] });
       queryClient.invalidateQueries({ queryKey: ['cron-jobs'] });
       setPendingCronEnabled(true);
-      toast({ 
+      toast({
         title: 'Cron активовано',
         description: `Пропущені новини будуть оброблятися ${PENDING_FREQUENCY_OPTIONS.find(f => f.value === result.frequency)?.label?.toLowerCase()}`
       });
@@ -466,13 +491,13 @@ export function CronJobsPanel({ password }: Props) {
       queryClient.invalidateQueries({ queryKey: ['auto-gen-stats'] });
       queryClient.invalidateQueries({ queryKey: ['pending-news-stats'] });
       refetchPendingStats();
-      
+
       const parts = [`${result.processed} новин`];
       if (result.retelled) parts.push(`${result.retelled} переказів`);
       if (result.dialogues) parts.push(`${result.dialogues} діалогів`);
       if (result.tweets) parts.push(`${result.tweets} твітів`);
-      
-      toast({ 
+
+      toast({
         title: 'Пропущені новини оброблено',
         description: `Оброблено: ${parts.join(', ')}${result.llmModel ? ` (${result.llmModel})` : ''}`
       });
@@ -740,7 +765,7 @@ export function CronJobsPanel({ password }: Props) {
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Daily Chart */}
               {stats.daily && stats.daily.length > 0 && (
                 <AutoGenChart data={stats.daily} />
@@ -752,8 +777,8 @@ export function CronJobsPanel({ password }: Props) {
             <div className="flex items-center gap-2 text-muted-foreground">
               <Zap className="w-4 h-4 text-primary" />
               <span>
-                {autoGenSettings.news_retell_ratio === 1 
-                  ? 'Всі нові новини будуть автоматично оброблені' 
+                {autoGenSettings.news_retell_ratio === 1
+                  ? 'Всі нові новини будуть автоматично оброблені'
                   : `Кожна ${autoGenSettings.news_retell_ratio}-та нова новина буде автоматично оброблена`}
                 {autoGenSettings.news_auto_retell_enabled && ' (переказ'}
                 {autoGenSettings.news_auto_dialogue_enabled && (autoGenSettings.news_auto_retell_enabled ? ', діалоги' : ' (діалоги')}
@@ -795,7 +820,7 @@ export function CronJobsPanel({ password }: Props) {
                 onValueChange={handleFrequencyChange}
                 disabled={updateScheduleMutation.isPending || scheduleLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   {scheduleLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
@@ -807,28 +832,72 @@ export function CronJobsPanel({ password }: Props) {
                     <SelectItem key={option.value} value={option.value}>
                       <div className="flex items-center gap-2">
                         <span>{option.label}</span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          ({option.schedule})
-                        </span>
+                        <Badge variant="outline" className="text-xs font-mono font-normal text-muted-foreground">
+                          {option.schedule}
+                        </Badge>
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
+
             <Button
+              variant="outline"
               onClick={() => triggerRssMutation.mutate()}
               disabled={triggerRssMutation.isPending}
-              className="gap-2"
             >
               {triggerRssMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
-                <Play className="w-4 h-4" />
+                <RefreshCw className="w-4 h-4 mr-2" />
               )}
               Запустити зараз
             </Button>
+          </div>
+
+          {/* Recent Logs Section */}
+          <div className="space-y-3 pt-2">
+            <Label className="text-sm text-muted-foreground">Останні запуски (статистика)</Label>
+            <div className="space-y-2">
+              {recentLogs && recentLogs.length > 0 ? (
+                recentLogs.map((log) => (
+                  <div key={log.id} className="flex items-center justify-between p-3 border border-border/50 rounded-md bg-muted/20 text-sm">
+                    <div className="flex items-center gap-3">
+                      {log.status === 'running' && <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />}
+                      {log.status === 'success' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                      {log.status === 'error' && <XCircle className="w-4 h-4 text-red-500" />}
+
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {new Date(log.created_at).toLocaleString('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{log.message}</span>
+                      </div>
+                    </div>
+
+                    {log.details && (
+                      <div className="flex items-center gap-3 text-xs">
+                        {log.details.itemsFound !== undefined && (
+                          <Badge variant="outline" className="bg-background/50">
+                            Знайдено: {log.details.itemsFound}
+                          </Badge>
+                        )}
+                        {log.details.itemsInserted !== undefined && (
+                          <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20">
+                            Додано: {log.details.itemsInserted}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-muted-foreground italic p-2">
+                  Історія запусків порожня
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -921,7 +990,7 @@ export function CronJobsPanel({ password }: Props) {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2 flex-1 min-w-[200px]">
               <Label>LLM Модель</Label>
               <Select
@@ -941,7 +1010,7 @@ export function CronJobsPanel({ password }: Props) {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <Button
               onClick={() => triggerPendingMutation.mutate()}
               disabled={triggerPendingMutation.isPending}
@@ -982,9 +1051,9 @@ export function CronJobsPanel({ password }: Props) {
                     </Badge>
                   )}
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => { setPendingLogs([]); setCurrentLlmModel(null); }}
                   className="h-6 text-xs"
                 >
@@ -994,7 +1063,7 @@ export function CronJobsPanel({ password }: Props) {
               <ScrollArea className="h-[200px] border border-border/50 rounded-lg">
                 <div className="p-3 space-y-2">
                   {pendingLogs.map((log, idx) => (
-                    <div 
+                    <div
                       key={`${log.id}-${log.step}-${idx}`}
                       className="flex items-start gap-2 text-xs animate-fade-in"
                     >

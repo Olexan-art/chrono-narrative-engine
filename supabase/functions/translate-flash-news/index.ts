@@ -1,35 +1,27 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const LOVABLE_API_URL = 'https://api.lovable.dev/v1/chat/completions';
+interface LLMSettings {
+  llm_provider: string;
+  llm_text_provider: string | null;
+  llm_text_model: string;
+  openai_api_key: string | null;
+  gemini_api_key: string | null;
+  anthropic_api_key: string | null;
+  zai_api_key: string | null;
+  mistral_api_key: string | null;
+}
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+async function translateWithLLM(settings: LLMSettings, title: string, content: string): Promise<any> {
+  const provider = settings.llm_text_provider || settings.llm_provider || 'zai';
+  const model = settings.llm_text_model || 'google/gemini-3-flash-preview';
 
-  try {
-    const { title, content } = await req.json();
-
-    if (!title && !content) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Title or content is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!apiKey) {
-      throw new Error('LOVABLE_API_KEY not configured');
-    }
-
-    console.log('Translating content to EN and PL...');
-
-    const prompt = `Translate the following news content to English and Polish. 
+  const prompt = `Translate the following news content to English and Polish. 
 Return ONLY a valid JSON object with this exact structure (no markdown, no code blocks):
 {
   "title_en": "English title",
@@ -47,55 +39,153 @@ Important:
 - Keep the translations accurate and natural
 - Return ONLY the JSON object, nothing else`;
 
-    const response = await fetch(LOVABLE_API_URL, {
+  // Auto-detect provider from model prefix
+  let effectiveProvider = provider;
+  if (model.startsWith('google/') || model.startsWith('gemini')) {
+    effectiveProvider = 'gemini';
+  } else if (model.startsWith('openai/') || model.startsWith('gpt')) {
+    effectiveProvider = 'openai';
+  } else if (model.startsWith('mistral-')) {
+    effectiveProvider = 'mistral';
+  } else if (model.startsWith('GLM-') || model.startsWith('glm-')) {
+    effectiveProvider = 'zai';
+  } else if (model.startsWith('claude')) {
+    effectiveProvider = 'anthropic';
+  }
+
+  let llmResponse = '';
+
+  if (effectiveProvider === 'zai') {
+    const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
+    if (!apiKey) throw new Error('Z.AI API key not configured');
+
+    const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: model || 'GLM-4.7',
         messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
+          { role: 'user', content: prompt }
         ],
-        temperature: 0.3,
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Z.AI error: ${response.status}`);
+    const data = await response.json();
+    llmResponse = data.choices?.[0]?.message?.content || '';
+  }
+  else if (effectiveProvider === 'openai') {
+    const apiKey = settings.openai_api_key || Deno.env.get('OPENAI_API_KEY');
+    if (!apiKey) throw new Error('OpenAI API key not configured');
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    if (!response.ok) throw new Error(`OpenAI error: ${response.status}`);
+    const data = await response.json();
+    llmResponse = data.choices?.[0]?.message?.content || '';
+  }
+  else if (effectiveProvider === 'gemini') {
+    const apiKey = settings.gemini_api_key || Deno.env.get('GEMINI_API_KEY');
+    if (!apiKey) throw new Error('Gemini API key not configured');
+
+    const modelName = model.replace('google/', '');
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json" }
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('LLM API error:', errorText);
-      throw new Error(`LLM API error: ${response.status}`);
+      throw new Error(`Gemini error: ${response.status} ${errorText}`);
+    }
+    const data = await response.json();
+    llmResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+  else {
+    throw new Error(`Provider ${effectiveProvider} not implemented in translate-flash-news`);
+  }
+
+  // Parse JSON from response
+  try {
+    const jsonMatch = llmResponse.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    } else {
+      throw new Error('No JSON found in response');
+    }
+  } catch (parseError) {
+    console.error('Failed to parse translations:', parseError);
+    return {
+      title_en: '',
+      title_pl: '',
+      content_en: '',
+      content_pl: ''
+    };
+  }
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { title, content } = await req.json();
+
+    if (!title && !content) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Title or content is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const result = await response.json();
-    const llmResponse = result.choices?.[0]?.message?.content || '';
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
 
-    console.log('Raw LLM response:', llmResponse.slice(0, 200));
+    // Fetch settings
+    const { data: settingsData } = await supabase
+      .from('settings')
+      .select('llm_provider, llm_text_provider, llm_text_model, openai_api_key, gemini_api_key, zai_api_key')
+      .limit(1)
+      .single();
 
-    // Parse JSON from response
-    let translations;
-    try {
-      // Try to extract JSON from the response
-      const jsonMatch = llmResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        translations = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
-      }
-    } catch (parseError) {
-      console.error('Failed to parse translations:', parseError);
-      // Return empty translations on parse failure
-      translations = {
-        title_en: '',
-        title_pl: '',
-        content_en: '',
-        content_pl: ''
-      };
-    }
+    const llmSettings: LLMSettings = settingsData || {
+      llm_provider: 'zai',
+      llm_text_provider: null,
+      llm_text_model: 'GLM-4.7',
+      openai_api_key: null,
+      gemini_api_key: null,
+      anthropic_api_key: null,
+      zai_api_key: null,
+      mistral_api_key: null
+    };
+
+    console.log('Translating content to EN and PL...');
+
+    const translations = await translateWithLLM(llmSettings, title, content);
 
     console.log('Translation successful');
 
@@ -115,9 +205,9 @@ Important:
   } catch (error) {
     console.error('Error translating:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to translate' 
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to translate'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

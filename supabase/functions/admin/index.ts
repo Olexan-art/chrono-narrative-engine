@@ -16,7 +16,7 @@ serve(async (req) => {
 
     // Get admin password from environment variable (not hardcoded)
     const ADMIN_PASSWORD = Deno.env.get('ADMIN_PASSWORD') || '1nuendo19071';
-    
+
     if (!ADMIN_PASSWORD) {
       console.error('ADMIN_PASSWORD environment variable not configured');
       return new Response(
@@ -55,7 +55,7 @@ serve(async (req) => {
           .select('*')
           .limit(1)
           .single();
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true, settings }),
@@ -90,7 +90,7 @@ serve(async (req) => {
 
       case 'updateSettings': {
         console.log('updateSettings called with data:', JSON.stringify(data));
-        
+
         if (!data || !data.id) {
           console.error('Missing data or data.id in updateSettings');
           return new Response(
@@ -98,12 +98,12 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        
+
         const { error } = await supabase
           .from('settings')
           .update(data)
           .eq('id', data.id);
-        
+
         if (error) {
           console.error('updateSettings error:', error);
           throw error;
@@ -121,7 +121,7 @@ serve(async (req) => {
           .insert(data)
           .select()
           .single();
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true, volume }),
@@ -134,7 +134,7 @@ serve(async (req) => {
           .from('volumes')
           .update(data)
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -148,7 +148,7 @@ serve(async (req) => {
           .insert(data)
           .select()
           .single();
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true, chapter }),
@@ -161,7 +161,7 @@ serve(async (req) => {
           .from('chapters')
           .update(data)
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -174,7 +174,7 @@ serve(async (req) => {
           .from('chapters')
           .delete()
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -188,7 +188,7 @@ serve(async (req) => {
           .insert(data)
           .select()
           .single();
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true, part }),
@@ -201,7 +201,7 @@ serve(async (req) => {
           .from('parts')
           .update(data)
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -214,7 +214,7 @@ serve(async (req) => {
           .from('parts')
           .delete()
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -225,12 +225,12 @@ serve(async (req) => {
       case 'publishPart': {
         const { error } = await supabase
           .from('parts')
-          .update({ 
+          .update({
             status: 'published',
             published_at: new Date().toISOString()
           })
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -241,12 +241,12 @@ serve(async (req) => {
       case 'schedulePart': {
         const { error } = await supabase
           .from('parts')
-          .update({ 
+          .update({
             status: 'scheduled',
             scheduled_at: data.scheduled_at
           })
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -260,7 +260,7 @@ serve(async (req) => {
           .insert(data)
           .select()
           .single();
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true, character }),
@@ -273,7 +273,7 @@ serve(async (req) => {
           .from('characters')
           .update(data)
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -286,7 +286,7 @@ serve(async (req) => {
           .from('characters')
           .delete()
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -300,7 +300,7 @@ serve(async (req) => {
           .insert(data)
           .select()
           .single();
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true, relationship }),
@@ -313,7 +313,7 @@ serve(async (req) => {
           .from('character_relationships')
           .update(data)
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -326,7 +326,7 @@ serve(async (req) => {
           .from('character_relationships')
           .delete()
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -348,8 +348,8 @@ serve(async (req) => {
           .eq('status', 'published');
 
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             stats: {
               volumes: volumes.count || 0,
               chapters: chapters.count || 0,
@@ -389,7 +389,7 @@ serve(async (req) => {
               .select('id', { count: 'exact', head: true })
               .gte('created_at', since)
           ]);
-          
+
           return {
             retold: retoldResult.count || 0,
             dialogues: dialogueResult.count || 0,
@@ -397,12 +397,12 @@ serve(async (req) => {
             entities: entitiesResult.count || 0
           };
         }
-        
+
         // Helper to get stats for a specific day range
         async function getStatsForDay(startDate: Date, endDate: Date) {
           const startISO = startDate.toISOString();
           const endISO = endDate.toISOString();
-          
+
           const [retoldResult, dialogueResult, tweetResult, entitiesResult] = await Promise.all([
             supabase
               .from('news_rss_items')
@@ -431,7 +431,7 @@ serve(async (req) => {
               .gte('created_at', startISO)
               .lt('created_at', endISO)
           ]);
-          
+
           return {
             retold: retoldResult.count || 0,
             dialogues: dialogueResult.count || 0,
@@ -439,13 +439,13 @@ serve(async (req) => {
             entities: entitiesResult.count || 0
           };
         }
-        
+
         const now = new Date();
         const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
         const d3 = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
         const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
         const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-        
+
         // Fetch all periods in parallel
         const [stats24h, stats3d, stats7d, stats30d] = await Promise.all([
           getStatsForPeriod(h24),
@@ -453,19 +453,19 @@ serve(async (req) => {
           getStatsForPeriod(d7),
           getStatsForPeriod(d30)
         ]);
-        
+
         // Generate daily stats for last 7 days
         const dailyPromises = [];
         const dayLabels = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-        
+
         for (let i = 6; i >= 0; i--) {
           const dayStart = new Date(now);
           dayStart.setHours(0, 0, 0, 0);
           dayStart.setDate(dayStart.getDate() - i);
-          
+
           const dayEnd = new Date(dayStart);
           dayEnd.setDate(dayEnd.getDate() + 1);
-          
+
           dailyPromises.push(
             getStatsForDay(dayStart, dayEnd).then(stats => ({
               date: dayStart.toISOString().split('T')[0],
@@ -474,12 +474,12 @@ serve(async (req) => {
             }))
           );
         }
-        
+
         const daily = await Promise.all(dailyPromises);
-        
+
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             stats: {
               h24: stats24h,
               d3: stats3d,
@@ -488,6 +488,46 @@ serve(async (req) => {
               daily
             }
           }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'createRSSFeed': {
+        const { data: feed, error } = await supabase
+          .from('news_rss_feeds')
+          .insert(data)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true, feed }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'deleteRSSFeed': {
+        // First delete related items (manual cascade)
+        const { error: itemsError } = await supabase
+          .from('news_rss_items')
+          .delete()
+          .eq('feed_id', data.id);
+
+        if (itemsError) {
+          console.error('Error deleting feed items:', itemsError);
+          // Continue anyway to try deleting the feed, or throw? 
+          // If we can't delete items, we likely can't delete feed due to FK.
+          throw itemsError;
+        }
+
+        const { error } = await supabase
+          .from('news_rss_feeds')
+          .delete()
+          .eq('id', data.id);
+
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
