@@ -1303,20 +1303,29 @@ serve(async (req) => {
           await new Promise(r => setTimeout(r, 300));
         }
       }
+           console.log(`[Pending] Processed ${totalProcessed} items: ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets`);
       
-      console.log(`[Pending] Completed: ${pendingItems.length} items, ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets using ${llmDisplayName}`);
+      // Save stats
+      await supabase
+        .from('cron_stats')
+        .insert({
+          cron_name: 'process-pending-news',
+          items_processed: totalProcessed,
+          items_succeeded: totalRetelled,
+          items_failed: totalProcessed - totalRetelled,
+          llm_model: llmModel,
+          execution_time_ms: null
+        });
       
       return new Response(
-        JSON.stringify({
-          success: true,
-          pendingFound: pendingItems.length,
-          processed: totalRetelled,
+        JSON.stringify({ 
+          success: true, 
+          processed: totalProcessed,
           retelled: totalRetelled,
           dialogues: totalDialogues,
           tweets: totalTweets,
           logs,
-          llmModel: llmDisplayName,
-          batchSize: effectiveBatchSize
+          llmModel: llmDisplayName
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -1724,6 +1733,276 @@ serve(async (req) => {
           totalDialogues,
           results 
         }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch US RSS feeds only with automatic retelling
+    if (action === 'fetch_us_rss') {
+      const startTime = Date.now();
+      
+      // Get US country ID
+      const { data: usCountry } = await supabase
+        .from('news_countries')
+        .select('id, code')
+        .eq('code', 'us')
+        .single();
+      
+      if (!usCountry) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'US country not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Get US RSS feeds
+      const { data: feeds } = await supabase
+        .from('news_rss_feeds')
+        .select('id, name, url, category')
+        .eq('country_id', usCountry.id)
+        .eq('is_active', true);
+      
+      // Get LLM model from settings
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('llm_text_model')
+        .limit(1)
+        .single();
+      
+      const llmModel = settings?.llm_text_model || 'GLM-4.7';
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      
+      let totalFetched = 0;
+      let totalRetold = 0;
+      let totalFailed = 0;
+      const results = [];
+      
+      console.log(`[fetch_us_rss] Processing ${feeds?.length || 0} US feeds with model: ${llmModel}`);
+      
+      for (const feed of feeds || []) {
+        try {
+          const response = await fetch(feed.url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+            }
+          });
+          
+          if (!response.ok) {
+            results.push({ feedId: feed.id, feedName: feed.name, success: false, error: `HTTP ${response.status}` });
+            continue;
+          }
+          
+          const xml = await response.text();
+          const parsedFeed = await parseRssFeed(xml);
+          
+          if (!parsedFeed || !parsedFeed.items || parsedFeed.items.length === 0) {
+            results.push({ feedId: feed.id, feedName: feed.name, success: true, newItems: 0 });
+            continue;
+          }
+          
+          let feedNewItems = 0;
+          let feedRetold = 0;
+          
+          // Process up to 50 items per feed to avoid timeouts
+          for (const item of parsedFeed.items.slice(0, 50)) {
+            const link = item.link || item.guid;
+            if (!link) continue;
+            
+            // Check if already exists
+            const { data: existing } = await supabase
+              .from('news_rss_items')
+              .select('id')
+              .eq('link', link)
+              .limit(1)
+              .single();
+            
+            if (existing) continue;
+            
+            // Create slug
+            const title = item.title || 'Untitled';
+            const baseSlug = title
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, '')
+              .replace(/\s+/g, '-')
+              .substring(0, 100);
+            
+            const timestamp = Date.now();
+            const slug = `${baseSlug}-${timestamp}`;
+            
+            // Scrape full content
+            let fullContent = item.contentSnippet || item.description || '';
+            try {
+              const scrapedContent = await scrapeArticleContent(link);
+              if (scrapedContent && scrapedContent.length > fullContent.length) {
+                fullContent = scrapedContent;
+              }
+            } catch (e) {
+              console.log(`Could not scrape ${link}:`, e);
+            }
+            
+            // Insert news item
+            const { data: inserted, error: insertError } = await supabase
+              .from('news_rss_items')
+              .insert({
+                feed_id: feed.id,
+                country_id: usCountry.id,
+                title,
+                slug,
+                link,
+                description: item.contentSnippet || item.description || '',
+                content: fullContent,
+                pub_date: item.isoDate || new Date().toISOString(),
+                category: feed.category || 'general'
+              })
+              .select('id')
+              .single();
+            
+            if (insertError || !inserted) {
+              console.error(`Failed to insert ${link}:`, insertError);
+              continue;
+            }
+            
+            feedNewItems++;
+            totalFetched++;
+            
+            // Automatically retell
+            try {
+              const retellResponse = await fetch(`${supabaseUrl}/functions/v1/retell-news`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+                },
+                body: JSON.stringify({ newsId: inserted.id, model: llmModel })
+              });
+              
+              if (retellResponse.ok) {
+                feedRetold++;
+                totalRetold++;
+              } else {
+                totalFailed++;
+              }
+            } catch (e) {
+              console.error(`Failed to retell ${inserted.id}:`, e);
+              totalFailed++;
+            }
+            
+            // Small delay to avoid rate limiting
+            await new Promise(r => setTimeout(r, 300));
+          }
+          
+          results.push({ 
+            feedId: feed.id, 
+            feedName: feed.name, 
+            success: true, 
+            newItems: feedNewItems,
+            retold: feedRetold
+          });
+          
+        } catch (error) {
+          console.error(`Error processing feed ${feed.id}:`, error);
+          results.push({ feedId: feed.id, feedName: feed.name, success: false, error: String(error) });
+        }
+      }
+      
+      const executionTime = Date.now() - startTime;
+      
+      // Save stats
+      await supabase
+        .from('cron_stats')
+        .insert({
+          cron_name: 'fetch-us-rss',
+          items_processed: totalFetched,
+          items_succeeded: totalRetold,
+          items_failed: totalFailed,
+          llm_model: llmModel,
+          execution_time_ms: executionTime
+        });
+      
+      console.log(`[fetch_us_rss] Complete: ${totalFetched} fetched, ${totalRetold} retold, ${totalFailed} failed in ${executionTime}ms`);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          feedsProcessed: feeds?.length || 0,
+          totalFetched,
+          totalRetold,
+          totalFailed,
+          llmModel,
+          executionTimeMs: executionTime,
+          results
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get cron statistics for different periods
+    if (action === 'get_cron_stats') {
+      const periods = [
+        { name: '6h', hours: 6 },
+        { name: '24h', hours: 24 },
+        { name: '3d', hours: 72 },
+        { name: '7d', hours: 168 },
+        { name: '14d', hours: 336 }
+      ];
+      
+      const stats: Record<string, any> = {};
+      
+      for (const period of periods) {
+        const since = new Date();
+        since.setHours(since.getHours() - period.hours);
+        
+        // Get stats from cron_stats table
+        const { data: cronStats } = await supabase
+          .from('cron_stats')
+          .select('*')
+          .gte('executed_at', since.toISOString());
+        
+        // Aggregate by cron_name
+        const fetchUsStats = cronStats?.filter(s => s.cron_name === 'fetch-us-rss') || [];
+        const processPendingStats = cronStats?.filter(s => s.cron_name === 'process-pending-news') || [];
+        
+        const fetchUsTotal = fetchUsStats.reduce((sum, s) => sum + (s.items_processed || 0), 0);
+        const fetchUsRetold = fetchUsStats.reduce((sum, s) => sum + (s.items_succeeded || 0), 0);
+        
+        const processPendingTotal = processPendingStats.reduce((sum, s) => sum + (s.items_processed || 0), 0);
+        const processPendingRetold = processPendingStats.reduce((sum, s) => sum + (s.items_succeeded || 0), 0);
+        
+        // Get total news count in period
+        const { count: totalNewsCount } = await supabase
+          .from('news_rss_items')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', since.toISOString());
+        
+        // Get news without retell
+        const { count: noRetellCount } = await supabase
+          .from('news_rss_items')
+          .select('*', { count: 'exact', head: true })
+          .is('content_en', null)
+          .gte('created_at', since.toISOString());
+        
+        stats[period.name] = {
+          fetchUs: {
+            fetched: fetchUsTotal,
+            retold: fetchUsRetold,
+            executions: fetchUsStats.length
+          },
+          processPending: {
+            processed: processPendingTotal,
+            retold: processPendingRetold,
+            executions: processPendingStats.length
+          },
+          total: {
+            newsCount: totalNewsCount || 0,
+            noRetellCount: noRetellCount || 0,
+            retellPercentage: totalNewsCount ? Math.round(((totalNewsCount - (noRetellCount || 0)) / totalNewsCount) * 100) : 0
+          }
+        };
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, stats }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
