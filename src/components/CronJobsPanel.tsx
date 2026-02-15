@@ -778,6 +778,15 @@ export function CronJobsPanel({ password }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* RSS Status Indicator */}
+          {rssSchedule && (
+            <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-sm font-medium">Активно</span>
+              <span className="text-xs text-muted-foreground">({rssSchedule.schedule})</span>
+            </div>
+          )}
+          
           <div className="flex items-end gap-4 flex-wrap">
             <div className="space-y-2 flex-1 min-w-[200px]">
               <Label>Частота перевірки</Label>
@@ -866,7 +875,15 @@ export function CronJobsPanel({ password }: Props) {
             <div className="flex items-center gap-3">
               <RotateCcw className="w-5 h-5 text-orange-500" />
               <div>
-                <div className="font-medium text-sm">Автообробка</div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm">Автообробка</span>
+                  {pendingCronEnabled && (
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 border border-green-500/30 rounded-full">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-xs font-medium text-green-600">Активно</span>
+                    </div>
+                  )}
+                </div>
                 <div className="text-xs text-muted-foreground">
                   Регулярно обробляти пропущені новини
                 </div>
