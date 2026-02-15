@@ -135,7 +135,7 @@ const LLM_MODEL_OPTIONS = [
   { value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
   { value: 'openai/gpt-4o', label: 'GPT-4o' },
   { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini' },
-};
+];
 
 function formatSchedule(schedule: string): string {
   if (schedule === '*/30 * * * *') return 'Кожні 30 хв';
