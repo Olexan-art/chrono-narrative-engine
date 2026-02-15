@@ -1136,6 +1136,7 @@ serve(async (req) => {
       // Use requested model from UI, fallback to settings, then default
       const llmModel = requestedModel || settings?.llm_text_model || 'GLM-4.7';
       const llmDisplayName = llmModel.split('/').pop() || llmModel;
+      console.log('[process_pending] requestedModel:', requestedModel, 'llmModel:', llmModel);
       
       // Get countries with 100% retell ratio
       const { data: countries } = await supabase
