@@ -31,6 +31,8 @@ const SitemapPage = lazy(() => import("./pages/SitemapPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const EditPartPage = lazy(() => import("./pages/EditPartPage"));
 const EditChapterPage = lazy(() => import("./pages/EditChapterPage"));
+const LLMManagementPage = lazy(() => import("./pages/admin/LLMManagementPage"));
+const NewsProcessingPage = lazy(() => import("./pages/admin/NewsProcessingPage"));
 const InstallPage = lazy(() => import("./pages/InstallPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const WikiCatalogPage = lazy(() => import("./pages/WikiCatalogPage"));
@@ -71,6 +73,8 @@ const App = () => (
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/admin/part/:id" element={<EditPartPage />} />
                 <Route path="/admin/chapter/:id" element={<EditChapterPage />} />
+                <Route path="/admin/llm" element={<LLMManagementPage />} />
+                <Route path="/admin/news-processing" element={<NewsProcessingPage />} />
                 <Route path="/install" element={<InstallPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/wiki" element={<WikiCatalogPage />} />

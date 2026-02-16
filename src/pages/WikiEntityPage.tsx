@@ -2,12 +2,12 @@ import { useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
-import { 
-  ArrowLeft, ExternalLink, User, Building2, Globe, Newspaper, 
+import {
+  ArrowLeft, ExternalLink, User, Building2, Globe, Newspaper,
   RefreshCw, Trash2, ImageIcon, Sparkles, Network, Share2,
   Eye, Pencil, Loader2, Tag, Search, Check, X, ChevronLeft, ChevronRight,
   Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit,
-  Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone, 
+  Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone,
   Swords, FolderOpen, Rss, BrainCircuit, ChevronDown, ChevronUp, Lightbulb,
   Link2, Plus, HardDrive
 } from "lucide-react";
@@ -33,8 +33,10 @@ import { AdminTextSelectionPopover } from "@/components/AdminTextSelectionPopove
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminStore } from "@/stores/adminStore";
-import { callEdgeFunction } from "@/lib/api";
+import { callEdgeFunction, adminAction } from "@/lib/api";
 import { toast } from "sonner";
+import { LLM_MODELS, LLMProvider } from "@/types/database";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface WikiEntity {
   id: string;
@@ -145,11 +147,14 @@ const TOPIC_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
 
 const NEWS_PER_PAGE = 70;
 
+// Default ZAI models (always available if ZAI_API_KEY is set)
+const ZAI_MODELS = LLM_MODELS.zai.text;
+
 export default function WikiEntityPage() {
   const { entityId } = useParams<{ entityId: string }>();
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const { isAuthenticated: isAdmin } = useAdminStore();
+  const { isAuthenticated: isAdmin, password: adminPassword } = useAdminStore();
   const [isEditingExtract, setIsEditingExtract] = useState(false);
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [editedExtract, setEditedExtract] = useState("");
@@ -174,7 +179,65 @@ export default function WikiEntityPage() {
   const [addingEntityUrl, setAddingEntityUrl] = useState("");
   const [addingEntity, setAddingEntity] = useState(false);
   const [isCaching, setIsCaching] = useState(false);
+  const [selectedFormatModel, setSelectedFormatModel] = useState(ZAI_MODELS[0]?.value || '');
   const queryClient = useQueryClient();
+
+  // Fetch LLM availability
+  const { data: settings } = useQuery({
+    queryKey: ['llm-settings-available'],
+    queryFn: async () => {
+      if (!adminPassword) return null;
+
+      const result = await adminAction<{
+        success: boolean;
+        availability: {
+          hasOpenai: boolean;
+          hasGemini: boolean;
+          hasGeminiV22: boolean;
+          hasAnthropic: boolean;
+          hasZai: boolean;
+          hasMistral: boolean;
+        };
+      }>('getLLMAvailability', adminPassword);
+
+      if (!result?.success) {
+        throw new Error('Failed to fetch LLM availability');
+      }
+
+      return result.availability;
+    },
+    enabled: isAdmin && !!adminPassword,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    retry: 2,
+  });
+
+  // Build available models list
+  const availableModels = useMemo(() => {
+    const models: { value: string; label: string; provider?: LLMProvider }[] = [];
+
+    // ZAI models are always available
+    ZAI_MODELS.forEach(m => models.push({ ...m, provider: 'zai' }));
+
+    if (settings?.hasMistral) {
+      LLM_MODELS.mistral.text.forEach(m => models.push({ ...m, provider: 'mistral' }));
+    }
+    if (settings?.hasOpenai) {
+      LLM_MODELS.openai.text.forEach(m => models.push({ ...m, provider: 'openai' }));
+    }
+    if (settings?.hasGemini) {
+      LLM_MODELS.gemini.text.forEach(m => models.push({ ...m, provider: 'gemini' }));
+    }
+    if (settings?.hasGeminiV22) {
+      LLM_MODELS.geminiV22.text.forEach(m => models.push({ ...m, provider: 'geminiV22' }));
+    }
+    if (settings?.hasAnthropic) {
+      LLM_MODELS.anthropic.text.forEach(m => models.push({ ...m, provider: 'anthropic' }));
+    }
+
+    return models;
+  }, [settings]);
 
   // Fetch entity data - support both slug and id
   const { data: entity, isLoading } = useQuery({
@@ -182,16 +245,16 @@ export default function WikiEntityPage() {
     queryFn: async () => {
       // Try by slug first, then by id
       let query = supabase.from('wiki_entities').select('*');
-      
+
       // Check if it's a UUID pattern
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entityId || '');
-      
+
       if (isUuid) {
         query = query.eq('id', entityId);
       } else {
         query = query.eq('slug', entityId);
       }
-      
+
       const { data, error } = await query.single();
 
       if (error) {
@@ -206,12 +269,12 @@ export default function WikiEntityPage() {
         }
         throw error;
       }
-      
+
       // Redirect to slug URL if accessed by ID and slug exists
       if (isUuid && data?.slug) {
         navigate(`/wiki/${data.slug}`, { replace: true });
       }
-      
+
       return data as WikiEntity;
     },
     enabled: !!entityId,
@@ -262,11 +325,11 @@ export default function WikiEntityPage() {
   const newsIds = useMemo(() => allLinkedNews.map(n => n.id), [allLinkedNews]);
 
   // Calculate total news likes/dislikes
-  const totalNewsLikes = useMemo(() => 
+  const totalNewsLikes = useMemo(() =>
     allLinkedNews.reduce((sum, n) => sum + (n.likes || 0), 0),
     [allLinkedNews]
   );
-  const totalNewsDislikes = useMemo(() => 
+  const totalNewsDislikes = useMemo(() =>
     allLinkedNews.reduce((sum, n) => sum + (n.dislikes || 0), 0),
     [allLinkedNews]
   );
@@ -276,13 +339,13 @@ export default function WikiEntityPage() {
     queryKey: ['entity-views', entity?.id, newsIds.length],
     queryFn: async () => {
       if (!newsIds.length) return 0;
-      
+
       const { data, error } = await supabase
         .from('view_counts')
         .select('views')
         .eq('entity_type', 'news')
         .in('entity_id', newsIds);
-      
+
       if (error) return 0;
       return data.reduce((sum, v) => sum + (v.views || 0), 0);
     },
@@ -307,19 +370,19 @@ export default function WikiEntityPage() {
           .from('outrage_ink')
           .select('id')
           .in('news_item_id', newsIds);
-        
+
         const newsBasedIds = newsLinks?.map(l => l.id) || [];
-        
+
         // Combine and deduplicate
         const allInkIds = [...new Set([...directIds, ...newsBasedIds])];
-        
+
         if (allInkIds.length === 0) return [];
-        
+
         const { data: inks } = await supabase
           .from('outrage_ink')
           .select('id, image_url, title, likes, dislikes, news_item_id')
           .in('id', allInkIds);
-        
+
         return (inks || []) as OutrageInk[];
       }
 
@@ -336,11 +399,11 @@ export default function WikiEntityPage() {
   });
 
   // Calculate caricature likes/dislikes
-  const totalCaricatureLikes = useMemo(() => 
+  const totalCaricatureLikes = useMemo(() =>
     caricatures.reduce((sum, c) => sum + (c.likes || 0), 0),
     [caricatures]
   );
-  const totalCaricatureDislikes = useMemo(() => 
+  const totalCaricatureDislikes = useMemo(() =>
     caricatures.reduce((sum, c) => sum + (c.dislikes || 0), 0),
     [caricatures]
   );
@@ -353,7 +416,7 @@ export default function WikiEntityPage() {
     queryKey: ['entity-daily-views', entity?.id, newsIds.length],
     queryFn: async () => {
       if (!newsIds.length) return [];
-      
+
       const { data, error } = await supabase
         .from('daily_views')
         .select('view_date, views, entity_id')
@@ -361,22 +424,22 @@ export default function WikiEntityPage() {
         .in('entity_id', newsIds)
         .gte('view_date', format(subDays(new Date(), 7), 'yyyy-MM-dd'))
         .order('view_date', { ascending: true });
-      
+
       if (error) return [];
-      
+
       // Aggregate by date
       const byDate: Record<string, number> = {};
       for (let i = 6; i >= 0; i--) {
         const d = format(subDays(new Date(), i), 'yyyy-MM-dd');
         byDate[d] = 0;
       }
-      
+
       for (const row of data) {
         if (byDate[row.view_date] !== undefined) {
           byDate[row.view_date] += row.views;
         }
       }
-      
+
       return Object.entries(byDate).map(([date, views]) => ({
         date,
         label: format(new Date(date), 'dd.MM'),
@@ -421,17 +484,17 @@ export default function WikiEntityPage() {
     queryKey: ['entity-feed-sources', entity?.id],
     queryFn: async () => {
       if (!entity?.id) return [];
-      
+
       // Get news item IDs linked to this entity
       const { data: newsLinks } = await supabase
         .from('news_wiki_entities')
         .select('news_item_id')
         .eq('wiki_entity_id', entity.id);
-      
+
       if (!newsLinks?.length) return [];
-      
+
       const newsItemIds = newsLinks.map(l => l.news_item_id);
-      
+
       // Get feed_id from those news items (batch in chunks of 100)
       const feedCounts: Record<string, number> = {};
       for (let i = 0; i < newsItemIds.length; i += 100) {
@@ -440,25 +503,25 @@ export default function WikiEntityPage() {
           .from('news_rss_items')
           .select('feed_id')
           .in('id', chunk);
-        
+
         if (items) {
           items.forEach(item => {
             feedCounts[item.feed_id] = (feedCounts[item.feed_id] || 0) + 1;
           });
         }
       }
-      
+
       const feedIds = Object.keys(feedCounts);
       if (feedIds.length === 0) return [];
-      
+
       // Fetch feed details
       const { data: feeds } = await supabase
         .from('news_rss_feeds')
         .select('id, name, url, default_image_url, country:news_countries(flag, name)')
         .in('id', feedIds);
-      
+
       if (!feeds) return [];
-      
+
       return feeds
         .map(feed => ({
           id: feed.id,
@@ -480,28 +543,28 @@ export default function WikiEntityPage() {
     queryKey: ['wiki-categories', entity?.id, entity?.wiki_url],
     queryFn: async (): Promise<string[]> => {
       if (!entity?.wiki_url) return [];
-      
+
       try {
         // Extract page title from wiki URL
         const url = new URL(entity.wiki_url);
         const pathParts = url.pathname.split('/');
         const pageTitle = pathParts[pathParts.length - 1];
-        
+
         // Determine wiki language
         const wikiLang = url.hostname.includes('uk.wikipedia') ? 'uk' : 'en';
-        
+
         // Fetch categories from Wikipedia API
         const apiUrl = `https://${wikiLang}.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(pageTitle)}&prop=categories&cllimit=20&format=json&origin=*`;
-        
+
         const response = await fetch(apiUrl);
         const data = await response.json();
-        
+
         const pages = data?.query?.pages;
         if (!pages) return [];
-        
+
         const pageId = Object.keys(pages)[0];
         const categories = pages[pageId]?.categories || [];
-        
+
         return categories
           .map((c: { title: string }) => c.title.replace(/^(Category:|Категорія:)/i, ''))
           .filter((c: string) => !c.includes('Вікіпедія') && !c.includes('Wikipedia') && !c.includes('Articles') && c.length < 60);
@@ -579,7 +642,7 @@ export default function WikiEntityPage() {
       if (error || !links?.length) return [];
 
       // Get the other entity IDs
-      const otherIds = links.map(l => 
+      const otherIds = links.map(l =>
         l.source_entity_id === entity?.id ? l.target_entity_id : l.source_entity_id
       );
 
@@ -683,10 +746,10 @@ export default function WikiEntityPage() {
       if (relatedEntities.length < 2) return [];
 
       const relatedIds = relatedEntities.map(e => e.id);
-      
+
       // For each pair of related entities, check if they share news
       const connections: SecondaryConnection[] = [];
-      
+
       // Get all news-entity links for related entities
       const { data: allLinks } = await supabase
         .from('news_wiki_entities')
@@ -711,7 +774,7 @@ export default function WikiEntityPage() {
           const entity2 = relatedEntities[j];
           const news1 = entityNewsMap.get(entity1.id) || new Set();
           const news2 = entityNewsMap.get(entity2.id) || new Set();
-          
+
           // Count shared news
           let sharedCount = 0;
           news1.forEach(newsId => {
@@ -834,10 +897,13 @@ export default function WikiEntityPage() {
         currentExtract: editedExtract || extract,
         entityName: name,
         language: language === 'uk' ? 'uk' : 'en',
+        model: selectedFormatModel,
       });
       if (result.success && result.formatted) {
         setEditedExtract(result.formatted);
-        toast.success('Відформатовано');
+        // Auto-save formatted text
+        await saveExtractMutation.mutateAsync(result.formatted);
+        toast.success(language === 'uk' ? 'Відформатовано та збережено' : 'Formatted and saved');
       } else {
         throw new Error(result.error || 'AI formatting failed');
       }
@@ -853,16 +919,16 @@ export default function WikiEntityPage() {
     if (!entity) return;
     setIsExtendedParsing(true);
     try {
-      const result = await callEdgeFunction<{ 
-        success: boolean; 
-        data?: ExtendedWikiData; 
-        error?: string 
+      const result = await callEdgeFunction<{
+        success: boolean;
+        data?: ExtendedWikiData;
+        error?: string
       }>('search-wiki', {
         action: 'extended_parse',
         wikiUrl: entity.wiki_url,
         language: language === 'uk' ? 'uk' : 'en',
       });
-      
+
       if (result.success && result.data) {
         setExtendedData(result.data);
         setSelectedSections(new Set(['extract']));
@@ -879,9 +945,9 @@ export default function WikiEntityPage() {
   // Apply selected sections from extended data
   const applyExtendedData = async () => {
     if (!extendedData) return;
-    
+
     const updates: Record<string, string | null> = {};
-    
+
     if (selectedSections.has('extract') && extendedData.extract) {
       const field = language === 'en' ? 'extract_en' : 'extract';
       updates[field] = extendedData.extract;
@@ -919,16 +985,16 @@ export default function WikiEntityPage() {
     if (!entity) return;
     setIsFetchingImages(true);
     try {
-      const result = await callEdgeFunction<{ 
-        success: boolean; 
-        data?: ExtendedWikiData; 
-        error?: string 
+      const result = await callEdgeFunction<{
+        success: boolean;
+        data?: ExtendedWikiData;
+        error?: string
       }>('search-wiki', {
         action: 'extended_parse',
         wikiUrl: entity.wiki_url,
         language: language === 'uk' ? 'uk' : 'en',
       });
-      
+
       if (result.success && result.data) {
         setExtendedData(result.data);
         // Auto-select image if found
@@ -950,24 +1016,24 @@ export default function WikiEntityPage() {
   // Open caricature lightbox with related news
   const openCaricatureLightbox = async (caricature: OutrageInk) => {
     let newsItem: NewsItem | undefined;
-    
+
     if (caricature.news_item_id) {
       // Find from existing list or fetch
       newsItem = allLinkedNews.find(n => n.id === caricature.news_item_id);
-      
+
       if (!newsItem) {
         const { data } = await supabase
           .from('news_rss_items')
           .select('id, slug, title, title_en, description, description_en, image_url, published_at, likes, dislikes, country:news_countries(code, flag, name)')
           .eq('id', caricature.news_item_id)
           .single();
-        
+
         if (data) {
           newsItem = { ...data, country: data.country } as any;
         }
       }
     }
-    
+
     setSelectedCaricature({ caricature, newsItem });
   };
 
@@ -1216,10 +1282,10 @@ export default function WikiEntityPage() {
           },
         ]}
       />
-      
+
       <div className="min-h-screen bg-background">
         <Header />
-        
+
         <main className="container mx-auto px-4 py-8">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
@@ -1321,23 +1387,23 @@ export default function WikiEntityPage() {
                               onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (!file || !entity?.id) return;
-                                
+
                                 const ext = file.name.split('.').pop() || 'jpg';
                                 const fileName = `${entity.id}.${ext}`;
-                                
+
                                 const { data, error } = await supabase.storage
                                   .from('covers')
                                   .upload(`wiki/${fileName}`, file, { upsert: true });
-                                
+
                                 if (error) {
                                   toast.error('Upload failed: ' + error.message);
                                   return;
                                 }
-                                
+
                                 const { data: urlData } = supabase.storage
                                   .from('covers')
                                   .getPublicUrl(`wiki/${fileName}`);
-                                
+
                                 updateImageMutation.mutate(urlData.publicUrl);
                               }}
                             />
@@ -1426,7 +1492,7 @@ export default function WikiEntityPage() {
                               </p>
                             </div>
                           )}
-                          
+
                           {/* Admin Actions */}
                           {isAdmin && (
                             <div className="flex gap-2">
@@ -1458,7 +1524,7 @@ export default function WikiEntityPage() {
                                 disabled={deleteMutation.isPending}
                                 title="Видалити"
                               >
-                              <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4" />
                               </Button>
                               <Button
                                 variant="outline"
@@ -1473,8 +1539,8 @@ export default function WikiEntityPage() {
                                 size="icon"
                                 onClick={generateEntityCache}
                                 disabled={isCaching}
-                                title={cacheStatus 
-                                  ? `${language === 'uk' ? 'Перегенерувати HTML' : 'Regenerate HTML'} (${new Date(cacheStatus.updated_at).toLocaleDateString()})` 
+                                title={cacheStatus
+                                  ? `${language === 'uk' ? 'Перегенерувати HTML' : 'Regenerate HTML'} (${new Date(cacheStatus.updated_at).toLocaleDateString()})`
                                   : (language === 'uk' ? 'Створити HTML кеш' : 'Generate HTML cache')
                                 }
                               >
@@ -1564,14 +1630,14 @@ export default function WikiEntityPage() {
                       const newsTitle = language === 'en' && latestNews.title_en ? latestNews.title_en : latestNews.title;
                       const newsDesc = language === 'en' && latestNews.description_en ? latestNews.description_en : latestNews.description;
                       return (
-                        <Link 
+                        <Link
                           to={`/news/${latestNews.country?.code || 'ua'}/${latestNews.slug || latestNews.id}`}
                           className="block group"
                         >
                           <div className="flex gap-4">
                             {latestNews.image_url && (
-                              <img 
-                                src={latestNews.image_url} 
+                              <img
+                                src={latestNews.image_url}
                                 alt={newsTitle}
                                 className="w-24 h-20 object-cover rounded-lg flex-shrink-0 group-hover:scale-105 transition-transform"
                               />
@@ -1806,7 +1872,7 @@ export default function WikiEntityPage() {
               {/* Narrative Comparison */}
               {Object.keys(narrativeAnalyses).length >= 2 && (() => {
                 const months = Object.keys(narrativeAnalyses).sort((a, b) => b.localeCompare(a));
-                
+
                 return (
                   <Card className="border-secondary/20 bg-gradient-to-br from-secondary/5 to-transparent">
                     <CardHeader className="pb-3">
@@ -1937,7 +2003,7 @@ export default function WikiEntityPage() {
                     </Button>
                   </div>
                   {graphVariant === 'cyberpunk' ? (
-                    <EntityCyberpunkGraph 
+                    <EntityCyberpunkGraph
                       mainEntity={{
                         id: entity.id,
                         slug: entity.slug,
@@ -1954,7 +2020,7 @@ export default function WikiEntityPage() {
                       wikiLinkedIds={new Set(wikiLinkedEntities.map(w => w.id))}
                     />
                   ) : graphVariant === 'tree' ? (
-                    <EntityIntersectionGraph 
+                    <EntityIntersectionGraph
                       mainEntity={{
                         id: entity.id,
                         slug: entity.slug,
@@ -1972,7 +2038,7 @@ export default function WikiEntityPage() {
                       wikiLinkedIds={new Set(wikiLinkedEntities.map(w => w.id))}
                     />
                   ) : (
-                    <EntityGhostlyGraph 
+                    <EntityGhostlyGraph
                       mainEntity={{
                         id: entity.id,
                         slug: entity.slug,
@@ -2118,6 +2184,18 @@ export default function WikiEntityPage() {
                           )}
                           {language === 'uk' ? 'Форматувати ШІ' : 'Format with AI'}
                         </Button>
+                        <Select value={selectedFormatModel} onValueChange={setSelectedFormatModel}>
+                          <SelectTrigger className="w-[180px] h-9">
+                            <SelectValue placeholder={language === 'uk' ? 'Модель' : 'Model'} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableModels.map((model) => (
+                              <SelectItem key={model.value} value={model.value}>
+                                {model.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -2133,7 +2211,7 @@ export default function WikiEntityPage() {
                       <AdminTextSelectionPopover entityId={entity?.id} onEntityAdded={() => { queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] }); queryClient.invalidateQueries({ queryKey: ['wiki-linked-entities', entity?.id] }); }}>
                         <EntityLinkedContent content={extract} excludeEntityId={entity?.id} extraEntities={[...relatedEntities, ...wikiLinkedEntities]} />
                       </AdminTextSelectionPopover>
-                      
+
                       {/* Categories Sub-block */}
                       {wikiCategories.length > 0 && (
                         <div className="pt-4 border-t border-border/50">
@@ -2146,7 +2224,7 @@ export default function WikiEntityPage() {
                               // Determine wiki language from entity URL
                               const wikiLang = entity?.wiki_url?.includes('uk.wikipedia') ? 'uk' : 'en';
                               const wikiSearchUrl = `https://${wikiLang}.wikipedia.org/wiki/Category:${encodeURIComponent(category.replace(/ /g, '_'))}`;
-                              
+
                               return (
                                 <a
                                   key={idx}
@@ -2155,8 +2233,8 @@ export default function WikiEntityPage() {
                                   rel="noopener noreferrer"
                                   className="inline-flex"
                                 >
-                                  <Badge 
-                                    variant="outline" 
+                                  <Badge
+                                    variant="outline"
                                     className="text-xs cursor-pointer hover:bg-primary/10 hover:border-primary transition-colors gap-1"
                                   >
                                     <ExternalLink className="w-2.5 h-2.5" />
@@ -2213,8 +2291,8 @@ export default function WikiEntityPage() {
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {caricatures.map((c) => (
-                        <button 
-                          key={c.id} 
+                        <button
+                          key={c.id}
                           onClick={() => openCaricatureLightbox(c)}
                           className="group text-left relative"
                         >
@@ -2381,37 +2459,37 @@ export default function WikiEntityPage() {
                         {wikiLinkedEntities
                           .filter(w => !relatedEntities.some(r => r.id === w.id))
                           .map((linked) => (
-                          <Link
-                            key={linked.id}
-                            to={`/wiki/${linked.slug || linked.id}`}
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors border border-dashed border-border/50"
-                          >
-                            {linked.image_url ? (
-                              <img
-                                src={linked.image_url}
-                                alt=""
-                                className="w-8 h-8 rounded-full object-cover opacity-80"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
-                                {linked.entity_type === 'person' ? (
-                                  <User className="w-3 h-3 text-muted-foreground" />
-                                ) : (
-                                  <Globe className="w-3 h-3 text-muted-foreground" />
-                                )}
+                            <Link
+                              key={linked.id}
+                              to={`/wiki/${linked.slug || linked.id}`}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors border border-dashed border-border/50"
+                            >
+                              {linked.image_url ? (
+                                <img
+                                  src={linked.image_url}
+                                  alt=""
+                                  className="w-8 h-8 rounded-full object-cover opacity-80"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
+                                  {linked.entity_type === 'person' ? (
+                                    <User className="w-3 h-3 text-muted-foreground" />
+                                  ) : (
+                                    <Globe className="w-3 h-3 text-muted-foreground" />
+                                  )}
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-xs line-clamp-1">
+                                  {language === 'en' && linked.name_en ? linked.name_en : linked.name}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground capitalize">
+                                  {linked.entity_type}
+                                </p>
                               </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-xs line-clamp-1">
-                                {language === 'en' && linked.name_en ? linked.name_en : linked.name}
-                              </p>
-                              <p className="text-[10px] text-muted-foreground capitalize">
-                                {linked.entity_type}
-                              </p>
-                            </div>
-                            <Link2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                          </Link>
-                        ))}
+                              <Link2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                            </Link>
+                          ))}
                       </div>
                     </div>
                   )}
@@ -2466,8 +2544,8 @@ export default function WikiEntityPage() {
                       {sortedTopics.slice(0, 8).map(([topic, count]) => {
                         const { color } = getTopicIcon(topic);
                         return (
-                          <Badge 
-                            key={topic} 
+                          <Badge
+                            key={topic}
                             variant="outline"
                             className={`text-xs ${color}`}
                           >
@@ -2655,7 +2733,7 @@ export default function WikiEntityPage() {
                             RSS Feeds
                           </p>
                           <div className="grid grid-cols-1 gap-2">
-                      {feedSources.map(feed => (
+                            {feedSources.map(feed => (
                               <div key={feed.id} className="group/feed flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-gradient-to-r from-card to-muted/10 border border-border/30 hover:border-[hsl(var(--chart-4))]/40 transition-all duration-200 relative overflow-hidden">
                                 <img
                                   src={feed.favicon}
@@ -2735,9 +2813,9 @@ export default function WikiEntityPage() {
                     />
                     <span className="font-medium">{language === 'uk' ? 'Зображення' : 'Image'}</span>
                   </div>
-                  <img 
-                    src={extendedData.image} 
-                    alt="" 
+                  <img
+                    src={extendedData.image}
+                    alt=""
                     className="ml-6 w-32 h-32 object-cover rounded-lg"
                   />
                 </div>
@@ -2786,7 +2864,7 @@ export default function WikiEntityPage() {
                 {selectedCaricature.caricature.title && (
                   <h3 className="font-medium text-lg">{selectedCaricature.caricature.title}</h3>
                 )}
-                
+
                 {/* Related News */}
                 {selectedCaricature.newsItem && (
                   <div className="border-t pt-3 mt-3">
@@ -2794,8 +2872,8 @@ export default function WikiEntityPage() {
                       {language === 'uk' ? 'Новина-джерело:' : 'Source news:'}
                     </p>
                     <Link
-                      to={selectedCaricature.newsItem.slug 
-                        ? `/news/${selectedCaricature.newsItem.country?.code?.toLowerCase()}/${selectedCaricature.newsItem.slug}` 
+                      to={selectedCaricature.newsItem.slug
+                        ? `/news/${selectedCaricature.newsItem.country?.code?.toLowerCase()}/${selectedCaricature.newsItem.slug}`
                         : '#'}
                       className="flex gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
                       onClick={() => setSelectedCaricature(null)}
@@ -2817,8 +2895,8 @@ export default function WikiEntityPage() {
                           )}
                         </div>
                         <h4 className="font-medium text-sm line-clamp-2">
-                          {language === 'en' && selectedCaricature.newsItem.title_en 
-                            ? selectedCaricature.newsItem.title_en 
+                          {language === 'en' && selectedCaricature.newsItem.title_en
+                            ? selectedCaricature.newsItem.title_en
                             : selectedCaricature.newsItem.title}
                         </h4>
                       </div>

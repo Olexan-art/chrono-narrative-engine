@@ -22,7 +22,7 @@ const BOT_PATTERNS: Record<string, { type: string; category: string }> = {
   'mj12bot': { type: 'majesticbot', category: 'search' },
   'ahrefsbot': { type: 'ahrefsbot', category: 'search' },
   'semrushbot': { type: 'semrushbot', category: 'search' },
-  
+
   // AI bots
   gptbot: { type: 'gptbot', category: 'ai' },
   chatgpt: { type: 'chatgpt', category: 'ai' },
@@ -39,7 +39,7 @@ const BOT_PATTERNS: Record<string, { type: string; category: string }> = {
   'youbot': { type: 'youbot', category: 'ai' },
   'applebot': { type: 'applebot', category: 'ai' },
   'ia_archiver': { type: 'alexa', category: 'ai' },
-  
+
   // Social
   facebookexternalhit: { type: 'facebook', category: 'social' },
   twitterbot: { type: 'twitter', category: 'social' },
@@ -49,7 +49,7 @@ const BOT_PATTERNS: Record<string, { type: string; category: string }> = {
   telegrambot: { type: 'telegram', category: 'social' },
   whatsapp: { type: 'whatsapp', category: 'social' },
   discordbot: { type: 'discord', category: 'social' },
-  
+
   // Other crawlers
   'site-shot': { type: 'screenshot', category: 'other' },
   'headlesschrome': { type: 'headless', category: 'other' },
@@ -62,27 +62,27 @@ const BOT_PATTERNS: Record<string, { type: string; category: string }> = {
 
 function detectBot(userAgent: string): { type: string; category: string } | null {
   if (!userAgent) return null;
-  
+
   const ua = userAgent.toLowerCase();
-  
+
   for (const [pattern, info] of Object.entries(BOT_PATTERNS)) {
     if (ua.includes(pattern)) {
       return info;
     }
   }
-  
+
   // Generic bot detection
   if (ua.includes('bot') || ua.includes('crawl') || ua.includes('spider') || ua.includes('scraper')) {
     return { type: 'unknown-bot', category: 'other' };
   }
-  
+
   return null;
 }
 
 async function logBotVisit(
-  supabase: any, 
-  botInfo: { type: string; category: string }, 
-  path: string, 
+  supabase: any,
+  botInfo: { type: string; category: string },
+  path: string,
   userAgent: string,
   referer: string | null,
   startTime: number,
@@ -90,7 +90,7 @@ async function logBotVisit(
 ) {
   try {
     const responseTime = Date.now() - startTime;
-    
+
     await supabase.from('bot_visits').insert({
       bot_type: botInfo.type,
       bot_category: botInfo.category,
@@ -101,7 +101,7 @@ async function logBotVisit(
       status_code: 200,
       cache_status: cacheStatus
     });
-    
+
     console.log(`Bot visit logged: ${botInfo.type} (${botInfo.category}) -> ${path} [${cacheStatus}]`);
   } catch (error) {
     console.error('Failed to log bot visit:', error);
@@ -110,7 +110,7 @@ async function logBotVisit(
 
 Deno.serve(async (req) => {
   const startTime = Date.now();
-  
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
     // NOTE: Support POST body for tooling/testing; GET+query is still the canonical interface.
     const body = req.method !== "GET" ? await req.json().catch(() => null) : null;
     const path = url.searchParams.get("path") || body?.url || body?.path || "/";
-    const lang = url.searchParams.get("lang") || body?.lang || "uk";
+    const lang = url.searchParams.get("lang") || body?.lang || "en";
     const useCache = (url.searchParams.get("cache") || body?.cache) !== "false"; // Default: use cache
     const userAgent = req.headers.get("user-agent") || "";
     const referer = req.headers.get("referer");
@@ -142,12 +142,12 @@ Deno.serve(async (req) => {
 
       if (cached && new Date(cached.expires_at) > new Date()) {
         console.log(`Serving cached page for ${path} [CACHE HIT]`);
-        
+
         // Log bot visit with CACHE HIT
         if (botInfo) {
           logBotVisit(supabase, botInfo, path, userAgent, referer, startTime, 'HIT');
         }
-        
+
         return new Response(cached.html, {
           headers: {
             ...corsHeaders,
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
         });
       }
     }
-    
+
     // Log bot visit with CACHE MISS (will generate fresh content)
     if (botInfo) {
       logBotVisit(supabase, botInfo, path, userAgent, referer, startTime, 'MISS');
@@ -274,19 +274,19 @@ Deno.serve(async (req) => {
       // Wiki catalog page
       title = "Entity Catalog | Echoes Wiki";
       description = "People, companies and organizations in the news. Browse entities mentioned in our AI-curated news coverage.";
-      
+
       const { data: entities } = await supabase
         .from("wiki_entities")
         .select("id, slug, name, name_en, description, description_en, image_url, entity_type, search_count")
         .order("search_count", { ascending: false })
         .limit(100);
-      
+
       html = generateWikiCatalogHTML(entities || [], lang);
     } else if (path === "/ink-abyss") {
       // Ink Abyss gallery page
       title = "The Ink Abyss | Satirical Art Gallery";
       description = "A timeline gallery of satirical political artwork and caricatures inspired by world news.";
-      
+
       const { data: inkItems } = await supabase
         .from("outrage_ink")
         .select(`
@@ -295,7 +295,7 @@ Deno.serve(async (req) => {
         `)
         .order("created_at", { ascending: false })
         .limit(50);
-      
+
       html = generateInkAbyssHTML(inkItems || [], lang);
     } else if (path === "/calendar" || path === "/read") {
       // Lightweight crawler-friendly index of recent dates
@@ -404,7 +404,7 @@ Deno.serve(async (req) => {
     } else if (newsArticleMatch) {
       // News article page: /news/us/slug - include "More from country" and "Other countries" links
       const [, countryCode, slug] = newsArticleMatch;
-      
+
       // Fetch article and all countries for cross-linking (include original_content for SSR)
       const [{ data: newsItem }, { data: allCountries }] = await Promise.all([
         supabase
@@ -423,7 +423,7 @@ Deno.serve(async (req) => {
         title = newsItem.title_en || newsItem.title;
         description = (newsItem.content_en || newsItem.content || newsItem.description_en || newsItem.description)?.substring(0, 160) + "...";
         image = newsItem.image_url || image;
-        
+
         // Fetch "More from country" links (6 articles), and wiki entities
         const [{ data: moreFromCountry }, { data: wikiLinks }] = await Promise.all([
           supabase
@@ -440,18 +440,18 @@ Deno.serve(async (req) => {
             .eq("news_item_id", newsItem.id)
             .limit(10)
         ]);
-        
+
         // Extract wiki entities from response
         const wikiEntities = (wikiLinks || []).map((link: any) => link.wiki_entity).filter(Boolean);
-        
+
         // Find the most mentioned entity (for Entity Intersection Graph)
         let mainEntityForGraph: any = null;
         let relatedEntitiesForGraph: any[] = [];
-        
+
         if (wikiEntities.length > 0) {
           // Use the first entity as main (most relevant based on order)
           mainEntityForGraph = wikiEntities[0];
-          
+
           // Find other entities mentioned with this main entity in other news
           if (mainEntityForGraph) {
             const { data: relatedNewsLinks } = await supabase
@@ -460,16 +460,16 @@ Deno.serve(async (req) => {
               .eq("wiki_entity_id", mainEntityForGraph.id)
               .neq("news_item_id", newsItem.id)
               .limit(50);
-            
+
             if (relatedNewsLinks && relatedNewsLinks.length > 0) {
               const relatedNewsIds = relatedNewsLinks.map((l: any) => l.news_item_id);
-              
+
               const { data: otherEntityLinks } = await supabase
                 .from("news_wiki_entities")
                 .select("wiki_entity:wiki_entities(id, name, name_en, slug, image_url, entity_type)")
                 .in("news_item_id", relatedNewsIds)
                 .neq("wiki_entity_id", mainEntityForGraph.id);
-              
+
               // Count and dedupe
               const entityCounts = new Map<string, { entity: any; count: number }>();
               for (const link of otherEntityLinks || []) {
@@ -479,7 +479,7 @@ Deno.serve(async (req) => {
                 if (existing) existing.count++;
                 else entityCounts.set(e.id, { entity: e, count: 1 });
               }
-              
+
               relatedEntitiesForGraph = Array.from(entityCounts.values())
                 .sort((a, b) => b.count - a.count)
                 .slice(0, 12)
@@ -487,7 +487,7 @@ Deno.serve(async (req) => {
             }
           }
         }
-        
+
         // Fetch "Other countries" news (3 per country)
         const otherCountries = (allCountries || []).filter((c: any) => c.id !== newsItem.country_id);
         const otherCountriesNewsPromises = otherCountries.map((c: any) =>
@@ -501,7 +501,7 @@ Deno.serve(async (req) => {
         );
         const otherCountriesResults = await Promise.all(otherCountriesNewsPromises);
         const otherCountriesNews = otherCountriesResults.flatMap(r => r.data || []);
-        
+
         // Generate FAQ items from key_points for FAQPage schema
         const keyPoints = newsItem.key_points_en || newsItem.key_points || [];
         const parsedKeyPoints = Array.isArray(keyPoints) ? keyPoints : (typeof keyPoints === 'string' ? JSON.parse(keyPoints) : []);
@@ -512,13 +512,13 @@ Deno.serve(async (req) => {
             answer: point
           }));
         }
-        
+
         html = generateNewsHTML(newsItem, lang, canonicalUrl, moreFromCountry || [], otherCountriesNews, wikiEntities, mainEntityForGraph, relatedEntitiesForGraph);
       }
     } else if (newsCountryMatch) {
       // News country listing page: /news/us - include cross-country links
       const [, countryCode] = newsCountryMatch;
-      
+
       // Fetch country info and all countries for cross-linking
       const [{ data: country }, { data: allCountries }] = await Promise.all([
         supabase
@@ -532,7 +532,7 @@ Deno.serve(async (req) => {
           .eq("is_active", true)
           .order("sort_order", { ascending: true })
       ]);
-      
+
       // Fetch recent news for this country (99 items for full listing)
       const { data: newsItems } = await supabase
         .from("news_rss_items")
@@ -541,7 +541,7 @@ Deno.serve(async (req) => {
         .eq("is_archived", false)
         .order("published_at", { ascending: false })
         .limit(99);
-      
+
       // Fetch news from other countries for cross-linking
       const otherCountries = (allCountries || []).filter((c: any) => c.id !== country?.id);
       const otherCountriesNewsPromises = otherCountries.map((c: any) =>
@@ -560,32 +560,32 @@ Deno.serve(async (req) => {
         const countryName = country.name_en || country.name;
         title = `${country.flag} ${countryName} News | Synchronization Point`;
         description = `Latest news from ${countryName}. AI-curated news digest with retelling and character dialogues.`;
-        
+
         html = generateNewsCountryHTML(newsItems || [], country, lang, canonicalUrl, otherCountriesNews);
       }
     } else if (wikiEntityMatch) {
       // Wiki entity page: /wiki/slug or /wiki/uuid
       const [, entitySlug] = wikiEntityMatch;
-      
+
       // Try slug first, then id
       let entityQuery = supabase.from("wiki_entities").select("*");
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entitySlug);
-      
+
       if (isUuid) {
         entityQuery = entityQuery.eq("id", entitySlug);
       } else {
         entityQuery = entityQuery.eq("slug", entitySlug);
       }
-      
+
       const { data: entity } = await entityQuery.maybeSingle();
-      
+
       if (entity) {
         const entityName = entity.name_en || entity.name;
         title = `${entityName} | Echoes Wiki`;
         description = entity.description_en || entity.description || entity.extract_en?.substring(0, 160) || entity.extract?.substring(0, 160) || `Information about ${entityName}`;
         image = entity.image_url || image;
         canonicalUrl = `${BASE_URL}/wiki/${entity.slug || entity.id}`;
-        
+
         // Fetch related news, wiki entity links, and narrative analysis in parallel
         const [{ data: newsLinks }, { data: wikiLinksOut }, { data: wikiLinksIn }, { data: narrativeData }] = await Promise.all([
           supabase
@@ -612,11 +612,11 @@ Deno.serve(async (req) => {
             .order("year_month", { ascending: false })
             .limit(1)
         ]);
-        
+
         const linkedNews = (newsLinks || [])
           .map((l: any) => l.news_item)
           .filter(Boolean);
-        
+
         // Merge wiki entity links (both directions, deduped)
         const wikiLinkedEntities: any[] = [];
         const seenIds = new Set<string>();
@@ -628,10 +628,10 @@ Deno.serve(async (req) => {
           const e = (link as any).source_entity;
           if (e && !seenIds.has(e.id)) { seenIds.add(e.id); wikiLinkedEntities.push(e); }
         }
-        
+
         // Latest narrative analysis
         const latestNarrative = narrativeData?.[0] || null;
-        
+
         // Aggregate topics and keywords from linked news
         const topicCounts: Record<string, number> = {};
         const keywordCounts: Record<string, number> = {};
@@ -643,18 +643,18 @@ Deno.serve(async (req) => {
         }
         const topTopics = Object.entries(topicCounts).sort((a, b) => b[1] - a[1]).slice(0, 12);
         const topKeywords = Object.entries(keywordCounts).sort((a, b) => b[1] - a[1]).slice(0, 20);
-        
+
         // Fetch related entities
         const newsIdsForEntity = linkedNews.map((n: any) => n.id);
         let relatedEntities: any[] = [];
-        
+
         if (newsIdsForEntity.length > 0) {
           const { data: otherLinks } = await supabase
             .from("news_wiki_entities")
             .select(`wiki_entity:wiki_entities(id, name, name_en, slug, image_url, entity_type)`)
             .in("news_item_id", newsIdsForEntity)
             .neq("wiki_entity_id", entity.id);
-          
+
           // Count and dedupe
           const entityCounts = new Map<string, { entity: any; count: number }>();
           for (const link of otherLinks || []) {
@@ -664,17 +664,17 @@ Deno.serve(async (req) => {
             if (existing) existing.count++;
             else entityCounts.set(e.id, { entity: e, count: 1 });
           }
-          
+
           relatedEntities = Array.from(entityCounts.values())
             .sort((a, b) => b.count - a.count)
             .slice(0, 10)
             .map(({ entity: e, count }) => ({ ...e, shared_news_count: count }));
         }
-        
+
         // Aggregate stats
         const totalLikes = linkedNews.reduce((s: number, n: any) => s + (n.likes || 0), 0);
         const totalDislikes = linkedNews.reduce((s: number, n: any) => s + (n.dislikes || 0), 0);
-        
+
         html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl, topTopics, topKeywords, totalLikes, totalDislikes, wikiLinkedEntities, latestNarrative);
       }
     } else if (dateMatch) {
@@ -698,7 +698,7 @@ Deno.serve(async (req) => {
       // Home page - fetch all sections for full content
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      
+
       const [
         { data: latestParts },
         { data: latestUsNews },
@@ -706,7 +706,8 @@ Deno.serve(async (req) => {
         { data: latestChapters },
         { data: countries },
         { data: trendingEntityMentions24h },
-        { data: trendingEntityMentionsWeek }
+        { data: trendingEntityMentionsWeek },
+        { data: latestSimpleUsNews }
       ] = await Promise.all([
         supabase
           .from("parts")
@@ -763,13 +764,21 @@ Deno.serve(async (req) => {
             news_item:news_rss_items(id, title, title_en, slug, country_id)
           `)
           .gte("created_at", oneWeekAgo)
-          .order("created_at", { ascending: false })
+          .order("created_at", { ascending: false }),
+        // Latest Simple US News (List)
+        supabase
+          .from("news_rss_items")
+          .select("slug, title, title_en, published_at, category, country:news_countries!inner(code)")
+          .eq("country.code", "US")
+          .eq("is_archived", false)
+          .order("published_at", { ascending: false })
+          .limit(10)
       ]);
-      
+
       // Process proportional news feed (50% USA, 25% PL, 25% UA - NO India)
       const retoldIds = new Set((latestUsNews || []).map((n: any) => n.id));
       const countryIdToCode = new Map((countries || []).map((c: any) => [c.id, c.code.toUpperCase()]));
-      
+
       // Group by country (USA, PL, UA only)
       const byCountry: Record<string, any[]> = { US: [], PL: [], UA: [], OTHER: [] };
       for (const item of (latestNewsAll || []) as any[]) {
@@ -781,31 +790,31 @@ Deno.serve(async (req) => {
           byCountry.OTHER.push(item);
         }
       }
-      
+
       // Take proportional amounts: 50% USA (10), 25% PL (5), 25% UA (5)
       const latestNewsProportional = [
         ...byCountry.US.slice(0, 10),
         ...byCountry.PL.slice(0, 5),
         ...byCountry.UA.slice(0, 5),
-      ].sort((a: any, b: any) => 
+      ].sort((a: any, b: any) =>
         new Date(b.published_at || 0).getTime() - new Date(a.published_at || 0).getTime()
       ).slice(0, 20);
-      
+
       // Process trending entities - 24 hours
       const entityMap24h = new Map<string, { entity: any; mentionCount: number; news: any[] }>();
       const countryIdToCodeLower = new Map((countries || []).map((c: any) => [c.id, c.code.toLowerCase()]));
-      
+
       for (const mention of (trendingEntityMentions24h || [])) {
         if (!mention.wiki_entity || !mention.news_item) continue;
         const entity = mention.wiki_entity as any;
         const newsItem = mention.news_item as any;
-        
+
         if (!entityMap24h.has(entity.id)) {
           entityMap24h.set(entity.id, { entity, mentionCount: 0, news: [] });
         }
         const existing = entityMap24h.get(entity.id)!;
         existing.mentionCount++;
-        
+
         if (existing.news.length < 4 && !existing.news.some(n => n.id === newsItem.id) && newsItem.slug) {
           existing.news.push({
             id: newsItem.id,
@@ -820,21 +829,21 @@ Deno.serve(async (req) => {
         .filter(e => e.entity.image_url)
         .sort((a, b) => b.mentionCount - a.mentionCount)
         .slice(0, 5);
-      
+
       // Process trending entities - Week
       const entityMapWeek = new Map<string, { entity: any; mentionCount: number; news: any[] }>();
-      
+
       for (const mention of (trendingEntityMentionsWeek || [])) {
         if (!mention.wiki_entity || !mention.news_item) continue;
         const entity = mention.wiki_entity as any;
         const newsItem = mention.news_item as any;
-        
+
         if (!entityMapWeek.has(entity.id)) {
           entityMapWeek.set(entity.id, { entity, mentionCount: 0, news: [] });
         }
         const existing = entityMapWeek.get(entity.id)!;
         existing.mentionCount++;
-        
+
         if (existing.news.length < 4 && !existing.news.some(n => n.id === newsItem.id) && newsItem.slug) {
           existing.news.push({
             id: newsItem.id,
@@ -849,7 +858,7 @@ Deno.serve(async (req) => {
         .filter(e => e.entity.image_url)
         .sort((a, b) => b.mentionCount - a.mentionCount)
         .slice(0, 5);
-      
+
       // Fetch latest news per country for "News by Country" section
       const countryNewsPromises = (countries || []).map((c: any) =>
         supabase
@@ -874,7 +883,7 @@ Deno.serve(async (req) => {
         .order("search_count", { ascending: false })
         .limit(20);
 
-      html = generateHomeHTML(latestParts || [], lang, canonicalUrl, latestUsNews || [], latestChapters || [], countryNewsMap, latestNewsProportional, trendingEntities24h, trendingEntitiesWeek, topWikiEntities || []);
+      html = generateHomeHTML(latestParts || [], lang, canonicalUrl, latestUsNews || [], latestChapters || [], countryNewsMap, latestNewsProportional, trendingEntities24h, trendingEntitiesWeek, topWikiEntities || [], latestSimpleUsNews || []);
     }
 
     // Generate full HTML document
@@ -892,7 +901,7 @@ Deno.serve(async (req) => {
     // Save to cache for paths that benefit from caching (homepage: 30 min, others: 1 hour)
     const cacheTtlMinutes = (path === "/" || path === "") ? 30 : 60;
     const expiresAt = new Date(Date.now() + cacheTtlMinutes * 60 * 1000).toISOString();
-    
+
     try {
       await supabase
         .from("cached_pages")
@@ -928,6 +937,131 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+
+const ICONS = {
+  bookOpen: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
+  globe: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+  palette: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>`,
+  calendar: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>`,
+  users: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  menu: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>`,
+};
+
+function generateHeaderHTML(lang: string, baseUrl: string) {
+  const t = (key: string) => {
+    // Simplified translation map for header
+    const map: any = {
+      'en': { 'hero.title': 'Synchronization Point', 'header.subtitle': 'Archive of Human History / Smart News', 'nav.read': 'Read', 'nav.newsdigest': 'News Digest', 'nav.calendar': 'Calendar', 'nav.admin': 'Admin' },
+      'uk': { 'hero.title': 'Точка Синхронізації', 'header.subtitle': 'Архів Людської Історії / Розумні Новини', 'nav.read': 'Читати', 'nav.newsdigest': 'Дайджест', 'nav.calendar': 'Календар', 'nav.admin': 'Адмін' },
+      'pl': { 'hero.title': 'Punkt Synchronizacji', 'header.subtitle': 'Archiwum Historii Ludzkości', 'nav.read': 'Czytaj', 'nav.newsdigest': 'Przegląd', 'nav.calendar': 'Kalendarz', 'nav.admin': 'Admin' }
+    };
+    return map[lang]?.[key] || map['en'][key] || key;
+  };
+
+  return `
+    <header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+      <div class="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
+        <a href="${baseUrl}/" class="flex items-center gap-2 md:gap-3 group text-foreground no-underline">
+          <div class="w-8 h-8 md:w-10 md:h-10 rounded overflow-hidden border border-primary/30 group-hover:border-primary transition-all">
+            <img src="${baseUrl}/favicon.png" alt="SP" class="w-full h-full object-cover" width="40" height="40" />
+          </div>
+          <div>
+            <h1 class="font-sans font-bold text-base md:text-lg tracking-tight text-foreground m-0">
+              ${t("hero.title")}
+            </h1>
+            <p class="text-[10px] md:text-xs text-muted-foreground font-mono hidden sm:block m-0">
+              ${t("header.subtitle")}
+            </p>
+          </div>
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="hidden md:flex items-center gap-2">
+          <a href="${baseUrl}/" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
+            ${ICONS.bookOpen}
+            <span>${t("nav.read")}</span>
+          </a>
+          <a href="${baseUrl}/news-digest" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
+            ${ICONS.globe}
+            <span>${t("nav.newsdigest")}</span>
+          </a>
+          <a href="${baseUrl}/ink-abyss" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
+            ${ICONS.palette}
+            <span>Ink Abyss</span>
+          </a>
+          <a href="${baseUrl}/media-calendar" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
+            ${ICONS.calendar}
+            <span>${t('nav.calendar')}</span>
+          </a>
+          <a href="${baseUrl}/wiki" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
+            ${ICONS.users}
+            <span>Wiki</span>
+          </a>
+        </nav>
+
+        <!-- Mobile Navigation Trigger -->
+        <div class="md:hidden flex items-center">
+          <label for="mobile-menu-toggle" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9 p-0 cursor-pointer text-foreground">
+             ${ICONS.menu}
+          </label>
+        </div>
+      </div>
+      
+      <!-- Mobile Menu -->
+      <input type="checkbox" id="mobile-menu-toggle" class="hidden peer" />
+      <div class="hidden peer-checked:block md:hidden border-t border-border bg-card/95 backdrop-blur-sm">
+        <nav class="container mx-auto px-4 py-3 flex flex-col gap-1">
+          <a href="${baseUrl}/" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
+            ${ICONS.bookOpen}
+            ${t("nav.read")}
+          </a>
+          <a href="${baseUrl}/news-digest" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
+             ${ICONS.globe}
+            ${t("nav.newsdigest")}
+          </a>
+          <a href="${baseUrl}/ink-abyss" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
+             ${ICONS.palette}
+            Ink Abyss
+          </a>
+          <a href="${baseUrl}/media-calendar" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
+             ${ICONS.calendar}
+            ${t('nav.calendar')}
+          </a>
+           <a href="${baseUrl}/wiki" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
+             ${ICONS.users}
+            Wiki
+          </a>
+        </nav>
+      </div>
+    </header>
+  `;
+}
+
+function generateFooterHTML(lang: string, baseUrl: string) {
+  const t = (key: string) => {
+    const map: any = {
+      'en': { 'footer.style': 'Synchronization Point - AI Generated History' },
+      'uk': { 'footer.style': 'Точка Синхронізації - Історія, згенерована ШІ' },
+      'pl': { 'footer.style': 'Punkt Synchronizacji - Historia generowana przez SI' }
+    };
+    return map[lang]?.[key] || map['en'][key] || key;
+  };
+
+  return `
+    <footer class="py-8 border-t border-border mt-12 bg-card/30">
+      <div class="container mx-auto px-4 text-center">
+        <p class="text-sm text-muted-foreground font-mono">
+          ${t('footer.style')}
+        </p>
+        <p class="text-xs text-muted-foreground mt-2">
+           <a href="${baseUrl}/" class="hover:text-primary transition-colors">Home</a> | 
+           <a href="${baseUrl}/sitemap" class="hover:text-primary transition-colors">Sitemap</a>
+        </p>
+      </div>
+    </footer>
+  `;
+}
 
 function generateFullDocument(opts: {
   title: string;
@@ -977,7 +1111,7 @@ function generateFullDocument(opts: {
   } : null;
 
   return `<!DOCTYPE html>
-<html lang="${lang}">
+<html lang="${lang}" class="dark"> <!-- Force dark mode class -->
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -997,7 +1131,7 @@ function generateFullDocument(opts: {
   <meta property="og:image" content="${image}">
   <meta property="og:url" content="${canonicalUrl}">
   <meta property="og:type" content="${path.includes("/read/") || (path.includes("/news/") && path.split("/").length === 4) ? "article" : "website"}">
-  <meta property="og:locale" content="${lang === "uk" ? "uk_UA" : lang === "pl" ? "pl_PL" : "en_US"}">
+  <meta property="og:locale" content="${lang === "uk" ? "uk_UA" : lang === "pl" ? "pl-PL" : "en_US"}">
   
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
@@ -1023,35 +1157,142 @@ function generateFullDocument(opts: {
   <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
   ${faqJsonLd ? `<script type="application/ld+json">${JSON.stringify(faqJsonLd)}</script>` : ""}
   
-  <!-- Noscript: content stays visible, no redirect needed -->
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class', // Enable class-based dark mode
+      theme: {
+        extend: {
+          colors: {
+            border: "hsl(var(--border))",
+            input: "hsl(var(--input))",
+            ring: "hsl(var(--ring))",
+            background: "hsl(var(--background))",
+            foreground: "hsl(var(--foreground))",
+            primary: {
+              DEFAULT: "hsl(var(--primary))",
+              foreground: "hsl(var(--primary-foreground))",
+            },
+            secondary: {
+              DEFAULT: "hsl(var(--secondary))",
+              foreground: "hsl(var(--secondary-foreground))",
+            },
+            destructive: {
+              DEFAULT: "hsl(var(--destructive))",
+              foreground: "hsl(var(--destructive-foreground))",
+            },
+            muted: {
+              DEFAULT: "hsl(var(--muted))",
+              foreground: "hsl(var(--muted-foreground))",
+            },
+            accent: {
+              DEFAULT: "hsl(var(--accent))",
+              foreground: "hsl(var(--accent-foreground))",
+            },
+            popover: {
+              DEFAULT: "hsl(var(--popover))",
+              foreground: "hsl(var(--popover-foreground))",
+            },
+            card: {
+              DEFAULT: "hsl(var(--card))",
+              foreground: "hsl(var(--card-foreground))",
+            },
+          },
+          borderRadius: {
+            lg: "var(--radius)",
+            md: "calc(var(--radius) - 2px)",
+            sm: "calc(var(--radius) - 4px)",
+          },
+          fontFamily: {
+            sans: ["Space Grotesk", "ui-sans-serif", "system-ui", "sans-serif"],
+            serif: ["Lora", "ui-serif", "Georgia", "serif"],
+            mono: ["Space Mono", "ui-monospace", "monospace"],
+          },
+        }
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer base {
+      :root {
+        --background: 220 15% 8%;
+        --foreground: 210 20% 96%;
+        
+        --card: 220 18% 14%;
+        --card-foreground: 210 20% 92%;
+        
+        --popover: 220 18% 10%;
+        --popover-foreground: 210 20% 92%;
+        
+        --primary: 195 100% 50%;
+        --primary-foreground: 220 15% 8%;
+        
+        --secondary: 280 80% 60%;
+        --secondary-foreground: 210 20% 95%;
+        
+        --muted: 220 15% 18%;
+        --muted-foreground: 210 15% 60%;
+        
+        --accent: 35 100% 55%;
+        --accent-foreground: 220 15% 8%;
+        
+        --destructive: 0 75% 55%;
+        --destructive-foreground: 210 20% 95%;
+        
+        --border: 220 20% 22%;
+        --input: 220 20% 18%;
+        --ring: 195 100% 50%;
+        
+        --radius: 1rem;
+      }
+      
+      body {
+        @apply bg-background text-foreground font-sans;
+        min-height: 100vh;
+      }
+      
+      h1, h2, h3, h4, h5, h6 {
+        @apply font-sans tracking-tight font-bold scroll-m-20;
+      }
+      
+      h1 { @apply text-4xl lg:text-5xl mb-6; }
+      h2 { @apply text-3xl pb-2 first:mt-0 mt-10 mb-4 border-b border-border; }
+      h3 { @apply text-2xl mt-8 mb-4; }
+      
+      p { @apply leading-7 [&:not(:first-child)]:mt-6; }
+      
+      a { @apply font-medium underline underline-offset-4 decoration-primary/50 hover:decoration-primary; }
+      
+      img { @apply rounded-lg border border-border bg-muted; }
+      
+      ul { @apply my-6 ml-6 list-disc [&>li]:mt-2; }
+      
+      .story-content { @apply font-serif text-lg leading-relaxed text-foreground/90; }
+      
+      /* Legacy Classes Support */
+      .meta { @apply text-muted-foreground text-sm font-medium mb-4 flex flex-wrap gap-2 items-center; }
+      .keywords { @apply flex flex-wrap gap-2 mt-4 mb-6; }
+      .keyword { @apply px-2 py-1 bg-secondary/10 text-secondary text-xs rounded-full border border-secondary/20; }
+      .category { @apply text-accent text-xs uppercase tracking-wider font-bold ml-2; }
+      blockquote { @apply border-l-4 border-primary/50 pl-4 py-2 my-4 bg-muted/30 italic rounded-r-lg; }
+    }
+  </style>
+
+  <!-- Noscript: content stays visible -->
   <noscript>
     <style>.js-redirect-notice { display: none; }</style>
   </noscript>
-  
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }
-    h1 { font-size: 2rem; margin-bottom: 1rem; }
-    article { margin: 2rem 0; }
-    .story-content { white-space: pre-wrap; }
-    .meta { color: #666; font-size: 0.9rem; margin-bottom: 1rem; }
-    a { color: #0066cc; }
-    img { max-width: 100%; height: auto; }
-  </style>
 </head>
-<body>
-  <header>
-    <h1><a href="${BASE_URL}">Точка Синхронізації</a></h1>
-    <p>AI Archive of Human History</p>
-  </header>
+<body class="min-h-screen bg-background text-foreground antialiased font-sans">
+  ${generateHeaderHTML(lang, BASE_URL)}
   
-  <main>
+  <main class="container mx-auto px-4 py-8">
     ${content}
   </main>
   
-  <footer>
-    <p><a href="${BASE_URL}">← Back to main site</a></p>
-    <p>© Synchronization Point. AI-generated content based on real news.</p>
-  </footer>
+  ${generateFooterHTML(lang, BASE_URL)}
   
   <script>
     // Redirect real users to SPA, keep bots on static content
@@ -1061,6 +1302,34 @@ function generateFullDocument(opts: {
   </script>
 </body>
 </html>`;
+}
+
+
+function generateBreadcrumbsHTML(items: { label: string; url?: string }[]) {
+  return `
+    <nav aria-label="Breadcrumb" style="margin-bottom: 24px;">
+      <ol itemscope itemtype="https://schema.org/BreadcrumbList" style="list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; font-size: 14px; color: hsl(var(--muted-foreground));">
+        ${items.map((item, index) => {
+    const isLast = index === items.length - 1;
+    return `
+            <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" style="display: flex; align-items: center;">
+              ${index > 0 ? `<span style="margin-right: 8px;">/</span>` : ""}
+              ${item.url && !isLast ? `
+                <a href="${item.url}" itemprop="item" style="color: inherit; text-decoration: none;">
+                  <span itemprop="name">${escapeHtml(item.label)}</span>
+                </a>
+              ` : `
+                <span itemprop="name" aria-current="page" style="color: hsl(var(--foreground)); font-weight: 500;">
+                  ${escapeHtml(item.label)}
+                </span>
+              `}
+              <meta itemprop="position" content="${index + 1}" />
+            </li>
+          `;
+  }).join("")}
+      </ol>
+    </nav>
+  `;
 }
 
 function generateStoryHTML(part: any, lang: string, canonicalUrl: string) {
@@ -1158,6 +1427,12 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
   }
 
   return `
+    ${generateBreadcrumbsHTML([
+    { label: "Home", url: `${BASE_URL}/` },
+    { label: "News", url: `${BASE_URL}/news` },
+    { label: countryName, url: `${BASE_URL}/news/${countryCode}` },
+    { label: title }
+  ])}
     <article itemscope itemtype="https://schema.org/NewsArticle">
       ${newsItem.image_url ? `<img src="${newsItem.image_url}" alt="${escapeHtml(title)}" itemprop="image">` : `<img src="https://echoes2.com/favicon.png" alt="${escapeHtml(title)}" itemprop="image" style="opacity:0.6;">`}
       
@@ -1234,25 +1509,30 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
         <section itemscope itemtype="https://schema.org/ItemList">
           <h3>📚 Related People & Topics</h3>
           ${wikiEntities.map((entity: any, index: number) => {
-            const name = entity.name_en || entity.name;
-            const description = entity.description_en || entity.description || "";
-            const extract = entity.extract_en || entity.extract || "";
-            const wikiUrl = entity.wiki_url_en || entity.wiki_url || "";
-            const imageUrl = entity.image_url || "";
-            const entityType = entity.entity_type || "topic";
-            
-            return `
-              <div itemprop="itemListElement" itemscope itemtype="https://schema.org/${entityType === 'person' ? 'Person' : 'Thing'}">
+    const name = entity.name_en || entity.name;
+    const description = entity.description_en || entity.description || "";
+    const extract = entity.extract_en || entity.extract || "";
+    const wikiUrl = entity.wiki_url_en || entity.wiki_url || "";
+    const imageUrl = entity.image_url || "";
+    const entityType = entity.entity_type || "topic";
+    const entitySlug = entity.slug || entity.id;
+    const internalUrl = `${BASE_URL}/wiki/${entitySlug}`;
+
+    return `
+              <div itemprop="itemListElement" itemscope itemtype="https://schema.org/${entityType === 'person' ? 'Person' : 'Thing'}" style="margin-bottom:16px;padding:12px;border:1px solid hsl(var(--border));border-radius:8px;background:hsl(var(--card));">
                 <meta itemprop="position" content="${index + 1}">
                 ${imageUrl ? `<img src="${imageUrl}" alt="${escapeHtml(name)}" itemprop="image" style="width:64px;height:64px;border-radius:50%;float:left;margin-right:12px;">` : ""}
-                <h4 itemprop="name">${escapeHtml(name)}</h4>
-                ${description ? `<p itemprop="description">${escapeHtml(description)}</p>` : ""}
-                ${extract ? `<p><em>${escapeHtml(extract.substring(0, 300))}${extract.length > 300 ? "..." : ""}</em></p>` : ""}
-                ${wikiUrl ? `<p><a href="${escapeHtml(wikiUrl)}" rel="noopener" target="_blank" itemprop="sameAs">Wikipedia →</a></p>` : ""}
+                <h4 itemprop="name" style="margin:0 0 8px 0;"><a href="${internalUrl}" style="color:hsl(var(--primary));text-decoration:none;">${escapeHtml(name)}</a></h4>
+                ${description ? `<p itemprop="description" style="margin:4px 0;font-size:0.9rem;color:hsl(var(--muted-foreground));">${escapeHtml(description)}</p>` : ""}
+                ${extract ? `<p style="margin:4px 0;font-size:0.85rem;color:hsl(var(--muted-foreground));font-style:italic;"><em>${escapeHtml(extract.substring(0, 300))}${extract.length > 300 ? "..." : ""}</em></p>` : ""}
+                <div style="margin-top:8px;display:flex;gap:12px;font-size:0.85rem;">
+                  <a href="${internalUrl}" style="color:hsl(var(--primary));text-decoration:none;">View Profile →</a>
+                  ${wikiUrl ? `<a href="${escapeHtml(wikiUrl)}" rel="noopener" target="_blank" itemprop="sameAs" style="color:hsl(var(--muted-foreground));text-decoration:none;">Wikipedia ↗</a>` : ""}
+                </div>
                 <div style="clear:both;"></div>
               </div>
             `;
-          }).join("")}
+  }).join("")}
         </section>
       ` : ""}
       
@@ -1262,28 +1542,46 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
           <p>Connections for <strong>${escapeHtml(mainEntityForGraph.name_en || mainEntityForGraph.name)}</strong>:</p>
           <ul>
             ${relatedEntitiesForGraph.map((e: any) => {
-              const eName = e.name_en || e.name;
-              const eSlug = e.slug || e.id;
-              const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
-              return `
+    const eName = e.name_en || e.name;
+    const eSlug = e.slug || e.id;
+    const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
+    return `
                 <li>
                   ${typeIcon} <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
                   <span>(${e.shared_news_count} shared articles)</span>
                 </li>
               `;
-            }).join("")}
+  }).join("")}
           </ul>
           <p><a href="${BASE_URL}/wiki/${mainEntityForGraph.slug || mainEntityForGraph.id}">View full profile →</a></p>
         </section>
       ` : ""}
       
       ${newsItem.original_content && newsItem.original_content.length > 100 ? `
-        <details>
-          <summary style="cursor:pointer;font-weight:bold;padding:8px 0;">📄 Original Source Content</summary>
-          <blockquote style="background:#f5f5f5;border-left:4px solid #ccc;padding:12px;margin:8px 0;font-size:0.9rem;color:#555;white-space:pre-wrap;">
-            ${escapeHtml(newsItem.original_content.substring(0, 2000))}${newsItem.original_content.length > 2000 ? '...' : ''}
-          </blockquote>
-        </details>
+        <section style="margin-top:24px;padding:16px;border:1px dashed hsl(var(--border));border-radius:8px;background:hsl(var(--muted)/0.3);">
+          <details open>
+            <summary style="cursor:pointer;font-weight:600;padding:8px 0;display:flex;align-items:center;gap:8px;color:hsl(var(--muted-foreground));font-size:0.875rem;">
+              <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              Original Source
+            </summary>
+            <div style="margin-top:12px;font-size:0.875rem;color:hsl(var(--muted-foreground));line-height:1.6;white-space:pre-wrap;">
+              ${escapeHtml(newsItem.original_content.substring(0, 2000))}${newsItem.original_content.length > 2000 ? '...' : ''}
+            </div>
+            ${newsItem.url ? `
+              <a href="${escapeHtml(newsItem.url)}" target="_blank" rel="noopener noreferrer nofollow" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:0.75rem;color:hsl(var(--primary));text-decoration:none;">
+                <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Read full article at source
+              </a>
+            ` : ''}
+          </details>
+        </section>
       ` : ""}
       
       ${newsItem.url ? `<p><a href="${escapeHtml(newsItem.url)}" rel="nofollow noopener" target="_blank">Original source</a></p>` : ""}
@@ -1305,10 +1603,10 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
       <section>
         <h3>News from Other Countries</h3>
         ${Object.entries(otherByCountry).map(([code, items]) => {
-          const first = items[0];
-          const flag = first?.country?.flag || "";
-          const name = first?.country?.name_en || code;
-          return `
+    const first = items[0];
+    const flag = first?.country?.flag || "";
+    const name = first?.country?.name_en || code;
+    return `
             <h4>${escapeHtml(flag)} ${escapeHtml(name)}</h4>
             <ul>
               ${items.map(item => `
@@ -1316,7 +1614,7 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
               `).join("")}
             </ul>
           `;
-        }).join("")}
+  }).join("")}
       </section>
     ` : ""}
     
@@ -1348,8 +1646,8 @@ function generateDateHTML(parts: any[], date: string, lang: string, canonicalUrl
 }
 
 function generateHomeHTML(
-  parts: any[], 
-  lang: string, 
+  parts: any[],
+  lang: string,
   canonicalUrl: string,
   latestUsNews: any[] = [],
   latestChapters: any[] = [],
@@ -1357,7 +1655,8 @@ function generateHomeHTML(
   latestNewsProportional: any[] = [],
   trendingEntities24h: { entity: any; mentionCount: number; news: any[] }[] = [],
   trendingEntitiesWeek: { entity: any; mentionCount: number; news: any[] }[] = [],
-  topWikiEntities: any[] = []
+  topWikiEntities: any[] = [],
+  latestSimpleUsNews: any[] = []
 ) {
   const titleField = lang === "en" ? "title_en" : lang === "pl" ? "title_pl" : "title";
 
@@ -1390,6 +1689,24 @@ function generateHomeHTML(
           `).join("")}
         </ul>
       </section>
+      </section>
+    ` : ""}
+    
+    ${latestSimpleUsNews.length > 0 ? `
+      <section>
+        <h2>🇺🇸 Latest USA News</h2>
+        <ul>
+          ${latestSimpleUsNews.map((item: any) => `
+            <li>
+              <a href="${BASE_URL}/news/us/${item.slug}">
+                ${escapeHtml(item.title_en || item.title)}
+              </a>
+              ${item.category ? ` <span class="category">[${escapeHtml(item.category)}]</span>` : ""}
+            </li>
+          `).join("")}
+        </ul>
+        <p><a href="${BASE_URL}/news/us">→ View all USA news</a></p>
+      </section>
     ` : ""}
     
     ${latestNewsProportional.length > 0 ? `
@@ -1397,8 +1714,8 @@ function generateHomeHTML(
         <h2>📰 Latest News (USA, PL, UA)</h2>
         <ul>
           ${latestNewsProportional.map((item: any) => {
-            const countryCode = (item.country as any)?.code?.toLowerCase() || 'us';
-            return `
+    const countryCode = (item.country as any)?.code?.toLowerCase() || 'us';
+    return `
             <li>
               <a href="${BASE_URL}/news/${countryCode}/${item.slug}">
                 ${escapeHtml(item.title_en || item.title)}
@@ -1415,10 +1732,10 @@ function generateHomeHTML(
       <section>
         <h2>🔥 Trending People & Companies (24h)</h2>
         ${trendingEntities24h.map((item: any) => {
-          const name = item.entity.name_en || item.entity.name;
-          const description = item.entity.description_en || item.entity.description || "";
-          const wikiUrl = item.entity.wiki_url_en || item.entity.wiki_url;
-          return `
+      const name = item.entity.name_en || item.entity.name;
+      const description = item.entity.description_en || item.entity.description || "";
+      const wikiUrl = item.entity.wiki_url_en || item.entity.wiki_url;
+      return `
             <div style="margin-bottom: 1rem; padding: 0.5rem; border: 1px solid #eee; border-radius: 4px;">
               ${item.entity.image_url ? `<img src="${item.entity.image_url}" alt="${escapeHtml(name)}" style="width:48px;height:48px;border-radius:50%;float:left;margin-right:12px;">` : ""}
               <h4 style="margin:0;">${escapeHtml(name)} <small>(${item.mentionCount} mentions)</small></h4>
@@ -1435,7 +1752,7 @@ function generateHomeHTML(
               <div style="clear:both;"></div>
             </div>
           `;
-        }).join("")}
+    }).join("")}
       </section>
     ` : ""}
     
@@ -1443,10 +1760,10 @@ function generateHomeHTML(
       <section>
         <h2>📅 Trending This Week (7 days)</h2>
         ${trendingEntitiesWeek.map((item: any) => {
-          const name = item.entity.name_en || item.entity.name;
-          const description = item.entity.description_en || item.entity.description || "";
-          const wikiUrl = item.entity.wiki_url_en || item.entity.wiki_url;
-          return `
+      const name = item.entity.name_en || item.entity.name;
+      const description = item.entity.description_en || item.entity.description || "";
+      const wikiUrl = item.entity.wiki_url_en || item.entity.wiki_url;
+      return `
             <div style="margin-bottom: 1rem; padding: 0.5rem; border: 1px solid #eee; border-radius: 4px;">
               ${item.entity.image_url ? `<img src="${item.entity.image_url}" alt="${escapeHtml(name)}" style="width:48px;height:48px;border-radius:50%;float:left;margin-right:12px;">` : ""}
               <h4 style="margin:0;">${escapeHtml(name)} <small>(${item.mentionCount} mentions)</small></h4>
@@ -1463,7 +1780,7 @@ function generateHomeHTML(
               <div style="clear:both;"></div>
             </div>
           `;
-        }).join("")}
+    }).join("")}
       </section>
     ` : ""}
     
@@ -1486,8 +1803,8 @@ function generateHomeHTML(
       <section>
         <h2>📰 News by Country</h2>
         ${countryNewsMap.map(({ country, news }) => {
-          if (!news || news.length === 0) return "";
-          return `
+      if (!news || news.length === 0) return "";
+      return `
             <h3><a href="${BASE_URL}/news/${country.code}">${country.flag || ""} ${escapeHtml(country.name_en || country.name)}</a></h3>
             <ul>
               ${news.map(item => `
@@ -1499,7 +1816,7 @@ function generateHomeHTML(
               `).join("")}
             </ul>
           `;
-        }).join("")}
+    }).join("")}
       </section>
     ` : ""}
     
@@ -1508,13 +1825,13 @@ function generateHomeHTML(
         <h2>🌐 Wiki: People & Organizations</h2>
         <ul>
           ${topWikiEntities.map(e => {
-            const name = e.name_en || e.name;
-            const slug = e.slug || e.id;
-            const typeIcon = e.entity_type === 'person' ? '👤' : '🏢';
-            return `
+      const name = e.name_en || e.name;
+      const slug = e.slug || e.id;
+      const typeIcon = e.entity_type === 'person' ? '👤' : '🏢';
+      return `
               <li>${typeIcon} <a href="${BASE_URL}/wiki/${slug}">${escapeHtml(name)}</a></li>
             `;
-          }).join("")}
+    }).join("")}
         </ul>
         <p><a href="${BASE_URL}/wiki">→ Browse all entities</a></p>
       </section>
@@ -1550,11 +1867,11 @@ function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, c
     
     <ul itemscope itemtype="https://schema.org/ItemList">
       ${newsItems.map((item, index) => {
-        const title = item.title_en || item.title;
-        const date = item.published_at ? new Date(item.published_at).toLocaleDateString() : "";
-        const slug = item.slug || "";
-        
-        return `
+    const title = item.title_en || item.title;
+    const date = item.published_at ? new Date(item.published_at).toLocaleDateString() : "";
+    const slug = item.slug || "";
+
+    return `
           <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
             <meta itemprop="position" content="${index + 1}">
             <a href="${BASE_URL}/news/${countryCode}/${slug}" itemprop="url">
@@ -1564,17 +1881,17 @@ function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, c
             ${item.category ? ` <span class="category">[${escapeHtml(item.category)}]</span>` : ""}
           </li>
         `;
-      }).join("")}
+  }).join("")}
     </ul>
     
     ${Object.keys(otherByCountry).length > 0 ? `
       <section>
         <h3>News from Other Countries</h3>
         ${Object.entries(otherByCountry).map(([code, items]) => {
-          const first = items[0];
-          const otherFlag = first?.country?.flag || "";
-          const otherName = first?.country?.name_en || code;
-          return `
+    const first = items[0];
+    const otherFlag = first?.country?.flag || "";
+    const otherName = first?.country?.name_en || code;
+    return `
             <h4><a href="${BASE_URL}/news/${code}">${escapeHtml(otherFlag)} ${escapeHtml(otherName)}</a></h4>
             <ul>
               ${items.map(item => `
@@ -1582,7 +1899,7 @@ function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, c
               `).join("")}
             </ul>
           `;
-        }).join("")}
+  }).join("")}
       </section>
     ` : ""}
     
@@ -1605,11 +1922,11 @@ function generateNewsHubHTML(countries: any[], lang: string) {
 
     <ul>
       ${countries.map((c) => {
-        const code = c.code;
-        const flag = c.flag || "";
-        const name = c[nameField] || c.name_en || c.name || code;
-        return `<li><a href="${BASE_URL}/news/${escapeHtml(code)}">${escapeHtml(flag)} ${escapeHtml(name)}</a></li>`;
-      }).join("")}
+    const code = c.code;
+    const flag = c.flag || "";
+    const name = c[nameField] || c.name_en || c.name || code;
+    return `<li><a href="${BASE_URL}/news/${escapeHtml(code)}">${escapeHtml(flag)} ${escapeHtml(name)}</a></li>`;
+  }).join("")}
     </ul>
 
     <nav>
@@ -1628,9 +1945,9 @@ function generateChaptersIndexHTML(chapters: any[], lang: string) {
 
     <ul>
       ${chapters.map((ch) => {
-        const title = ch[titleField] || ch.title;
-        return `<li><a href="${BASE_URL}/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(title)}</a></li>`;
-      }).join("")}
+    const title = ch[titleField] || ch.title;
+    return `<li><a href="${BASE_URL}/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(title)}</a></li>`;
+  }).join("")}
     </ul>
 
     <nav>
@@ -1650,11 +1967,11 @@ function generateVolumesIndexHTML(volumes: any[], lang: string) {
 
     <ul>
       ${volumes.map((v) => {
-        const monthStr = String(v.month).padStart(2, "0");
-        const yearMonth = `${v.year}-${monthStr}`;
-        const title = v[titleField] || v.title || yearMonth;
-        return `<li><a href="${BASE_URL}/volume/${yearMonth}">${escapeHtml(title)} (${yearMonth})</a></li>`;
-      }).join("")}
+    const monthStr = String(v.month).padStart(2, "0");
+    const yearMonth = `${v.year}-${monthStr}`;
+    const title = v[titleField] || v.title || yearMonth;
+    return `<li><a href="${BASE_URL}/volume/${yearMonth}">${escapeHtml(title)} (${yearMonth})</a></li>`;
+  }).join("")}
     </ul>
 
     <nav>
@@ -1679,9 +1996,9 @@ function generateVolumeHTML(volume: any, chapters: any[], lang: string) {
     <h3>Chapters in this volume</h3>
     <ul>
       ${chapters.map((ch) => {
-        const chTitle = ch[titleField] || ch.title;
-        return `<li><a href="${BASE_URL}/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(chTitle)}</a></li>`;
-      }).join("")}
+    const chTitle = ch[titleField] || ch.title;
+    return `<li><a href="${BASE_URL}/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(chTitle)}</a></li>`;
+  }).join("")}
     </ul>
 
     <nav>
@@ -1698,9 +2015,9 @@ function generateCalendarIndexHTML(dates: string[], lang: string) {
 
     <ul>
       ${dates.map((d) => {
-        const date = escapeHtml(d);
-        return `<li><a href="${BASE_URL}/date/${date}">${date}</a> | <a href="${BASE_URL}/read/${date}">/read/${date}</a></li>`;
-      }).join("")}
+    const date = escapeHtml(d);
+    return `<li><a href="${BASE_URL}/date/${date}">${date}</a> | <a href="${BASE_URL}/read/${date}">/read/${date}</a></li>`;
+  }).join("")}
     </ul>
 
     <nav>
@@ -1741,29 +2058,29 @@ function generateSitemapHTML(
     <h3>Countries</h3>
     <ul>
       ${data.countries.map((c) => {
-        const code = c.code;
-        const flag = c.flag || "";
-        const name = c[nameField] || c.name_en || c.name || code;
-        return `<li><a href="${BASE_URL}/news/${escapeHtml(code)}">${escapeHtml(flag)} ${escapeHtml(name)}</a></li>`;
-      }).join("")}
+    const code = c.code;
+    const flag = c.flag || "";
+    const name = c[nameField] || c.name_en || c.name || code;
+    return `<li><a href="${BASE_URL}/news/${escapeHtml(code)}">${escapeHtml(flag)} ${escapeHtml(name)}</a></li>`;
+  }).join("")}
     </ul>
 
     <h3>Volumes (recent)</h3>
     <ul>
       ${data.volumes.map((v) => {
-        const monthStr = String(v.month).padStart(2, "0");
-        const yearMonth = `${v.year}-${monthStr}`;
-        const title = v[titleField] || v.title || yearMonth;
-        return `<li><a href="${BASE_URL}/volume/${yearMonth}">${escapeHtml(title)}</a></li>`;
-      }).join("")}
+    const monthStr = String(v.month).padStart(2, "0");
+    const yearMonth = `${v.year}-${monthStr}`;
+    const title = v[titleField] || v.title || yearMonth;
+    return `<li><a href="${BASE_URL}/volume/${yearMonth}">${escapeHtml(title)}</a></li>`;
+  }).join("")}
     </ul>
 
     <h3>Chapters (recent)</h3>
     <ul>
       ${data.chapters.map((ch) => {
-        const title = ch[titleField] || ch.title;
-        return `<li><a href="${BASE_URL}/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(title)}</a></li>`;
-      }).join("")}
+    const title = ch[titleField] || ch.title;
+    return `<li><a href="${BASE_URL}/chapter/${ch.number}">Chapter ${ch.number}: ${escapeHtml(title)}</a></li>`;
+  }).join("")}
     </ul>
 
     <h3>Dates (recent)</h3>
@@ -1775,16 +2092,16 @@ function generateSitemapHTML(
     <p>For full coverage, use <a href="${BASE_URL}/sitemap.xml">sitemap.xml</a>.</p>
     <ul>
       ${data.stories.map((p) => {
-        const t = p[titleField] || p.title;
-        return `<li><a href="${BASE_URL}/read/${escapeHtml(p.date)}/${p.number}">${escapeHtml(t)}</a></li>`;
-      }).join("")}
+    const t = p[titleField] || p.title;
+    return `<li><a href="${BASE_URL}/read/${escapeHtml(p.date)}/${p.number}">${escapeHtml(t)}</a></li>`;
+  }).join("")}
     </ul>
   `;
 }
 
 function generateInkAbyssHTML(items: any[], lang: string) {
   const titleField = lang === "en" ? "title_en" : "title";
-  
+
   // Group by date
   const grouped = new Map<string, any[]>();
   for (const item of items) {
@@ -1802,19 +2119,19 @@ function generateInkAbyssHTML(items: any[], lang: string) {
         <h3>${escapeHtml(date)}</h3>
         <ul>
           ${dateItems.map(item => {
-            const newsTitle = item.news_item?.[titleField] || item.news_item?.title || item.title || 'Satirical artwork';
-            const countryCode = item.news_item?.country?.code?.toLowerCase() || 'us';
-            const newsLink = item.news_item?.slug 
-              ? `${BASE_URL}/news/${countryCode}/${item.news_item.slug}`
-              : null;
-            return `
+    const newsTitle = item.news_item?.[titleField] || item.news_item?.title || item.title || 'Satirical artwork';
+    const countryCode = item.news_item?.country?.code?.toLowerCase() || 'us';
+    const newsLink = item.news_item?.slug
+      ? `${BASE_URL}/news/${countryCode}/${item.news_item.slug}`
+      : null;
+    return `
               <li>
                 <img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(newsTitle)}" title="${escapeHtml(newsTitle)}" width="300">
                 <p>👍 ${item.likes} | 👎 ${item.dislikes}</p>
                 ${newsLink ? `<a href="${newsLink}">${escapeHtml(newsTitle)}</a>` : `<span>${escapeHtml(newsTitle)}</span>`}
               </li>
             `;
-          }).join("")}
+  }).join("")}
         </ul>
       </section>
     `).join("")}
@@ -1827,12 +2144,83 @@ function generateInkAbyssHTML(items: any[], lang: string) {
   `;
 }
 
+function generateStaticIntersectionGraph(mainEntity: any, relatedEntities: any[], width = 600, height = 400) {
+  if (!mainEntity || relatedEntities.length === 0) return "";
+
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const mainRadius = 40;
+  const orbitRadius = Math.min(width, height) / 2 - 60;
+
+  // Sort by shared count to put most important ones closer or larger
+  const topEntities = relatedEntities.slice(0, 12); // Limit to 12 for static graph
+
+  let svgContent = "";
+
+  // Draw connections first (so they are behind nodes)
+  topEntities.forEach((entity, index) => {
+    const angle = (index / topEntities.length) * 2 * Math.PI - Math.PI / 2;
+    const x = centerX + orbitRadius * Math.cos(angle);
+    const y = centerY + orbitRadius * Math.sin(angle);
+
+    // Line style
+    const strokeWidth = 1 + (entity.shared_news_count > 5 ? 2 : 0);
+    const opacity = 0.3 + (entity.shared_news_count > 5 ? 0.3 : 0);
+
+    svgContent += `<line x1="${centerX}" y1="${centerY}" x2="${x}" y2="${y}" stroke="hsl(var(--primary))" stroke-width="${strokeWidth}" stroke-opacity="${opacity}" />`;
+  });
+
+  // Draw peripheral nodes
+  topEntities.forEach((entity, index) => {
+    const angle = (index / topEntities.length) * 2 * Math.PI - Math.PI / 2;
+    const x = centerX + orbitRadius * Math.cos(angle);
+    const y = centerY + orbitRadius * Math.sin(angle);
+    const radius = 15 + (entity.shared_news_count > 5 ? 10 : 0);
+
+    // Node circle
+    svgContent += `<circle cx="${x}" cy="${y}" r="${radius}" fill="hsl(var(--card))" stroke="hsl(var(--primary))" stroke-width="2" />`;
+
+    // Entity image (clipped) or icon
+    if (entity.image_url) {
+      // Clip path definition would be needed, but for simplicity we use pattern or just overlay text
+      // For simple static SVG without defs overhead, we might just color it
+    }
+
+    // Text label
+    const name = entity.name_en || entity.name;
+    const labelX = x;
+    const labelY = y + radius + 15;
+
+    svgContent += `<text x="${labelX}" y="${labelY}" text-anchor="middle" fill="hsl(var(--foreground))" font-size="10" font-family="sans-serif">${escapeHtml(name)}</text>`;
+    svgContent += `<text x="${labelX}" y="${labelY + 10}" text-anchor="middle" fill="hsl(var(--muted-foreground))" font-size="8" font-family="sans-serif">(${entity.shared_news_count})</text>`;
+
+    // Link area (transparent rect on top)
+    const url = `${BASE_URL}/wiki/${entity.slug || entity.id}`;
+    svgContent += `<a href="${url}"><rect x="${x - radius}" y="${y - radius}" width="${radius * 2}" height="${radius * 2}" fill="transparent" style="cursor:pointer"/></a>`;
+  });
+
+  // Draw main center node
+  svgContent += `<circle cx="${centerX}" cy="${centerY}" r="${mainRadius}" fill="hsl(var(--primary))" stroke="hsl(var(--primary))" stroke-width="4" fill-opacity="0.2" />`;
+  svgContent += `<circle cx="${centerX}" cy="${centerY}" r="${mainRadius - 5}" fill="none" stroke="hsl(var(--primary))" stroke-width="1" />`;
+
+  const mainName = mainEntity.name_en || mainEntity.name;
+
+  // Main label
+  svgContent += `<text x="${centerX}" y="${centerY + 5}" text-anchor="middle" fill="hsl(var(--foreground))" font-weight="bold" font-size="12" font-family="sans-serif">${escapeHtml(mainName)}</text>`;
+
+  return `
+    <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto border rounded-xl bg-card/50" style="max-width: 100%; border: 1px solid hsl(var(--border)); border-radius: 0.75rem; background: hsl(var(--card)); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+      ${svgContent}
+    </svg>
+  `;
+}
+
 function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string, topTopics: [string, number][] = [], topKeywords: [string, number][] = [], totalLikes = 0, totalDislikes = 0, wikiLinkedEntities: any[] = [], latestNarrative: any = null) {
   const name = entity.name_en || entity.name;
   const description = entity.description_en || entity.description || '';
   const extract = entity.extract_en || entity.extract || '';
   const entityTypeLabel = entity.entity_type === 'person' ? '👤 Person' : entity.entity_type === 'company' ? '🏢 Company' : '🌐 Entity';
-  
+
   // Parse narrative analysis
   let narrativeHtml = '';
   if (latestNarrative) {
@@ -1841,7 +2229,7 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
       const sentiment = analysis?.sentiment || analysis?.overall_sentiment || '';
       const summary = analysis?.summary || analysis?.narrative_summary || '';
       const trends = analysis?.key_trends || analysis?.trends || [];
-      
+
       narrativeHtml = `
         <section>
           <h2>📊 Narrative Analysis (${latestNarrative.year_month})</h2>
@@ -1856,14 +2244,32 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
       `;
     } catch { /* ignore parse errors */ }
   }
-  
+
   return `
+    ${generateBreadcrumbsHTML([
+    { label: "Home", url: `${BASE_URL}/` },
+    { label: "Wiki", url: `${BASE_URL}/wiki` },
+    { label: name }
+  ])}
     <article itemscope itemtype="https://schema.org/${entity.entity_type === 'person' ? 'Person' : 'Organization'}">
-      <header>
-        <span>${entityTypeLabel}</span>
-        ${entity.image_url ? `<img itemprop="image" src="${escapeHtml(entity.image_url)}" alt="${escapeHtml(name)}" width="200">` : ''}
-        <h1 itemprop="name">${escapeHtml(name)}</h1>
-        ${description ? `<p itemprop="description">${escapeHtml(description)}</p>` : ''}
+      <header style="display: flex; gap: 24px; align-items: start; margin-bottom: 32px;">
+        ${entity.image_url ? `
+          <img itemprop="image" src="${escapeHtml(entity.image_url)}" alt="${escapeHtml(name)}" 
+               style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid hsl(var(--card)); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        ` : `
+          <div style="width: 120px; height: 120px; border-radius: 50%; background: hsl(var(--muted)); display: flex; align-items: center; justify-content: center; font-size: 48px;">
+            ${entity.entity_type === 'person' ? '👤' : '🏢'}
+          </div>
+        `}
+        <div>
+          <span style="display: inline-block; padding: 4px 12px; background: hsl(var(--muted)); border-radius: 9999px; font-size: 14px; font-weight: 500; margin-bottom: 12px;">
+            ${entityTypeLabel}
+          </span>
+          <h1 itemprop="name" style="margin: 0 0 8px 0; font-size: 32px; line-height: 1.2;">
+            ${escapeHtml(name)}
+          </h1>
+          ${description ? `<p itemprop="description" style="font-size: 18px; color: hsl(var(--muted-foreground)); margin: 0;">${escapeHtml(description)}</p>` : ''}
+        </div>
       </header>
       
       <section>
@@ -1899,18 +2305,18 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
           <h2>📰 Related News (${linkedNews.length})</h2>
           <ul>
             ${linkedNews.map((news: any) => {
-              const newsTitle = news.title_en || news.title;
-              const countryCode = (news.country as any)?.code?.toLowerCase() || 'us';
-              const countryFlag = (news.country as any)?.flag || '';
-              const newsUrl = news.slug ? `${BASE_URL}/news/${countryCode}/${news.slug}` : null;
-              return `
+    const newsTitle = news.title_en || news.title;
+    const countryCode = (news.country as any)?.code?.toLowerCase() || 'us';
+    const countryFlag = (news.country as any)?.flag || '';
+    const newsUrl = news.slug ? `${BASE_URL}/news/${countryCode}/${news.slug}` : null;
+    return `
                 <li>
                   ${countryFlag} ${newsUrl ? `<a href="${newsUrl}">${escapeHtml(newsTitle)}</a>` : escapeHtml(newsTitle)}
                   ${news.published_at ? `<time>(${news.published_at.split('T')[0]})</time>` : ''}
                   ${news.description_en ? `<p>${escapeHtml(news.description_en.substring(0, 150))}...</p>` : ''}
                 </li>
               `;
-            }).join("")}
+  }).join("")}
           </ul>
         </section>
       ` : ''}
@@ -1918,19 +2324,22 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
       ${relatedEntities.length > 0 ? `
         <section>
           <h2>🔗 Entity Intersection Graph</h2>
+          <div style="margin: 24px 0;">
+            ${generateStaticIntersectionGraph(entity, relatedEntities)}
+          </div>
           <p>People and organizations frequently mentioned alongside <strong>${escapeHtml(name)}</strong>:</p>
           <ul>
             ${relatedEntities.map((e: any) => {
-              const eName = e.name_en || e.name;
-              const eSlug = e.slug || e.id;
-              const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
-              return `
+    const eName = e.name_en || e.name;
+    const eSlug = e.slug || e.id;
+    const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
+    return `
                 <li>
                   ${typeIcon} <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
                   <span>(${e.shared_news_count} shared articles)</span>
                 </li>
               `;
-            }).join("")}
+  }).join("")}
           </ul>
         </section>
       ` : ''}
@@ -1941,17 +2350,17 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
           <p>Entities directly linked to <strong>${escapeHtml(name)}</strong>:</p>
           <ul>
             ${wikiLinkedEntities.map((e: any) => {
-              const eName = e.name_en || e.name;
-              const eSlug = e.slug || e.id;
-              const eDesc = e.description_en || e.description || '';
-              const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
-              return `
+    const eName = e.name_en || e.name;
+    const eSlug = e.slug || e.id;
+    const eDesc = e.description_en || e.description || '';
+    const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
+    return `
                 <li>
                   ${typeIcon} <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
                   ${eDesc ? `<span> — ${escapeHtml(eDesc.substring(0, 100))}</span>` : ''}
                 </li>
               `;
-            }).join("")}
+  }).join("")}
           </ul>
         </section>
       ` : ''}
@@ -1978,7 +2387,7 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
 function generateWikiCatalogHTML(entities: any[], lang: string) {
   const titleField = lang === "en" ? "name_en" : "name";
   const descField = lang === "en" ? "description_en" : "description";
-  
+
   return `
     <h1>Entity Catalog</h1>
     <p>People, companies and organizations mentioned in the news.</p>
@@ -1987,11 +2396,11 @@ function generateWikiCatalogHTML(entities: any[], lang: string) {
       <h2>All Entities (${entities.length})</h2>
       <ul>
         ${entities.map((e) => {
-          const name = e[titleField] || e.name;
-          const desc = e[descField] || e.description || '';
-          const slug = e.slug || e.id;
-          const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
-          return `
+    const name = e[titleField] || e.name;
+    const desc = e[descField] || e.description || '';
+    const slug = e.slug || e.id;
+    const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
+    return `
             <li>
               <a href="${BASE_URL}/wiki/${slug}">
                 ${typeIcon} ${escapeHtml(name)}
@@ -1999,7 +2408,7 @@ function generateWikiCatalogHTML(entities: any[], lang: string) {
               ${desc ? `<span> - ${escapeHtml(desc.substring(0, 100))}${desc.length > 100 ? '...' : ''}</span>` : ''}
             </li>
           `;
-        }).join("")}
+  }).join("")}
       </ul>
     </section>
     
