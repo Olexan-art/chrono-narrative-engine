@@ -27,7 +27,7 @@ interface SEOHeadProps {
   additionalSchemas?: Record<string, unknown>[];
 }
 
-const BASE_URL = 'https://echoes2.com';
+const BASE_URL = 'https://bravennow.com';
 
 export function SEOHead({
   title = 'Точка Синхронізації',

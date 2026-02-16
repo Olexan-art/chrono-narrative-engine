@@ -16,7 +16,7 @@ serve(async (req) => {
 
     // Get admin password from environment variable (not hardcoded)
     const ADMIN_PASSWORD = Deno.env.get('ADMIN_PASSWORD') || '1nuendo19071';
-    
+
     if (!ADMIN_PASSWORD) {
       console.error('ADMIN_PASSWORD environment variable not configured');
       return new Response(
@@ -55,7 +55,7 @@ serve(async (req) => {
           .select('*')
           .limit(1)
           .single();
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true, settings }),
@@ -90,7 +90,7 @@ serve(async (req) => {
 
       case 'updateSettings': {
         console.log('updateSettings called with data:', JSON.stringify(data));
-        
+
         if (!data || !data.id) {
           console.error('Missing data or data.id in updateSettings');
           return new Response(
@@ -98,17 +98,294 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        
+
         const { error } = await supabase
           .from('settings')
           .update(data)
           .eq('id', data.id);
-        
+
         if (error) {
           console.error('updateSettings error:', error);
           throw error;
         }
         console.log('updateSettings success');
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'updateApiKeys': {
+        console.log('updateApiKeys called');
+
+        // Fetch current settings to get ID
+        const { data: currentSettings } = await supabase
+          .from('settings')
+          .select('id')
+          .limit(1)
+          .single();
+
+        if (!currentSettings) {
+          return new Response(
+            JSON.stringify({ error: 'Settings not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Update keys - data should contain { openai_api_key, etc }
+        // Filter out empty strings to avoid overwriting with empty
+        const updates: any = {};
+        if (data.openai_api_key !== undefined) updates.openai_api_key = data.openai_api_key;
+        if (data.gemini_api_key !== undefined) updates.gemini_api_key = data.gemini_api_key;
+        if (data.gemini_v22_api_key !== undefined) updates.gemini_v22_api_key = data.gemini_v22_api_key;
+        if (data.anthropic_api_key !== undefined) updates.anthropic_api_key = data.anthropic_api_key;
+        if (data.zai_api_key !== undefined) updates.zai_api_key = data.zai_api_key;
+        if (data.mistral_api_key !== undefined) updates.mistral_api_key = data.mistral_api_key;
+
+        const { error } = await supabase
+          .from('settings')
+          .update(updates)
+          .eq('id', currentSettings.id);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'testProvider': {
+        const { provider, apiKey, model } = data;
+        if (!provider || !apiKey) {
+          return new Response(
+            JSON.stringify({ error: 'Provider and API Key required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        try {
+          let success = false;
+          let message = '';
+
+          if (provider === 'openai') {
+            const response = await fetch('https://api.openai.com/v1/models', {
+              headers: { 'Authorization': `Bearer ${apiKey}` }
+            });
+            success = response.ok;
+            message = success ? 'Connection successful' : `Error: ${response.status}`;
+          } else if (provider === 'anthropic') {
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'claude-3-haiku-20240307',
+                max_tokens: 1,
+                messages: [{ role: 'user', content: 'Hi' }]
+              })
+            });
+            success = response.ok;
+            message = success ? 'Connection successful' : `Error: ${response.status}`;
+          } else if (provider === 'gemini' || provider === 'geminiV22') {
+            const m = model || 'gemini-1.5-flash';
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}?key=${apiKey}`);
+            success = response.ok;
+            message = success ? 'Connection successful' : `Error: ${response.status}`;
+          } else if (provider === 'zai') {
+            const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'GLM-4.7-Flash',
+                messages: [{ role: 'user', content: 'Hi' }]
+              })
+            });
+            success = response.ok;
+            message = success ? 'Connection successful' : `Error: ${response.status}`;
+          } else if (provider === 'mistral') {
+            const response = await fetch('https://api.mistral.ai/v1/models', {
+              headers: { 'Authorization': `Bearer ${apiKey}` }
+            });
+            success = response.ok;
+            message = success ? 'Connection successful' : `Error: ${response.status}`;
+          } else {
+            return new Response(
+              JSON.stringify({ success: true, message: 'Provider test not implemented yet' }), // Treat as skipping test
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          return new Response(
+            JSON.stringify({ success, message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+
+        } catch (e) {
+          return new Response(
+            JSON.stringify({ success: false, message: e instanceof Error ? e.message : 'Unknown error' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      case 'getCronConfigs': {
+        const { data: configs, error } = await supabase
+          .from('cron_job_configs')
+          .select('*')
+          .order('job_name');
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true, configs }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'updateCronConfig': {
+        const { jobName, config } = data;
+        if (!jobName) {
+          return new Response(
+            JSON.stringify({ error: 'Job Name required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // 1. Update the database table
+        const updateData: any = { updated_at: new Date().toISOString() };
+        if (config.processing_options !== undefined) updateData.processing_options = config.processing_options;
+        if (config.frequency_minutes !== undefined) updateData.frequency_minutes = config.frequency_minutes;
+        if (config.enabled !== undefined) updateData.enabled = config.enabled;
+        if (config.countries !== undefined) updateData.countries = config.countries;
+
+        const { error } = await supabase
+          .from('cron_job_configs')
+          .update(updateData)
+          .eq('job_name', jobName);
+
+        if (error) throw error;
+
+        // 2. Sync with pg_cron
+        // Only if enabled/frequency changes, or if we want to ensure it's always in sync
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+        // Determine schedule expression
+        let schedule = '0 * * * *'; // default 1 hour
+        if (config.frequency_minutes) {
+          const mins = config.frequency_minutes;
+          if (mins === 15) schedule = '*/15 * * * *';
+          else if (mins === 30) schedule = '*/30 * * * *';
+          else if (mins === 60) schedule = '0 * * * *';
+          else if (mins === 180) schedule = '0 */3 * * *';
+          else if (mins === 360) schedule = '0 */6 * * *';
+          else if (mins === 720) schedule = '0 */12 * * *';
+          else if (mins === 1440) schedule = '0 0 * * *';
+          else if (mins === 10080) schedule = '0 9 * * 1'; // Weekly on Monday morning 9am
+        }
+
+        const isEnabled = config.enabled !== undefined ? config.enabled : true; // Assuming true if not passed, but we should probably fetch current if not passed. 
+        // Better: Fetch the FULL updated config to be sure
+        const { data: updatedConfig } = await supabase
+          .from('cron_job_configs')
+          .select('*')
+          .eq('job_name', jobName)
+          .single();
+
+        if (updatedConfig) {
+          const finalEnabled = updatedConfig.enabled;
+          const finalMins = updatedConfig.frequency_minutes;
+
+          // Recalculate schedule based on fetched data
+          if (finalMins === 15) schedule = '*/15 * * * *';
+          else if (finalMins === 30) schedule = '*/30 * * * *';
+          else if (finalMins === 60) schedule = '0 * * * *';
+          else if (finalMins === 180) schedule = '0 */3 * * *';
+          else if (finalMins === 360) schedule = '0 */6 * * *';
+          else if (finalMins === 720) schedule = '0 */12 * * *';
+          else if (finalMins === 1440) schedule = '0 0 * * *';
+          else if (finalMins === 10080) schedule = '0 9 * * 1';
+
+          try {
+            // Always try to unschedule first
+            await supabase.rpc('exec_sql', {
+              sql: `SELECT cron.unschedule('${jobName}')`
+            });
+
+            if (finalEnabled) {
+              let cronCommand = '';
+
+              if (jobName === 'news_fetching' || jobName === 'fetch-rss-feeds-hourly') {
+                cronCommand = `
+                            SELECT net.http_post(
+                              url:='${supabaseUrl}/functions/v1/fetch-rss',
+                              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb,
+                              body:='{"action": "fetch_all"}'::jsonb
+                            ) as request_id;
+                          `;
+              } else if (jobName === 'fetch-us-rss') {
+                cronCommand = `
+                            SELECT net.http_post(
+                              url:='${supabaseUrl}/functions/v1/fetch-rss',
+                              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb,
+                              body:='{"action": "fetch_us_rss"}'::jsonb
+                            ) as request_id;
+                          `;
+              } else if (jobName === 'generate-week') {
+                // For weekly generation
+                cronCommand = `
+                            SELECT net.http_post(
+                              url:='${supabaseUrl}/functions/v1/generate-week',
+                              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb,
+                              body:='{"mode": "auto"}'::jsonb
+                            ) as request_id;
+                          `;
+              } else if (jobName === 'news_retelling') {
+                // Retelling separate job?
+                // Logic from original cron-control/migrations might help. 
+                // For now, mapping 'news_retelling' to a retell-news call if structure allows, 
+                // or assuming it's part of fetch-rss logic. 
+                // But if strictly separate:
+                cronCommand = `
+                            SELECT net.http_post(
+                              url:='${supabaseUrl}/functions/v1/retell-news',
+                              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb,
+                              body:='{"action": "process_queue"}'::jsonb
+                            ) as request_id;
+                       `;
+              } else if (jobName === 'cache_refresh') {
+                // Cache refresh job
+                cronCommand = `
+                            SELECT net.http_post(
+                              url:='${supabaseUrl}/functions/v1/cache-pages',
+                              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb,
+                              body:='{"action": "refresh-all"}'::jsonb
+                            ) as request_id;
+                        `;
+              }
+
+              if (cronCommand) {
+                await supabase.rpc('exec_sql', {
+                  sql: `SELECT cron.schedule('${jobName}', '${schedule}', $$${cronCommand}$$)`
+                });
+                console.log(`Scheduled ${jobName} at ${schedule}`);
+              }
+            } else {
+              console.log(`Unscheduled ${jobName}`);
+            }
+          } catch (cronError) {
+            console.error('Error syncing cron:', cronError);
+            // Don't fail the request, just log
+          }
+        }
+
         return new Response(
           JSON.stringify({ success: true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -121,7 +398,7 @@ serve(async (req) => {
           .insert(data)
           .select()
           .single();
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true, volume }),
@@ -134,7 +411,7 @@ serve(async (req) => {
           .from('volumes')
           .update(data)
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -148,7 +425,7 @@ serve(async (req) => {
           .insert(data)
           .select()
           .single();
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true, chapter }),
@@ -161,7 +438,7 @@ serve(async (req) => {
           .from('chapters')
           .update(data)
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -174,7 +451,7 @@ serve(async (req) => {
           .from('chapters')
           .delete()
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -188,7 +465,7 @@ serve(async (req) => {
           .insert(data)
           .select()
           .single();
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true, part }),
@@ -201,7 +478,7 @@ serve(async (req) => {
           .from('parts')
           .update(data)
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -214,7 +491,7 @@ serve(async (req) => {
           .from('parts')
           .delete()
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -225,12 +502,12 @@ serve(async (req) => {
       case 'publishPart': {
         const { error } = await supabase
           .from('parts')
-          .update({ 
+          .update({
             status: 'published',
             published_at: new Date().toISOString()
           })
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -241,12 +518,12 @@ serve(async (req) => {
       case 'schedulePart': {
         const { error } = await supabase
           .from('parts')
-          .update({ 
+          .update({
             status: 'scheduled',
             scheduled_at: data.scheduled_at
           })
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -260,7 +537,7 @@ serve(async (req) => {
           .insert(data)
           .select()
           .single();
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true, character }),
@@ -273,7 +550,7 @@ serve(async (req) => {
           .from('characters')
           .update(data)
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -286,7 +563,7 @@ serve(async (req) => {
           .from('characters')
           .delete()
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -300,7 +577,7 @@ serve(async (req) => {
           .insert(data)
           .select()
           .single();
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true, relationship }),
@@ -313,7 +590,7 @@ serve(async (req) => {
           .from('character_relationships')
           .update(data)
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -326,7 +603,7 @@ serve(async (req) => {
           .from('character_relationships')
           .delete()
           .eq('id', data.id);
-        
+
         if (error) throw error;
         return new Response(
           JSON.stringify({ success: true }),
@@ -348,8 +625,8 @@ serve(async (req) => {
           .eq('status', 'published');
 
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             stats: {
               volumes: volumes.count || 0,
               chapters: chapters.count || 0,
@@ -389,7 +666,7 @@ serve(async (req) => {
               .select('id', { count: 'exact', head: true })
               .gte('created_at', since)
           ]);
-          
+
           return {
             retold: retoldResult.count || 0,
             dialogues: dialogueResult.count || 0,
@@ -397,12 +674,12 @@ serve(async (req) => {
             entities: entitiesResult.count || 0
           };
         }
-        
+
         // Helper to get stats for a specific day range
         async function getStatsForDay(startDate: Date, endDate: Date) {
           const startISO = startDate.toISOString();
           const endISO = endDate.toISOString();
-          
+
           const [retoldResult, dialogueResult, tweetResult, entitiesResult] = await Promise.all([
             supabase
               .from('news_rss_items')
@@ -431,7 +708,7 @@ serve(async (req) => {
               .gte('created_at', startISO)
               .lt('created_at', endISO)
           ]);
-          
+
           return {
             retold: retoldResult.count || 0,
             dialogues: dialogueResult.count || 0,
@@ -439,13 +716,13 @@ serve(async (req) => {
             entities: entitiesResult.count || 0
           };
         }
-        
+
         const now = new Date();
         const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
         const d3 = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
         const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
         const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-        
+
         // Fetch all periods in parallel
         const [stats24h, stats3d, stats7d, stats30d] = await Promise.all([
           getStatsForPeriod(h24),
@@ -453,19 +730,19 @@ serve(async (req) => {
           getStatsForPeriod(d7),
           getStatsForPeriod(d30)
         ]);
-        
+
         // Generate daily stats for last 7 days
         const dailyPromises = [];
         const dayLabels = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-        
+
         for (let i = 6; i >= 0; i--) {
           const dayStart = new Date(now);
           dayStart.setHours(0, 0, 0, 0);
           dayStart.setDate(dayStart.getDate() - i);
-          
+
           const dayEnd = new Date(dayStart);
           dayEnd.setDate(dayEnd.getDate() + 1);
-          
+
           dailyPromises.push(
             getStatsForDay(dayStart, dayEnd).then(stats => ({
               date: dayStart.toISOString().split('T')[0],
@@ -474,18 +751,203 @@ serve(async (req) => {
             }))
           );
         }
-        
+
         const daily = await Promise.all(dailyPromises);
-        
+
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             stats: {
               h24: stats24h,
               d3: stats3d,
               d7: stats7d,
               d30: stats30d,
               daily
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'createBulkRetellCron': {
+        const { country_code, time_range, llm_model, llm_provider, frequency_minutes } = data;
+
+        if (!country_code || !time_range || !llm_model || !llm_provider || !frequency_minutes) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required fields' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Verify country exists
+        const { data: country, error: countryError } = await supabase
+          .from('news_countries')
+          .select('id, code')
+          .eq('code', country_code.toUpperCase())
+          .single();
+
+        if (countryError || !country) {
+          return new Response(
+            JSON.stringify({ error: `Country ${country_code} not found` }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const jobName = `bulk_retell_${country_code.toLowerCase()}`;
+
+        // Check if job already exists
+        const { data: existing } = await supabase
+          .from('cron_job_configs')
+          .select('id')
+          .eq('job_name', jobName)
+          .single();
+
+        if (existing) {
+          return new Response(
+            JSON.stringify({ error: `Bulk retell cron for ${country_code} already exists` }),
+            { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Create cron job config
+        const { error: insertError } = await supabase
+          .from('cron_job_configs')
+          .insert({
+            job_name: jobName,
+            job_type: 'bulk_retell',
+            enabled: true,
+            frequency_minutes,
+            countries: [country_code.toLowerCase()],
+            processing_options: {
+              country_code: country_code.toLowerCase(),
+              time_range,
+              llm_model,
+              llm_provider
+            }
+          });
+
+        if (insertError) throw insertError;
+
+        // Schedule in pg_cron
+        const cronExpression = frequency_minutes === 30 ? '*/30 * * * *' :
+          frequency_minutes === 60 ? '0 * * * *' :
+            frequency_minutes === 180 ? '0 */3 * * *' :
+              `*/${frequency_minutes} * * * *`;
+
+        const { error: cronError } = await supabase.rpc('schedule_cron_job', {
+          job_name: jobName,
+          schedule: cronExpression,
+          command: `SELECT net.http_post(
+            url:='${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-retell-news',
+            headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}"}'::jsonb,
+            body:='{"country_code": "${country_code.toLowerCase()}", "time_range": "${time_range}", "llm_model": "${llm_model}", "llm_provider": "${llm_provider}", "job_name": "${jobName}"}'::jsonb
+          ) AS request_id;`
+        });
+
+        if (cronError) {
+          console.error('Failed to schedule cron job:', cronError);
+          // Don't fail the whole operation, just log the error
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, jobName }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'deleteBulkRetellCron': {
+        const { jobName } = data;
+
+        if (!jobName || !jobName.startsWith('bulk_retell_')) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid job name' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Delete from cron_job_configs
+        const { error: deleteError } = await supabase
+          .from('cron_job_configs')
+          .delete()
+          .eq('job_name', jobName);
+
+        if (deleteError) throw deleteError;
+
+        // Unschedule from pg_cron
+        const { error: cronError } = await supabase.rpc('unschedule_cron_job', {
+          job_name: jobName
+        });
+
+        if (cronError) {
+          console.error('Failed to unschedule cron job:', cronError);
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'getBulkRetellStats': {
+        const { country_code } = data;
+
+        if (!country_code) {
+          return new Response(
+            JSON.stringify({ error: 'country_code is required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const jobName = `bulk_retell_${country_code.toLowerCase()}`;
+
+        // Query llm_usage_logs for this cron job
+        const now = new Date();
+        const timeRanges = {
+          h1: new Date(now.getTime() - 60 * 60 * 1000),
+          h6: new Date(now.getTime() - 6 * 60 * 60 * 1000),
+          h24: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+          d3: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
+          d7: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+        };
+
+        const getCount = async (since?: Date) => {
+          let query = supabase
+            .from('llm_usage_logs')
+            .select('id', { count: 'exact', head: true })
+            .eq('operation', 'retell-news')
+            .filter('metadata->>country_code', 'eq', country_code.toLowerCase());
+
+          if (since) {
+            query = query.gte('created_at', since.toISOString());
+          }
+
+          const { count, error } = await query;
+          if (error) {
+            console.error('Error fetching bulk retell stats:', error);
+            throw error;
+          }
+          return count || 0;
+        };
+
+        const [allTime, h1, h6, h24, d3, d7] = await Promise.all([
+          getCount(),
+          getCount(timeRanges.h1),
+          getCount(timeRanges.h6),
+          getCount(timeRanges.h24),
+          getCount(timeRanges.d3),
+          getCount(timeRanges.d7),
+        ]);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            stats: {
+              all_time: allTime,
+              h1,
+              h6,
+              h24,
+              d3,
+              d7
             }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

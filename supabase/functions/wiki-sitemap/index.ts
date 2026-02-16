@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const BASE_URL = "https://echoes2.com";
+const BASE_URL = "https://bravennow.com";
 const CACHE_TTL_HOURS = 24;
 const MAX_SITEMAP_ENTRIES = 2000;
 
@@ -64,12 +64,12 @@ Deno.serve(async (req) => {
 
       if (cached && new Date(cached.expires_at) > new Date()) {
         console.log("Wiki sitemap cache HIT");
-        
+
         // Compress cached XML
         const xmlBytes = new TextEncoder().encode(cached.html);
         const compressedStream = new Response(cached.html).body!.pipeThrough(new CompressionStream("gzip"));
         const compressedBody = await new Response(compressedStream).arrayBuffer();
-        
+
         return new Response(compressedBody, {
           headers: {
             ...corsHeaders,

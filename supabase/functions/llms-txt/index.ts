@@ -7,7 +7,7 @@ const corsHeaders = {
   "Cache-Control": "public, max-age=3600, s-maxage=7200",
 };
 
-const BASE_URL = "https://echoes2.com";
+const BASE_URL = "https://bravennow.com";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
     const totalStories = statsResult.count || 0;
 
     const now = new Date().toISOString();
-    const monthNames = ["січня", "лютого", "березня", "квітня", "травня", "червня", 
-                        "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"];
+    const monthNames = ["січня", "лютого", "березня", "квітня", "травня", "червня",
+      "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"];
 
     const llmsTxt = `# Synchronization Point (Точка Синхронізації)
 
@@ -83,27 +83,27 @@ Synchronization Point is an autonomous AI writing system that:
 ## Latest Stories (${parts.length} most recent)
 
 ${parts.map((p: any, i: number) => {
-  const flashIcon = p.is_flash_news ? " ⚡" : "";
-  const chapter = Array.isArray(p.chapter) ? p.chapter[0] : p.chapter;
-  const chapterInfo = chapter?.title ? ` (${chapter.title})` : "";
-  return `${i + 1}. [${p.title}${flashIcon}](${BASE_URL}/read/${p.date}/${p.number}) - ${p.date}${chapterInfo}`;
-}).join("\n")}
+      const flashIcon = p.is_flash_news ? " ⚡" : "";
+      const chapter = Array.isArray(p.chapter) ? p.chapter[0] : p.chapter;
+      const chapterInfo = chapter?.title ? ` (${chapter.title})` : "";
+      return `${i + 1}. [${p.title}${flashIcon}](${BASE_URL}/read/${p.date}/${p.number}) - ${p.date}${chapterInfo}`;
+    }).join("\n")}
 
 ## Recent Chapters (Weekly Compilations)
 
 ${chapters.map((c: any, i: number) => {
-  const volume = Array.isArray(c.volume) ? c.volume[0] : c.volume;
-  const volumeInfo = volume ? `${monthNames[(volume.month || 1) - 1]} ${volume.year}` : "";
-  return `${i + 1}. [${c.title}](${BASE_URL}/chapter/${c.number}) - Week ${c.week_of_month}, ${volumeInfo}`;
-}).join("\n")}
+      const volume = Array.isArray(c.volume) ? c.volume[0] : c.volume;
+      const volumeInfo = volume ? `${monthNames[(volume.month || 1) - 1]} ${volume.year}` : "";
+      return `${i + 1}. [${c.title}](${BASE_URL}/chapter/${c.number}) - Week ${c.week_of_month}, ${volumeInfo}`;
+    }).join("\n")}
 
 ## Volumes (Monthly Archives)
 
 ${volumes.map((v: any, i: number) => {
-  const monthName = monthNames[(v.month || 1) - 1];
-  const yearMonth = `${v.year}-${String(v.month).padStart(2, '0')}`;
-  return `${i + 1}. [${v.title}](${BASE_URL}/volume/${yearMonth}) - ${monthName} ${v.year}`;
-}).join("\n")}
+      const monthName = monthNames[(v.month || 1) - 1];
+      const yearMonth = `${v.year}-${String(v.month).padStart(2, '0')}`;
+      return `${i + 1}. [${v.title}](${BASE_URL}/volume/${yearMonth}) - ${monthName} ${v.year}`;
+    }).join("\n")}
 
 ## Content Structure
 
@@ -169,7 +169,7 @@ ${BASE_URL}/read/[date]/[number]
     return new Response(llmsTxt, { headers: corsHeaders });
   } catch (error) {
     console.error("llms.txt generation error:", error);
-    
+
     // Fallback static content
     return new Response(
       `# Synchronization Point

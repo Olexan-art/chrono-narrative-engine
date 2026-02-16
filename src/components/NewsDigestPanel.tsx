@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/api";
 import { FeedNewsViewer } from "./FeedNewsViewer";
 import { BatchRetellPanel } from "./BatchRetellPanel";
+import { BulkRetellCronPanel } from "@/components/admin/BulkRetellCronPanel";
 import { formatDistanceToNow } from "date-fns";
 import { uk } from "date-fns/locale";
 import { isNewsRetold, hasNewsDialogue, getStatsLabels } from "@/lib/countryContentConfig";
@@ -109,7 +110,7 @@ export function NewsDigestPanel({ password }: Props) {
         .eq('country_id', selectedCountry)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      
+
       // Get item counts for each feed
       const feedsWithCounts = await Promise.all((feedsData as RSSFeed[]).map(async (feed) => {
         const { count } = await supabase
@@ -118,7 +119,7 @@ export function NewsDigestPanel({ password }: Props) {
           .eq('feed_id', feed.id);
         return { ...feed, items_count: count || 0 };
       }));
-      
+
       return feedsWithCounts;
     },
     enabled: !!selectedCountry
@@ -135,7 +136,7 @@ export function NewsDigestPanel({ password }: Props) {
       const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      
+
       // Fetch items with all content fields needed for retold and dialogue detection
       // Use published_at for time-based stats (when article was published), not fetched_at (when we downloaded it)
       const { data: allItems, error } = await supabase
@@ -143,17 +144,17 @@ export function NewsDigestPanel({ password }: Props) {
         .select('country_id, published_at, fetched_at, content, content_en, content_hi, content_ta, content_te, content_bn, chat_dialogue')
         .eq('is_archived', false);
       if (error) throw error;
-      
+
       // Get country codes for proper retold detection
       const { data: countriesData } = await supabase
         .from('news_countries')
         .select('id, code');
-      
+
       const countryCodeMap: Record<string, string> = {};
       for (const c of countriesData || []) {
         countryCodeMap[c.id] = c.code;
       }
-      
+
       interface CountryStats {
         total: number;
         last6h: number;
@@ -171,41 +172,41 @@ export function NewsDigestPanel({ password }: Props) {
           lastWeek: number;
         };
       }
-      
+
       const stats: Record<string, CountryStats> = {};
       for (const item of allItems || []) {
         if (!item.country_id) continue;
-        
+
         if (!stats[item.country_id]) {
-          stats[item.country_id] = { 
-            total: 0, 
-            last6h: 0, 
+          stats[item.country_id] = {
+            total: 0,
+            last6h: 0,
             last24h: 0,
             retold: { total: 0, last6h: 0, last24h: 0, lastWeek: 0 },
             dialogues: { total: 0, last6h: 0, last24h: 0, lastWeek: 0 }
           };
         }
         stats[item.country_id].total++;
-        
+
         // Use published_at for time-based stats, fallback to fetched_at if not available
         const itemDate = item.published_at ? new Date(item.published_at) : new Date(item.fetched_at);
         if (itemDate >= sixHoursAgo) stats[item.country_id].last6h++;
         if (itemDate >= twentyFourHoursAgo) stats[item.country_id].last24h++;
-        
+
         // Check if retold using centralized config
         const countryCode = countryCodeMap[item.country_id];
         const retold = isNewsRetold(item as Record<string, unknown>, countryCode);
-        
+
         if (retold) {
           stats[item.country_id].retold.total++;
           if (itemDate >= sixHoursAgo) stats[item.country_id].retold.last6h++;
           if (itemDate >= twentyFourHoursAgo) stats[item.country_id].retold.last24h++;
           if (itemDate >= oneWeekAgo) stats[item.country_id].retold.lastWeek++;
         }
-        
+
         // Check if has dialogue using centralized config
         const hasDialogue = hasNewsDialogue(item as Record<string, unknown>);
-        
+
         if (hasDialogue) {
           stats[item.country_id].dialogues.total++;
           if (itemDate >= sixHoursAgo) stats[item.country_id].dialogues.last6h++;
@@ -216,7 +217,7 @@ export function NewsDigestPanel({ password }: Props) {
       return stats;
     }
   });
-  
+
   // Keep backward compatible itemCounts
   const itemCounts = newsStats ? Object.fromEntries(
     Object.entries(newsStats).map(([k, v]) => [k, v.total])
@@ -225,10 +226,10 @@ export function NewsDigestPanel({ password }: Props) {
   // Validate RSS feed
   const validateFeed = async () => {
     if (!newFeed.url) return;
-    
+
     setIsValidating(true);
     setValidationResult(null);
-    
+
     try {
       const result = await callEdgeFunction<{ valid: boolean; error?: string; itemCount?: number }>(
         'fetch-rss',
@@ -248,7 +249,7 @@ export function NewsDigestPanel({ password }: Props) {
       if (!selectedCountry || !newFeed.name || !newFeed.url) {
         throw new Error('Missing required fields');
       }
-      
+
       const { error } = await supabase
         .from('news_rss_feeds')
         .insert({
@@ -258,7 +259,7 @@ export function NewsDigestPanel({ password }: Props) {
           category: newFeed.category,
           sample_ratio: newFeed.sample_ratio
         });
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -283,7 +284,7 @@ export function NewsDigestPanel({ password }: Props) {
         .from('news_rss_feeds')
         .delete()
         .eq('id', feedId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -300,7 +301,7 @@ export function NewsDigestPanel({ password }: Props) {
         .from('news_rss_feeds')
         .update({ sample_ratio: sampleRatio })
         .eq('id', feedId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -323,7 +324,7 @@ export function NewsDigestPanel({ password }: Props) {
         .from('news_rss_feeds')
         .update({ default_image_url: defaultImageUrl } as any)
         .eq('id', feedId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -397,19 +398,19 @@ export function NewsDigestPanel({ password }: Props) {
       }
     }
   });
-  
+
   // Bulk fetch with retelling - uses new fetch_country_bulk action
   const bulkFetchMutation = useMutation({
     mutationFn: async (countryId: string) => {
       setBulkProgress(prev => ({ ...prev, isRunning: true, countryId, results: [] }));
-      
-      return callEdgeFunction<{ 
-        success: boolean; 
+
+      return callEdgeFunction<{
+        success: boolean;
         countryCode: string;
         feedsProcessed: number;
         totalInserted: number;
         totalRetelled: number;
-        results: Array<{ feedName: string; success: boolean; inserted: number; retelled?: number; error?: string }> 
+        results: Array<{ feedName: string; success: boolean; inserted: number; retelled?: number; error?: string }>
       }>(
         'fetch-rss',
         { action: 'fetch_country_bulk', countryId }
@@ -425,14 +426,14 @@ export function NewsDigestPanel({ password }: Props) {
         totalRetelled: result.totalRetelled,
         results: result.results || []
       }));
-      
+
       queryClient.invalidateQueries({ queryKey: ['news-rss-feeds'] });
       queryClient.invalidateQueries({ queryKey: ['news-rss-items-count'] });
       queryClient.invalidateQueries({ queryKey: ['news-rss-items-stats'] });
       queryClient.invalidateQueries({ queryKey: ['latest-usa-retold-news'] });
       queryClient.invalidateQueries({ queryKey: ['country-news'] });
-      
-      toast({ 
+
+      toast({
         title: `Завантажено ${result.totalInserted} новин`,
         description: `Переказано ${result.totalRetelled} з ${result.feedsProcessed} каналів`
       });
@@ -446,20 +447,20 @@ export function NewsDigestPanel({ password }: Props) {
       });
     }
   });
-  
+
   // Full pipeline: fetch + retell ALL + dialogues ALL
   const fullPipelineMutation = useMutation({
     mutationFn: async (countryId: string) => {
       setBulkProgress(prev => ({ ...prev, isRunning: true, countryId, results: [], totalDialogues: 0 }));
-      
-      return callEdgeFunction<{ 
-        success: boolean; 
+
+      return callEdgeFunction<{
+        success: boolean;
         countryCode: string;
         feedsProcessed: number;
         totalInserted: number;
         totalRetelled: number;
         totalDialogues: number;
-        results: Array<{ feedName: string; success: boolean; inserted: number; retelled?: number; dialogues?: number; error?: string }> 
+        results: Array<{ feedName: string; success: boolean; inserted: number; retelled?: number; dialogues?: number; error?: string }>
       }>(
         'fetch-rss',
         { action: 'fetch_country_full', countryId }
@@ -476,14 +477,14 @@ export function NewsDigestPanel({ password }: Props) {
         totalDialogues: result.totalDialogues,
         results: result.results || []
       }));
-      
+
       queryClient.invalidateQueries({ queryKey: ['news-rss-feeds'] });
       queryClient.invalidateQueries({ queryKey: ['news-rss-items-count'] });
       queryClient.invalidateQueries({ queryKey: ['news-rss-items-stats'] });
       queryClient.invalidateQueries({ queryKey: ['latest-usa-retold-news'] });
       queryClient.invalidateQueries({ queryKey: ['country-news'] });
-      
-      toast({ 
+
+      toast({
         title: `Повний пайплайн завершено`,
         description: `+${result.totalInserted} новин, ${result.totalRetelled} переказано, ${result.totalDialogues} діалогів`
       });
@@ -511,7 +512,7 @@ export function NewsDigestPanel({ password }: Props) {
       if (result.success && result.results) {
         const successCount = result.results.filter(r => r.success).length;
         const totalItems = result.results.reduce((sum, r) => sum + (r.itemsInserted || 0), 0);
-        toast({ 
+        toast({
           title: `Оновлено ${successCount}/${result.feedsProcessed} каналів`,
           description: `Завантажено ${totalItems} новин`
         });
@@ -529,11 +530,11 @@ export function NewsDigestPanel({ password }: Props) {
   // Check feed status mutation
   const checkFeedMutation = useMutation({
     mutationFn: async (feedId: string) => {
-      return callEdgeFunction<{ 
-        success: boolean; 
+      return callEdgeFunction<{
+        success: boolean;
         feedName: string;
-        rssItemCount: number; 
-        dbItemCount: number; 
+        rssItemCount: number;
+        dbItemCount: number;
         newItemCount?: number;
         canFetch: boolean;
         error?: string;
@@ -618,9 +619,9 @@ export function NewsDigestPanel({ password }: Props) {
         .select('id, name')
         .eq('country_id', countryId)
         .eq('is_active', true);
-      
+
       if (!feeds || feeds.length === 0) return { total: 0, feeds: [] };
-      
+
       // Check each feed
       const results = await Promise.all(feeds.map(async (feed) => {
         try {
@@ -631,10 +632,10 @@ export function NewsDigestPanel({ password }: Props) {
             dbItemCount: number;
             newItemCount?: number;
           }>('fetch-rss', { action: 'check_feed', feedId: feed.id });
-          
+
           // Use newItemCount if provided, otherwise fallback to diff
           const newCount = result.newItemCount ?? Math.max(0, result.rssItemCount - result.dbItemCount);
-          
+
           return {
             feedId: feed.id,
             feedName: result.feedName || feed.name,
@@ -646,13 +647,13 @@ export function NewsDigestPanel({ password }: Props) {
           return { feedId: feed.id, feedName: feed.name, newCount: 0, rssCount: 0, dbCount: 0 };
         }
       }));
-      
+
       const totalNew = results.reduce((sum, r) => sum + r.newCount, 0);
       return { total: totalNew, feeds: results.filter(r => r.newCount > 0) };
     },
     onSuccess: (result) => {
       if (result.total > 0) {
-        toast({ 
+        toast({
           title: `Знайдено ${result.total} нових новин`,
           description: `У ${result.feeds.length} каналах`
         });
@@ -767,7 +768,7 @@ export function NewsDigestPanel({ password }: Props) {
                           </Button>
                         )}
                       </div>
-                      
+
                       {/* Retold stats row */}
                       <div className="flex items-center gap-6 pt-2 border-t border-border/50">
                         <div className="flex items-center gap-2">
@@ -792,7 +793,7 @@ export function NewsDigestPanel({ password }: Props) {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Dialogues stats row */}
                       <div className="flex items-center gap-6 pt-2 border-t border-border/50">
                         <div className="flex items-center gap-2">
@@ -820,7 +821,7 @@ export function NewsDigestPanel({ password }: Props) {
                     </CardContent>
                   </Card>
                 )}
-                
+
                 {/* Check new news results */}
                 {checkAllNewsMutation.data && checkAllNewsMutation.data.total > 0 && selectedCountry === country.id && (
                   <Card className="border-green-500/30 bg-green-500/5">
@@ -885,7 +886,7 @@ export function NewsDigestPanel({ password }: Props) {
                     </CardContent>
                   </Card>
                 )}
-                
+
                 {/* Bulk progress panel */}
                 {(bulkProgress.isRunning || bulkProgress.results.length > 0) && bulkProgress.countryId === country.id && (
                   <Card className="border-primary/30 bg-primary/5">
@@ -905,7 +906,7 @@ export function NewsDigestPanel({ password }: Props) {
                           )}
                         </div>
                       </div>
-                      
+
                       {bulkProgress.results.length > 0 && (
                         <div className="space-y-1 max-h-40 overflow-y-auto text-xs">
                           {bulkProgress.results.map((r, i) => (
@@ -920,7 +921,7 @@ export function NewsDigestPanel({ password }: Props) {
                           ))}
                         </div>
                       )}
-                      
+
                       {!bulkProgress.isRunning && bulkProgress.results.length > 0 && (
                         <Button
                           variant="ghost"
@@ -963,8 +964,8 @@ export function NewsDigestPanel({ password }: Props) {
                               setValidationResult(null);
                             }}
                           />
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="icon"
                             onClick={validateFeed}
                             disabled={!newFeed.url || isValidating}
@@ -982,8 +983,8 @@ export function NewsDigestPanel({ password }: Props) {
                         </div>
                         {validationResult && (
                           <p className={`text-xs ${validationResult.valid ? 'text-green-500' : 'text-destructive'}`}>
-                            {validationResult.valid 
-                              ? `✓ Знайдено ${validationResult.itemCount} новин` 
+                            {validationResult.valid
+                              ? `✓ Знайдено ${validationResult.itemCount} новин`
                               : `✗ ${validationResult.error}`}
                           </p>
                         )}
@@ -1064,15 +1065,15 @@ export function NewsDigestPanel({ password }: Props) {
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                               {/* Feed logo */}
                               {(feed as any).default_image_url ? (
-                                <img 
-                                  src={(feed as any).default_image_url} 
+                                <img
+                                  src={(feed as any).default_image_url}
                                   alt={feed.name}
                                   className="w-8 h-8 rounded object-contain border border-border flex-shrink-0"
                                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                                 />
                               ) : (
                                 <div className="w-8 h-8 rounded border border-border flex items-center justify-center flex-shrink-0 bg-muted/50">
-                                  <img 
+                                  <img
                                     src={`https://www.google.com/s2/favicons?domain=${new URL(feed.url).hostname}&sz=32`}
                                     alt=""
                                     className="w-5 h-5"
@@ -1091,9 +1092,9 @@ export function NewsDigestPanel({ password }: Props) {
                                   </Badge>
                                   <Select
                                     value={(feed.sample_ratio || 1).toString()}
-                                    onValueChange={(v) => updateFeedSampleRatioMutation.mutate({ 
-                                      feedId: feed.id, 
-                                      sampleRatio: parseInt(v) 
+                                    onValueChange={(v) => updateFeedSampleRatioMutation.mutate({
+                                      feedId: feed.id,
+                                      sampleRatio: parseInt(v)
                                     })}
                                   >
                                     <SelectTrigger className="h-6 w-auto text-xs gap-1 px-2">
@@ -1115,9 +1116,9 @@ export function NewsDigestPanel({ password }: Props) {
                                   )}
                                 </div>
                                 <div className="flex items-center gap-2 mt-1">
-                                  <a 
-                                    href={feed.url} 
-                                    target="_blank" 
+                                  <a
+                                    href={feed.url}
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-xs text-muted-foreground hover:text-primary truncate max-w-md"
                                   >
@@ -1234,9 +1235,9 @@ export function NewsDigestPanel({ password }: Props) {
                                 className="flex-1 text-xs h-8"
                               />
                               {editingDefaultImage.url && (
-                                <img 
-                                  src={editingDefaultImage.url} 
-                                  alt="Preview" 
+                                <img
+                                  src={editingDefaultImage.url}
+                                  alt="Preview"
                                   className="w-8 h-8 rounded object-cover border border-border"
                                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                                 />
@@ -1244,9 +1245,9 @@ export function NewsDigestPanel({ password }: Props) {
                               <Button
                                 size="sm"
                                 onClick={() => {
-                                  updateFeedDefaultImageMutation.mutate({ 
-                                    feedId: feed.id, 
-                                    defaultImageUrl: editingDefaultImage.url 
+                                  updateFeedDefaultImageMutation.mutate({
+                                    feedId: feed.id,
+                                    defaultImageUrl: editingDefaultImage.url
                                   });
                                   setEditingDefaultImage(null);
                                 }}
@@ -1277,7 +1278,7 @@ export function NewsDigestPanel({ password }: Props) {
               {feedCheckResult?.feedName && `Канал: ${feedCheckResult.feedName}`}
             </DialogDescription>
           </DialogHeader>
-          
+
           {feedCheckResult && (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3 text-center">
@@ -1296,7 +1297,7 @@ export function NewsDigestPanel({ password }: Props) {
                   <p className="text-xs text-muted-foreground">Нових</p>
                 </div>
               </div>
-              
+
               {feedCheckResult.canFetch ? (
                 <div className="space-y-2">
                   <Label>Скільки новин завантажити?</Label>
@@ -1333,18 +1334,18 @@ export function NewsDigestPanel({ password }: Props) {
               )}
             </div>
           )}
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowFetchDialog(false)}>
               Скасувати
             </Button>
             {feedCheckResult?.canFetch && (
-              <Button 
+              <Button
                 onClick={() => {
                   if (feedCheckResult) {
-                    fetchLimitedMutation.mutate({ 
-                      feedId: feedCheckResult.feedId, 
-                      limit: fetchLimit 
+                    fetchLimitedMutation.mutate({
+                      feedId: feedCheckResult.feedId,
+                      limit: fetchLimit
                     });
                   }
                 }}
@@ -1372,6 +1373,9 @@ export function NewsDigestPanel({ password }: Props) {
 
       {/* Batch Retell Panel */}
       <BatchRetellPanel />
+
+      {/* Bulk Retell Cron Panel (Automated) */}
+      <BulkRetellCronPanel password={password} />
     </div>
   );
 }

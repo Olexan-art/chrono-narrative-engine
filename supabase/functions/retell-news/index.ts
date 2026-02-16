@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { logLlmUsage } from '../_shared/llm-logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,21 +9,21 @@ const corsHeaders = {
 
 // Helper to trigger cache update for a news page
 async function updateNewsCache(
-  countryCode: string, 
-  slug: string, 
+  countryCode: string,
+  slug: string,
   supabaseUrl: string
 ): Promise<void> {
   try {
     const path = `/news/${countryCode}/${slug}`;
     console.log(`Updating cache for news page: ${path}`);
-    
+
     const response = await fetch(`${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(path)}&password=${Deno.env.get('ADMIN_PASSWORD')}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
       }
     });
-    
+
     if (!response.ok) {
       console.error(`Failed to update cache for ${path}:`, response.status);
     } else {
@@ -46,12 +47,20 @@ interface LLMSettings {
   mistral_api_key: string | null;
 }
 
-async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: string, overrideModel?: string): Promise<string> {
+async function callLLM(
+  supabase: SupabaseClient,
+  settings: LLMSettings,
+  systemPrompt: string,
+  userPrompt: string,
+  overrideModel?: string,
+  metadata: any = {}
+): Promise<string> {
   const model = overrideModel || settings.llm_text_model || 'google/gemini-3-flash-preview';
-  
+  const startTime = Date.now();
+
   // Determine provider from model name if override model is passed
   let provider = settings.llm_text_provider || settings.llm_provider || 'zai';
-  
+
   // Auto-detect provider from model prefix to prevent mismatches
   if (overrideModel) {
     if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
@@ -66,187 +75,211 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
       provider = 'anthropic';
     }
   }
-  
-  // Z.AI provider - OpenAI-compatible API
-  if (provider === 'zai') {
-    const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
-    if (!apiKey) throw new Error('Z.AI API key not configured');
 
-    console.log('Using Z.AI with model:', model || 'GLM-4.7');
-    
-    const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: model || 'GLM-4.7',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-      }),
-    });
+  try {
+    let result = '';
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Z.AI error:', response.status, errorText);
-      throw new Error(`Z.AI error: ${response.status}`);
-    }
+    // Z.AI provider - OpenAI-compatible API
+    if (provider === 'zai') {
+      const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
+      if (!apiKey) throw new Error('Z.AI API key not configured');
 
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
-  }
-  
-  if (provider === 'lovable') {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
+      console.log('Using Z.AI with model:', model || 'GLM-4.7');
 
-    console.log('Using Lovable AI with model:', model);
-    
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-      }),
-    });
+      const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: model || 'GLM-4.7',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+        }),
+      });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        throw new Error('Rate limit exceeded. Please try again later.');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Z.AI error: ${response.status} ${errorText}`);
       }
-      if (response.status === 402) {
-        throw new Error('Payment required. Please add credits to your workspace.');
+
+      const data = await response.json();
+      result = data.choices?.[0]?.message?.content || '';
+    }
+
+    else if (provider === 'lovable') {
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
+
+      console.log('Using Lovable AI with model:', model);
+
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error('Rate limit exceeded. Please try again later.');
+        }
+        if (response.status === 402) {
+          throw new Error('Payment required. Please add credits to your workspace.');
+        }
+        const errorText = await response.text();
+        throw new Error(`Lovable AI error: ${response.status} ${errorText}`);
       }
-      const errorText = await response.text();
-      console.error('Lovable AI error:', response.status, errorText);
-      throw new Error(`Lovable AI error: ${response.status}`);
+
+      const data = await response.json();
+      result = data.choices?.[0]?.message?.content || '';
     }
 
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
-  }
+    else if (provider === 'openai') {
+      const apiKey = settings.openai_api_key || Deno.env.get('OPENAI_API_KEY');
+      if (!apiKey) throw new Error('OpenAI API key not configured');
 
-  if (provider === 'openai') {
-    const apiKey = settings.openai_api_key || Deno.env.get('OPENAI_API_KEY');
-    if (!apiKey) throw new Error('OpenAI API key not configured');
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+        }),
+      });
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-      }),
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`OpenAI error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      result = data.choices?.[0]?.message?.content || '';
+    }
+
+    else if (provider === 'gemini') {
+      const apiKey = settings.gemini_api_key || Deno.env.get('GEMINI_API_KEY');
+      if (!apiKey) throw new Error('Gemini API key not configured');
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      result = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+
+    else if (provider === 'geminiV22') {
+      const apiKey = settings.gemini_v22_api_key || Deno.env.get('GEMINI_V22_API_KEY');
+      if (!apiKey) throw new Error('Gemini V22 API key not configured');
+
+      const modelName = model || 'gemini-2.5-flash';
+      console.log('Using Gemini V22 with model:', modelName);
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini V22 error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      result = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+
+    else if (provider === 'mistral') {
+      const apiKey = settings.mistral_api_key;
+      if (!apiKey) throw new Error('Mistral API key not configured');
+
+      const modelName = model || 'mistral-large-latest';
+      console.log('Using Mistral with model:', modelName);
+
+      const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Mistral error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      result = data.choices?.[0]?.message?.content || '';
+    } else {
+      throw new Error(`Unknown provider: ${provider}`);
+    }
+
+    // Log success
+    await logLlmUsage({
+      supabase,
+      provider,
+      model,
+      operation: 'retell-news',
+      duration_ms: Date.now() - startTime,
+      success: true,
+      metadata
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI error:', response.status, errorText);
-      throw new Error(`OpenAI error: ${response.status}`);
-    }
+    return result;
 
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
-  }
-
-  if (provider === 'gemini') {
-    const apiKey = settings.gemini_api_key || Deno.env.get('GEMINI_API_KEY');
-    if (!apiKey) throw new Error('Gemini API key not configured');
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-      }),
+  } catch (error) {
+    // Log error
+    await logLlmUsage({
+      supabase,
+      provider,
+      model,
+      operation: 'retell-news',
+      duration_ms: Date.now() - startTime,
+      success: false,
+      error_message: error instanceof Error ? error.message : String(error),
+      metadata
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini error:', response.status, errorText);
-      throw new Error(`Gemini error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.error('LLM call failed:', error);
+    throw error;
   }
-
-  // Gemini V22 provider - direct Google AI API with v22 key
-  if (provider === 'geminiV22') {
-    const apiKey = settings.gemini_v22_api_key || Deno.env.get('GEMINI_V22_API_KEY');
-    if (!apiKey) throw new Error('Gemini V22 API key not configured');
-
-    const modelName = model || 'gemini-2.5-flash';
-    console.log('Using Gemini V22 with model:', modelName);
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini V22 error:', response.status, errorText);
-      throw new Error(`Gemini V22 error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  }
-
-  // Mistral provider
-  if (provider === 'mistral') {
-    const apiKey = settings.mistral_api_key;
-    if (!apiKey) throw new Error('Mistral API key not configured');
-
-    const modelName = model || 'mistral-large-latest';
-    console.log('Using Mistral with model:', modelName);
-
-    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelName,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Mistral error:', response.status, errorText);
-      throw new Error(`Mistral error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
-  }
-
-  throw new Error(`Unknown provider: ${provider}`);
 }
 
 serve(async (req) => {
@@ -256,7 +289,7 @@ serve(async (req) => {
 
   try {
     const { newsId, model } = await req.json();
-    
+
     if (!newsId) {
       return new Response(JSON.stringify({ error: 'newsId is required' }), {
         status: 400,
@@ -296,13 +329,13 @@ serve(async (req) => {
       if (news.content_ta || news.title_ta) return { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்' };
       if (news.content_te || news.title_te) return { code: 'te', name: 'Telugu', nativeName: 'తెలుగు' };
       if (news.content_bn || news.title_bn) return { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' };
-      
+
       // Check country code
       const countryCode = news.country?.code?.toLowerCase();
       if (countryCode === 'ua') return { code: 'uk', name: 'Ukrainian', nativeName: 'українська' };
       if (countryCode === 'pl') return { code: 'pl', name: 'Polish', nativeName: 'polski' };
       if (countryCode === 'in') return { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' };
-      
+
       // Default to English
       return { code: 'en', name: 'English', nativeName: 'English' };
     };
@@ -478,7 +511,7 @@ Zasady:
     };
 
     const prompt = prompts[language.code] || prompts['en'];
-    
+
     // Get the appropriate content based on language
     // IMPORTANT: Use original_content for retelling if available (not the AI-generated content)
     const getContent = () => {
@@ -487,7 +520,7 @@ Zasady:
         console.log('Using original_content for retelling:', news.original_content.length, 'chars');
         return news.original_content;
       }
-      
+
       // Fallback to localized content fields (legacy items without original_content)
       if (language.code === 'hi') return news.content_hi || news.content_en || news.content;
       if (language.code === 'ta') return news.content_ta || news.content_en || news.content;
@@ -525,7 +558,14 @@ Original content: ${getContent() || 'No content'}
 
 Category: ${news.category || 'general'}`;
 
-    const rawResponse = await callLLM(settings as LLMSettings, prompt.system, userPrompt, model);
+    // Get country code for metadata tracking
+    const newsCountryCode = news.country?.code?.toLowerCase() || 'unknown';
+
+    const rawResponse = await callLLM(supabase, settings as LLMSettings, prompt.system, userPrompt, model, {
+      newsId,
+      language: language.code,
+      country_code: newsCountryCode
+    });
 
     // Parse JSON response or use raw content as fallback
     let retoldContent = rawResponse;
@@ -535,11 +575,11 @@ Category: ${news.category || 'general'}`;
 
     try {
       // Try to extract JSON from response (may be wrapped in markdown code blocks)
-      const jsonMatch = rawResponse.match(/```json\s*([\s\S]*?)\s*```/) || 
-                        rawResponse.match(/```\s*([\s\S]*?)\s*```/) ||
-                        [null, rawResponse];
+      const jsonMatch = rawResponse.match(/```json\s*([\s\S]*?)\s*```/) ||
+        rawResponse.match(/```\s*([\s\S]*?)\s*```/) ||
+        [null, rawResponse];
       const jsonStr = jsonMatch[1] || rawResponse;
-      
+
       // Try to parse as JSON
       const parsed = JSON.parse(jsonStr.trim());
       if (parsed.content) {
@@ -609,7 +649,7 @@ Category: ${news.category || 'general'}`;
     try {
       if (keywords && keywords.length > 0) {
         console.log('Searching Wikipedia for entities from keywords:', keywords);
-        
+
         const wikiResponse = await fetch(`${supabaseUrl}/functions/v1/search-wiki`, {
           method: 'POST',
           headers: {
@@ -644,8 +684,8 @@ Category: ${news.category || 'general'}`;
       await updateNewsCache(countryCode, news.slug, supabaseUrl);
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       content: retoldContent,
       language: language.code,
       field: updateField,
@@ -660,8 +700,8 @@ Category: ${news.category || 'general'}`;
 
   } catch (error) {
     console.error('Error in retell-news:', error);
-    return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return new Response(JSON.stringify({
+      error: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

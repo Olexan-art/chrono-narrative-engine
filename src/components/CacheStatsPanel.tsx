@@ -94,18 +94,37 @@ export function CacheStatsPanel({ password }: Props) {
     queryKey: ['cache-cron-status'],
     queryFn: async () => {
       try {
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-cron`, {
+        // Use admin function to get config
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/admin`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'get_cache_cron_status', password }),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({ action: 'getCronConfigs' }),
         });
-        
+
         const data = await response.json().catch(() => null);
-        if (!response.ok) {
+        if (!response.ok || !data.success) {
           throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
         }
-        return data;
-      } catch {
+
+        const config = data.configs?.find((c: any) => c.job_name === 'cache_refresh');
+
+        if (!config || !config.enabled) return { enabled: false, frequency: '6hours' };
+
+        // Map minutes back to string frequency
+        const minutes = config.frequency_minutes;
+        let frequency = '6hours';
+        if (minutes === 60) frequency = '1hour';
+        else if (minutes === 180) frequency = '3hours';
+        else if (minutes === 360) frequency = '6hours';
+        else if (minutes === 720) frequency = '12hours';
+        else if (minutes === 1440) frequency = '24hours';
+
+        return { enabled: true, frequency };
+      } catch (e) {
+        console.error('Failed to fetch cron status', e);
         return { enabled: false, frequency: '6hours' };
       }
     }
@@ -118,18 +137,18 @@ export function CacheStatsPanel({ password }: Props) {
     setRefreshStats(null);
     setShowLogs(true);
     setCurrentProgress(0);
-    
+
     const actionLabels: Record<RefreshAction, string> = {
       'refresh-all': '🔄 Повне оновлення всіх сторінок (батчами)...',
       'refresh-recent': '⏰ Оновлення сторінок за 24 години...',
       'refresh-news': '📰 Оновлення новин за 7 днів...',
       'refresh-wiki': '👥 Оновлення wiki сторінок та сутностей...',
     };
-    
+
     try {
-      setRefreshLogs([{ 
-        path: actionLabels[action], 
-        success: true, 
+      setRefreshLogs([{
+        path: actionLabels[action],
+        success: true,
         timestamp: new Date(),
         isHeader: true,
       }]);
@@ -139,10 +158,10 @@ export function CacheStatsPanel({ password }: Props) {
         `${SUPABASE_URL}/functions/v1/cache-pages?action=${action}&password=${password}&info=true`,
         { method: 'GET' }
       );
-      
+
       if (!infoResponse.ok) throw new Error(`HTTP ${infoResponse.status}`);
       const info = await infoResponse.json();
-      
+
       const totalPages = info.totalPages || 0;
       const batchSize = 50; // Process 50 pages per batch
       let offset = 0;
@@ -150,9 +169,9 @@ export function CacheStatsPanel({ password }: Props) {
       let totalFailed = 0;
       const allResults: { path: string; success: boolean; timeMs?: number; error?: string }[] = [];
 
-      setRefreshLogs(prev => [...prev, { 
-        path: `📊 Знайдено ${totalPages} сторінок. Обробка батчами по ${batchSize}...`, 
-        success: true, 
+      setRefreshLogs(prev => [...prev, {
+        path: `📊 Знайдено ${totalPages} сторінок. Обробка батчами по ${batchSize}...`,
+        success: true,
         timestamp: new Date(),
         isHeader: true,
       }]);
@@ -161,10 +180,10 @@ export function CacheStatsPanel({ password }: Props) {
       while (offset < totalPages) {
         const batchNum = Math.floor(offset / batchSize) + 1;
         const totalBatches = Math.ceil(totalPages / batchSize);
-        
-        setRefreshLogs(prev => [...prev, { 
-          path: `🔄 Батч ${batchNum}/${totalBatches} (${offset}-${Math.min(offset + batchSize, totalPages)})...`, 
-          success: true, 
+
+        setRefreshLogs(prev => [...prev, {
+          path: `🔄 Батч ${batchNum}/${totalBatches} (${offset}-${Math.min(offset + batchSize, totalPages)})...`,
+          success: true,
           timestamp: new Date(),
           isHeader: true,
         }]);
@@ -180,7 +199,7 @@ export function CacheStatsPanel({ password }: Props) {
         }
 
         const result = await response.json();
-        
+
         // Process results
         if (result.results && Array.isArray(result.results)) {
           const logs: CacheRefreshLog[] = result.results.map((r: { path: string; success: boolean; timeMs?: number; error?: string }) => ({
@@ -190,7 +209,7 @@ export function CacheStatsPanel({ password }: Props) {
             error: r.error,
             timestamp: new Date(),
           }));
-          
+
           setRefreshLogs(prev => [...prev, ...logs]);
           allResults.push(...result.results);
         }
@@ -201,7 +220,7 @@ export function CacheStatsPanel({ password }: Props) {
 
         // Update progress
         setCurrentProgress(Math.min(100, Math.round((offset / totalPages) * 100)));
-        
+
         // Small delay between batches to avoid overwhelming the server
         if (result.hasMore) {
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -219,10 +238,10 @@ export function CacheStatsPanel({ password }: Props) {
       queryClient.invalidateQueries({ queryKey: ['cache-stats'] });
     } catch (error) {
       console.error('Failed to refresh cache:', error);
-      setRefreshLogs(prev => [...prev, { 
-        path: `❌ Помилка: ${error instanceof Error ? error.message : 'Невідома помилка'}`, 
-        success: false, 
-        timestamp: new Date() 
+      setRefreshLogs(prev => [...prev, {
+        path: `❌ Помилка: ${error instanceof Error ? error.message : 'Невідома помилка'}`,
+        success: false,
+        timestamp: new Date()
       }]);
       toast.error('Не вдалося оновити кеш');
     } finally {
@@ -236,21 +255,37 @@ export function CacheStatsPanel({ password }: Props) {
       await handleRemoveCron();
       return;
     }
-    
+
     setIsSettingUpCron(true);
     try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-cron`, {
+      // Map frequency string to minutes
+      let minutes = 360;
+      if (frequency === '1hour') minutes = 60;
+      else if (frequency === '3hours') minutes = 180;
+      else if (frequency === '6hours') minutes = 360;
+      else if (frequency === '12hours') minutes = 720;
+      else if (frequency === '24hours') minutes = 1440;
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
         body: JSON.stringify({
-          action: 'setup_cache_cron',
-          password,
-          data: { frequency },
+          action: 'updateCronConfig',
+          data: {
+            jobName: 'cache_refresh',
+            config: {
+              enabled: true,
+              frequency_minutes: minutes
+            }
+          }
         }),
       });
 
       const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
+      if (!response.ok || !data.success) throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
 
       const labels: Record<string, string> = {
         '1hour': '1 годину',
@@ -258,8 +293,9 @@ export function CacheStatsPanel({ password }: Props) {
         '6hours': '6 годин',
         '12hours': '12 годин',
         '24hours': '24 години',
+        'off': 'Вимкнено'
       };
-      
+
       toast.success(`Автооновлення: кожні ${labels[frequency]}`);
       queryClient.invalidateQueries({ queryKey: ['cache-cron-status'] });
     } catch (error) {
@@ -273,14 +309,23 @@ export function CacheStatsPanel({ password }: Props) {
   const handleRemoveCron = async () => {
     setIsSettingUpCron(true);
     try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-cron`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'remove_cache_cron', password }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          action: 'updateCronConfig',
+          data: {
+            jobName: 'cache_refresh',
+            config: { enabled: false }
+          }
+        }),
       });
 
       const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
+      if (!response.ok || !data.success) throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
 
       toast.success('Автооновлення вимкнено');
       queryClient.invalidateQueries({ queryKey: ['cache-cron-status'] });
@@ -308,14 +353,14 @@ export function CacheStatsPanel({ password }: Props) {
           <Database className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-semibold">Кеш HTML сторінок</h3>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-2">
           {/* Main refresh button with dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="default" 
-                size="sm" 
+              <Button
+                variant="default"
+                size="sm"
                 disabled={isRefreshing}
                 className="min-w-[140px]"
               >
@@ -325,28 +370,28 @@ export function CacheStatsPanel({ password }: Props) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => handleRefreshCache('refresh-all')}
                 disabled={isRefreshing}
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Все повністю
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => handleRefreshCache('refresh-recent')}
                 disabled={isRefreshing}
               >
                 <Timer className="w-4 h-4 mr-2" />
                 За 24 години
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => handleRefreshCache('refresh-news')}
                 disabled={isRefreshing}
               >
                 <Newspaper className="w-4 h-4 mr-2" />
                 Новини (7 днів)
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => handleRefreshCache('refresh-wiki')}
                 disabled={isRefreshing}
               >
@@ -377,7 +422,7 @@ export function CacheStatsPanel({ password }: Props) {
                 {isRefreshing && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-primary transition-all duration-300 ease-out"
                         style={{ width: `${currentProgress}%` }}
                       />
@@ -404,20 +449,19 @@ export function CacheStatsPanel({ password }: Props) {
             </div>
           </CardHeader>
           <CardContent>
-            <div 
+            <div
               ref={logsContainerRef}
               className="max-h-[350px] overflow-y-auto space-y-0.5 font-mono text-xs bg-background/50 rounded-lg p-3 border border-border/30"
             >
               {refreshLogs.map((log, i) => (
-                <div 
-                  key={i} 
-                  className={`flex items-start gap-2 py-1 px-2 rounded transition-all duration-300 ${
-                    log.isHeader 
-                      ? 'bg-primary/10 text-primary font-medium' 
-                      : log.success 
-                        ? 'hover:bg-muted/30' 
-                        : 'bg-destructive/10 text-destructive'
-                  }`}
+                <div
+                  key={i}
+                  className={`flex items-start gap-2 py-1 px-2 rounded transition-all duration-300 ${log.isHeader
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : log.success
+                      ? 'hover:bg-muted/30'
+                      : 'bg-destructive/10 text-destructive'
+                    }`}
                   style={{
                     animation: 'fadeSlideIn 0.3s ease-out forwards',
                     animationDelay: `${Math.min(i * 20, 500)}ms`,
@@ -460,9 +504,9 @@ export function CacheStatsPanel({ password }: Props) {
                     <span className="text-destructive"> ({refreshStats.failed} помилок)</span>
                   )}
                 </span>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setShowLogs(false)}
                   className="text-xs"
                 >
@@ -503,7 +547,7 @@ export function CacheStatsPanel({ password }: Props) {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="cosmic-card">
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-3">
@@ -515,7 +559,7 @@ export function CacheStatsPanel({ password }: Props) {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="cosmic-card">
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-3">
@@ -527,7 +571,7 @@ export function CacheStatsPanel({ password }: Props) {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="cosmic-card">
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-3">
@@ -572,8 +616,8 @@ export function CacheStatsPanel({ password }: Props) {
               <CardContent>
                 <div className="max-h-[400px] overflow-y-auto space-y-2">
                   {cacheStats.pages.slice(0, 30).map((page, i) => (
-                    <div 
-                      key={i} 
+                    <div
+                      key={i}
                       className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
@@ -589,8 +633,8 @@ export function CacheStatsPanel({ password }: Props) {
                           <Calendar className="w-3 h-3" />
                           {format(new Date(page.updatedAt), 'd MMM HH:mm', { locale: uk })}
                         </div>
-                        <Badge 
-                          variant={new Date(page.expiresAt) > new Date() ? 'secondary' : 'destructive'} 
+                        <Badge
+                          variant={new Date(page.expiresAt) > new Date() ? 'secondary' : 'destructive'}
                           className="text-xs"
                         >
                           {new Date(page.expiresAt) > new Date() ? 'Активний' : 'Прострочено'}

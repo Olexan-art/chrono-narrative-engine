@@ -22,7 +22,7 @@ function parseContentWithLinks(content: string): React.ReactNode {
     if (match.index > lastIndex) {
       parts.push(content.slice(lastIndex, match.index));
     }
-    
+
     parts.push(
       <a
         key={match.index}
@@ -34,7 +34,7 @@ function parseContentWithLinks(content: string): React.ReactNode {
         {match[1]}
       </a>
     );
-    
+
     lastIndex = match.index + match[0].length;
   }
 
@@ -65,7 +65,7 @@ export default function ReadPage() {
         .eq('date', date)
         .eq('status', 'published')
         .order('created_at', { ascending: true });
-      
+
       if (error) throw error;
       return data || [];
     },
@@ -177,33 +177,33 @@ export default function ReadPage() {
 
   // Build canonical URL
   const storyNum = storyNumber || '1';
-  const baseUrl = 'https://echoes2.com';
+  const baseUrl = 'https://bravennow.com';
   const canonicalUrl = `${baseUrl}/read/${date}/${storyNum}`;
 
   // Build breadcrumbs for SEO
   const breadcrumbs = [
     { name: language === 'en' ? 'Home' : language === 'pl' ? 'Strona główna' : 'Головна', url: baseUrl },
   ];
-  
+
   if (part.chapter?.volume) {
     breadcrumbs.push({
-      name: language === 'en' && part.chapter.volume.title_en ? part.chapter.volume.title_en : 
-            language === 'pl' && part.chapter.volume.title_pl ? part.chapter.volume.title_pl : 
-            part.chapter.volume.title,
+      name: language === 'en' && part.chapter.volume.title_en ? part.chapter.volume.title_en :
+        language === 'pl' && part.chapter.volume.title_pl ? part.chapter.volume.title_pl :
+          part.chapter.volume.title,
       url: `${baseUrl}/volumes`
     });
   }
-  
+
   if (part.chapter) {
     const chapterTitle = language === 'en' && part.chapter.title_en ? part.chapter.title_en :
-                         language === 'pl' && part.chapter.title_pl ? part.chapter.title_pl :
-                         part.chapter.title;
+      language === 'pl' && part.chapter.title_pl ? part.chapter.title_pl :
+        part.chapter.title;
     breadcrumbs.push({
       name: chapterTitle,
       url: `${baseUrl}/chapter/${part.chapter.id}`
     });
   }
-  
+
   breadcrumbs.push({
     name: localizedTitle,
     url: canonicalUrl
@@ -211,7 +211,7 @@ export default function ReadPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead 
+      <SEOHead
         title={localizedTitle}
         description={seoDescription}
         type="article"
@@ -222,7 +222,7 @@ export default function ReadPage() {
         breadcrumbs={breadcrumbs}
       />
       <Header />
-      
+
       <main className="container mx-auto px-3 md:px-4 py-4 md:py-8">
         <article className="max-w-3xl mx-auto">
           {/* Breadcrumbs */}
@@ -234,22 +234,22 @@ export default function ReadPage() {
               <>
                 <span className="shrink-0">/</span>
                 <Link to="/volumes" className="shrink-0 hover:text-primary transition-colors">
-                  {language === 'en' && part.chapter.volume.title_en ? part.chapter.volume.title_en : 
-                   language === 'pl' && part.chapter.volume.title_pl ? part.chapter.volume.title_pl : 
-                   part.chapter.volume.title}
+                  {language === 'en' && part.chapter.volume.title_en ? part.chapter.volume.title_en :
+                    language === 'pl' && part.chapter.volume.title_pl ? part.chapter.volume.title_pl :
+                      part.chapter.volume.title}
                 </Link>
               </>
             )}
             {part.chapter && (
               <>
                 <span className="shrink-0">/</span>
-                <Link 
-                  to={`/chapter/${part.chapter.number}`} 
+                <Link
+                  to={`/chapter/${part.chapter.number}`}
                   className="shrink-0 truncate max-w-[120px] md:max-w-none hover:text-primary transition-colors"
                 >
                   {language === 'en' && part.chapter.title_en ? part.chapter.title_en :
-                   language === 'pl' && part.chapter.title_pl ? part.chapter.title_pl :
-                   part.chapter.title}
+                    language === 'pl' && part.chapter.title_pl ? part.chapter.title_pl :
+                      part.chapter.title}
                 </Link>
               </>
             )}
@@ -271,11 +271,10 @@ export default function ReadPage() {
                   <Link
                     key={p.id}
                     to={`/read/${date}/${idx + 1}`}
-                    className={`px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm border rounded-md transition-colors ${
-                      isActive
+                    className={`px-2 md:px-3 py-0.5 md:py-1 text-xs md:text-sm border rounded-md transition-colors ${isActive
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-border hover:border-primary/50'
-                    }`}
+                      }`}
                   >
                     #{idx + 1}
                   </Link>
@@ -288,22 +287,22 @@ export default function ReadPage() {
           {(() => {
             const isJustBusiness = part.category === 'just_business';
             const manualImages = Array.isArray(part.manual_images) ? (part.manual_images as string[]) : [];
-            
+
             if (isJustBusiness && manualImages.length > 0) {
               // Just Business: show image gallery
               return (
                 <div className="mb-4 md:mb-8 -mx-3 md:mx-0">
-                  <img 
-                    src={manualImages[0] as string} 
+                  <img
+                    src={manualImages[0] as string}
                     alt={localizedTitle}
                     className="w-full max-h-64 md:max-h-96 object-cover border-y md:border border-blue-500/30"
                   />
                   {manualImages.length > 1 && (
                     <div className="grid grid-cols-3 gap-1 mt-1 md:gap-2 md:mt-2">
                       {manualImages.slice(1).map((img, idx: number) => (
-                        <img 
+                        <img
                           key={idx}
-                          src={img} 
+                          src={img}
                           alt={`${localizedTitle} - ${idx + 2}`}
                           className="w-full h-24 md:h-32 object-cover border border-blue-500/30"
                         />
@@ -313,24 +312,24 @@ export default function ReadPage() {
                 </div>
               );
             }
-            
+
             // Regular story: use cover_image_type logic
             const coverType = part.cover_image_type || 'generated';
             const newsSources = part.news_sources as any[] || [];
             const selectedNewsImage = newsSources.find((s: any) => s.is_selected && s.image_url);
             const firstNewsImage = newsSources.find((s: any) => s.image_url);
             const newsImage = selectedNewsImage || firstNewsImage;
-            
-            const imageUrl = coverType === 'news' && newsImage 
-              ? newsImage.image_url 
+
+            const imageUrl = coverType === 'news' && newsImage
+              ? newsImage.image_url
               : part.cover_image_url;
-            
+
             if (!imageUrl) return null;
-            
+
             return (
               <div className="mb-4 md:mb-8 -mx-3 md:mx-0">
-                <img 
-                  src={imageUrl} 
+                <img
+                  src={imageUrl}
                   alt={localizedTitle}
                   className="w-full max-h-64 md:max-h-96 object-cover border-y md:border border-border"
                 />
@@ -380,8 +379,8 @@ export default function ReadPage() {
           {/* Cover Image 2 - In the middle */}
           {part.cover_image_url_2 && (
             <div className="my-6 md:my-10 -mx-3 md:mx-0">
-              <img 
-                src={part.cover_image_url_2} 
+              <img
+                src={part.cover_image_url_2}
                 alt={`${localizedTitle} - ${language === 'en' ? 'illustration' : language === 'pl' ? 'ilustracja' : 'ілюстрація'} 2`}
                 className="w-full max-h-60 md:max-h-80 object-cover border-y md:border border-border"
               />
@@ -406,8 +405,8 @@ export default function ReadPage() {
             if (!displayImage) return null;
             return (
               <div className="mt-8 md:mt-12 -mx-3 md:mx-0">
-                <img 
-                  src={displayImage.image_url} 
+                <img
+                  src={displayImage.image_url}
                   alt={displayImage.title}
                   className="w-full max-h-60 md:max-h-80 object-cover border-y md:border border-border"
                 />
@@ -470,13 +469,13 @@ export default function ReadPage() {
             ) : (
               <div />
             )}
-            
+
             <Link to="/calendar">
               <Button variant="ghost" size="icon">
                 <Calendar className="w-5 h-5" />
               </Button>
             </Link>
-            
+
             {adjacentParts?.next ? (
               <Link to={`/read/${adjacentParts.next.date}`}>
                 <Button variant="outline" className="gap-2">

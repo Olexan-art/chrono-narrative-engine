@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { logLlmUsage } from '../_shared/llm-logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,7 @@ interface LLMSettings {
   llm_image_model: string;
   openai_api_key: string | null;
   gemini_api_key: string | null;
+  zai_api_key: string | null;
 }
 
 async function uploadBase64ToStorage(
@@ -101,22 +103,62 @@ async function generateWithGemini(prompt: string, apiKey: string, model: string)
   return `data:image/png;base64,${b64}`;
 }
 
-async function generateImage(settings: LLMSettings, prompt: string): Promise<string> {
+
+
+
+
+async function generateImage(
+  supabase: SupabaseClient,
+  settings: LLMSettings,
+  prompt: string,
+  metadata: any = {}
+): Promise<string> {
   const provider = settings.llm_image_provider || settings.llm_provider || 'gemini';
+  const startTime = Date.now();
+  let model = settings.llm_image_model || (provider === 'openai' ? 'dall-e-3' : 'imagen-3');
 
-  if (provider === 'openai' && settings.openai_api_key) {
-    return generateWithOpenAI(prompt, settings.openai_api_key, settings.llm_image_model);
+  try {
+    let result: string;
+
+    if (provider === 'openai' && settings.openai_api_key) {
+      result = await generateWithOpenAI(prompt, settings.openai_api_key, model);
+    } else if (provider === 'gemini' && settings.gemini_api_key) {
+      result = await generateWithGemini(prompt, settings.gemini_api_key, model);
+    } else if (provider === 'zai' && settings.zai_api_key) {
+      result = await generateWithZai(prompt, settings.zai_api_key, model);
+    } else if ((!provider || provider === 'gemini') && settings.gemini_api_key) {
+      result = await generateWithGemini(prompt, settings.gemini_api_key, model);
+    } else {
+      throw new Error(`No valid image provider configured for ${provider} (or missing API key)`);
+    }
+
+    // Log success
+    await logLlmUsage({
+      supabase,
+      provider,
+      model,
+      operation: 'generate-image',
+      duration_ms: Date.now() - startTime,
+      success: true,
+      metadata
+    });
+
+    return result;
+
+  } catch (error) {
+    // Log error
+    await logLlmUsage({
+      supabase,
+      provider,
+      model,
+      operation: 'generate-image',
+      duration_ms: Date.now() - startTime,
+      success: false,
+      error_message: error instanceof Error ? error.message : String(error),
+      metadata
+    });
+    throw error;
   }
-
-  if ((provider === 'gemini' || !provider) && settings.gemini_api_key) {
-    return generateWithGemini(prompt, settings.gemini_api_key, settings.llm_image_model);
-  }
-
-  if (settings.gemini_api_key) {
-    return generateWithGemini(prompt, settings.gemini_api_key, settings.llm_image_model);
-  }
-
-  throw new Error('No valid image provider configured (Gemini or OpenAI required)');
 }
 
 serve(async (req) => {
@@ -135,7 +177,7 @@ serve(async (req) => {
     // Get LLM settings from database
     const { data: settingsData } = await supabase
       .from('settings')
-      .select('llm_provider, llm_image_provider, llm_image_model, openai_api_key, gemini_api_key')
+      .select('llm_provider, llm_image_provider, llm_image_model, openai_api_key, gemini_api_key, zai_api_key')
       .limit(1)
       .single();
 
@@ -144,7 +186,8 @@ serve(async (req) => {
       llm_image_provider: null,
       llm_image_model: 'imagen-3',
       openai_api_key: null,
-      gemini_api_key: null
+      gemini_api_key: null,
+      zai_api_key: null
     };
 
     // Handle image enhancement action
@@ -156,7 +199,7 @@ serve(async (req) => {
       // we'll generate a new one based on prompt description or just fail if strict
       // For now, let's treat it as a new generation requested by user interaction
       // effectively regenerating the cover
-      const enhancedBase64 = await generateImage(llmSettings, enhancePrompt);
+      const enhancedBase64 = await generateImage(supabase, llmSettings, enhancePrompt, { action: 'enhance', imageUrl });
 
       if (!enhancedBase64) {
         throw new Error('Failed to enhance image');
@@ -167,10 +210,7 @@ serve(async (req) => {
         ? `news/${newsId}/cover_enhanced.png`
         : `temp/${crypto.randomUUID()}_enhanced.png`;
 
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
+
 
       const finalImageUrl = await uploadBase64ToStorage(supabase, enhancedBase64, storagePath);
       console.log('Enhanced image uploaded to:', storagePath);
@@ -190,7 +230,9 @@ serve(async (req) => {
     const effectiveProvider = llmSettings.llm_image_provider || llmSettings.llm_provider || 'gemini';
     console.log('Generating image with provider:', effectiveProvider, 'prompt:', prompt.slice(0, 50));
 
-    const base64ImageUrl = await generateImage(llmSettings, enhancedPrompt);
+    const base64ImageUrl = await generateImage(supabase, llmSettings, enhancedPrompt, {
+      newsId, partId, chapterId, volumeId, imageIndex
+    });
 
     if (!base64ImageUrl) {
       throw new Error('No image generated');

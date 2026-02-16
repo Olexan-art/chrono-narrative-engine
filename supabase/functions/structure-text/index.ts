@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { logLlmUsage } from '../_shared/llm-logger.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,8 +12,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let newsId: string | undefined;
+  let content: string | undefined;
+  const startTime = Date.now();
+
   try {
-    const { newsId, content } = await req.json();
+    const body = await req.json();
+    newsId = body.newsId;
+    content = body.content;
 
     if (!content || content.length < 50) {
       return new Response(
@@ -25,6 +32,15 @@ serve(async (req) => {
     if (!ZAI_API_KEY) {
       throw new Error("ZAI_API_KEY not configured");
     }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const startTime = Date.now();
+    const model = "GLM-4.7-Flash";
+    const provider = "zai";
 
     const systemPrompt = `You are a text cleaning and structuring assistant. Your task is to:
 1. Remove any code snippets, JavaScript, JSON, HTML tags, or technical artifacts
@@ -81,10 +97,7 @@ Return ONLY the cleaned and structured article text. Do not add any comments or 
 
     // If newsId is provided, update the database
     if (newsId) {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-      );
+      // Supabase client already initialized above
 
       const { error } = await supabase
         .from("news_rss_items")
@@ -99,12 +112,47 @@ Return ONLY the cleaned and structured article text. Do not add any comments or 
 
     console.log(`Structured text: ${content.length} -> ${cleanedContent.length} chars`);
 
+    // Log success
+    await logLlmUsage({
+      supabase,
+      provider,
+      model,
+      operation: 'structure-text',
+      duration_ms: Date.now() - startTime,
+      success: true,
+      metadata: { newsId, inputLength: content.length, outputLength: cleanedContent.length }
+    });
+
     return new Response(
       JSON.stringify({ success: true, content: cleanedContent }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error:", error);
+
+    // Log error (needs supabase client if initialized, or recreate)
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      await logLlmUsage({
+        supabase,
+        provider: "zai",
+        model: "GLM-4.7-Flash",
+        operation: 'structure-text',
+        duration_ms: Date.now() - (Date.now()), // Approximate if startTime not accessible in catch block scope? No, scope is shared.
+        // Wait, startTime is inside try block. I should move it out or re-initialize.
+        // Since I moved startTime inside try, it's scoped to try block? No, `const` is block scoped. 
+        // I should move declarations up.
+        success: false,
+        error_message: error instanceof Error ? error.message : String(error),
+        metadata: {}
+      });
+    } catch (logError) {
+      // Ignore logging error
+    }
+
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

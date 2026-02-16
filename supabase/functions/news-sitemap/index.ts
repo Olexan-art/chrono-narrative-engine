@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const BASE_URL = "https://echoes2.com";
+const BASE_URL = "https://bravennow.com";
 const CACHE_TTL_HOURS = 6; // Cache sitemap for 6 hours
 
 // Helper to add hreflang links for multilingual pages
@@ -26,13 +26,13 @@ async function getCachedSitemap(supabase: any, cachePath: string): Promise<strin
     .single();
 
   if (error || !data) return null;
-  
+
   // Check if cache is still valid
   if (new Date(data.expires_at) > new Date()) {
     console.log(`Cache HIT for sitemap: ${cachePath}`);
     return data.html;
   }
-  
+
   console.log(`Cache EXPIRED for sitemap: ${cachePath}`);
   return null;
 }
@@ -47,7 +47,7 @@ async function cacheSitemap(
 ): Promise<void> {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + CACHE_TTL_HOURS * 60 * 60 * 1000);
-  
+
   await supabase
     .from("cached_pages")
     .upsert({
@@ -60,14 +60,14 @@ async function cacheSitemap(
       updated_at: now.toISOString(),
       html_size_bytes: new TextEncoder().encode(xml).length,
     }, { onConflict: 'path' });
-  
+
   console.log(`Cached news sitemap: ${cachePath}, expires: ${expiresAt.toISOString()}`);
 }
 
 // Ping search engines about sitemap updates
 async function pingSitemapToSearchEngines(sitemapUrl: string): Promise<{ google: boolean; bing: boolean }> {
   const results = { google: false, bing: false };
-  
+
   try {
     // Ping Google
     const googlePingUrl = `https://www.google.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`;
@@ -93,8 +93,8 @@ async function pingSitemapToSearchEngines(sitemapUrl: string): Promise<{ google:
 
 // Update ping status in metadata
 async function updatePingStatus(
-  supabase: any, 
-  sitemapType: string, 
+  supabase: any,
+  sitemapType: string,
   pingResults: { google: boolean; bing: boolean }
 ) {
   await supabase
@@ -154,38 +154,38 @@ Deno.serve(async (req) => {
     if (!forceRefresh && action !== "generate") {
       const cachedXml = await getCachedSitemap(supabase, cachePath);
       if (cachedXml) {
-        return new Response(cachedXml, { 
+        return new Response(cachedXml, {
           headers: {
             ...corsHeaders,
             "Content-Type": "application/xml; charset=utf-8",
             "X-Cache": "HIT",
             "Cache-Control": "public, max-age=21600",
           },
-          status: 200 
+          status: 200
         });
       }
     }
 
     // Generate sitemap for specific country
     const { xml, urlCount } = await generateCountrySitemap(supabase, country, startTime);
-    
+
     // Cache the generated sitemap
     await cacheSitemap(supabase, functionsBaseUrl, cachePath, xml, country.name);
-    
+
     // Ping search engines in background if action=generate and ping not disabled
     if (action === "generate" && pingEnabled && urlCount > 0) {
       const sitemapUrl = `${functionsBaseUrl}/news-sitemap?country=${countryCode}`;
       const sitemapType = `news-${countryCode}`;
-      
+
       // Fire and forget - don't await
-      pingSitemapToSearchEngines(sitemapUrl).then(results => 
+      pingSitemapToSearchEngines(sitemapUrl).then(results =>
         updatePingStatus(supabase, sitemapType, results)
       ).catch(err => console.error('Ping failed:', err));
     }
 
     const generationTime = Date.now() - startTime;
-    
-    return new Response(xml, { 
+
+    return new Response(xml, {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/xml; charset=utf-8",
@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
         "X-Generation-Time": `${generationTime}ms`,
         "Cache-Control": "public, max-age=21600",
       },
-      status: 200 
+      status: 200
     });
 
   } catch (error) {
@@ -218,14 +218,14 @@ async function generateSitemapIndex(
   if (!forceRefresh) {
     const cachedXml = await getCachedSitemap(supabase, cachePath);
     if (cachedXml) {
-      return new Response(cachedXml, { 
+      return new Response(cachedXml, {
         headers: {
           ...corsHeaders,
           "Content-Type": "application/xml; charset=utf-8",
           "X-Cache": "HIT",
           "Cache-Control": "public, max-age=21600",
         },
-        status: 200 
+        status: 200
       });
     }
   }
@@ -240,7 +240,7 @@ async function generateSitemapIndex(
   if (error) throw error;
 
   const now = new Date().toISOString();
-  
+
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
@@ -271,14 +271,14 @@ async function generateSitemapIndex(
   // Cache the index
   await cacheSitemap(supabase, functionsBaseUrl, cachePath, xml, 'Index');
 
-  return new Response(xml, { 
+  return new Response(xml, {
     headers: {
       ...corsHeaders,
       "Content-Type": "application/xml; charset=utf-8",
       "X-Cache": "MISS",
       "Cache-Control": "public, max-age=21600",
     },
-    status: 200 
+    status: 200
   });
 }
 
@@ -297,25 +297,25 @@ async function fetchAllRows<T>(
 
   while (hasMore) {
     let query = supabase.from(tableName).select(selectQuery);
-    
+
     for (const filter of filters) {
       if (filter.op === 'eq') query = query.eq(filter.column, filter.value);
       else if (filter.op === 'not.is.null') query = query.not(filter.column, 'is', null);
     }
-    
+
     if (orderBy) {
       query = query.order(orderBy.column, { ascending: orderBy.ascending });
     }
-    
+
     query = query.range(offset, offset + PAGE_SIZE - 1);
-    
+
     const { data, error } = await query;
-    
+
     if (error) {
       console.error(`Error fetching ${tableName}:`, error);
       break;
     }
-    
+
     if (!data || data.length === 0) {
       hasMore = false;
     } else {
@@ -324,13 +324,13 @@ async function fetchAllRows<T>(
       hasMore = data.length === PAGE_SIZE;
     }
   }
-  
+
   console.log(`Fetched ${allRows.length} rows from ${tableName}`);
   return allRows;
 }
 
 async function generateCountrySitemap(
-  supabase: any, 
+  supabase: any,
   country: { id: string; code: string; name: string },
   startTime: number
 ): Promise<{ xml: string; urlCount: number }> {
@@ -350,7 +350,7 @@ async function generateCountrySitemap(
   const now = new Date().toISOString();
   const countryCodeLower = country.code.toLowerCase();
   const urlCount = newsItems?.length || 0;
-  
+
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml"
@@ -366,7 +366,7 @@ async function generateCountrySitemap(
   for (const item of newsItems || []) {
     const url = `${BASE_URL}/news/${countryCodeLower}/${item.slug}`;
     const lastmod = item.published_at || item.fetched_at || now;
-    
+
     xml += `
   <url>
     <loc>${url}</loc>

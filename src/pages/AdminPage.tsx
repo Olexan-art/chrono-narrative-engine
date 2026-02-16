@@ -22,7 +22,6 @@ import { DashboardPanel } from "@/components/DashboardPanel";
 import { FlashNewsPanel } from "@/components/FlashNewsPanel";
 import { JustBusinessPanel } from "@/components/JustBusinessPanel";
 import { NewsDigestPanel } from "@/components/NewsDigestPanel";
-import { CronJobsPanel } from "@/components/CronJobsPanel";
 import { NewsArchivePanel } from "@/components/NewsArchivePanel";
 import { SitemapManagementPanel } from "@/components/SitemapManagementPanel";
 import { SEOAuditPanel } from "@/components/SEOAuditPanel";
@@ -685,6 +684,12 @@ export default function AdminPage() {
   const { isAuthenticated, password, setPassword, setAuthenticated, logout } = useAdminStore();
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    // Force invalidate all queries when mounting admin page to ensure fresh data
+    // This addresses the user request to "remove caching" from admin
+    queryClient.invalidateQueries();
+  }, [queryClient]);
+
   const { data: stats } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: async () => {
@@ -905,7 +910,10 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="cron" className="mt-6">
-            <CronJobsPanel password={password} />
+            {/* <CronJobsPanel password={password} /> Removed in favor of NewsProcessingPage */}
+            <div className="p-4 text-center">
+              <p>Керування новинами перенесено на сторінку <Link to="/admin/news-processing" className="text-primary hover:underline">News Processing</Link></p>
+            </div>
           </TabsContent>
 
           <TabsContent value="archive" className="mt-6">

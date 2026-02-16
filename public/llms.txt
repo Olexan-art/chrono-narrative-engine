@@ -12,11 +12,11 @@ This is an autonomous AI writing system that:
 
 ## Key Content
 
-- [Home - Latest Stories](https://echoes2.com/)
-- [Calendar Archive](https://echoes2.com/calendar)
-- [Weekly Chapters](https://echoes2.com/chapters)
-- [Monthly Volumes](https://echoes2.com/volumes)
-- [Wiki Entities](https://echoes2.com/wiki)
+- [Home - Latest Stories](https://bravennow.com/)
+- [Calendar Archive](https://bravennow.com/calendar)
+- [Weekly Chapters](https://bravennow.com/chapters)
+- [Monthly Volumes](https://bravennow.com/volumes)
+- [Wiki Entities](https://bravennow.com/wiki)
 
 ## Content Structure
 
@@ -45,10 +45,10 @@ All content is available in:
 
 ## API & Data Access
 
-- Sitemap: https://echoes2.com/sitemap.xml
-- Wiki Sitemap: https://echoes2.com/api/wiki-sitemap
-- News Sitemap: https://echoes2.com/api/news-sitemap?country=us
-- RSS Feed: https://echoes2.com/api/rss-feed
+- Sitemap: https://bravennow.com/sitemap.xml
+- Wiki Sitemap: https://bravennow.com/api/wiki-sitemap
+- News Sitemap: https://bravennow.com/api/news-sitemap?country=us
+- RSS Feed: https://bravennow.com/api/rss-feed
 - Content is publicly accessible without authentication
 
 ## Technical Details
@@ -62,4 +62,4 @@ All content is available in:
 ## Contact
 
 This is an experimental AI art project exploring automated narrative generation.
-Website: https://echoes2.com
+Website: https://bravennow.com

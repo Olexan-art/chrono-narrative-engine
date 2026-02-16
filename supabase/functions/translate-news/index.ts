@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { logLlmUsage } from '../_shared/llm-logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,8 +12,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let newsId: string | undefined;
+  let targetLanguage: string | undefined;
+
   try {
-    const { newsId, targetLanguage = 'en' } = await req.json();
+    const body = await req.json();
+    newsId = body.newsId;
+    targetLanguage = body.targetLanguage || 'en';
 
     if (!newsId) {
       return new Response(JSON.stringify({ error: 'newsId is required' }), {
@@ -24,7 +31,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    
+
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
@@ -119,13 +126,13 @@ ${JSON.stringify(themes)}`;
 
     const data = await response.json();
     const rawContent = data.choices?.[0]?.message?.content || '{}';
-    
+
     // Parse JSON response
     let translated;
     try {
-      const jsonMatch = rawContent.match(/```json\s*([\s\S]*?)\s*```/) || 
-                        rawContent.match(/```\s*([\s\S]*?)\s*```/) ||
-                        [null, rawContent];
+      const jsonMatch = rawContent.match(/```json\s*([\s\S]*?)\s*```/) ||
+        rawContent.match(/```\s*([\s\S]*?)\s*```/) ||
+        [null, rawContent];
       const jsonStr = jsonMatch[1] || rawContent;
       translated = JSON.parse(jsonStr.trim());
     } catch (parseError) {
@@ -170,12 +177,44 @@ ${JSON.stringify(themes)}`;
 
     console.log(`Successfully translated news to ${targetLanguage}:`, Object.keys(updateData).join(', '));
 
+    // Log success
+    await logLlmUsage({
+      supabase,
+      provider: 'lovable',
+      model: 'google/gemini-3-flash-preview',
+      operation: 'translate-news',
+      duration_ms: Date.now() - startTime,
+      success: true,
+      metadata: { newsId, targetLanguage }
+    });
+
     return new Response(
       JSON.stringify({ success: true, translated: updateData }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Translation error:', error);
+
+    // Log error (if supabase client is available)
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      await logLlmUsage({
+        supabase,
+        provider: 'lovable',
+        model: 'google/gemini-3-flash-preview',
+        operation: 'translate-news',
+        duration_ms: Date.now() - startTime,
+        success: false,
+        error_message: error instanceof Error ? error.message : String(error),
+        metadata: { newsId, targetLanguage }
+      });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
+
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

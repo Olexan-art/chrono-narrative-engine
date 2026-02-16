@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  Search, AlertTriangle, CheckCircle, XCircle, RefreshCw, Loader2, 
+import {
+  Search, AlertTriangle, CheckCircle, XCircle, RefreshCw, Loader2,
   ExternalLink, Globe, FileText, Image, Link2, Tag, Zap,
   ChevronDown, ChevronUp, Sparkles, Bot, MapIcon, BookOpen, Newspaper, Users
 } from "lucide-react";
@@ -54,7 +54,7 @@ export function SEOAuditPanel({ password }: { password: string }) {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [selectedTab, setSelectedTab] = useState('overview');
   const [fixingIssue, setFixingIssue] = useState<string | null>(null);
-  const [crawlerStatus, setCrawlerStatus] = useState<{robots: boolean; sitemap: boolean; ssrRender: boolean; wikiSitemap: boolean; newsSitemap: boolean} | null>(null);
+  const [crawlerStatus, setCrawlerStatus] = useState<{ robots: boolean; sitemap: boolean; ssrRender: boolean; wikiSitemap: boolean; newsSitemap: boolean } | null>(null);
   const [isBulkFixing, setIsBulkFixing] = useState(false);
   const [isPinging, setIsPinging] = useState(false);
   const queryClient = useQueryClient();
@@ -62,15 +62,15 @@ export function SEOAuditPanel({ password }: { password: string }) {
   // Check crawler accessibility
   const checkCrawlerAccess = async () => {
     const results = { robots: false, sitemap: false, ssrRender: false, wikiSitemap: false, newsSitemap: false };
-    
+
     const checks = [
-      fetch('https://echoes2.com/robots.txt').then(r => { results.robots = r.ok; }).catch(() => {}),
-      fetch('https://tuledxqigzufkecztnlo.supabase.co/functions/v1/sitemap').then(r => { results.sitemap = r.ok; }).catch(() => {}),
-      fetch('https://tuledxqigzufkecztnlo.supabase.co/functions/v1/ssr-render?path=/&lang=en').then(r => { results.ssrRender = r.ok; }).catch(() => {}),
-      fetch('https://tuledxqigzufkecztnlo.supabase.co/functions/v1/wiki-sitemap').then(r => { results.wikiSitemap = r.ok; }).catch(() => {}),
-      fetch('https://tuledxqigzufkecztnlo.supabase.co/functions/v1/news-sitemap?country=us').then(r => { results.newsSitemap = r.ok; }).catch(() => {}),
+      fetch('https://bravennow.com/robots.txt').then(r => { results.robots = r.ok; }).catch(() => { }),
+      fetch('https://tuledxqigzufkecztnlo.supabase.co/functions/v1/sitemap').then(r => { results.sitemap = r.ok; }).catch(() => { }),
+      fetch('https://tuledxqigzufkecztnlo.supabase.co/functions/v1/ssr-render?path=/&lang=en').then(r => { results.ssrRender = r.ok; }).catch(() => { }),
+      fetch('https://tuledxqigzufkecztnlo.supabase.co/functions/v1/wiki-sitemap').then(r => { results.wikiSitemap = r.ok; }).catch(() => { }),
+      fetch('https://tuledxqigzufkecztnlo.supabase.co/functions/v1/news-sitemap?country=us').then(r => { results.newsSitemap = r.ok; }).catch(() => { }),
     ];
-    
+
     await Promise.all(checks);
     setCrawlerStatus(results);
   };
@@ -78,23 +78,23 @@ export function SEOAuditPanel({ password }: { password: string }) {
   // Auto-fix handler
   const handleAutoFix = async (issue: SEOIssue) => {
     setFixingIssue(issue.id);
-    
+
     try {
       if (issue.category === 'Description' && issue.page.startsWith('/read/')) {
         const [, , date, storyNum] = issue.page.split('/');
-        
+
         const { data: part } = await supabase
           .from('parts')
           .select('id, content, content_en')
           .eq('date', date)
           .eq('number', parseInt(storyNum))
           .single();
-        
+
         if (part) {
           const content = part.content_en || part.content || '';
           const cleanContent = content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
           const seoDescription = cleanContent.slice(0, 155) + (cleanContent.length > 155 ? '...' : '');
-          
+
           await supabase.from('parts').update({ seo_description: seoDescription }).eq('id', part.id);
           toast.success(`Мета-опис згенеровано для ${issue.page}`);
           queryClient.invalidateQueries({ queryKey: ['seo-audit'] });
@@ -113,7 +113,7 @@ export function SEOAuditPanel({ password }: { password: string }) {
   // Bulk auto-fix all missing meta descriptions
   const handleBulkAutoFix = async () => {
     setIsBulkFixing(true);
-    
+
     try {
       const { data: partsToFix } = await supabase
         .from('parts')
@@ -121,26 +121,26 @@ export function SEOAuditPanel({ password }: { password: string }) {
         .eq('status', 'published')
         .or('seo_description.is.null,seo_description.eq.')
         .limit(200);
-      
+
       if (!partsToFix || partsToFix.length === 0) {
         toast.info('Усі історії вже мають мета-описи');
         setIsBulkFixing(false);
         return;
       }
-      
+
       let fixedCount = 0;
       for (const part of partsToFix) {
         if (part.seo_description && part.seo_description.length > 50) continue;
-        
+
         const content = part.content_en || part.content || '';
         const cleanContent = content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
         if (cleanContent.length < 50) continue;
-        
+
         const seoDescription = cleanContent.slice(0, 155) + (cleanContent.length > 155 ? '...' : '');
         const { error } = await supabase.from('parts').update({ seo_description: seoDescription }).eq('id', part.id);
         if (!error) fixedCount++;
       }
-      
+
       toast.success(`Згенеровано ${fixedCount} мета-описів`);
       queryClient.invalidateQueries({ queryKey: ['seo-audit'] });
     } catch (error) {
@@ -159,7 +159,7 @@ export function SEOAuditPanel({ password }: { password: string }) {
         success: boolean;
         results: Array<{ service: string; success: boolean }>;
       }>('ping-sitemap', {});
-      
+
       if (result.success) {
         toast.success('Пошукові системи повідомлені про оновлення');
       } else {
@@ -249,7 +249,7 @@ export function SEOAuditPanel({ password }: { password: string }) {
         pageCount++;
         let score = 100;
         const pageUrl = `/read/${part.date}/${part.number}`;
-        
+
         const title = part.seo_title || part.title_en || part.title;
         if (title.length < SEO_RULES.title.min) {
           issues.push({
@@ -630,7 +630,7 @@ export function SEOAuditPanel({ password }: { password: string }) {
                     <span className="text-sm">{item.label}</span>
                   </div>
                 ))}
-                <a 
+                <a
                   href="https://bravennow.com/sitemap"
                   target="_blank" rel="noopener noreferrer"
                   className="text-primary hover:underline flex items-center gap-1 text-sm ml-auto"
@@ -761,10 +761,9 @@ export function SEOAuditPanel({ password }: { password: string }) {
               <ScrollArea className="h-[500px]">
                 <div className="space-y-3">
                   {seoData?.issues.map(issue => (
-                    <div key={issue.id} className={`p-4 border rounded-lg ${
-                      issue.type === 'error' ? 'border-red-500/30 bg-red-500/5' :
-                      issue.type === 'warning' ? 'border-yellow-500/30 bg-yellow-500/5' : 'border-border'
-                    }`}>
+                    <div key={issue.id} className={`p-4 border rounded-lg ${issue.type === 'error' ? 'border-red-500/30 bg-red-500/5' :
+                        issue.type === 'warning' ? 'border-yellow-500/30 bg-yellow-500/5' : 'border-border'
+                      }`}>
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3">
                           {issue.type === 'error' && <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />}

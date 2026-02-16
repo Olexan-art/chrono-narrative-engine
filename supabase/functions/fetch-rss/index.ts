@@ -11,21 +11,21 @@ const insertedItemsTracker: Map<string, string[]> = new Map();
 
 // Helper to trigger cache generation for a news page
 async function autoCacheNewsPage(
-  countryCode: string, 
-  slug: string, 
+  countryCode: string,
+  slug: string,
   supabaseUrl: string
 ): Promise<void> {
   try {
     const path = `/news/${countryCode}/${slug}`;
     console.log(`Auto-caching news page: ${path}`);
-    
+
     const response = await fetch(`${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(path)}&password=${Deno.env.get('ADMIN_PASSWORD')}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
       }
     });
-    
+
     if (!response.ok) {
       console.error(`Failed to auto-cache ${path}:`, response.status);
     } else {
@@ -49,7 +49,7 @@ async function autoRetellNews(newsId: string, supabaseUrl: string, model: string
       },
       body: JSON.stringify({ newsId, model })
     });
-    
+
     if (!response.ok) {
       console.error(`Failed to auto-retell news ${newsId}:`, response.status);
     } else {
@@ -71,12 +71,12 @@ async function scrapeArticleContent(url: string, supabaseUrl: string): Promise<s
       },
       body: JSON.stringify({ url })
     });
-    
+
     if (!response.ok) {
       console.error(`Scrape failed for ${url}: ${response.status}`);
       return null;
     }
-    
+
     const result = await response.json();
     if (result.success && result.data?.content) {
       return result.data.content.slice(0, 10000);
@@ -129,7 +129,7 @@ function decodeHTMLEntities(text: string): string {
 function generateSlug(title: string): string {
   // First decode HTML entities
   const decodedTitle = decodeHTMLEntities(title);
-  
+
   return decodedTitle
     .toLowerCase()
     .replace(/[^\w\s-]/g, '') // Remove special characters
@@ -147,20 +147,20 @@ function extractImageFromContent(content: string): string | null {
 
 function parseXML(xml: string): RSSItem[] {
   const items: RSSItem[] = [];
-  
+
   // Find all <item> or <entry> elements
   const itemMatches = xml.matchAll(/<item[^>]*>([\s\S]*?)<\/item>/gi);
   const entryMatches = xml.matchAll(/<entry[^>]*>([\s\S]*?)<\/entry>/gi);
-  
+
   const allMatches = [...itemMatches, ...entryMatches];
-  
+
   for (const match of allMatches) {
     const itemXml = match[1];
-    
+
     // Extract title
     const titleMatch = itemXml.match(/<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
     const title = titleMatch ? titleMatch[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim() : '';
-    
+
     // Extract link
     let link = '';
     const linkMatch = itemXml.match(/<link[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i);
@@ -173,36 +173,36 @@ function parseXML(xml: string): RSSItem[] {
         link = hrefMatch[1];
       }
     }
-    
+
     // Extract description
     const descMatch = itemXml.match(/<description[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i) ||
-                      itemXml.match(/<summary[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/summary>/i);
+      itemXml.match(/<summary[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/summary>/i);
     const description = descMatch ? descMatch[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, ' ').trim().slice(0, 500) : '';
-    
+
     // Extract content
     const contentMatch = itemXml.match(/<content:encoded[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/content:encoded>/i) ||
-                         itemXml.match(/<content[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/content>/i);
+      itemXml.match(/<content[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/content>/i);
     const content = contentMatch ? contentMatch[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, ' ').trim().slice(0, 2000) : '';
-    
+
     // Extract pubDate
     const pubDateMatch = itemXml.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i) ||
-                         itemXml.match(/<published[^>]*>([\s\S]*?)<\/published>/i) ||
-                         itemXml.match(/<updated[^>]*>([\s\S]*?)<\/updated>/i);
+      itemXml.match(/<published[^>]*>([\s\S]*?)<\/published>/i) ||
+      itemXml.match(/<updated[^>]*>([\s\S]*?)<\/updated>/i);
     const pubDate = pubDateMatch ? pubDateMatch[1].trim() : '';
-    
+
     // Extract image
     let imageUrl = '';
     const mediaMatch = itemXml.match(/<media:content[^>]+url=["']([^"']+)["']/i) ||
-                       itemXml.match(/<media:thumbnail[^>]+url=["']([^"']+)["']/i) ||
-                       itemXml.match(/<enclosure[^>]+url=["']([^"']+)["'][^>]+type=["']image/i) ||
-                       itemXml.match(/<enclosure[^>]+type=["']image[^>]+url=["']([^"']+)["']/i);
+      itemXml.match(/<media:thumbnail[^>]+url=["']([^"']+)["']/i) ||
+      itemXml.match(/<enclosure[^>]+url=["']([^"']+)["'][^>]+type=["']image/i) ||
+      itemXml.match(/<enclosure[^>]+type=["']image[^>]+url=["']([^"']+)["']/i);
     if (mediaMatch) {
       imageUrl = mediaMatch[1];
     } else if (content || description) {
       const extracted = extractImageFromContent(content || description);
       if (extracted) imageUrl = extracted;
     }
-    
+
     if (title && link) {
       items.push({
         title,
@@ -214,7 +214,7 @@ function parseXML(xml: string): RSSItem[] {
       });
     }
   }
-  
+
   return items;
 }
 
@@ -229,17 +229,17 @@ async function validateRSSFeed(url: string): Promise<{ valid: boolean; error?: s
         'Pragma': 'no-cache'
       }
     });
-    
+
     if (!response.ok) {
       return { valid: false, error: `HTTP ${response.status}` };
     }
-    
+
     const xml = await response.text();
-    
+
     if (!xml.includes('<rss') && !xml.includes('<feed') && !xml.includes('<channel')) {
       return { valid: false, error: 'Not a valid RSS/Atom feed' };
     }
-    
+
     const items = parseXML(xml);
     return { valid: true, itemCount: items.length };
   } catch (error) {
@@ -255,7 +255,7 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const { action, feedId, feedUrl, countryId, limit = 10 } = body;
-    
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -269,7 +269,7 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       const result = await validateRSSFeed(feedUrl);
       return new Response(
         JSON.stringify({ success: result.valid, ...result }),
@@ -284,14 +284,14 @@ serve(async (req) => {
         .select('id, title')
         .is('slug', null)
         .limit(500);
-      
+
       if (!items || items.length === 0) {
         return new Response(
           JSON.stringify({ success: true, message: 'No items need slugs', updated: 0 }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       let updatedCount = 0;
       for (const item of items) {
         const slug = generateSlug(item.title);
@@ -299,10 +299,10 @@ serve(async (req) => {
           .from('news_rss_items')
           .update({ slug })
           .eq('id', item.id);
-        
+
         if (!error) updatedCount++;
       }
-      
+
       return new Response(
         JSON.stringify({ success: true, total: items.length, updated: updatedCount }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -317,29 +317,29 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       const { data: feed, error: feedError } = await supabase
         .from('news_rss_feeds')
         .select('id, name, url')
         .eq('id', feedId)
         .single();
-      
+
       if (feedError || !feed) {
         return new Response(
           JSON.stringify({ success: false, error: 'Feed not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       // Get existing URLs from our database
       const { data: existingItems } = await supabase
         .from('news_rss_items')
         .select('url')
         .eq('feed_id', feedId);
-      
+
       const existingUrls = new Set((existingItems || []).map(item => item.url));
       const dbCount = existingUrls.size;
-      
+
       // Fetch items from RSS and check which are new
       try {
         const response = await fetch(feed.url, {
@@ -351,11 +351,11 @@ serve(async (req) => {
             'Pragma': 'no-cache'
           }
         });
-        
+
         if (!response.ok) {
           return new Response(
-            JSON.stringify({ 
-              success: true, 
+            JSON.stringify({
+              success: true,
               feedName: feed.name,
               rssItemCount: 0,
               dbItemCount: dbCount,
@@ -366,16 +366,16 @@ serve(async (req) => {
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        
+
         const xml = await response.text();
         const items = parseXML(xml);
-        
+
         // Count actually new items (not in database)
         const newItems = items.filter(item => !existingUrls.has(item.link));
-        
+
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             feedName: feed.name,
             rssItemCount: items.length,
             dbItemCount: dbCount,
@@ -386,8 +386,8 @@ serve(async (req) => {
         );
       } catch (error) {
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             feedName: feed.name,
             rssItemCount: 0,
             dbItemCount: dbCount,
@@ -408,20 +408,20 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       const { data: feed, error: feedError } = await supabase
         .from('news_rss_feeds')
         .select('*, news_countries!inner(id, code)')
         .eq('id', feedId)
         .single();
-      
+
       if (feedError || !feed) {
         return new Response(
           JSON.stringify({ success: false, error: 'Feed not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       try {
         const response = await fetch(feed.url, {
           headers: {
@@ -432,37 +432,37 @@ serve(async (req) => {
             'Pragma': 'no-cache'
           }
         });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
-        
+
         const xml = await response.text();
         const items = parseXML(xml);
-        
+
         // Get existing URLs to check for actual new items
         const { data: existingItems } = await supabase
           .from('news_rss_items')
           .select('url')
           .eq('feed_id', feed.id);
-        
+
         const existingUrls = new Set((existingItems || []).map(item => item.url));
-        
+
         let insertedCount = 0;
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const countryCode = feed.news_countries?.code?.toLowerCase() || 'us';
-        
+
         for (const item of items.slice(0, limit)) {
           // Skip if already exists
           if (existingUrls.has(item.link)) continue;
-          
+
           const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
           const slug = generateSlug(item.title);
-          
+
           // Store original RSS content for AI retelling
           const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
           const rssContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
-          
+
           // Priority scraping: fetch full article content first
           let originalContent = rssContent || originalDescription;
           const scrapedContent = await scrapeArticleContent(item.link, supabaseUrl);
@@ -470,7 +470,7 @@ serve(async (req) => {
             originalContent = scrapedContent;
             console.log(`Scraped full content for ${item.link}: ${scrapedContent.length} chars`);
           }
-          
+
           const { error: insertError } = await supabase
             .from('news_rss_items')
             .insert({
@@ -491,27 +491,27 @@ serve(async (req) => {
               published_at: pubDate?.toISOString() || null,
               fetched_at: new Date().toISOString()
             });
-          
+
           if (!insertError) {
             insertedCount++;
             existingUrls.add(item.link); // Track newly added
-            
+
             // Auto-cache the newly inserted news page
             autoCacheNewsPage(countryCode, slug, supabaseUrl);
           }
         }
-        
+
         await supabase
           .from('news_rss_feeds')
-          .update({ 
+          .update({
             last_fetched_at: new Date().toISOString(),
             fetch_error: null
           })
           .eq('id', feed.id);
-        
+
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             feedName: feed.name,
             itemsFound: items.length,
             itemsInserted: insertedCount,
@@ -519,7 +519,7 @@ serve(async (req) => {
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
-        
+
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return new Response(
@@ -537,22 +537,22 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       const { data: feed, error: feedError } = await supabase
         .from('news_rss_feeds')
         .select('*, news_countries!inner(id, code)')
         .eq('id', feedId)
         .single();
-      
+
       if (feedError || !feed) {
         return new Response(
           JSON.stringify({ success: false, error: 'Feed not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       console.log(`Fetching RSS feed: ${feed.name} (${feed.url})`);
-      
+
       try {
         const response = await fetch(feed.url, {
           headers: {
@@ -563,52 +563,52 @@ serve(async (req) => {
             'Pragma': 'no-cache'
           }
         });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
-        
+
         const xml = await response.text();
         const items = parseXML(xml);
-        
+
         console.log(`Parsed ${items.length} items from ${feed.name}`);
-        
+
         // Get existing URLs to avoid duplicates
         const { data: existingItems } = await supabase
           .from('news_rss_items')
           .select('url')
           .eq('feed_id', feed.id);
-        
+
         const existingUrls = new Set((existingItems || []).map(item => item.url));
-        
+
         // Insert only new items into database
         let insertedCount = 0;
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const countryCode = feed.news_countries?.code?.toLowerCase() || 'us';
-        
+
         // Get feed's sample ratio (1 = all, 2 = every 2nd, 3 = every 3rd)
         const feedSampleRatio = feed.sample_ratio || 1;
         let itemIndex = 0;
-        
+
         for (const item of items.slice(0, 200)) { // Limit to 200 items per feed
           // Skip if already exists
           if (existingUrls.has(item.link)) continue;
-          
+
           // Apply sample ratio: only take every Nth item based on feed setting
           itemIndex++;
           if (feedSampleRatio > 1 && itemIndex % feedSampleRatio !== 0) {
             continue;
           }
-          
+
           const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
-          
+
           // Generate slug from title
           const slug = generateSlug(item.title);
-          
+
           // Store original RSS content for AI retelling
           const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
           const rssContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
-          
+
           // Priority scraping: fetch full article content first
           let originalContent = rssContent || originalDescription;
           const scrapedContent = await scrapeArticleContent(item.link, supabaseUrl);
@@ -616,7 +616,7 @@ serve(async (req) => {
             originalContent = scrapedContent;
             console.log(`Scraped full content for ${item.link}: ${scrapedContent.length} chars`);
           }
-          
+
           const { error: insertError } = await supabase
             .from('news_rss_items')
             .insert({
@@ -637,46 +637,46 @@ serve(async (req) => {
               fetched_at: new Date().toISOString(),
               slug: slug
             });
-          
+
           if (!insertError) {
             insertedCount++;
             existingUrls.add(item.link);
-            
+
             // Auto-cache the newly inserted news page
             autoCacheNewsPage(countryCode, slug, supabaseUrl);
           }
         }
-        
+
         // Update feed status
         await supabase
           .from('news_rss_feeds')
-          .update({ 
+          .update({
             last_fetched_at: new Date().toISOString(),
             fetch_error: null
           })
           .eq('id', feed.id);
-        
+
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             feedName: feed.name,
             itemsFound: items.length,
             itemsInserted: insertedCount
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
-        
+
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        
+
         await supabase
           .from('news_rss_feeds')
-          .update({ 
+          .update({
             last_fetched_at: new Date().toISOString(),
             fetch_error: errorMessage
           })
           .eq('id', feed.id);
-        
+
         return new Response(
           JSON.stringify({ success: false, error: errorMessage }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -692,20 +692,20 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       const { data: feeds, error: feedsError } = await supabase
         .from('news_rss_feeds')
         .select('id, name')
         .eq('country_id', countryId)
         .eq('is_active', true);
-      
+
       if (feedsError) {
         return new Response(
           JSON.stringify({ success: false, error: feedsError.message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       const results = [];
       for (const feed of feeds || []) {
         // Recursively call this function for each feed
@@ -717,7 +717,7 @@ serve(async (req) => {
         const result = await response.json();
         results.push({ feedId: feed.id, feedName: feed.name, ...result });
       }
-      
+
       return new Response(
         JSON.stringify({ success: true, results }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -730,45 +730,46 @@ serve(async (req) => {
         .from('news_rss_feeds')
         .select('id, name, country_id, url, category, sample_ratio')
         .eq('is_active', true);
-      
+
       if (feedsError) {
         return new Response(
           JSON.stringify({ success: false, error: feedsError.message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       // Get auto-generation settings
       const { data: settings } = await supabase
         .from('settings')
-        .select('news_auto_retell_enabled, news_auto_dialogue_enabled, news_auto_tweets_enabled, news_retell_ratio, news_dialogue_count, news_tweet_count')
+        .select('news_auto_retell_enabled, news_auto_dialogue_enabled, news_auto_tweets_enabled, news_retell_ratio, news_dialogue_count, news_tweet_count, llm_text_model, llm_text_provider')
         .limit(1)
         .single();
-      
+
       // Get per-country retell ratios
       const { data: countriesWithRatio } = await supabase
         .from('news_countries')
         .select('id, code, retell_ratio')
         .eq('is_active', true);
-      
+
       const countryRatioMap = new Map<string, number>();
       for (const c of countriesWithRatio || []) {
         countryRatioMap.set(c.id, c.retell_ratio ?? 100);
       }
-      
+
       const autoRetellEnabled = settings?.news_auto_retell_enabled ?? true;
       const autoDialogueEnabled = false;
       const autoTweetsEnabled = false;
       const globalRetellRatio = settings?.news_retell_ratio ?? 1; // Fallback if per-country not set
       const dialogueCount = settings?.news_dialogue_count ?? 7;
       const tweetCount = settings?.news_tweet_count ?? 4;
+      const llmModel = settings?.llm_text_model || 'GLM-4.7';
 
       console.log(`Fetching all ${feeds?.length || 0} active RSS feeds with settings: retell=${autoRetellEnabled}, dialogue=${autoDialogueEnabled}, tweets=${autoTweetsEnabled}`);
-      
+
       // Track inserted items per country+category for auto-content generation
       const insertTracker: Map<string, { count: number; toProcess: Array<{ id: string; countryCode: string; slug: string }> }> = new Map();
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      
+
       const results = [];
       for (const feed of feeds || []) {
         try {
@@ -778,9 +779,9 @@ serve(async (req) => {
             .select('code')
             .eq('id', feed.country_id)
             .single();
-          
+
           const countryCode = countryData?.code || 'unknown';
-          
+
           const response = await fetch(feed.url, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -789,7 +790,7 @@ serve(async (req) => {
               'Cache-Control': 'no-cache'
             }
           });
-          
+
           if (!response.ok) {
             await supabase
               .from('news_rss_feeds')
@@ -798,48 +799,48 @@ serve(async (req) => {
             results.push({ feedId: feed.id, feedName: feed.name, success: false, error: `HTTP ${response.status}` });
             continue;
           }
-          
+
           const xml = await response.text();
           const items = parseXML(xml);
-          
+
           // Get existing URLs to prevent duplicates
           const { data: existingItems } = await supabase
             .from('news_rss_items')
             .select('url')
             .eq('feed_id', feed.id);
-          
+
           const existingUrls = new Set((existingItems || []).map(item => item.url));
-          
+
           let insertedCount = 0;
           const category = feed.category || 'general';
           const trackerKey = `${countryCode}_${category}`;
-          
+
           // Initialize tracker for this country+category if not exists
           if (!insertTracker.has(trackerKey)) {
             insertTracker.set(trackerKey, { count: 0, toProcess: [] });
           }
-          
+
           // Get feed's sample ratio (1 = all, 2 = every 2nd, 3 = every 3rd)
           const feedSampleRatio = feed.sample_ratio || 1;
           let itemIndex = 0;
-          
+
           for (const item of items.slice(0, 200)) {
             // Skip if already exists
             if (existingUrls.has(item.link)) continue;
-            
+
             // Apply sample ratio: only take every Nth item based on feed setting
             itemIndex++;
             if (feedSampleRatio > 1 && itemIndex % feedSampleRatio !== 0) {
               continue;
             }
-            
+
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
             const slug = generateSlug(item.title);
-            
+
             // Store original RSS content for AI retelling
             const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
             const originalContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
-            
+
             // Insert new item
             const { data: insertedData, error: insertError } = await supabase
               .from('news_rss_items')
@@ -863,33 +864,33 @@ serve(async (req) => {
               })
               .select('id')
               .single();
-            
+
             if (!insertError && insertedData) {
               insertedCount++;
               existingUrls.add(item.link); // Track newly added
-              
+
               // Auto-cache the newly inserted news page
               autoCacheNewsPage(countryCode.toLowerCase(), slug, supabaseUrl);
-              
+
               // Track for auto-processing based on per-country ratio
               const tracker = insertTracker.get(trackerKey)!;
               tracker.count++;
-              
+
               // Get per-country retell ratio (percentage 1-100), fallback to global setting
               const countryRetellRatio = countryRatioMap.get(feed.country_id) ?? 100;
               const shouldProcess = Math.random() * 100 < countryRetellRatio;
-              
+
               if (shouldProcess) {
                 tracker.toProcess.push({ id: insertedData.id, countryCode, slug });
               }
             }
           }
-          
+
           await supabase
             .from('news_rss_feeds')
             .update({ last_fetched_at: new Date().toISOString(), fetch_error: null })
             .eq('id', feed.id);
-          
+
           results.push({ feedId: feed.id, feedName: feed.name, success: true, itemsInserted: insertedCount });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -900,31 +901,31 @@ serve(async (req) => {
           results.push({ feedId: feed.id, feedName: feed.name, success: false, error: errorMessage });
         }
       }
-      
+
       // Collect all items to process
       const allToProcess: Array<{ id: string; countryCode: string; slug: string }> = [];
       for (const tracker of insertTracker.values()) {
         allToProcess.push(...tracker.toProcess);
       }
-      
+
       // Limit processing to avoid timeout (edge function has ~50s limit)
       // Each item takes ~2-5s for retelling, so limit to 20 items per run
       const MAX_ITEMS_PER_RUN = 20;
       const itemsToProcess = allToProcess.slice(0, MAX_ITEMS_PER_RUN);
       const skippedCount = Math.max(0, allToProcess.length - MAX_ITEMS_PER_RUN);
-      
+
       console.log(`Processing queue: ${itemsToProcess.length} items (${skippedCount} skipped due to limit). Total candidates: ${allToProcess.length}`);
-      
+
       let totalRetelled = 0;
       let totalDialogues = 0;
       let totalTweets = 0;
-      
+
       // Process each item: retell -> dialogue -> tweets
       for (const item of itemsToProcess) {
         const newsId = item.id;
         const countryCode = item.countryCode;
         const slug = item.slug;
-        
+
         // Detect language based on country
         const detectLang = () => {
           const code = countryCode.toLowerCase();
@@ -934,7 +935,7 @@ serve(async (req) => {
           return 'en';
         };
         const contentLanguage = detectLang();
-        
+
         // Step 1: Retell
         if (autoRetellEnabled) {
           try {
@@ -947,11 +948,11 @@ serve(async (req) => {
               },
               body: JSON.stringify({ newsId, model: llmModel })
             });
-            
+
             if (response.ok) {
               totalRetelled++;
               console.log(`Successfully auto-retold news ${newsId}`);
-              
+
               // Update cache after retelling completes
               autoCacheNewsPage(countryCode.toLowerCase(), slug, supabaseUrl);
             } else {
@@ -962,7 +963,7 @@ serve(async (req) => {
           }
           await new Promise(r => setTimeout(r, 300));
         }
-        
+
         // Step 2: Generate dialogue
         if (autoDialogueEnabled) {
           try {
@@ -972,7 +973,7 @@ serve(async (req) => {
               .select('*, feed:news_rss_feeds(name)')
               .eq('id', newsId)
               .single();
-            
+
             if (article) {
               console.log(`Generating dialogue for news item: ${newsId}`);
               const response = await fetch(`${supabaseUrl}/functions/v1/generate-dialogue`, {
@@ -992,28 +993,28 @@ serve(async (req) => {
                   tweetCount: tweetCount
                 })
               });
-              
+
               if (response.ok) {
                 const result = await response.json();
                 const updateData: Record<string, unknown> = {};
-                
+
                 if (result.success && result.dialogue) {
                   updateData.chat_dialogue = result.dialogue;
                   totalDialogues++;
                 }
-                
+
                 if (result.tweets) {
                   updateData.tweets = result.tweets;
                   totalTweets++;
                 }
-                
+
                 if (Object.keys(updateData).length > 0) {
                   await supabase
                     .from('news_rss_items')
                     .update(updateData)
                     .eq('id', newsId);
                 }
-                
+
                 console.log(`Successfully generated dialogue${autoTweetsEnabled ? ' and tweets' : ''} for ${newsId}`);
               } else {
                 console.error(`Failed to generate dialogue for ${newsId}:`, response.status);
@@ -1025,9 +1026,9 @@ serve(async (req) => {
           await new Promise(r => setTimeout(r, 300));
         }
       }
-      
+
       console.log(`Completed: ${results.length} feeds, ${itemsToProcess.length} processed (${skippedCount} skipped), ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets`);
-      
+
       // Ping search engines if new content was added
       if (itemsToProcess.length > 0) {
         try {
@@ -1040,7 +1041,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({})
           });
-          
+
           if (pingResponse.ok) {
             const pingResult = await pingResponse.json();
             console.log('Search engine ping result:', pingResult);
@@ -1051,11 +1052,11 @@ serve(async (req) => {
           console.error('Error pinging search engines:', pingError);
         }
       }
-      
+
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          feedsProcessed: results.length, 
+        JSON.stringify({
+          success: true,
+          feedsProcessed: results.length,
           totalCandidates: allToProcess.length,
           totalProcessed: itemsToProcess.length,
           skippedDueToLimit: skippedCount,
@@ -1063,7 +1064,7 @@ serve(async (req) => {
           autoDialogues: totalDialogues,
           autoTweets: totalTweets,
           searchEnginesPinged: itemsToProcess.length > 0,
-          results 
+          results
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -1077,17 +1078,17 @@ serve(async (req) => {
         .select('id, code, name, flag, retell_ratio')
         .eq('is_active', true)
         .gte('retell_ratio', 100);
-      
+
       if (!countries || countries.length === 0) {
         return new Response(
           JSON.stringify({ success: true, pendingByCountry: [], total: 0 }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       const pendingByCountry: { countryId: string; code: string; name: string; flag: string; count: number }[] = [];
       let totalPending = 0;
-      
+
       for (const country of countries) {
         const { count } = await supabase
           .from('news_rss_items')
@@ -1095,7 +1096,7 @@ serve(async (req) => {
           .eq('country_id', country.id)
           .is('content_en', null)
           .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-        
+
         const pendingCount = count || 0;
         if (pendingCount > 0) {
           pendingByCountry.push({
@@ -1108,7 +1109,7 @@ serve(async (req) => {
           totalPending += pendingCount;
         }
       }
-      
+
       return new Response(
         JSON.stringify({ success: true, pendingByCountry, total: totalPending }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -1119,14 +1120,14 @@ serve(async (req) => {
     // Now with batch processing and concurrency control
     if (action === 'process_pending') {
       const { countryCode, limit: processLimit = 20, batchSize = 5, llmModel: requestedModel } = body;
-      
+
       // Get auto-generation settings including LLM model
       const { data: settings } = await supabase
         .from('settings')
         .select('news_auto_retell_enabled, news_auto_dialogue_enabled, news_auto_tweets_enabled, news_dialogue_count, news_tweet_count, llm_text_model, llm_text_provider')
         .limit(1)
         .single();
-      
+
       const autoRetellEnabled = settings?.news_auto_retell_enabled ?? true;
       const autoDialogueEnabled = false;
       const autoTweetsEnabled = false;
@@ -1137,23 +1138,23 @@ serve(async (req) => {
       const llmModel = requestedModel || settings?.llm_text_model || 'GLM-4.7';
       const llmDisplayName = llmModel.split('/').pop() || llmModel;
       console.log('[process_pending] requestedModel:', requestedModel, 'llmModel:', llmModel);
-      
+
       // Get countries with 100% retell ratio
       const { data: countries } = await supabase
         .from('news_countries')
         .select('id, code, retell_ratio')
         .eq('is_active', true)
         .gte('retell_ratio', 100);
-      
+
       const countryIds = countries?.map(c => c.id) || [];
-      
+
       if (countryIds.length === 0) {
         return new Response(
           JSON.stringify({ success: true, message: 'No countries with 100% retell ratio', processed: 0, logs: [], llmModel: llmDisplayName }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       // Find news items that should be retold but aren't (100% ratio countries, no content_en, recent)
       let query = supabase
         .from('news_rss_items')
@@ -1163,7 +1164,7 @@ serve(async (req) => {
         .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
         .order('created_at', { ascending: false })
         .limit(processLimit);
-      
+
       if (countryCode) {
         const country = countries?.find(c => c.code.toLowerCase() === countryCode.toLowerCase());
         if (country) {
@@ -1177,27 +1178,28 @@ serve(async (req) => {
             .limit(processLimit);
         }
       }
-      
+
       const { data: pendingItems } = await query;
-      
+
       if (!pendingItems || pendingItems.length === 0) {
         return new Response(
           JSON.stringify({ success: true, message: 'No pending items to process', processed: 0, logs: [], llmModel: llmDisplayName }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       console.log(`[Pending] Processing ${pendingItems.length} items in batches of ${batchSize} using ${llmDisplayName}`);
-      
+
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      let totalProcessed = 0;
       let totalRetelled = 0;
       let totalDialogues = 0;
       let totalTweets = 0;
       const logs: { id: string; title: string; country: string; flag: string; step: string; status: 'success' | 'error' | 'skip'; message: string; timestamp: string }[] = [];
-      
+
       // Define pending item type
       type PendingItem = { id: string; title: string; slug: string | null; country: { code: string; name: string; flag: string }[] | null };
-      
+
       // Helper function to process a single item
       async function processItem(item: PendingItem): Promise<void> {
         const newsId = item.id;
@@ -1206,7 +1208,7 @@ serve(async (req) => {
         const countryName = countryData?.name || 'Unknown';
         const countryFlag = countryData?.flag || '🏳️';
         const shortTitle = item.title?.slice(0, 60) + (item.title?.length > 60 ? '...' : '');
-        
+
         // Step 1: Retell
         if (autoRetellEnabled) {
           try {
@@ -1219,7 +1221,7 @@ serve(async (req) => {
               },
               body: JSON.stringify({ newsId, model: llmModel })
             });
-            
+
             if (response.ok) {
               totalRetelled++;
               logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'retell', status: 'success', message: `✓ ${llmDisplayName}`, timestamp: new Date().toISOString() });
@@ -1230,7 +1232,7 @@ serve(async (req) => {
             logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'retell', status: 'error', message: String(error), timestamp: new Date().toISOString() });
           }
         }
-        
+
         // Step 2: Generate dialogue
         if (autoDialogueEnabled) {
           try {
@@ -1239,7 +1241,7 @@ serve(async (req) => {
               .select('*, feed:news_rss_feeds(name)')
               .eq('id', newsId)
               .single();
-            
+
             if (article) {
               const detectLang = () => {
                 if (itemCountryCode === 'ua') return 'uk';
@@ -1247,7 +1249,7 @@ serve(async (req) => {
                 if (itemCountryCode === 'in') return 'hi';
                 return 'en';
               };
-              
+
               const response = await fetch(`${supabaseUrl}/functions/v1/generate-dialogue`, {
                 method: 'POST',
                 headers: {
@@ -1263,7 +1265,7 @@ serve(async (req) => {
                   contentLanguage: detectLang()
                 })
               });
-              
+
               if (response.ok) {
                 const result = await response.json();
                 if (result.success && result.dialogue) {
@@ -1274,7 +1276,7 @@ serve(async (req) => {
                       tweets: result.tweets || null
                     })
                     .eq('id', newsId);
-                  
+
                   totalDialogues++;
                   if (result.tweets) totalTweets++;
                   logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'dialogue', status: 'success', message: `✓ ${result.tweets ? '+твіти' : ''}`, timestamp: new Date().toISOString() });
@@ -1288,23 +1290,26 @@ serve(async (req) => {
           }
         }
       }
-      
+
       // Process items in batches with concurrency
       const effectiveBatchSize = Math.min(batchSize, 5); // Cap at 5 concurrent
       for (let i = 0; i < pendingItems.length; i += effectiveBatchSize) {
         const batch = pendingItems.slice(i, i + effectiveBatchSize);
         console.log(`[Pending] Processing batch ${Math.floor(i / effectiveBatchSize) + 1}/${Math.ceil(pendingItems.length / effectiveBatchSize)} (${batch.length} items)`);
-        
+
         // Process batch items in parallel
         await Promise.all(batch.map(item => processItem(item)));
-        
+
+        // Update total processed count
+        totalProcessed += batch.length;
+
         // Small delay between batches to avoid rate limiting
         if (i + effectiveBatchSize < pendingItems.length) {
           await new Promise(r => setTimeout(r, 300));
         }
       }
-           console.log(`[Pending] Processed ${totalProcessed} items: ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets`);
-      
+      console.log(`[Pending] Processed ${totalProcessed} items: ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets`);
+
       // Save stats
       await supabase
         .from('cron_stats')
@@ -1316,10 +1321,10 @@ serve(async (req) => {
           llm_model: llmModel,
           execution_time_ms: null
         });
-      
+
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           processed: totalProcessed,
           retelled: totalRetelled,
           dialogues: totalDialogues,
@@ -1339,45 +1344,45 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       const { data: feeds, error: feedsError } = await supabase
         .from('news_rss_feeds')
         .select('id, name, url, category')
         .eq('country_id', countryId)
         .eq('is_active', true);
-      
+
       if (feedsError) {
         return new Response(
           JSON.stringify({ success: false, error: feedsError.message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       const { data: countryData } = await supabase
         .from('news_countries')
         .select('code')
         .eq('id', countryId)
         .single();
-      
+
       const countryCode = countryData?.code || 'unknown';
-      
+
       // Get LLM settings
       const { data: settings } = await supabase
         .from('settings')
         .select('llm_text_model, llm_text_provider')
         .limit(1)
         .single();
-      
+
       const llmModel = settings?.llm_text_model || 'GLM-4.7';
-      
+
       console.log(`Bulk fetching ${feeds?.length || 0} feeds for country ${countryCode} with model ${llmModel}...`);
-      
+
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const results = [];
       let totalInserted = 0;
       let totalRetelled = 0;
       let retellCounter = 0;
-      
+
       for (const feed of feeds || []) {
         try {
           const response = await fetch(feed.url, {
@@ -1388,37 +1393,37 @@ serve(async (req) => {
               'Cache-Control': 'no-cache'
             }
           });
-          
+
           if (!response.ok) {
             results.push({ feedName: feed.name, success: false, error: `HTTP ${response.status}`, inserted: 0 });
             continue;
           }
-          
+
           const xml = await response.text();
           const items = parseXML(xml);
-          
+
           // Get existing URLs to prevent duplicates
           const { data: existingItems } = await supabase
             .from('news_rss_items')
             .select('url')
             .eq('feed_id', feed.id);
-          
+
           const existingUrls = new Set((existingItems || []).map(item => item.url));
-          
+
           let insertedCount = 0;
           const itemsToRetell: string[] = [];
-          
+
           for (const item of items.slice(0, 200)) {
             // Skip if already exists
             if (existingUrls.has(item.link)) continue;
-            
+
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
             const slug = generateSlug(item.title);
-            
+
             // Store original RSS content for AI retelling
             const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
             const originalContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
-            
+
             const { data: insertedData, error: insertError } = await supabase
               .from('news_rss_items')
               .insert({
@@ -1441,53 +1446,53 @@ serve(async (req) => {
               })
               .select('id')
               .single();
-            
+
             if (!insertError && insertedData) {
               insertedCount++;
               totalInserted++;
               retellCounter++;
               existingUrls.add(item.link);
-              
+
               // Every 5th item gets auto-retell
               if (retellCounter % 5 === 0) {
                 itemsToRetell.push(insertedData.id);
               }
             }
           }
-          
+
           await supabase
             .from('news_rss_feeds')
             .update({ last_fetched_at: new Date().toISOString(), fetch_error: null })
             .eq('id', feed.id);
-          
+
           // Auto-retell items
           for (const newsId of itemsToRetell) {
             await autoRetellNews(newsId, supabaseUrl);
             totalRetelled++;
             await new Promise(r => setTimeout(r, 300));
           }
-          
+
           results.push({ feedName: feed.name, success: true, inserted: insertedCount, retelled: itemsToRetell.length });
         } catch (error) {
-          results.push({ 
-            feedName: feed.name, 
-            success: false, 
+          results.push({
+            feedName: feed.name,
+            success: false,
             error: error instanceof Error ? error.message : 'Unknown error',
             inserted: 0
           });
         }
       }
-      
+
       console.log(`Bulk fetch complete: ${totalInserted} inserted, ${totalRetelled} retelled`);
-      
+
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           countryCode,
           feedsProcessed: feeds?.length || 0,
           totalInserted,
           totalRetelled,
-          results 
+          results
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -1501,37 +1506,37 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       const { data: feeds, error: feedsError } = await supabase
         .from('news_rss_feeds')
         .select('id, name, url, category, sample_ratio')
         .eq('country_id', countryId)
         .eq('is_active', true);
-      
+
       if (feedsError) {
         return new Response(
           JSON.stringify({ success: false, error: feedsError.message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       const { data: countryData } = await supabase
         .from('news_countries')
         .select('code')
         .eq('id', countryId)
         .single();
-      
+
       const countryCode = countryData?.code || 'unknown';
-      
+
       console.log(`Full pipeline: fetching ${feeds?.length || 0} feeds for country ${countryCode}...`);
-      
+
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const results = [];
       let totalInserted = 0;
       let totalRetelled = 0;
       let totalDialogues = 0;
       const allNewItemIds: string[] = [];
-      
+
       // Step 1: Fetch all new items from all feeds
       for (const feed of feeds || []) {
         try {
@@ -1543,47 +1548,47 @@ serve(async (req) => {
               'Cache-Control': 'no-cache'
             }
           });
-          
+
           if (!response.ok) {
             results.push({ feedName: feed.name, success: false, error: `HTTP ${response.status}`, inserted: 0, retelled: 0, dialogues: 0 });
             continue;
           }
-          
+
           const xml = await response.text();
           const items = parseXML(xml);
-          
+
           // Get existing URLs to prevent duplicates
           const { data: existingItems } = await supabase
             .from('news_rss_items')
             .select('url')
             .eq('feed_id', feed.id);
-          
+
           const existingUrls = new Set((existingItems || []).map(item => item.url));
-          
+
           let insertedCount = 0;
           const feedNewIds: string[] = [];
-          
+
           // Get feed's sample ratio (1 = all, 2 = every 2nd, 3 = every 3rd)
           const feedSampleRatio = feed.sample_ratio || 1;
           let itemIndex = 0;
-          
+
           for (const item of items.slice(0, 200)) {
             // Skip if already exists
             if (existingUrls.has(item.link)) continue;
-            
+
             // Apply sample ratio: only take every Nth item based on feed setting
             itemIndex++;
             if (feedSampleRatio > 1 && itemIndex % feedSampleRatio !== 0) {
               continue;
             }
-            
+
             const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
             const slug = generateSlug(item.title);
-            
+
             // Store original RSS content for AI retelling
             const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
             const originalContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
-            
+
             const { data: insertedData, error: insertError } = await supabase
               .from('news_rss_items')
               .insert({
@@ -1606,7 +1611,7 @@ serve(async (req) => {
               })
               .select('id')
               .single();
-            
+
             if (!insertError && insertedData) {
               insertedCount++;
               totalInserted++;
@@ -1615,17 +1620,17 @@ serve(async (req) => {
               existingUrls.add(item.link);
             }
           }
-          
+
           await supabase
             .from('news_rss_feeds')
             .update({ last_fetched_at: new Date().toISOString(), fetch_error: null })
             .eq('id', feed.id);
-          
+
           results.push({ feedName: feed.name, success: true, inserted: insertedCount, retelled: 0, dialogues: 0 });
         } catch (error) {
-          results.push({ 
-            feedName: feed.name, 
-            success: false, 
+          results.push({
+            feedName: feed.name,
+            success: false,
             error: error instanceof Error ? error.message : 'Unknown error',
             inserted: 0,
             retelled: 0,
@@ -1633,9 +1638,9 @@ serve(async (req) => {
           });
         }
       }
-      
+
       console.log(`Fetch complete. Processing ${allNewItemIds.length} new items with retell + dialogues...`);
-      
+
       // Step 2: Retell ALL new items
       for (const newsId of allNewItemIds) {
         try {
@@ -1647,7 +1652,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({ newsId, model: llmModel })
           });
-          
+
           if (response.ok) {
             totalRetelled++;
           } else {
@@ -1659,9 +1664,9 @@ serve(async (req) => {
         // Small delay to avoid rate limiting
         await new Promise(r => setTimeout(r, 500));
       }
-      
+
       console.log(`Retell complete. Generating dialogues for ${allNewItemIds.length} items...`);
-      
+
       // Step 3: Generate dialogues for ALL new items
       for (const newsId of allNewItemIds) {
         try {
@@ -1671,9 +1676,9 @@ serve(async (req) => {
             .select('*, feed:news_rss_feeds(name), country:news_countries(code)')
             .eq('id', newsId)
             .single();
-          
+
           if (!article) continue;
-          
+
           // Detect language based on country
           const detectLang = () => {
             const code = article.country?.code?.toLowerCase();
@@ -1682,9 +1687,9 @@ serve(async (req) => {
             if (code === 'in') return 'hi';
             return 'en';
           };
-          
+
           const contentLanguage = detectLang();
-          
+
           const response = await fetch(`${supabaseUrl}/functions/v1/generate-dialogue`, {
             method: 'POST',
             headers: {
@@ -1700,7 +1705,7 @@ serve(async (req) => {
               contentLanguage
             })
           });
-          
+
           if (response.ok) {
             const result = await response.json();
             if (result.success && result.dialogue) {
@@ -1720,18 +1725,18 @@ serve(async (req) => {
         // Small delay to avoid rate limiting
         await new Promise(r => setTimeout(r, 500));
       }
-      
+
       console.log(`Full pipeline complete: ${totalInserted} inserted, ${totalRetelled} retelled, ${totalDialogues} dialogues`);
-      
+
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           countryCode,
           feedsProcessed: feeds?.length || 0,
           totalInserted,
           totalRetelled,
           totalDialogues,
-          results 
+          results
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -1740,45 +1745,54 @@ serve(async (req) => {
     // Fetch US RSS feeds only with automatic retelling
     if (action === 'fetch_us_rss') {
       const startTime = Date.now();
-      
+
       // Get US country ID
       const { data: usCountry } = await supabase
         .from('news_countries')
         .select('id, code')
         .eq('code', 'us')
         .single();
-      
+
       if (!usCountry) {
         return new Response(
           JSON.stringify({ success: false, error: 'US country not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       // Get US RSS feeds
       const { data: feeds } = await supabase
         .from('news_rss_feeds')
         .select('id, name, url, category')
         .eq('country_id', usCountry.id)
         .eq('is_active', true);
-      
-      // Get LLM model from settings
-      const { data: settings } = await supabase
-        .from('settings')
-        .select('llm_text_model')
-        .limit(1)
-        .single();
-      
-      const llmModel = settings?.llm_text_model || 'GLM-4.7';
+
+      // Get LLM model from settings or cron config
+      const { data: cronConfig } = await supabase
+        .from('cron_job_configs')
+        .select('processing_options')
+        .eq('job_name', 'fetch-us-rss')
+        .maybeSingle();
+
+      let llmModel = cronConfig?.processing_options?.llm_model;
+
+      if (!llmModel) {
+        const { data: settings } = await supabase
+          .from('settings')
+          .select('llm_text_model')
+          .limit(1)
+          .single();
+        llmModel = settings?.llm_text_model || 'GLM-4.7';
+      }
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      
+
       let totalFetched = 0;
       let totalRetold = 0;
       let totalFailed = 0;
       const results = [];
-      
+
       console.log(`[fetch_us_rss] Processing ${feeds?.length || 0} US feeds with model: ${llmModel}`);
-      
+
       for (const feed of feeds || []) {
         try {
           const response = await fetch(feed.url, {
@@ -1787,28 +1801,28 @@ serve(async (req) => {
               'Accept': 'application/rss+xml, application/xml, text/xml, */*'
             }
           });
-          
+
           if (!response.ok) {
             results.push({ feedId: feed.id, feedName: feed.name, success: false, error: `HTTP ${response.status}` });
             continue;
           }
-          
+
           const xml = await response.text();
           const parsedFeed = await parseRssFeed(xml);
-          
+
           if (!parsedFeed || !parsedFeed.items || parsedFeed.items.length === 0) {
             results.push({ feedId: feed.id, feedName: feed.name, success: true, newItems: 0 });
             continue;
           }
-          
+
           let feedNewItems = 0;
           let feedRetold = 0;
-          
+
           // Process up to 50 items per feed to avoid timeouts
           for (const item of parsedFeed.items.slice(0, 50)) {
             const link = item.link || item.guid;
             if (!link) continue;
-            
+
             // Check if already exists
             const { data: existing } = await supabase
               .from('news_rss_items')
@@ -1816,9 +1830,9 @@ serve(async (req) => {
               .eq('link', link)
               .limit(1)
               .single();
-            
+
             if (existing) continue;
-            
+
             // Create slug
             const title = item.title || 'Untitled';
             const baseSlug = title
@@ -1826,10 +1840,10 @@ serve(async (req) => {
               .replace(/[^a-z0-9\s-]/g, '')
               .replace(/\s+/g, '-')
               .substring(0, 100);
-            
+
             const timestamp = Date.now();
             const slug = `${baseSlug}-${timestamp}`;
-            
+
             // Scrape full content
             let fullContent = item.contentSnippet || item.description || '';
             try {
@@ -1840,7 +1854,7 @@ serve(async (req) => {
             } catch (e) {
               console.log(`Could not scrape ${link}:`, e);
             }
-            
+
             // Insert news item
             const { data: inserted, error: insertError } = await supabase
               .from('news_rss_items')
@@ -1857,15 +1871,15 @@ serve(async (req) => {
               })
               .select('id')
               .single();
-            
+
             if (insertError || !inserted) {
               console.error(`Failed to insert ${link}:`, insertError);
               continue;
             }
-            
+
             feedNewItems++;
             totalFetched++;
-            
+
             // Automatically retell
             try {
               const retellResponse = await fetch(`${supabaseUrl}/functions/v1/retell-news`, {
@@ -1876,7 +1890,7 @@ serve(async (req) => {
                 },
                 body: JSON.stringify({ newsId: inserted.id, model: llmModel })
               });
-              
+
               if (retellResponse.ok) {
                 feedRetold++;
                 totalRetold++;
@@ -1887,27 +1901,27 @@ serve(async (req) => {
               console.error(`Failed to retell ${inserted.id}:`, e);
               totalFailed++;
             }
-            
+
             // Small delay to avoid rate limiting
             await new Promise(r => setTimeout(r, 300));
           }
-          
-          results.push({ 
-            feedId: feed.id, 
-            feedName: feed.name, 
-            success: true, 
+
+          results.push({
+            feedId: feed.id,
+            feedName: feed.name,
+            success: true,
             newItems: feedNewItems,
             retold: feedRetold
           });
-          
+
         } catch (error) {
           console.error(`Error processing feed ${feed.id}:`, error);
           results.push({ feedId: feed.id, feedName: feed.name, success: false, error: String(error) });
         }
       }
-      
+
       const executionTime = Date.now() - startTime;
-      
+
       // Save stats
       await supabase
         .from('cron_stats')
@@ -1919,11 +1933,11 @@ serve(async (req) => {
           llm_model: llmModel,
           execution_time_ms: executionTime
         });
-      
+
       console.log(`[fetch_us_rss] Complete: ${totalFetched} fetched, ${totalRetold} retold, ${totalFailed} failed in ${executionTime}ms`);
-      
+
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           success: true,
           feedsProcessed: feeds?.length || 0,
           totalFetched,
@@ -1946,42 +1960,42 @@ serve(async (req) => {
         { name: '7d', hours: 168 },
         { name: '14d', hours: 336 }
       ];
-      
+
       const stats: Record<string, any> = {};
-      
+
       for (const period of periods) {
         const since = new Date();
         since.setHours(since.getHours() - period.hours);
-        
+
         // Get stats from cron_stats table
         const { data: cronStats } = await supabase
           .from('cron_stats')
           .select('*')
           .gte('executed_at', since.toISOString());
-        
+
         // Aggregate by cron_name
         const fetchUsStats = cronStats?.filter(s => s.cron_name === 'fetch-us-rss') || [];
         const processPendingStats = cronStats?.filter(s => s.cron_name === 'process-pending-news') || [];
-        
+
         const fetchUsTotal = fetchUsStats.reduce((sum, s) => sum + (s.items_processed || 0), 0);
         const fetchUsRetold = fetchUsStats.reduce((sum, s) => sum + (s.items_succeeded || 0), 0);
-        
+
         const processPendingTotal = processPendingStats.reduce((sum, s) => sum + (s.items_processed || 0), 0);
         const processPendingRetold = processPendingStats.reduce((sum, s) => sum + (s.items_succeeded || 0), 0);
-        
+
         // Get total news count in period
         const { count: totalNewsCount } = await supabase
           .from('news_rss_items')
           .select('*', { count: 'exact', head: true })
           .gte('created_at', since.toISOString());
-        
+
         // Get news without retell
         const { count: noRetellCount } = await supabase
           .from('news_rss_items')
           .select('*', { count: 'exact', head: true })
           .is('content_en', null)
           .gte('created_at', since.toISOString());
-        
+
         stats[period.name] = {
           fetchUs: {
             fetched: fetchUsTotal,
@@ -2000,7 +2014,7 @@ serve(async (req) => {
           }
         };
       }
-      
+
       return new Response(
         JSON.stringify({ success: true, stats }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -2015,9 +2029,9 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in fetch-rss:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

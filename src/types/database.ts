@@ -6,7 +6,7 @@ export type NarrativeSpecial = 'conspiratorial' | 'transmedia' | 'personal' | 'c
 export type StoryStatus = 'draft' | 'scheduled' | 'published';
 export type PartCategory = 'story' | 'just_business';
 
-export type LLMProvider = 'zai' | 'openai' | 'gemini' | 'geminiV22' | 'anthropic' | 'mistral';
+export type LLMProvider = 'zai' | 'openai' | 'gemini' | 'geminiV22' | 'anthropic' | 'mistral' | 'lovable';
 
 export interface Settings {
   id: string;
@@ -99,7 +99,10 @@ export const LLM_MODELS = {
       { value: 'GLM-4.7-Flash', label: 'GLM-4.7-Flash (швидкий)' },
       { value: 'GLM-4.5-Air', label: 'GLM-4.5-Air (легкий)' },
     ],
-    image: []
+    image: [
+      { value: 'cogview-3-plus', label: 'GLM-4 Image (CogView-3 Plus)' },
+      { value: 'cogview-3', label: 'GLM-4 Image (CogView-3)' },
+    ]
   },
   mistral: {
     text: [

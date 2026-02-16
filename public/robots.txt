@@ -5,10 +5,8 @@
 User-agent: Googlebot
 Allow: /
 
-
 User-agent: Bingbot
 Allow: /
-
 
 User-agent: Yandex
 Allow: /
@@ -78,12 +76,13 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /edit/
+Disallow: /install
 
 # Resources - Single sitemap index contains all sitemaps
-Sitemap: https://echoes2.com/sitemap.xml
+Sitemap: https://bravennow.com/sitemap.xml
 
 # LLM-optimized documentation (dynamic)
-# See https://echoes2.com/llms.txt for AI-friendly site overview with latest content
+# See https://bravennow.com/llms.txt for AI-friendly site overview with latest content
 
 # SSR for crawlers
 # All pages serve pre-rendered HTML for crawlers via Edge Functions

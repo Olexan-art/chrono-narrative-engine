@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SITEMAP_URL = "https://echoes2.com/sitemap.xml";
+const SITEMAP_URL = "https://bravennow.com/sitemap.xml";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -97,8 +97,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: allSuccess,
-        message: allSuccess 
-          ? "Sitemap ping sent to all search engines" 
+        message: allSuccess
+          ? "Sitemap ping sent to all search engines"
           : "Some pings failed",
         results,
         sitemap: SITEMAP_URL,

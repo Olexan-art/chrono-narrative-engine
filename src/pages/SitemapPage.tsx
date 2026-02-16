@@ -1,14 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { 
-  Calendar, BookOpen, Library, Newspaper, ChevronRight, 
+import {
+  Calendar, BookOpen, Library, Newspaper, ChevronRight,
   Globe, Loader2, MapPin, Users
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SEOHead } from "@/components/SEOHead";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const BASE_URL = 'https://echoes2.com';
+const BASE_URL = 'https://bravennow.com';
 
 export default function SitemapPage() {
   const { language } = useLanguage();
@@ -53,7 +53,7 @@ export default function SitemapPage() {
       // Group news by country
       const newsByCountry: Record<string, any[]> = {};
       const countryMap = new Map(countriesResult.data?.map(c => [c.id, c]) || []);
-      
+
       for (const item of newsResult.data || []) {
         const country = countryMap.get(item.country_id);
         if (country) {
@@ -96,7 +96,7 @@ export default function SitemapPage() {
         description="Complete HTML sitemap for Synchronization Point - AI Archive of Human History. Navigate all stories, chapters, volumes, and news articles."
         canonicalUrl={`${BASE_URL}/sitemap`}
       />
-      
+
       <div className="min-h-screen py-24 px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-12">
@@ -127,8 +127,8 @@ export default function SitemapPage() {
                 ].map(page => (
                   <li key={page.url} className="flex items-center gap-2">
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    <Link 
-                      to={page.url} 
+                    <Link
+                      to={page.url}
                       className="text-primary hover:underline"
                     >
                       {page.name}
@@ -147,8 +147,8 @@ export default function SitemapPage() {
                 {data?.parts.map(part => (
                   <li key={`${part.date}-${part.number}`} className="flex items-center gap-2">
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    <Link 
-                      to={`/read/${part.date}/${part.number}`} 
+                    <Link
+                      to={`/read/${part.date}/${part.number}`}
                       className="text-primary hover:underline truncate"
                     >
                       {part.date} - {getTitle(part)}
@@ -156,8 +156,8 @@ export default function SitemapPage() {
                   </li>
                 ))}
               </ul>
-              <Link 
-                to="/calendar" 
+              <Link
+                to="/calendar"
                 className="text-sm text-muted-foreground hover:text-primary mt-4 inline-block"
               >
                 View all →
@@ -174,8 +174,8 @@ export default function SitemapPage() {
                 {data?.chapters.map(chapter => (
                   <li key={chapter.number} className="flex items-center gap-2 break-inside-avoid">
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    <Link 
-                      to={`/chapter/${chapter.number}`} 
+                    <Link
+                      to={`/chapter/${chapter.number}`}
                       className="text-primary hover:underline"
                     >
                       Chapter {chapter.number}
@@ -197,8 +197,8 @@ export default function SitemapPage() {
                   return (
                     <li key={yearMonth} className="flex items-center gap-2 break-inside-avoid">
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      <Link 
-                        to={`/volume/${yearMonth}`} 
+                      <Link
+                        to={`/volume/${yearMonth}`}
                         className="text-primary hover:underline"
                       >
                         {yearMonth}
@@ -219,8 +219,8 @@ export default function SitemapPage() {
                 {data?.wikiEntities.map(entity => (
                   <li key={entity.id} className="flex items-center gap-2 break-inside-avoid">
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    <Link 
-                      to={`/wiki/${entity.slug || entity.id}`} 
+                    <Link
+                      to={`/wiki/${entity.slug || entity.id}`}
                       className="text-primary hover:underline truncate"
                     >
                       {language === 'en' && entity.name_en ? entity.name_en : entity.name}
@@ -231,8 +231,8 @@ export default function SitemapPage() {
                   </li>
                 ))}
               </ul>
-              <Link 
-                to="/wiki" 
+              <Link
+                to="/wiki"
                 className="text-sm text-muted-foreground hover:text-primary mt-4 inline-block"
               >
                 View all entities →
@@ -249,12 +249,12 @@ export default function SitemapPage() {
                 {data?.countries.map(country => {
                   const countryCode = country.code.toLowerCase();
                   const newsCount = data.newsByCountry[countryCode]?.length || 0;
-                  
+
                   return (
                     <li key={country.id} className="flex items-center gap-3">
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      <Link 
-                        to={`/news/${countryCode}`} 
+                      <Link
+                        to={`/news/${countryCode}`}
                         className="text-primary hover:underline font-medium"
                       >
                         {country.name_en || country.name}
@@ -273,7 +273,7 @@ export default function SitemapPage() {
               const countryCode = country.code.toLowerCase();
               const newsItems = data.newsByCountry[countryCode] || [];
               if (newsItems.length === 0) return null;
-              
+
               return (
                 <section key={country.id} className="bg-card border border-border rounded-lg p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -281,7 +281,7 @@ export default function SitemapPage() {
                       <Newspaper className="w-5 h-5 text-primary" />
                       {country.name_en || country.name} News
                     </h2>
-                    <Link 
+                    <Link
                       to={`/news/${countryCode}`}
                       className="text-sm text-primary hover:underline"
                     >
@@ -292,8 +292,8 @@ export default function SitemapPage() {
                     {newsItems.slice(0, 15).map((item: any) => (
                       <li key={item.slug} className="flex items-center gap-2">
                         <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                        <Link 
-                          to={`/news/${countryCode}/${item.slug}`} 
+                        <Link
+                          to={`/news/${countryCode}/${item.slug}`}
                           className="text-primary hover:underline truncate"
                         >
                           {getTitle(item)}
@@ -302,7 +302,7 @@ export default function SitemapPage() {
                     ))}
                   </ul>
                   {newsItems.length > 15 && (
-                    <Link 
+                    <Link
                       to={`/news/${countryCode}`}
                       className="text-sm text-muted-foreground hover:text-primary mt-3 inline-block"
                     >
@@ -317,10 +317,10 @@ export default function SitemapPage() {
           {/* Footer with XML sitemap link */}
           <div className="text-center mt-12 text-sm text-muted-foreground">
             <p>
-              For search engines: 
-              <a 
-                href="https://bravennow.com/sitemap.xml" 
-                target="_blank" 
+              For search engines:
+              <a
+                href="https://bravennow.com/sitemap.xml"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline ml-1"
               >

@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-password, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const BASE_URL = 'https://echoes2.com';
+const BASE_URL = 'https://bravennow.com';
 const SSR_ENDPOINT = Deno.env.get('SUPABASE_URL') + '/functions/v1/ssr-render';
 
 // Helper to fetch all rows with pagination (bypasses 1000 row limit)
@@ -23,7 +23,7 @@ async function fetchAllRows<T>(
 
   while (hasMore) {
     let query = supabase.from(tableName).select(selectQuery);
-    
+
     for (const filter of filters) {
       if (filter.op === 'eq') query = query.eq(filter.column, filter.value);
       else if (filter.op === 'neq') query = query.neq(filter.column, filter.value);
@@ -31,20 +31,20 @@ async function fetchAllRows<T>(
       else if (filter.op === 'is.null') query = query.is(filter.column, null);
       else if (filter.op === 'not.is.null') query = query.not(filter.column, 'is', null);
     }
-    
+
     if (orderBy) {
       query = query.order(orderBy.column, { ascending: orderBy.ascending });
     }
-    
+
     query = query.range(offset, offset + PAGE_SIZE - 1);
-    
+
     const { data, error } = await query;
-    
+
     if (error) {
       console.error(`Error fetching ${tableName}:`, error);
       break;
     }
-    
+
     if (!data || data.length === 0) {
       hasMore = false;
     } else {
@@ -53,7 +53,7 @@ async function fetchAllRows<T>(
       hasMore = data.length === PAGE_SIZE;
     }
   }
-  
+
   console.log(`Fetched ${allRows.length} rows from ${tableName}`);
   return allRows;
 }
@@ -62,22 +62,22 @@ async function fetchAllRows<T>(
 async function fetchAllNewsWithCountry(supabase: any): Promise<{ slug: string; countryCode: string }[]> {
   const PAGE_SIZE = 1000;
   const results: { slug: string; countryCode: string }[] = [];
-  
+
   // First get country mapping
   const { data: countries } = await supabase
     .from('news_countries')
     .select('id, code')
     .eq('is_active', true);
-  
+
   const countryMap = new Map<string, string>();
   for (const c of countries || []) {
     countryMap.set(c.id, c.code);
   }
-  
+
   // Fetch all news with pagination
   let offset = 0;
   let hasMore = true;
-  
+
   while (hasMore) {
     const { data, error } = await supabase
       .from('news_rss_items')
@@ -86,7 +86,7 @@ async function fetchAllNewsWithCountry(supabase: any): Promise<{ slug: string; c
       .not('slug', 'is', null)
       .order('published_at', { ascending: false })
       .range(offset, offset + PAGE_SIZE - 1);
-    
+
     if (error || !data || data.length === 0) {
       hasMore = false;
     } else {
@@ -100,13 +100,13 @@ async function fetchAllNewsWithCountry(supabase: any): Promise<{ slug: string; c
       hasMore = data.length === PAGE_SIZE;
     }
   }
-  
+
   return results;
 }
 
 // Get all pages based on filter type
 async function getAllPagesToCache(
-  supabase: any, 
+  supabase: any,
   filter?: 'all' | 'recent-24h' | 'news-7d' | 'wiki'
 ): Promise<string[]> {
   const pages: string[] = [];
@@ -118,7 +118,7 @@ async function getAllPagesToCache(
   if (filter === 'wiki') {
     // Static wiki pages
     pages.push('/wiki', '/news', '/news/us', '/news/ua', '/news/pl', '/news/in');
-    
+
     // Add all wiki entities (top 500 by search count)
     const { data: wikiEntities } = await supabase
       .from('wiki_entities')
@@ -133,7 +133,7 @@ async function getAllPagesToCache(
         pages.push(`/wiki/${entityPath}`);
       }
     }
-    
+
     return pages;
   }
 
@@ -350,7 +350,7 @@ async function generateAndCachePage(
   try {
     // Call ssr-render to generate HTML
     const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(path)}&lang=en`;
-    
+
     const response = await fetch(ssrUrl, {
       headers: {
         'Authorization': `Bearer ${serviceKey}`,
@@ -410,7 +410,7 @@ async function processPagesInBatches(
   concurrency: number = 5
 ): Promise<{ path: string; success: boolean; timeMs?: number; error?: string }[]> {
   const results: { path: string; success: boolean; timeMs?: number; error?: string }[] = [];
-  
+
   for (let i = 0; i < pages.length; i += concurrency) {
     const batch = pages.slice(i, i + concurrency);
     const batchPromises = batch.map(async (path) => {
@@ -418,18 +418,18 @@ async function processPagesInBatches(
       console.log(`[${i + batch.indexOf(path) + 1}/${pages.length}] ${path}: ${result.success ? 'OK' : result.error}`);
       return { path, ...result };
     });
-    
+
     const batchResults = await Promise.all(batchPromises);
     results.push(...batchResults);
   }
-  
+
   return results;
 }
 
 // Store job status in database
 async function updateJobStatus(
-  supabase: any, 
-  jobId: string, 
+  supabase: any,
+  jobId: string,
   status: 'running' | 'completed' | 'failed',
   data: object
 ) {
@@ -468,7 +468,7 @@ Deno.serve(async (req) => {
     if (action === 'refresh-single' && specificPath) {
       // Refresh a single page
       const result = await generateAndCachePage(supabase, specificPath, serviceKey);
-      
+
       return new Response(JSON.stringify({
         action: 'refresh-single',
         path: specificPath,
@@ -489,7 +489,7 @@ Deno.serve(async (req) => {
       // Get all pages to cache
       const allPages = await getAllPagesToCache(supabase, filter);
       const totalPages = allPages.length;
-      
+
       // If requesting batch info only
       if (url.searchParams.get('info') === 'true') {
         return new Response(JSON.stringify({
@@ -505,7 +505,7 @@ Deno.serve(async (req) => {
 
       // Get batch of pages
       const pagesToProcess = allPages.slice(offset, offset + batchSize);
-      
+
       if (pagesToProcess.length === 0) {
         return new Response(JSON.stringify({
           action,
@@ -591,8 +591,8 @@ Deno.serve(async (req) => {
       );
 
       const totalSize = allPages.reduce((sum, p) => sum + (p.html_size_bytes || 0), 0);
-      const avgTime = allPages.length 
-        ? allPages.reduce((sum, p) => sum + (p.generation_time_ms || 0), 0) / allPages.length 
+      const avgTime = allPages.length
+        ? allPages.reduce((sum, p) => sum + (p.generation_time_ms || 0), 0) / allPages.length
         : 0;
 
       // Return only recent 1000 pages for the list to avoid huge response, but show accurate totals

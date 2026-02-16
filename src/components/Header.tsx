@@ -59,12 +59,6 @@ export function Header() {
             </Button>
           </Link>
           <LanguageSwitcher />
-          <Link to="/admin">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Clock className="w-4 h-4" />
-              <span>{t('nav.admin')}</span>
-            </Button>
-          </Link>
         </nav>
 
         {/* Mobile Navigation */}
@@ -108,12 +102,6 @@ export function Header() {
               <Button variant="ghost" className="w-full justify-start gap-3">
                 <Users className="w-4 h-4" />
                 Wiki
-              </Button>
-            </Link>
-            <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start gap-3">
-                <Clock className="w-4 h-4" />
-                {t("nav.admin")}
               </Button>
             </Link>
           </nav>

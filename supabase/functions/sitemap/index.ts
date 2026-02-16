@@ -6,7 +6,7 @@ const corsHeaders = {
   "Content-Type": "application/xml; charset=utf-8",
 };
 
-const BASE_URL = "https://echoes2.com";
+const BASE_URL = "https://bravennow.com";
 const CACHE_TTL_HOURS = 6; // Cache sitemap for 6 hours
 
 // Helper to add hreflang links for multilingual pages
@@ -33,25 +33,25 @@ async function fetchAllRows<T>(
 
   while (hasMore) {
     let query = supabase.from(tableName).select(selectQuery);
-    
+
     for (const filter of filters) {
       if (filter.op === 'eq') query = query.eq(filter.column, filter.value);
       else if (filter.op === 'not.is.null') query = query.not(filter.column, 'is', null);
     }
-    
+
     if (orderBy) {
       query = query.order(orderBy.column, { ascending: orderBy.ascending });
     }
-    
+
     query = query.range(offset, offset + PAGE_SIZE - 1);
-    
+
     const { data, error } = await query;
-    
+
     if (error) {
       console.error(`Error fetching ${tableName}:`, error);
       break;
     }
-    
+
     if (!data || data.length === 0) {
       hasMore = false;
     } else {
@@ -60,7 +60,7 @@ async function fetchAllRows<T>(
       hasMore = data.length === PAGE_SIZE;
     }
   }
-  
+
   console.log(`Fetched ${allRows.length} rows from ${tableName}`);
   return allRows;
 }
@@ -74,13 +74,13 @@ async function getCachedSitemap(supabase: any, cachePath: string): Promise<strin
     .single();
 
   if (error || !data) return null;
-  
+
   // Check if cache is still valid
   if (new Date(data.expires_at) > new Date()) {
     console.log(`Cache HIT for sitemap: ${cachePath}`);
     return data.html;
   }
-  
+
   console.log(`Cache EXPIRED for sitemap: ${cachePath}`);
   return null;
 }
@@ -89,7 +89,7 @@ async function getCachedSitemap(supabase: any, cachePath: string): Promise<strin
 async function cacheSitemap(supabase: any, cachePath: string, xml: string): Promise<void> {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + CACHE_TTL_HOURS * 60 * 60 * 1000);
-  
+
   await supabase
     .from("cached_pages")
     .upsert({
@@ -102,7 +102,7 @@ async function cacheSitemap(supabase: any, cachePath: string, xml: string): Prom
       updated_at: now.toISOString(),
       html_size_bytes: new TextEncoder().encode(xml).length,
     }, { onConflict: 'path' });
-  
+
   console.log(`Cached sitemap: ${cachePath}, expires: ${expiresAt.toISOString()}`);
 }
 
@@ -124,13 +124,13 @@ Deno.serve(async (req) => {
     if (!forceRefresh) {
       const cachedXml = await getCachedSitemap(supabase, cachePath);
       if (cachedXml) {
-        return new Response(cachedXml, { 
+        return new Response(cachedXml, {
           headers: {
             ...corsHeaders,
             "X-Cache": "HIT",
             "Cache-Control": "public, max-age=21600", // 6 hours
           },
-          status: 200 
+          status: 200
         });
       }
     }
@@ -202,7 +202,7 @@ Deno.serve(async (req) => {
 
     // Build sitemap XML
     const now = new Date().toISOString();
-    
+
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
@@ -329,7 +329,7 @@ Deno.serve(async (req) => {
     for (const item of newsItems || []) {
       const countryCode = countryCodeMap.get(item.country_id);
       if (!countryCode || !item.slug) continue;
-      
+
       const url = `${BASE_URL}/news/${countryCode}/${item.slug}`;
       xml += `
   <url>
@@ -371,14 +371,14 @@ Deno.serve(async (req) => {
     const generationTime = Date.now() - startTime;
     console.log(`Sitemap generated in ${generationTime}ms, ${newsItems.length + (parts?.length || 0)} URLs`);
 
-    return new Response(xml, { 
+    return new Response(xml, {
       headers: {
         ...corsHeaders,
         "X-Cache": "MISS",
         "X-Generation-Time": `${generationTime}ms`,
         "Cache-Control": "public, max-age=21600",
       },
-      status: 200 
+      status: 200
     });
 
   } catch (error) {
