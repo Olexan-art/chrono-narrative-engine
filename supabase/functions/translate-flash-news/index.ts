@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const LOVABLE_API_URL = 'https://api.lovable.dev/v1/chat/completions';
+const ZAI_API_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -22,9 +22,9 @@ serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
+    const apiKey = Deno.env.get('ZAI_API_KEY');
     if (!apiKey) {
-      throw new Error('LOVABLE_API_KEY not configured');
+      throw new Error('ZAI_API_KEY not configured');
     }
 
     console.log('Translating content to EN and PL...');
@@ -47,14 +47,14 @@ Important:
 - Keep the translations accurate and natural
 - Return ONLY the JSON object, nothing else`;
 
-    const response = await fetch(LOVABLE_API_URL, {
+    const response = await fetch(ZAI_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'GLM-4.7-Flash',
         messages: [
           {
             role: 'user',
@@ -115,9 +115,9 @@ Important:
   } catch (error) {
     console.error('Error translating:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to translate' 
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to translate'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
