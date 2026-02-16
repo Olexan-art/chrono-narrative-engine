@@ -21,9 +21,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY not configured");
+    const ZAI_API_KEY = Deno.env.get("ZAI_API_KEY");
+    if (!ZAI_API_KEY) {
+      throw new Error("ZAI_API_KEY not configured");
     }
 
     const systemPrompt = `You are a text cleaning and structuring assistant. Your task is to:
@@ -39,14 +39,14 @@ serve(async (req) => {
 
 Return ONLY the cleaned and structured article text. Do not add any comments or explanations.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${ZAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "GLM-4.7-Flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Clean and structure this text:\n\n${content}` },
