@@ -65,18 +65,6 @@ export function Header() {
               <span>{t('nav.admin')}</span>
             </Button>
           </Link>
-          <Link to="/admin/llm">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Bot className="w-4 h-4" />
-              <span>LLM</span>
-            </Button>
-          </Link>
-          <Link to="/admin/news-processing">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <RefreshCw className="w-4 h-4" />
-              <span>News Jobs</span>
-            </Button>
-          </Link>
         </nav>
 
         {/* Mobile Navigation */}
@@ -126,18 +114,6 @@ export function Header() {
               <Button variant="ghost" className="w-full justify-start gap-3">
                 <Clock className="w-4 h-4" />
                 {t("nav.admin")}
-              </Button>
-            </Link>
-            <Link to="/admin/llm" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start gap-3">
-                <Bot className="w-4 h-4" />
-                LLM Stats
-              </Button>
-            </Link>
-            <Link to="/admin/news-processing" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start gap-3">
-                <RefreshCw className="w-4 h-4" />
-                News Jobs
               </Button>
             </Link>
           </nav>

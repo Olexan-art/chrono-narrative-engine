@@ -39,6 +39,8 @@ import { BulkScrapePanel } from "@/components/admin/BulkScrapePanel";
 import { ViralityPanel } from "@/components/admin/ViralityPanel";
 import { NewsMergePanel } from "@/components/admin/NewsMergePanel";
 import { RSSFeedPanel } from "@/components/admin/RSSFeedPanel";
+import LLMManagementPage from "@/pages/admin/LLMManagementPage";
+import NewsProcessingPage from "@/pages/admin/NewsProcessingPage";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -840,10 +842,26 @@ export default function AdminPage() {
               <Settings className="w-4 h-4" />
               Налаштування
             </TabsTrigger>
+            <TabsTrigger value="llm" className="gap-2">
+              <Bot className="w-4 h-4 text-purple-500" />
+              LLM
+            </TabsTrigger>
+            <TabsTrigger value="news-processing" className="gap-2">
+              <RefreshCw className="w-4 h-4 text-orange-500" />
+              News Jobs
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6">
             <DashboardPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="llm" className="mt-6">
+            <LLMManagementPage />
+          </TabsContent>
+
+          <TabsContent value="news-processing" className="mt-6">
+            <NewsProcessingPage />
           </TabsContent>
 
           <TabsContent value="statistics" className="mt-6">
