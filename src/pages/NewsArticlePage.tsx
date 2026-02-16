@@ -34,7 +34,7 @@ import { LLM_MODELS, LLMProvider } from "@/types/database";
 
 // Default ZAI models (always available if ZAI_API_KEY is set)
 const ZAI_MODELS = LLM_MODELS.zai.text;
-const LOVABLE_MODELS = LLM_MODELS.lovable.text;
+
 
 export default function NewsArticlePage() {
   const { country, slug } = useParams<{ country: string; slug: string }>();
@@ -81,12 +81,11 @@ export default function NewsArticlePage() {
   // Build available models list based on configured API keys
   const availableModels = useMemo(() => {
     const models: { value: string; label: string; provider?: LLMProvider }[] = [];
-    
+
     // ZAI models are always available (ZAI_API_KEY is set as Edge Function secret)
     ZAI_MODELS.forEach(m => models.push({ ...m, provider: 'zai' }));
-    
-    // Lovable AI models are always available
-    LOVABLE_MODELS.forEach(m => models.push({ ...m, provider: 'lovable' }));
+
+
     if (settings?.hasMistral) {
       LLM_MODELS.mistral.text.forEach(m => models.push({ ...m, provider: 'mistral' }));
     }
@@ -102,12 +101,12 @@ export default function NewsArticlePage() {
     if (settings?.hasAnthropic) {
       LLM_MODELS.anthropic.text.forEach(m => models.push({ ...m, provider: 'anthropic' }));
     }
-    
+
     return models;
   }, [settings]);
 
-  const [selectedModel, setSelectedModel] = useState(ZAI_MODELS[0]?.value || LOVABLE_MODELS[0]?.value || '');
-  const [selectedTweetModel, setSelectedTweetModel] = useState(ZAI_MODELS[0]?.value || LOVABLE_MODELS[0]?.value || '');
+  const [selectedModel, setSelectedModel] = useState(ZAI_MODELS[0]?.value || '');
+  const [selectedTweetModel, setSelectedTweetModel] = useState(ZAI_MODELS[0]?.value || '');
 
   // Helper to get localized field - defined early so can be used in mutations
   const getLocalizedField = (field: string, articleData?: any) => {
@@ -130,7 +129,7 @@ export default function NewsArticlePage() {
         .select('id, name, name_en, name_pl, flag, code')
         .ilike('code', country || '')
         .maybeSingle();
-      
+
       if (!countryData) throw new Error('Country not found');
 
       const { data: item } = await supabase
@@ -142,9 +141,9 @@ export default function NewsArticlePage() {
         .eq('country_id', countryData.id)
         .eq('slug', slug)
         .maybeSingle();
-      
+
       if (!item) throw new Error('Article not found');
-      
+
       return { ...item, country: countryData };
     },
     enabled: !!country && !!slug
@@ -203,7 +202,7 @@ export default function NewsArticlePage() {
       const entities = entityLinks
         .filter(l => l.wiki_entity)
         .map(l => l.wiki_entity as any);
-      
+
       if (entities.length === 0) return null;
 
       const mainEntity = entities[0];
@@ -275,7 +274,7 @@ export default function NewsArticlePage() {
         .in('entity_id', entityIds)
         .eq('language', language === 'uk' ? 'uk' : 'en')
         .order('year_month', { ascending: false });
-      
+
       if (!data) return {};
       // Group by entity_id, keep only latest per entity
       const map: Record<string, any> = {};
@@ -292,12 +291,12 @@ export default function NewsArticlePage() {
 
   const detectNewsLanguage = (): string => {
     if (!article) return 'en';
-    
+
     // Default based on country code FIRST (most reliable)
     const countryCode = article.country?.code?.toLowerCase();
     if (countryCode === 'ua') return 'uk';
     if (countryCode === 'pl') return 'pl';
-    
+
     // For India - check specific language content
     if (countryCode === 'in') {
       if (article.content_hi || article.title_hi) return 'hi';
@@ -306,7 +305,7 @@ export default function NewsArticlePage() {
       if (article.content_bn || article.title_bn) return 'bn';
       return 'hi'; // Default to Hindi for India
     }
-    
+
     return 'en';
   };
 
@@ -314,10 +313,10 @@ export default function NewsArticlePage() {
   const generateDialogueMutation = useMutation({
     mutationFn: async () => {
       if (!article) throw new Error('No article');
-      
+
       const contentLanguage = detectNewsLanguage();
       console.log('Generating dialogue in language:', contentLanguage);
-      
+
       const result = await callEdgeFunction<{
         success: boolean;
         dialogue: Array<{
@@ -339,15 +338,15 @@ export default function NewsArticlePage() {
         threadProbability: 30,
         contentLanguage // Pass the detected language
       });
-      
+
       if (!result.success) throw new Error('Generation failed');
-      
+
       // Save dialogue to article
       await supabase
         .from('news_rss_items')
         .update({ chat_dialogue: result.dialogue })
         .eq('id', article.id);
-      
+
       return result.dialogue;
     },
     onSuccess: () => {
@@ -363,10 +362,10 @@ export default function NewsArticlePage() {
   const generateTweetsMutation = useMutation({
     mutationFn: async () => {
       if (!article) throw new Error('No article');
-      
+
       const contentLanguage = detectNewsLanguage();
       console.log('Generating tweets in language:', contentLanguage, 'with model:', selectedTweetModel);
-      
+
       const result = await callEdgeFunction<{
         success: boolean;
         tweets: Array<{
@@ -385,15 +384,15 @@ export default function NewsArticlePage() {
         model: selectedTweetModel,
         isHypeTweet: true
       });
-      
+
       if (!result.success) throw new Error('Tweet generation failed');
-      
+
       // Save tweets to article
       await supabase
         .from('news_rss_items')
         .update({ tweets: result.tweets })
         .eq('id', article.id);
-      
+
       return result.tweets;
     },
     onSuccess: () => {
@@ -407,7 +406,7 @@ export default function NewsArticlePage() {
   const generateStoryMutation = useMutation({
     mutationFn: async () => {
       if (!article) throw new Error('No article');
-      
+
       // Navigate to admin with pre-filled news
       window.open(`/admin?generateFromNews=${article.id}`, '_blank');
     }
@@ -417,16 +416,16 @@ export default function NewsArticlePage() {
   const retellNewsMutation = useMutation({
     mutationFn: async () => {
       if (!article) throw new Error('No article');
-      
+
       const result = await callEdgeFunction<{ success: boolean; content: string; error?: string }>(
         'retell-news',
         { newsId: article.id, model: selectedModel }
       );
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Failed to retell news');
       }
-      
+
       return result.content;
     },
     onSuccess: () => {
@@ -442,16 +441,16 @@ export default function NewsArticlePage() {
   const translateToEnglishMutation = useMutation({
     mutationFn: async () => {
       if (!article) throw new Error('No article');
-      
+
       const result = await callEdgeFunction<{ success: boolean; error?: string }>(
         'translate-news',
         { newsId: article.id, targetLanguage: 'en' }
       );
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Translation failed');
       }
-      
+
       return result;
     },
     onSuccess: () => {
@@ -467,7 +466,7 @@ export default function NewsArticlePage() {
   const scrapeNewsMutation = useMutation({
     mutationFn: async () => {
       if (!article) throw new Error('No article');
-      
+
       // Call scrape-news edge function
       const result = await callEdgeFunction<{
         success: boolean;
@@ -480,28 +479,28 @@ export default function NewsArticlePage() {
         };
         error?: string;
       }>('scrape-news', { url: article.url });
-      
+
       if (!result.success || !result.data) {
         throw new Error(result.error || 'Failed to scrape article');
       }
-      
+
       // Save scraped content to original_content
       const { error } = await supabase
         .from('news_rss_items')
         .update({ original_content: result.data.content })
         .eq('id', article.id);
-      
+
       if (error) throw error;
-      
+
       return result.data;
     },
     onSuccess: (data) => {
       toast.success(
-        language === 'en' 
-          ? `Scraped ${data.content.length} characters` 
-          : language === 'pl' 
-          ? `Pobrano ${data.content.length} znaków`
-          : `Спарсено ${data.content.length} символів`
+        language === 'en'
+          ? `Scraped ${data.content.length} characters`
+          : language === 'pl'
+            ? `Pobrano ${data.content.length} znaków`
+            : `Спарсено ${data.content.length} символів`
       );
       queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] });
     },
@@ -514,21 +513,21 @@ export default function NewsArticlePage() {
   const deleteNewsMutation = useMutation({
     mutationFn: async () => {
       if (!article) throw new Error('No article');
-      
+
       // First delete related entities
       await supabase
         .from('news_wiki_entities')
         .delete()
         .eq('news_item_id', article.id);
-      
+
       // Delete the news item itself
       const { error } = await supabase
         .from('news_rss_items')
         .delete()
         .eq('id', article.id);
-      
+
       if (error) throw error;
-      
+
       return article.id;
     },
     onSuccess: () => {
@@ -566,11 +565,11 @@ export default function NewsArticlePage() {
     );
   }
 
-  const countryName = language === 'en' 
+  const countryName = language === 'en'
     ? article.country.name_en || article.country.name
     : language === 'pl'
-    ? article.country.name_pl || article.country.name
-    : article.country.name;
+      ? article.country.name_pl || article.country.name
+      : article.country.name;
 
   const chatDialogue = Array.isArray(article.chat_dialogue) ? article.chat_dialogue : [];
   const tweets = Array.isArray((article as any).tweets) ? (article as any).tweets : [];
@@ -581,7 +580,7 @@ export default function NewsArticlePage() {
   // Check if this is a Ukrainian news article (for translate button)
   const isUkrainianNews = article.country?.code?.toLowerCase() === 'ua';
   const hasEnglishContent = !!(article.content_en || article.title_en);
-  
+
   // English key points and themes for bilingual display
   const keyPointsEn = Array.isArray((article as any).key_points_en) ? (article as any).key_points_en : [];
   const themesEn = Array.isArray((article as any).themes_en) ? (article as any).themes_en : [];
@@ -618,7 +617,7 @@ export default function NewsArticlePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead 
+      <SEOHead
         title={getLocalizedField('title')}
         description={generateSeoDescription()}
         keywords={generateKeywords()}
@@ -630,7 +629,7 @@ export default function NewsArticlePage() {
         breadcrumbs={breadcrumbs}
       />
       <Header />
-      
+
       <main className="container mx-auto px-4 py-6 md:py-10">
         {/* Breadcrumb - Clickable: News Digest > All Countries > Country > Article */}
         <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
@@ -642,8 +641,8 @@ export default function NewsArticlePage() {
             {language === 'en' ? 'All Countries' : language === 'pl' ? 'Wszystkie kraje' : 'Усі країни'}
           </Link>
           <span className="text-muted-foreground/50">/</span>
-          <Link 
-            to={`/news/${article.country.code.toLowerCase()}`} 
+          <Link
+            to={`/news/${article.country.code.toLowerCase()}`}
             className="hover:text-primary transition-colors flex items-center gap-1 whitespace-nowrap"
           >
             <span>{article.country.flag}</span>
@@ -674,7 +673,7 @@ export default function NewsArticlePage() {
                     </span>
                   )}
                 </div>
-                
+
                 <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-serif leading-tight mb-2">
                   {getLocalizedField('title')}
                 </h1>
@@ -684,15 +683,15 @@ export default function NewsArticlePage() {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                     <Badge variant="outline" className="gap-1.5 bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400">
                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round"/>
-                        <polyline points="22,4 12,14.01 9,11.01" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points="22,4 12,14.01 9,11.01" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                       {language === 'en' ? 'Verified' : language === 'pl' ? 'Zweryfikowane' : 'Перевірено'}
                     </Badge>
                     <span className="text-muted-foreground">—</span>
-                    <a 
-                      href={article.url} 
-                      target="_blank" 
+                    <a
+                      href={article.url}
+                      target="_blank"
                       rel="nofollow noopener noreferrer"
                       className="hover:text-primary transition-colors underline-offset-2 hover:underline"
                     >
@@ -703,7 +702,7 @@ export default function NewsArticlePage() {
 
                 {/* Keywords - under title */}
                 <NewsKeywords keywords={articleKeywords} />
-                
+
 
                 {/* News Image with admin controls */}
                 <NewsImageBlock
@@ -721,9 +720,9 @@ export default function NewsArticlePage() {
 
                 {/* Voting block - prominent placement under image */}
                 <div className="mt-4 p-4 rounded-lg bg-card/50 border border-border/50">
-                  <NewsVoteBlock 
-                    newsId={article.id} 
-                    likes={(article as any).likes || 0} 
+                  <NewsVoteBlock
+                    newsId={article.id}
+                    likes={(article as any).likes || 0}
                     dislikes={(article as any).dislikes || 0}
                     className="justify-center"
                     showLabel={true}
@@ -733,57 +732,57 @@ export default function NewsArticlePage() {
               </header>
 
               {/* Key Points Block - before content */}
-              <NewsKeyPoints 
-                keyPoints={keyPoints} 
-                themes={themes} 
+              <NewsKeyPoints
+                keyPoints={keyPoints}
+                themes={themes}
                 keywords={articleKeywords}
                 isUkrainian={isUkrainianNews}
                 keyPointsEn={keyPointsEn}
                 themesEn={themesEn}
               />
               <AdminTextSelectionPopover newsId={article.id} onEntityAdded={() => queryClient.invalidateQueries({ queryKey: ['news-wiki-entities', article.id] })}>
-              <div className="prose prose-invert max-w-none">
-                {getLocalizedField('description') && (
-                  <p className="text-lg text-muted-foreground font-serif leading-relaxed">
-                    {getLocalizedField('description')}
-                  </p>
-                )}
-                
-                {getLocalizedField('content') && (() => {
-                  const fullContent = getLocalizedField('content');
-                  // Split content into lead paragraph and rest
-                  const paragraphs = fullContent.split(/\n\n+/);
-                  const leadParagraph = paragraphs[0] || '';
-                  const restContent = paragraphs.slice(1).join('\n\n');
-                  
-                  return (
-                    <>
-                      {/* Lead paragraph - highlighted with accent border only (no background) */}
-                      {leadParagraph && (
-                        <div className="mt-4 pl-4 border-l-4 border-accent">
+                <div className="prose prose-invert max-w-none">
+                  {getLocalizedField('description') && (
+                    <p className="text-lg text-muted-foreground font-serif leading-relaxed">
+                      {getLocalizedField('description')}
+                    </p>
+                  )}
+
+                  {getLocalizedField('content') && (() => {
+                    const fullContent = getLocalizedField('content');
+                    // Split content into lead paragraph and rest
+                    const paragraphs = fullContent.split(/\n\n+/);
+                    const leadParagraph = paragraphs[0] || '';
+                    const restContent = paragraphs.slice(1).join('\n\n');
+
+                    return (
+                      <>
+                        {/* Lead paragraph - highlighted with accent border only (no background) */}
+                        {leadParagraph && (
+                          <div className="mt-4 pl-4 border-l-4 border-accent">
+                            <EntityHighlightedContent
+                              newsId={article.id}
+                              content={leadParagraph}
+                              className="text-foreground font-serif leading-relaxed text-lg"
+                            />
+                          </div>
+                        )}
+                        {/* Rest of content */}
+                        {restContent && (
                           <EntityHighlightedContent
                             newsId={article.id}
-                            content={leadParagraph}
-                            className="text-foreground font-serif leading-relaxed text-lg"
+                            content={restContent}
+                            className="mt-4 text-foreground/90 font-serif leading-relaxed whitespace-pre-wrap"
                           />
-                        </div>
-                      )}
-                      {/* Rest of content */}
-                      {restContent && (
-                        <EntityHighlightedContent
-                          newsId={article.id}
-                          content={restContent}
-                          className="mt-4 text-foreground/90 font-serif leading-relaxed whitespace-pre-wrap"
-                        />
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
               </AdminTextSelectionPopover>
 
               {/* Original Source Block */}
-              <OriginalSourceBlock 
+              <OriginalSourceBlock
                 originalContent={article.original_content}
                 sourceUrl={article.url}
                 sourceName={article.feed?.name}
@@ -796,7 +795,7 @@ export default function NewsArticlePage() {
               {/* Narrative Analysis Block - under original source */}
               {mainEntityData?.mainEntity && entityNarratives[mainEntityData.mainEntity.id] && (() => {
                 const n = entityNarratives[mainEntityData.mainEntity.id];
-                const entityName = language === 'en' && mainEntityData.mainEntity.name_en 
+                const entityName = language === 'en' && mainEntityData.mainEntity.name_en
                   ? mainEntityData.mainEntity.name_en : mainEntityData.mainEntity.name;
                 return (
                   <div className="mt-6 p-4 rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
@@ -819,7 +818,7 @@ export default function NewsArticlePage() {
               })()}
 
               {/* Related Entities News - before original link */}
-              <RelatedEntitiesNews 
+              <RelatedEntitiesNews
                 newsId={article.id}
                 countryCode={article.country.code}
                 className="mt-6"
@@ -828,16 +827,16 @@ export default function NewsArticlePage() {
 
               {/* Original link, share, and translate button */}
               <div className="pt-4 border-t border-border flex flex-wrap items-center gap-3">
-                <a 
-                  href={article.url} 
-                  target="_blank" 
+                <a
+                  href={article.url}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-primary hover:underline text-sm"
                 >
                   <ExternalLink className="w-4 h-4" />
                   {t('news.read_original')}
                 </a>
-                
+
                 {/* Share to Twitter/X button */}
                 <a
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
@@ -850,7 +849,7 @@ export default function NewsArticlePage() {
                   <Twitter className="w-3.5 h-3.5" fill="currentColor" />
                   <span>{language === 'en' ? 'Share on X' : language === 'pl' ? 'Udostępnij na X' : 'Поділитися в X'}</span>
                 </a>
-                
+
                 {/* Translate to English button - for Ukrainian news only */}
                 {isUkrainianNews && !hasEnglishContent && (
                   <Button
@@ -893,13 +892,13 @@ export default function NewsArticlePage() {
                 ) : (
                   <div />
                 )}
-                
+
                 <Link to={`/news/${article.country.code.toLowerCase()}`}>
                   <Button variant="ghost" size="sm" className="text-xs">
                     {article.country.flag} {language === 'en' ? 'All news' : language === 'pl' ? 'Wszystkie' : 'Всі новини'}
                   </Button>
                 </Link>
-                
+
                 {adjacentNews?.next ? (
                   <Link to={`/news/${article.country.code.toLowerCase()}/${adjacentNews.next.slug}`}>
                     <Button variant="outline" className="gap-2">
@@ -918,17 +917,17 @@ export default function NewsArticlePage() {
               </nav>
 
 
-               {/* Tweets disabled for news */}
+              {/* Tweets disabled for news */}
 
-            {/* Entity Intersection Graph - BELOW article on ALL screens */}
-            {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
-              <EntityIntersectionGraph
-                mainEntity={mainEntityData.mainEntity}
-                relatedEntities={mainEntityData.relatedEntities}
-                className="mt-8"
-              />
-            )}
-          </article>
+              {/* Entity Intersection Graph - BELOW article on ALL screens */}
+              {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
+                <EntityIntersectionGraph
+                  mainEntity={mainEntityData.mainEntity}
+                  relatedEntities={mainEntityData.relatedEntities}
+                  className="mt-8"
+                />
+              )}
+            </article>
 
 
             {/* Dialogue disabled for news (mobile) */}
@@ -980,7 +979,7 @@ export default function NewsArticlePage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button 
+                    <Button
                       className="w-full gap-2"
                       variant="secondary"
                       onClick={() => retellNewsMutation.mutate()}
@@ -1009,10 +1008,10 @@ export default function NewsArticlePage() {
                       {language === 'en'
                         ? 'Generate full retelling with key points and metadata'
                         : language === 'pl'
-                        ? 'Wygeneruj pełny przekaz z kluczowymi punktami i metadanymi'
-                        : 'Згенерувати повний переказ з тезами та метаданими'}
+                          ? 'Wygeneruj pełny przekaz z kluczowymi punktami i metadanymi'
+                          : 'Згенерувати повний переказ з тезами та метаданими'}
                     </p>
-                    
+
 
                     {/* Progress indicator showing current step */}
                     {retellNewsMutation.isPending && (
@@ -1026,7 +1025,7 @@ export default function NewsArticlePage() {
                       </div>
                     )}
 
-                    
+
                     <Select value={selectedTweetModel} onValueChange={setSelectedTweetModel}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder={t('news.select_model')} />
@@ -1039,7 +1038,7 @@ export default function NewsArticlePage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button 
+                    <Button
                       className="w-full gap-2"
                       onClick={async () => {
                         try {
@@ -1078,18 +1077,18 @@ export default function NewsArticlePage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      {language === 'en' 
-                        ? 'Fetch full content from source URL and save to original_content' 
-                        : language === 'pl' 
-                        ? 'Pobierz pełną treść z URL źródła i zapisz do original_content'
-                        : 'Завантажити повний текст з URL джерела та зберегти в original_content'}
+                      {language === 'en'
+                        ? 'Fetch full content from source URL and save to original_content'
+                        : language === 'pl'
+                          ? 'Pobierz pełną treść z URL źródła i zapisz do original_content'
+                          : 'Завантажити повний текст з URL джерела та зберегти в original_content'}
                     </p>
                     {article.original_content && (
                       <Badge variant="outline" className="text-xs">
                         {language === 'en' ? 'Has content' : language === 'pl' ? 'Ma treść' : 'Є контент'}: {article.original_content.length} {language === 'en' ? 'chars' : language === 'pl' ? 'znaków' : 'символів'}
                       </Badge>
                     )}
-                    <Button 
+                    <Button
                       className="w-full gap-2"
                       variant="outline"
                       onClick={() => scrapeNewsMutation.mutate()}
@@ -1100,9 +1099,9 @@ export default function NewsArticlePage() {
                       ) : (
                         <Download className="w-4 h-4" />
                       )}
-                      {scrapeNewsMutation.isPending 
-                        ? (language === 'en' ? 'Scraping...' : language === 'pl' ? 'Pobieranie...' : 'Парсинг...') 
-                        : article.original_content 
+                      {scrapeNewsMutation.isPending
+                        ? (language === 'en' ? 'Scraping...' : language === 'pl' ? 'Pobieranie...' : 'Парсинг...')
+                        : article.original_content
                           ? (language === 'en' ? 'Re-scrape Article' : language === 'pl' ? 'Ponownie pobierz' : 'Перепарсити')
                           : (language === 'en' ? 'Scrape Now' : language === 'pl' ? 'Pobierz teraz' : 'Спарсити зараз')}
                     </Button>
@@ -1119,21 +1118,21 @@ export default function NewsArticlePage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      {language === 'en' 
-                        ? 'Permanently delete this article and all related data' 
-                        : language === 'pl' 
-                        ? 'Trwale usuń ten artykuł i wszystkie powiązane dane'
-                        : 'Назавжди видалити цю новину та всі пов\'язані дані'}
+                      {language === 'en'
+                        ? 'Permanently delete this article and all related data'
+                        : language === 'pl'
+                          ? 'Trwale usuń ten artykuł i wszystkie powiązane dane'
+                          : 'Назавжди видалити цю новину та всі пов\'язані дані'}
                     </p>
-                    <Button 
+                    <Button
                       className="w-full gap-2"
                       variant="destructive"
                       onClick={() => {
-                        const confirmMsg = language === 'en' 
-                          ? 'Are you sure you want to delete this article? This cannot be undone.' 
-                          : language === 'pl' 
-                          ? 'Czy na pewno chcesz usunąć ten artykuł? Tej operacji nie można cofnąć.'
-                          : 'Ви впевнені, що хочете видалити цю новину? Цю дію неможливо скасувати.';
+                        const confirmMsg = language === 'en'
+                          ? 'Are you sure you want to delete this article? This cannot be undone.'
+                          : language === 'pl'
+                            ? 'Czy na pewno chcesz usunąć ten artykuł? Tej operacji nie można cofnąć.'
+                            : 'Ви впевнені, що хочете видалити цю новину? Цю дію неможливо скасувати.';
                         if (window.confirm(confirmMsg)) {
                           deleteNewsMutation.mutate();
                         }
@@ -1145,8 +1144,8 @@ export default function NewsArticlePage() {
                       ) : (
                         <Trash2 className="w-4 h-4" />
                       )}
-                      {deleteNewsMutation.isPending 
-                        ? (language === 'en' ? 'Deleting...' : language === 'pl' ? 'Usuwanie...' : 'Видалення...') 
+                      {deleteNewsMutation.isPending
+                        ? (language === 'en' ? 'Deleting...' : language === 'pl' ? 'Usuwanie...' : 'Видалення...')
                         : (language === 'en' ? 'Delete Forever' : language === 'pl' ? 'Usuń na zawsze' : 'Видалити назавжди')}
                     </Button>
                   </CardContent>
@@ -1161,7 +1160,7 @@ export default function NewsArticlePage() {
                 try {
                   const domain = new URL(article.url).hostname;
                   return (
-                    <img 
+                    <img
                       src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`}
                       alt=""
                       className="absolute -top-2 -right-2 w-[35%] h-auto opacity-[0.08] pointer-events-none select-none"
@@ -1182,7 +1181,7 @@ export default function NewsArticlePage() {
                     const domain = new URL(article.url).hostname;
                     return (
                       <div className="flex items-center gap-3 pb-2 border-b border-border">
-                        <img 
+                        <img
                           src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
                           alt=""
                           className="w-6 h-6 rounded"
@@ -1190,7 +1189,7 @@ export default function NewsArticlePage() {
                         />
                         <div className="flex flex-col min-w-0">
                           <span className="font-medium truncate">{article.feed?.name || domain}</span>
-                          <a 
+                          <a
                             href={article.url}
                             target="_blank"
                             rel="nofollow noopener noreferrer"
@@ -1205,7 +1204,7 @@ export default function NewsArticlePage() {
                     return null;
                   }
                 })()}
-                
+
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ID</span>
                   <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono select-all">
@@ -1271,8 +1270,8 @@ export default function NewsArticlePage() {
                         }}
                       >
                         <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3,6 5,6 21,6" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <polyline points="3,6 5,6 21,6" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                         {language === 'en' ? 'Delete' : language === 'pl' ? 'Usuń' : 'Видалити'}
                       </Button>
@@ -1290,7 +1289,7 @@ export default function NewsArticlePage() {
             />
 
             {/* Wikipedia Entities with Narrative indicators */}
-            <NewsWikiEntities 
+            <NewsWikiEntities
               newsId={article.id}
               title={getLocalizedField('title')}
               keywords={articleKeywords}
