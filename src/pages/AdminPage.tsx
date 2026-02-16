@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock, Archive, Map, Search, Activity, ChartArea, Database, AlertTriangle, Building2, Flame, GitMerge, Rss } from "lucide-react";
+import { AdminLogin } from "@/components/AdminLogin";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,63 +46,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Settings as SettingsType, AdminStats, Part, Volume, Chapter, LLMProvider } from "@/types/database";
 import { NARRATIVE_OPTIONS, LLM_MODELS } from "@/types/database";
 
-function AdminLogin({ onLogin }: { onLogin: (password: string) => void }) {
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+// AdminLogin component moved to separate file
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      await adminAction('verify', password);
-      onLogin(password);
-      toast({ title: "Авторизація успішна" });
-    } catch (error) {
-      toast({
-        title: "Помилка",
-        description: "Невірний пароль",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <Card className="w-full max-w-md cosmic-card">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 border border-primary/30 flex items-center justify-center mb-4">
-            <Lock className="w-6 h-6 text-primary" />
-          </div>
-          <CardTitle className="chapter-title">АДМІН ПАНЕЛЬ</CardTitle>
-          <CardDescription className="font-mono">
-            ТОЧКА СИНХРОНІЗАЦІЇ
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">Пароль</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Введіть пароль"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Увійти"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 function StatsCard({ stats }: { stats: AdminStats }) {
   return (
@@ -133,7 +79,7 @@ function SettingsPanel({ password }: { password: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
-  
+
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => {
@@ -194,7 +140,7 @@ function SettingsPanel({ password }: { password: string }) {
                 <Key className="w-4 h-4" />
                 API Ключі
               </div>
-              
+
               {(textProvider === 'openai' || imageProvider === 'openai') && (
                 <div className="space-y-2">
                   <Label>OpenAI API Key</Label>
@@ -206,8 +152,8 @@ function SettingsPanel({ password }: { password: string }) {
                       placeholder="sk-..."
                       className="font-mono"
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => toggleApiKeyVisibility('openai')}
                     >
@@ -231,8 +177,8 @@ function SettingsPanel({ password }: { password: string }) {
                       placeholder="AIza..."
                       className="font-mono"
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => toggleApiKeyVisibility('gemini')}
                     >
@@ -256,8 +202,8 @@ function SettingsPanel({ password }: { password: string }) {
                       placeholder="sk-ant-..."
                       className="font-mono"
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => toggleApiKeyVisibility('anthropic')}
                     >
@@ -281,8 +227,8 @@ function SettingsPanel({ password }: { password: string }) {
                       placeholder="..."
                       className="font-mono"
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => toggleApiKeyVisibility('zai')}
                     >
@@ -306,8 +252,8 @@ function SettingsPanel({ password }: { password: string }) {
                       placeholder="AIza..."
                       className="font-mono"
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => toggleApiKeyVisibility('geminiV22')}
                     >
@@ -331,8 +277,8 @@ function SettingsPanel({ password }: { password: string }) {
                       placeholder="..."
                       className="font-mono"
                     />
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => toggleApiKeyVisibility('mistral')}
                     >
@@ -358,8 +304,8 @@ function SettingsPanel({ password }: { password: string }) {
                   onValueChange={(v) => {
                     const provider = v as LLMProvider;
                     const defaultModel = LLM_MODELS[provider]?.text[0]?.value || '';
-                    updateMutation.mutate({ 
-                      llm_text_provider: provider, 
+                    updateMutation.mutate({
+                      llm_text_provider: provider,
                       llm_text_model: defaultModel
                     });
                   }}
@@ -450,8 +396,8 @@ function SettingsPanel({ password }: { password: string }) {
                   onValueChange={(v) => {
                     const provider = v as LLMProvider;
                     const defaultModel = LLM_MODELS[provider]?.image[0]?.value || '';
-                    updateMutation.mutate({ 
-                      llm_image_provider: provider, 
+                    updateMutation.mutate({
+                      llm_image_provider: provider,
                       llm_image_model: defaultModel
                     });
                   }}
@@ -560,9 +506,9 @@ function SettingsPanel({ password }: { password: string }) {
             <div key={key} className="space-y-2">
               <Label className="capitalize">{
                 key === 'source' ? 'Джерело' :
-                key === 'structure' ? 'Структура' :
-                key === 'purpose' ? 'Мета' :
-                key === 'plot' ? 'Сюжет' : 'Спеціальний'
+                  key === 'structure' ? 'Структура' :
+                    key === 'purpose' ? 'Мета' :
+                      key === 'plot' ? 'Сюжет' : 'Спеціальний'
               }</Label>
               <Select
                 value={settings[`narrative_${key}` as keyof SettingsType] as string}
@@ -636,7 +582,7 @@ function PartsPanel({ password }: { password: string }) {
         `)
         .order('date', { ascending: false })
         .limit(50);
-      
+
       if (error) throw error;
       return data;
     }
@@ -698,9 +644,9 @@ function PartsPanel({ password }: { password: string }) {
                 </p>
               </div>
               {part.cover_image_url && (
-                <img 
-                  src={part.cover_image_url} 
-                  alt="" 
+                <img
+                  src={part.cover_image_url}
+                  alt=""
                   className={`w-20 h-20 object-cover border ${part.is_flash_news ? 'border-amber-500/30' : 'border-border'}`}
                 />
               )}
@@ -712,9 +658,9 @@ function PartsPanel({ password }: { password: string }) {
               <Link to={`/read/${part.date}`}>
                 <Button size="sm" variant="ghost">Переглянути</Button>
               </Link>
-              <Button 
-                size="sm" 
-                variant="destructive" 
+              <Button
+                size="sm"
+                variant="destructive"
                 onClick={() => handleDelete(part.id, part.title)}
                 disabled={deletingId === part.id}
                 className="ml-auto"
@@ -759,7 +705,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background">
       <SEOHead title="Панель керування" noIndex={true} />
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold chapter-title text-glow">ПАНЕЛЬ КЕРУВАННЯ</h1>
@@ -790,7 +736,7 @@ export default function AdminPage() {
               <Database className="w-4 h-4 text-cyan-500" />
               Кеш
             </TabsTrigger>
-            
+
             {/* Генерація контенту */}
             <TabsTrigger value="generate" className="gap-2">
               <Sparkles className="w-4 h-4" />
@@ -808,7 +754,7 @@ export default function AdminPage() {
               <Building2 className="w-4 h-4 text-blue-500" />
               Business
             </TabsTrigger>
-            
+
             {/* Контент */}
             <TabsTrigger value="chapters" className="gap-2">
               <BookOpen className="w-4 h-4" />
@@ -826,7 +772,7 @@ export default function AdminPage() {
               <MessageSquare className="w-4 h-4" />
               Діалоги
             </TabsTrigger>
-            
+
             {/* Новини */}
             <TabsTrigger value="newsdigest" className="gap-2">
               <Globe className="w-4 h-4 text-cyan-500" />
@@ -856,7 +802,7 @@ export default function AdminPage() {
               <Rss className="w-4 h-4 text-orange-500" />
               RSS
             </TabsTrigger>
-            
+
             {/* База даних */}
             <TabsTrigger value="wiki-entities" className="gap-2">
               <Building2 className="w-4 h-4 text-violet-500" />
@@ -870,7 +816,7 @@ export default function AdminPage() {
               <FileText className="w-4 h-4 text-cyan-500" />
               Парсинг
             </TabsTrigger>
-            
+
             {/* SEO & Технічне */}
             <TabsTrigger value="sitemaps" className="gap-2">
               <Map className="w-4 h-4 text-blue-500" />
@@ -888,7 +834,7 @@ export default function AdminPage() {
               <AlertTriangle className="w-4 h-4 text-destructive" />
               Помилки
             </TabsTrigger>
-            
+
             {/* Налаштування */}
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />

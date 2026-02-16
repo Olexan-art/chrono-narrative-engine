@@ -39,6 +39,8 @@ const WikiCatalogPage = lazy(() => import("./pages/WikiCatalogPage"));
 const WikiEntityPage = lazy(() => import("./pages/WikiEntityPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+import { AdminGuard } from "@/components/AdminGuard";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -70,11 +72,13 @@ const App = () => (
                 <Route path="/read/:date/:storyNumber" element={<ReadPage />} />
                 <Route path="/chapter/:number" element={<ChapterPage />} />
                 <Route path="/chapter-legacy/:id" element={<ChapterRedirect />} />
-                <Route path="/admin" element={<AdminPage />} />
-                <Route path="/admin/part/:id" element={<EditPartPage />} />
-                <Route path="/admin/chapter/:id" element={<EditChapterPage />} />
-                <Route path="/admin/llm" element={<LLMManagementPage />} />
-                <Route path="/admin/news-processing" element={<NewsProcessingPage />} />
+                <Route element={<AdminGuard />}>
+                  <Route path="/admin" element={<AdminPage />} />
+                  <Route path="/admin/part/:id" element={<EditPartPage />} />
+                  <Route path="/admin/chapter/:id" element={<EditChapterPage />} />
+                  <Route path="/admin/llm" element={<LLMManagementPage />} />
+                  <Route path="/admin/news-processing" element={<NewsProcessingPage />} />
+                </Route>
                 <Route path="/install" element={<InstallPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/wiki" element={<WikiCatalogPage />} />
