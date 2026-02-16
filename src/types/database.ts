@@ -38,21 +38,7 @@ export interface Settings {
 }
 
 export const LLM_MODELS = {
-  lovable: {
-    text: [
-      { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash Preview (швидкий)' },
-      { value: 'google/gemini-3-pro-preview', label: 'Gemini 3 Pro Preview (потужний)' },
-      { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-      { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-      { value: 'openai/gpt-5', label: 'GPT-5 (найпотужніший)' },
-      { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini' },
-      { value: 'openai/gpt-5.2', label: 'GPT-5.2 (новітній)' },
-    ],
-    image: [
-      { value: 'google/gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (новітній)' },
-      { value: 'google/gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image' },
-    ]
-  },
+
   openai: {
     text: [
       { value: 'gpt-4o', label: 'GPT-4o' },
