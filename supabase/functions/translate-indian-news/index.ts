@@ -20,11 +20,11 @@ interface TranslationResult {
   content_bn?: string;
 }
 
-async function translateWithLovable(text: string, targetLanguages: string[]): Promise<Record<string, string>> {
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  
-  if (!LOVABLE_API_KEY) {
-    throw new Error('LOVABLE_API_KEY not configured');
+async function translateWithZai(text: string, targetLanguages: string[]): Promise<Record<string, string>> {
+  const ZAI_API_KEY = Deno.env.get('ZAI_API_KEY');
+
+  if (!ZAI_API_KEY) {
+    throw new Error('ZAI_API_KEY not configured');
   }
 
   const languageNames: Record<string, string> = {
@@ -44,14 +44,14 @@ Provide ONLY the translations in this exact JSON format, no explanation:
 ${targetLanguages.map(l => `  "${l}": "translated text in ${languageNames[l]}"`).join(',\n')}
 }`;
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Authorization': `Bearer ${ZAI_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
+      model: 'GLM-4.7-Flash',
       messages: [
         { role: 'system', content: 'You are a professional translator specializing in Indian languages. Always respond with valid JSON only.' },
         { role: 'user', content: prompt }
@@ -63,13 +63,13 @@ ${targetLanguages.map(l => `  "${l}": "translated text in ${languageNames[l]}"`)
 
   if (!response.ok) {
     const error = await response.text();
-    console.error('Lovable API error:', error);
+    console.error('Zai API error:', error);
     throw new Error(`Translation API error: ${response.status}`);
   }
 
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || '';
-  
+
   // Extract JSON from response
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
       // Translate title
       if (item.title) {
         console.log('Translating title:', item.title.slice(0, 50));
-        const titleTranslations = await translateWithLovable(item.title, targetLanguages);
+        const titleTranslations = await translateWithZai(item.title, targetLanguages);
         for (const lang of targetLanguages) {
           (translations as any)[`title_${lang}`] = titleTranslations[lang];
         }
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
       // Translate description
       if (item.description) {
         console.log('Translating description');
-        const descTranslations = await translateWithLovable(item.description, targetLanguages);
+        const descTranslations = await translateWithZai(item.description, targetLanguages);
         for (const lang of targetLanguages) {
           (translations as any)[`description_${lang}`] = descTranslations[lang];
         }
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
       // Translate content (if short enough)
       if (item.content && item.content.length < 2000) {
         console.log('Translating content');
-        const contentTranslations = await translateWithLovable(item.content, targetLanguages);
+        const contentTranslations = await translateWithZai(item.content, targetLanguages);
         for (const lang of targetLanguages) {
           (translations as any)[`content_${lang}`] = contentTranslations[lang];
         }
@@ -202,14 +202,14 @@ Deno.serve(async (req) => {
           const translations: Record<string, string> = {};
 
           if (item.title) {
-            const titleTranslations = await translateWithLovable(item.title, targetLanguages);
+            const titleTranslations = await translateWithZai(item.title, targetLanguages);
             for (const lang of targetLanguages) {
               translations[`title_${lang}`] = titleTranslations[lang];
             }
           }
 
           if (item.description) {
-            const descTranslations = await translateWithLovable(item.description, targetLanguages);
+            const descTranslations = await translateWithZai(item.description, targetLanguages);
             for (const lang of targetLanguages) {
               translations[`description_${lang}`] = descTranslations[lang];
             }
