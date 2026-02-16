@@ -37,37 +37,9 @@ interface LLMSettings {
 }
 
 async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: string): Promise<string> {
-  const provider = settings.llm_text_provider || settings.llm_provider || 'lovable';
-  
-  if (provider === 'lovable') {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
+  const provider = settings.llm_text_provider || settings.llm_provider || 'zai';
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: settings.llm_text_model || 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        response_format: { type: "json_object" }
-      }),
-    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Lovable AI error:', response.status, errorText);
-      throw new Error(`Lovable AI error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
-  }
 
   if (provider === 'openai') {
     const apiKey = settings.openai_api_key;
@@ -159,7 +131,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
     if (!apiKey) throw new Error('Z.AI API key not configured');
 
     console.log('Using Z.AI with model:', settings.llm_text_model || 'GLM-4.7');
-    
+
     const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
       method: 'POST',
       headers: {
@@ -257,9 +229,9 @@ serve(async (req) => {
   }
 
   try {
-    const { 
-      news, 
-      date, 
+    const {
+      news,
+      date,
       narrativeSource,
       narrativeStructure,
       narrativePurpose,
@@ -283,9 +255,9 @@ serve(async (req) => {
       .single();
 
     const llmSettings: LLMSettings = settingsData || {
-      llm_provider: 'lovable',
+      llm_provider: 'zai',
       llm_text_provider: null,
-      llm_text_model: 'google/gemini-3-flash-preview',
+      llm_text_model: 'GLM-4.7',
       openai_api_key: null,
       gemini_api_key: null,
       gemini_v22_api_key: null,
@@ -294,7 +266,7 @@ serve(async (req) => {
       mistral_api_key: null
     };
 
-    const effectiveProvider = llmSettings.llm_text_provider || llmSettings.llm_provider || 'lovable';
+    const effectiveProvider = llmSettings.llm_text_provider || llmSettings.llm_provider || 'zai';
     console.log('Using text LLM provider:', effectiveProvider, 'model:', llmSettings.llm_text_model);
 
     // Fetch active characters from database
@@ -309,26 +281,26 @@ serve(async (req) => {
       avatar: c.avatar,
       style: c.style
     })) || [
-      { id: "narrator", name: "Наратор", avatar: "🎭", style: "Говорить загадково та філософськи" },
-      { id: "observer", name: "Спостерігач", avatar: "👁️", style: "Об'єктивний та аналітичний" }
-    ];
+        { id: "narrator", name: "Наратор", avatar: "🎭", style: "Говорить загадково та філософськи" },
+        { id: "observer", name: "Спостерігач", avatar: "👁️", style: "Об'єктивний та аналітичний" }
+      ];
 
     console.log('Using characters:', characters.length);
 
-    const newsContext = news.map((n: any, i: number) => 
+    const newsContext = news.map((n: any, i: number) =>
       `[${i + 1}] ${n.title}\n${n.description}\nДжерело: ${n.source_name}\nURL: ${n.url}`
     ).join('\n\n');
 
     const shuffled = [...characters].sort(() => Math.random() - 0.5);
     const selectedCharacters = shuffled.slice(0, 2);
-    
+
     // 50% chance of third character
     const includeThirdCharacter = Math.random() < 0.5 && characters.length >= 3;
     const thirdCharacter = includeThirdCharacter ? shuffled[2] : null;
 
     // Generate random likes (0-1907) for dialogue messages
     const generateRandomLikes = () => Math.floor(Math.random() * 1908);
-    
+
     // Get character likes from other characters
     const getCharacterLikes = (mainCharId: string) => {
       const others = characters.filter(c => c.id !== mainCharId).sort(() => Math.random() - 0.5);
@@ -430,7 +402,7 @@ ${newsContext}
     console.log('Generating multilingual story for:', date, 'with provider:', llmSettings.llm_provider);
 
     const content = await callLLM(llmSettings, systemPrompt, userPrompt);
-    
+
     let result;
     try {
       result = JSON.parse(content);
