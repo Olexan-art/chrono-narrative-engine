@@ -860,7 +860,7 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="news-processing" className="mt-6">
-            <NewsProcessingPage />
+            <NewsProcessingPage password={password} />
           </TabsContent>
 
           <TabsContent value="statistics" className="mt-6">

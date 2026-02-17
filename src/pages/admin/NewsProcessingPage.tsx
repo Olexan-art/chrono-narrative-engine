@@ -72,7 +72,7 @@ function BulkRetellStats({ countryCode }: { countryCode: string }) {
 }
 
 // Helper component for creating new bulk retell crons
-function BulkRetellForm({ onSuccess }: { onSuccess: () => void }) {
+function BulkRetellForm({ onSuccess, password }: { onSuccess: () => void; password: string }) {
     const [countryCode, setCountryCode] = useState('');
     const [timeRange, setTimeRange] = useState<'last_1h' | 'all'>('last_1h');
     const [llmModel, setLlmModel] = useState('');
@@ -96,6 +96,7 @@ function BulkRetellForm({ onSuccess }: { onSuccess: () => void }) {
         try {
             const result = await callEdgeFunction('admin', {
                 action: 'createBulkRetellCron',
+                password,
                 data: {
                     country_code: countryCode,
                     time_range: timeRange,
@@ -211,7 +212,7 @@ function BulkRetellForm({ onSuccess }: { onSuccess: () => void }) {
     );
 }
 
-export default function NewsProcessingPage() {
+export default function NewsProcessingPage({ password }: { password: string }) {
     const queryClient = useQueryClient();
 
     // Fetch cron configurations
@@ -220,7 +221,8 @@ export default function NewsProcessingPage() {
         queryKey: ['cron-configs'],
         queryFn: async () => {
             const response = await callEdgeFunction('admin', {
-                action: 'getCronConfigs'
+                action: 'getCronConfigs',
+                password
             }) as { success: boolean; error?: string; configs: CronConfig[] };
 
             if (!response.success) throw new Error(response.error);
@@ -238,6 +240,7 @@ export default function NewsProcessingPage() {
             const enabled = action === 'resume';
             const result = await callEdgeFunction('admin', {
                 action: 'updateCronConfig',
+                password,
                 data: {
                     jobName,
                     config: { enabled }
@@ -261,6 +264,7 @@ export default function NewsProcessingPage() {
         mutationFn: async ({ jobName, config }: { jobName: string; config: any }) => {
             const result = await callEdgeFunction('admin', {
                 action: 'updateCronConfig',
+                password,
                 data: {
                     jobName,
                     config
@@ -792,7 +796,7 @@ export default function NewsProcessingPage() {
                     {/* Add New Cron Form */}
                     <div className="border-t pt-6">
                         <h4 className="font-medium mb-4">Create New Bulk Retell Cron</h4>
-                        <BulkRetellForm onSuccess={() => queryClient.invalidateQueries({ queryKey: ['cron-configs'] })} />
+                        <BulkRetellForm onSuccess={() => queryClient.invalidateQueries({ queryKey: ['cron-configs'] })} password={password} />
                     </div>
                 </CardContent>
             </Card>
