@@ -76,33 +76,7 @@ function shouldSSR(pathname) {
   return SSR_PATTERNS.some(p => p.test(pathname));
 }
 
-/**
- * Fetch HTML directly from cached_pages table via Supabase REST API.
- * Returns HTML even if expired (stale-while-revalidate pattern).
- */
-async function fetchFromCachedPages(pathname) {
-  try {
-    const restUrl = `${SUPABASE_URL}/rest/v1/cached_pages?path=eq.${encodeURIComponent(pathname)}&select=html,expires_at&limit=1`;
-    const response = await fetch(restUrl, {
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'Accept': 'application/json',
-      },
-    });
 
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    if (!data || data.length === 0 || !data[0].html) return null;
-
-    const isExpired = new Date(data[0].expires_at) < new Date();
-    return { html: data[0].html, isExpired };
-  } catch (error) {
-    console.error('[worker] cached_pages fetch failed:', error);
-    return null;
-  }
-}
 
 /**
  * Fetch from Supabase Edge Function (ssr-render) for fresh generation
@@ -136,10 +110,10 @@ async function handleApiRoute(request, pathname, env) {
   let fn = null;
   let ttl = CACHE_TTL.api;
 
-  if (cleanPath === '/sitemap.xml' || cleanPath === '/api/sitemap') {
+  if (cleanPath === '/sitemap.xml' || cleanPath.includes('/api/sitemap')) {
     fn = 'sitemap';
     ttl = CACHE_TTL.sitemap;
-  } else if (cleanPath === '/api/news-sitemap') {
+  } else if (cleanPath.includes('/api/news-sitemap')) {
     fn = 'news-sitemap';
     ttl = CACHE_TTL.sitemap;
   } else if (cleanPath === '/api/wiki-sitemap') {
@@ -242,10 +216,9 @@ function ctx_waitUntil_put(cache, key, response) {
 }
 
 /**
- * Handle SSR pages — 3-tier strategy:
+ * Handle SSR pages — 2-tier strategy:
  * 1. Cloudflare edge cache (instant)
- * 2. cached_pages REST API (fast, serves even stale content)
- * 3. ssr-render Edge Function (generates fresh, slow)
+ * 2. ssr-render Edge Function (generates fresh HTML)
  */
 async function handleSSR(request, pathname, env) {
   const cache = caches.default;
@@ -256,7 +229,7 @@ async function handleSSR(request, pathname, env) {
   cacheUrl.search = '';
   const cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
 
-  // 1. Cloudflare edge cache
+  // 1. Check Cloudflare edge cache
   let cached = await cache.match(cacheKey);
   if (cached) {
     const headers = new Headers(cached.headers);
@@ -266,35 +239,8 @@ async function handleSSR(request, pathname, env) {
     return new Response(cached.body, { status: cached.status, headers });
   }
 
-  // 2. Fetch from cached_pages (even stale — better than empty SPA)
-  const dbCached = await fetchFromCachedPages(pathname);
-
-  let html = null;
-  let cacheSource = '';
-
-  if (dbCached) {
-    html = dbCached.html;
-    cacheSource = dbCached.isExpired ? 'supabase-stale' : 'supabase-fresh';
-
-    // If stale, trigger background regeneration via ssr-render (fire-and-forget)
-    if (dbCached.isExpired && _ctx && _ctx.waitUntil) {
-      _ctx.waitUntil(
-        fetchFromSSRRender(pathname, userAgent)
-          .then(freshHtml => {
-            if (freshHtml) {
-              console.log(`[worker] Background regeneration complete: ${pathname}`);
-            }
-          })
-          .catch(err => console.error('[worker] Background regen failed:', err))
-      );
-    }
-  }
-
-  // 3. If no cached_pages entry at all, try ssr-render directly
-  if (!html) {
-    html = await fetchFromSSRRender(pathname, userAgent);
-    cacheSource = 'supabase-ssr';
-  }
+  // 2. Cache MISS → fetch from ssr-render
+  const html = await fetchFromSSRRender(pathname, userAgent);
 
   if (!html) return null; // Fall through to SPA
 
@@ -303,7 +249,7 @@ async function handleSSR(request, pathname, env) {
     'Content-Type': 'text/html; charset=utf-8',
     'Cache-Control': `public, max-age=${ttl}, s-maxage=${ttl}`,
     'X-Cache': 'MISS',
-    'X-Cache-Source': cacheSource,
+    'X-Cache-Source': 'ssr-render',
     'X-SSR': 'true',
     'X-SSR-Bot': isBotReq ? 'true' : 'false',
   };
@@ -350,6 +296,9 @@ export default {
     }
 
     // 4. Fallback: serve SPA (index.html)
-    return env.ASSETS.fetch(request);
+    const spaResponse = await env.ASSETS.fetch(request);
+    const spaHeaders = new Headers(spaResponse.headers);
+    spaHeaders.set('X-Debug-Path', pathname);
+    return new Response(spaResponse.body, { status: spaResponse.status, headers: spaHeaders });
   },
 };
