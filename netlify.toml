@@ -31,6 +31,30 @@
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[redirects]]
+  from = "/sitemap.xml"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/sitemap"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/news-sitemap"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/news-sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/wiki-sitemap"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/wiki-sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
