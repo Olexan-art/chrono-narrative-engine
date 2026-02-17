@@ -60,12 +60,13 @@ const SSR_PATTERNS = [
 
 // API proxy routes → Supabase Edge Functions
 const API_ROUTES = {
-  '/api/sitemap':      { fn: 'sitemap',      ttl: CACHE_TTL.sitemap },
+  '/sitemap.xml': { fn: 'sitemap', ttl: CACHE_TTL.sitemap },
+  '/api/sitemap': { fn: 'sitemap', ttl: CACHE_TTL.sitemap },
   '/api/news-sitemap': { fn: 'news-sitemap', ttl: CACHE_TTL.sitemap },
   '/api/wiki-sitemap': { fn: 'wiki-sitemap', ttl: CACHE_TTL.sitemap },
-  '/api/ssr-render':   { fn: 'ssr-render',   ttl: CACHE_TTL.api },
-  '/api/llms-txt':     { fn: 'llms-txt',     ttl: CACHE_TTL.sitemap },
-  '/api/rss-feed':     { fn: 'rss-feed',     ttl: CACHE_TTL.api },
+  '/api/ssr-render': { fn: 'ssr-render', ttl: CACHE_TTL.api },
+  '/api/llms-txt': { fn: 'llms-txt', ttl: CACHE_TTL.sitemap },
+  '/api/rss-feed': { fn: 'rss-feed', ttl: CACHE_TTL.api },
 };
 
 function isBot(ua) {
@@ -139,7 +140,10 @@ async function fetchFromSSRRender(pathname, userAgent) {
  * Handle API proxy routes with Cloudflare cache
  */
 async function handleApiRoute(request, pathname, env) {
-  const matchedRoute = Object.entries(API_ROUTES).find(([path]) => pathname.startsWith(path));
+  // Check for exact match first (e.g. /sitemap.xml) or prefix match for /api/
+  const matchedRoute = Object.entries(API_ROUTES).find(([path]) =>
+    path === pathname || (path.startsWith('/api/') && pathname.startsWith(path))
+  );
   if (!matchedRoute) return null;
 
   const [, { fn, ttl }] = matchedRoute;
@@ -239,14 +243,14 @@ async function handleSSR(request, pathname, env) {
 
   // 2. Fetch from cached_pages (even stale — better than empty SPA)
   const dbCached = await fetchFromCachedPages(pathname);
-  
+
   let html = null;
   let cacheSource = '';
 
   if (dbCached) {
     html = dbCached.html;
     cacheSource = dbCached.isExpired ? 'supabase-stale' : 'supabase-fresh';
-    
+
     // If stale, trigger background regeneration via ssr-render (fire-and-forget)
     if (dbCached.isExpired && _ctx && _ctx.waitUntil) {
       _ctx.waitUntil(
