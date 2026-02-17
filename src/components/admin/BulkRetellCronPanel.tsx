@@ -71,6 +71,41 @@ function BulkRetellStats({ countryCode, password }: { countryCode: string; passw
     );
 }
 
+// Helper function to calculate time until next run
+function getNextRunInfo(lastRunAt: string | null, frequencyMinutes: number): { text: string; isOverdue: boolean } {
+    if (!lastRunAt) {
+        return { text: 'Not run yet', isOverdue: false };
+    }
+
+    const lastRun = new Date(lastRunAt).getTime();
+    const now = Date.now();
+    const frequencyMs = frequencyMinutes * 60 * 1000;
+    const nextRun = lastRun + frequencyMs;
+    const timeUntil = nextRun - now;
+
+    if (timeUntil <= 0) {
+        const overdue = Math.abs(timeUntil);
+        const overdueMinutes = Math.floor(overdue / (60 * 1000));
+        if (overdueMinutes < 60) {
+            return { text: `Overdue by ${overdueMinutes}m`, isOverdue: true };
+        }
+        const overdueHours = Math.floor(overdueMinutes / 60);
+        return { text: `Overdue by ${overdueHours}h`, isOverdue: true };
+    }
+
+    const minutes = Math.floor(timeUntil / (60 * 1000));
+    if (minutes < 60) {
+        return { text: `in ${minutes}m`, isOverdue: false };
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (remainingMinutes === 0) {
+        return { text: `in ${hours}h`, isOverdue: false };
+    }
+    return { text: `in ${hours}h ${remainingMinutes}m`, isOverdue: false };
+}
+
+
 // Helper component for creating new bulk retell crons
 function BulkRetellForm({ onSuccess, password }: { onSuccess: () => void; password: string }) {
     const [countryCode, setCountryCode] = useState('');
@@ -285,6 +320,17 @@ export function BulkRetellCronPanel({ password }: { password: string }) {
                                             <div className="text-sm text-muted-foreground flex items-center gap-2">
                                                 <Clock className="w-3 h-3" />
                                                 Every {cron.frequency_minutes} mins
+                                                {cron.enabled && (() => {
+                                                    const nextRun = getNextRunInfo(cron.last_run_at, cron.frequency_minutes);
+                                                    return (
+                                                        <>
+                                                            <span className="text-border">|</span>
+                                                            <span className={nextRun.isOverdue ? 'text-orange-500 font-medium' : 'text-muted-foreground'}>
+                                                                Next: {nextRun.text}
+                                                            </span>
+                                                        </>
+                                                    );
+                                                })()}
                                                 <span className="text-border">|</span>
                                                 Looking at: {cron.processing_options?.time_range}
                                             </div>

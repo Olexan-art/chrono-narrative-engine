@@ -915,7 +915,7 @@ serve(async (req) => {
             .from('llm_usage_logs')
             .select('id', { count: 'exact', head: true })
             .eq('operation', 'retell-news')
-            .filter('metadata->>country_code', 'eq', country_code.toLowerCase());
+            .eq('metadata->>country_code', country_code.toLowerCase());
 
           if (since) {
             query = query.gte('created_at', since.toISOString());
@@ -923,9 +923,11 @@ serve(async (req) => {
 
           const { count, error } = await query;
           if (error) {
-            console.error('Error fetching bulk retell stats:', error);
+            console.error(`Error fetching bulk retell stats for ${country_code}:`, error);
+            console.error('Query details - operation: retell-news, country_code:', country_code.toLowerCase(), 'since:', since?.toISOString());
             throw error;
           }
+          console.log(`Stats for ${country_code} since ${since?.toISOString() || 'all time'}: ${count || 0}`);
           return count || 0;
         };
 
