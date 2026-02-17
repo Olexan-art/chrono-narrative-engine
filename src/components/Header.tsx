@@ -5,25 +5,17 @@ import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+import { Logo } from "@/components/Logo";
+
 export function Header() {
   const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+    <header className="border-b border-border/40 bg-[#030711]/95 backdrop-blur-md sticky top-0 z-50 transition-colors duration-300">
       <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 md:gap-3 group">
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded overflow-hidden border border-primary/30 group-hover:border-primary transition-all">
-            <img src="/favicon.png" alt="SP" className="w-full h-full object-cover" width={40} height={40} />
-          </div>
-          <div>
-            <h1 className="font-sans font-bold text-base md:text-lg tracking-tight text-foreground">
-              {t("hero.title")}
-            </h1>
-            <p className="text-[10px] md:text-xs text-muted-foreground font-mono hidden sm:block">
-              {t("header.subtitle")}
-            </p>
-          </div>
+        <Link to="/" className="flex items-center gap-2 group">
+          <Logo className="transition-transform duration-300 group-hover:scale-[1.02]" />
         </Link>
 
         {/* Desktop Navigation */}
