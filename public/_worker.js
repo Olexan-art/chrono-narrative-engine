@@ -58,16 +58,7 @@ const SSR_PATTERNS = [
   /^\/ink-abyss$/,
 ];
 
-// API proxy routes → Supabase Edge Functions
-const API_ROUTES = {
-  '/sitemap.xml': { fn: 'sitemap', ttl: CACHE_TTL.sitemap },
-  '/api/sitemap': { fn: 'sitemap', ttl: CACHE_TTL.sitemap },
-  '/api/news-sitemap': { fn: 'news-sitemap', ttl: CACHE_TTL.sitemap },
-  '/api/wiki-sitemap': { fn: 'wiki-sitemap', ttl: CACHE_TTL.sitemap },
-  '/api/ssr-render': { fn: 'ssr-render', ttl: CACHE_TTL.api },
-  '/api/llms-txt': { fn: 'llms-txt', ttl: CACHE_TTL.sitemap },
-  '/api/rss-feed': { fn: 'rss-feed', ttl: CACHE_TTL.api },
-};
+
 
 function isBot(ua) {
   if (!ua) return false;
