@@ -38,7 +38,7 @@ export default function Index() {
         .eq('status', 'published')
         .order('date', { ascending: false })
         .limit(STORIES_COUNT);
-      
+
       return (data || []) as unknown as Part[];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -81,62 +81,62 @@ export default function Index() {
     staleTime: 1000 * 60 * 10,
   });
 
-  const pageTitle = language === 'en' 
-    ? 'Synchronization Point - Smart News, Real News' 
-    : language === 'pl' 
-    ? 'Punkt Synchronizacji - Smart News, Real News'
-    : 'Точка Синхронізації - Smart News, Real News';
-  
-  const pageDescription = language === 'en'
-    ? 'A book that writes itself. An archivist structures the chaos of human history through the lens of news, generating daily stories from real-world news.'
+  const pageTitle = language === 'en'
+    ? 'BravenNow | Brave New World'
     : language === 'pl'
-    ? 'Książka, która pisze się sama. Archiwista porządkuje chaos ludzkiej historii przez pryzmat wiadomości, generując codzienne opowiadania z prawdziwych wiadomości.'
-    : 'Книга, що пише себе сама. Архіваріус структурує хаос людської історії крізь призму новин, генеруючи щоденні оповідання з реальних подій.';
+      ? 'BravenNow | Brave New World'
+      : 'BravenNow | Brave New World';
+
+  const pageDescription = language === 'en'
+    ? 'Brave New World — A book that writes itself through smart news based on real news events.'
+    : language === 'pl'
+      ? 'Brave New World — Książka, która pisze się sama poprzez smart news oparte na prawdziwych wydarzeniach.'
+      : 'Brave New World — Книга, що пише себе сама через розумні новини на основі реальних подій.';
 
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead 
+      <SEOHead
         title={pageTitle}
         description={pageDescription}
         canonicalUrl="https://bravennow.com/"
         keywords={['AI', 'science fiction', 'news', 'narrative', 'Ukraine', 'наукова фантастика', 'новини', 'ШІ']}
       />
       <Header />
-      
+
       <main>
         {/* Hero Section */}
         <HeroSection />
-        
+
         {/* Latest USA Retold News */}
         <LatestUsaNews />
-        
+
         {/* Latest USA News (simple, no retelling) */}
         <LatestUsaNewsSimple />
-        
+
         <Suspense fallback={<div className="min-h-[200px]" />}>
           {/* Outrage Ink Section - above Trending */}
           <OutrageInkSection />
-          
+
           {/* Trending Wiki Entities (12h) */}
           <TrendingWikiEntities />
-          
+
           {/* Latest Stories - Grid layout */}
           <LatestStoriesSection parts={latestParts} />
-          
+
           {/* Structure Explainer */}
           <StructureSection />
-          
+
           {/* News by Country - 6 per country */}
           <CountryNewsSection />
-          
+
           {/* Chapters Section */}
           <ChaptersSection chapters={allChapters} />
-          
+
           {/* Infinite News Feed */}
           <InfiniteNewsFeed />
         </Suspense>
       </main>
-      
+
       {/* Footer */}
       <footer className="py-8 border-t border-border">
         <div className="container mx-auto px-4 text-center">

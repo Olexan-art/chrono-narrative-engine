@@ -180,8 +180,8 @@ Deno.serve(async (req) => {
     const wikiEntityMatch = path.match(/^\/wiki\/([a-z0-9-]+)$/);
 
     let html = "";
-    let title = "Точка Синхронізації";
-    let description = "AI-генерована наукова фантастика на основі реальних новин";
+    let title = "BravenNow | Brave New World";
+    let description = "Brave New World — A book that writes itself through smart news based on real news events.";
     let image = `${BASE_URL}/favicon.png`;
     let canonicalUrl = BASE_URL + path;
     let faqItems: { question: string; answer: string }[] = [];
@@ -716,10 +716,11 @@ Deno.serve(async (req) => {
           .order("date", { ascending: false })
           .order("number", { ascending: false })
           .limit(6),
-        // Full Retelling (with content_en)
+        // Full Retelling (with content_en) - USA only
         supabase
           .from("news_rss_items")
-          .select("id, slug, title, title_en, content_en, published_at, country:news_countries(code, name_en, flag)")
+          .select("id, slug, title, title_en, content_en, published_at, country:news_countries!inner(code, name_en, flag)")
+          .eq("country.code", "US")
           .eq("is_archived", false)
           .not("content_en", "is", null)
           .order("published_at", { ascending: false })
@@ -952,9 +953,9 @@ function generateHeaderHTML(lang: string, baseUrl: string) {
   const t = (key: string) => {
     // Simplified translation map for header
     const map: any = {
-      'en': { 'hero.title': 'Synchronization Point', 'header.subtitle': 'Archive of Human History / Smart News', 'nav.read': 'Read', 'nav.newsdigest': 'News Digest', 'nav.calendar': 'Calendar', 'nav.admin': 'Admin' },
-      'uk': { 'hero.title': 'Точка Синхронізації', 'header.subtitle': 'Архів Людської Історії / Розумні Новини', 'nav.read': 'Читати', 'nav.newsdigest': 'Дайджест', 'nav.calendar': 'Календар', 'nav.admin': 'Адмін' },
-      'pl': { 'hero.title': 'Punkt Synchronizacji', 'header.subtitle': 'Archiwum Historii Ludzkości', 'nav.read': 'Czytaj', 'nav.newsdigest': 'Przegląd', 'nav.calendar': 'Kalendarz', 'nav.admin': 'Admin' }
+      'en': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.read': 'Read', 'nav.newsdigest': 'News Digest', 'nav.calendar': 'Calendar', 'nav.admin': 'Admin' },
+      'uk': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.read': 'Читати', 'nav.newsdigest': 'Дайджест', 'nav.calendar': 'Календар', 'nav.admin': 'Адмін' },
+      'pl': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.read': 'Czytaj', 'nav.newsdigest': 'Przegląd', 'nav.calendar': 'Kalendarz', 'nav.admin': 'Admin' }
     };
     return map[lang]?.[key] || map['en'][key] || key;
   };
