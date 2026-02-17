@@ -18,7 +18,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const CACHE_TTL = {
   ssr: 1800,       // 30 min Cloudflare edge cache for SSR pages
   api: 3600,       // 1 hour for API responses
-  sitemap: 60,     // Reduced to 60s for debugging (was 86400)
+  sitemap: 86400,  // 24 hours for sitemaps
 };
 
 // Bot detection for analytics headers
@@ -157,6 +157,18 @@ async function handleApiRoute(request, pathname, env) {
 
   // If no explicit match, return null to let other handlers try
   if (!fn) return null;
+
+  const cache = caches.default;
+  const cacheKey = new Request(request.url, { method: 'GET' });
+
+  // 1. Check Cloudflare edge cache first
+  let cached = await cache.match(cacheKey);
+  if (cached) {
+    const headers = new Headers(cached.headers);
+    headers.set('X-Cache', 'HIT');
+    headers.set('X-Cache-Source', 'cloudflare-edge');
+    return new Response(cached.body, { status: cached.status, headers });
+  }
 
   const url = new URL(request.url);
 
