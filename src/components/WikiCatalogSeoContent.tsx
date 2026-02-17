@@ -36,75 +36,75 @@ export function WikiCatalogSeoContent() {
   const content: SeoCopy =
     language === "uk"
       ? {
-          mainTitle: "Енциклопедія глобальних персон та організацій",
-          mainDescription:
-            "Echoes — це унікальна платформа, що систематизує інформацію про ключових гравців світової арени: політиків, бізнесменів, корпорації та міжнародні організації. Ми аналізуємо новини з США, України, Польщі та Індії, щоб виявити зв'язки та взаємодії між впливовими фігурами сучасності.",
+        mainTitle: "Енциклопедія глобальних персон та організацій",
+        mainDescription:
+          "Echoes — це унікальна платформа, що систематизує інформацію про ключових гравців світової арени: політиків, бізнесменів, корпорації та міжнародні організації. Ми аналізуємо новини з США та України, щоб виявити зв'язки та взаємодії між впливовими фігурами сучасності.",
 
-          sectionsTitle: "Що ви знайдете в каталозі",
+        sectionsTitle: "Що ви знайдете в каталозі",
 
-          personsTitle: "Персони",
-          personsDescription:
-            "Профілі політичних лідерів, підприємців, науковців та громадських діячів. Кожен профіль містить короткий опис, динаміку згадок у новинах та перехід до повної сторінки сутності.",
+        personsTitle: "Персони",
+        personsDescription:
+          "Профілі політичних лідерів, підприємців, науковців та громадських діячів. Кожен профіль містить короткий опис, динаміку згадок у новинах та перехід до повної сторінки сутності.",
 
-          corporationsTitle: "Корпорації та компанії",
-          corporationsDescription:
-            "Аналітика провідних світових компаній: технології, енергетика, фінанси, оборона. Сторінки компаній показують, у яких новинах вони фігурують і з якими персонами перетинаються.",
+        corporationsTitle: "Корпорації та компанії",
+        corporationsDescription:
+          "Аналітика провідних світових компаній: технології, енергетика, фінанси, оборона. Сторінки компаній показують, у яких новинах вони фігурують і з якими персонами перетинаються.",
 
-          organizationsTitle: "Міжнародні організації",
-          organizationsDescription:
-            "ООН, НАТО, ЄС, МВФ та інші інституції — у контексті новин та взаємодій з урядами й компаніями. Це допомагає швидше зрозуміти роль організацій у подіях.",
+        organizationsTitle: "Міжнародні організації",
+        organizationsDescription:
+          "ООН, НАТО, ЄС, МВФ та інші інституції — у контексті новин та взаємодій з урядами й компаніями. Це допомагає швидше зрозуміти роль організацій у подіях.",
 
-          connectionsTitle: "Зв'язки між сутностями",
-          connectionsDescription:
-            "Мережа зв'язків формується на основі спільних згадок у новинах. Так можна побачити, які персони, корпорації та організації найчастіше опиняються в одному інформаційному контексті.",
+        connectionsTitle: "Зв'язки між сутностями",
+        connectionsDescription:
+          "Мережа зв'язків формується на основі спільних згадок у новинах. Так можна побачити, які персони, корпорації та організації найчастіше опиняються в одному інформаційному контексті.",
 
-          newsTitle: "Новини як джерело даних",
-          newsDescription:
-            "Ми агрегуємо новини з різних джерел і пов'язуємо їх із сутностями: людьми, компаніями, організаціями. Це перетворює стрічку новин у структуровану карту подій.",
+        newsTitle: "Новини як джерело даних",
+        newsDescription:
+          "Ми агрегуємо новини з різних джерел і пов'язуємо їх із сутностями: людьми, компаніями, організаціями. Це перетворює стрічку новин у структуровану карту подій.",
 
-          analyticsTitle: "Тренди та згадки",
-          analyticsDescription:
-            "Рейтинги й тренди показують, хто і що в центрі уваги зараз. Каталог допомагає швидко перейти від новини до персони/компанії і назад — з контекстом.",
+        analyticsTitle: "Тренди та згадки",
+        analyticsDescription:
+          "Рейтинги й тренди показують, хто і що в центрі уваги зараз. Каталог допомагає швидко перейти від новини до персони/компанії і назад — з контекстом.",
 
-          conclusionTitle: "Контекст замість шуму",
-          conclusionDescription:
-            "Каталог сутностей — це інструмент, який з'єднує новини, персони та корпорації в одну систему. Досліджуйте взаємозв'язки, порівнюйте згадки й розумійте, як події складаються в загальну картину.",
-        }
+        conclusionTitle: "Контекст замість шуму",
+        conclusionDescription:
+          "Каталог сутностей — це інструмент, який з'єднує новини, персони та корпорації в одну систему. Досліджуйте взаємозв'язки, порівнюйте згадки й розумійте, як події складаються в загальну картину.",
+      }
       : {
-          mainTitle: "Encyclopedia of Global Personas and Organizations",
-          mainDescription:
-            "Echoes is a platform that organizes key actors on the world stage: people, corporations and international organizations. We analyze news from the USA, Ukraine, Poland and India to surface connections and recurring interactions between influential entities.",
+        mainTitle: "Encyclopedia of Global Personas and Organizations",
+        mainDescription:
+          "Echoes is a platform that organizes key actors on the world stage: people, corporations and international organizations. We analyze news from the USA and Ukraine to surface connections and recurring interactions between influential entities.",
 
-          sectionsTitle: "What you'll find in the catalog",
+        sectionsTitle: "What you'll find in the catalog",
 
-          personsTitle: "People",
-          personsDescription:
-            "Profiles of political leaders, entrepreneurs, scientists and public figures. Each page connects the person to the latest stories and related entities for quick context.",
+        personsTitle: "People",
+        personsDescription:
+          "Profiles of political leaders, entrepreneurs, scientists and public figures. Each page connects the person to the latest stories and related entities for quick context.",
 
-          corporationsTitle: "Corporations & companies",
-          corporationsDescription:
-            "Coverage and analytics for major companies across tech, energy, finance and defense. See how companies appear in the news and which people and institutions they intersect with.",
+        corporationsTitle: "Corporations & companies",
+        corporationsDescription:
+          "Coverage and analytics for major companies across tech, energy, finance and defense. See how companies appear in the news and which people and institutions they intersect with.",
 
-          organizationsTitle: "International organizations",
-          organizationsDescription:
-            "UN, NATO, EU, IMF and other institutions — tracked through daily coverage and their interactions with governments and corporations.",
+        organizationsTitle: "International organizations",
+        organizationsDescription:
+          "UN, NATO, EU, IMF and other institutions — tracked through daily coverage and their interactions with governments and corporations.",
 
-          connectionsTitle: "Entity connections",
-          connectionsDescription:
-            "Connections are inferred from co-mentions in news. This helps you understand which people, companies and organizations repeatedly share the same information context.",
+        connectionsTitle: "Entity connections",
+        connectionsDescription:
+          "Connections are inferred from co-mentions in news. This helps you understand which people, companies and organizations repeatedly share the same information context.",
 
-          newsTitle: "News as a data source",
-          newsDescription:
-            "We aggregate news and link stories to entities: people, corporations and organizations. This turns the feed into a structured map of events and actors.",
+        newsTitle: "News as a data source",
+        newsDescription:
+          "We aggregate news and link stories to entities: people, corporations and organizations. This turns the feed into a structured map of events and actors.",
 
-          analyticsTitle: "Trends & mentions",
-          analyticsDescription:
-            "Trending signals highlight who and what is getting attention. The catalog lets you move from a story to an entity page — and back — without losing context.",
+        analyticsTitle: "Trends & mentions",
+        analyticsDescription:
+          "Trending signals highlight who and what is getting attention. The catalog lets you move from a story to an entity page — and back — without losing context.",
 
-          conclusionTitle: "Context over noise",
-          conclusionDescription:
-            "The entity catalog connects news, people and corporations into one navigable system. Explore relationships, compare mentions and understand how events fit together.",
-        };
+        conclusionTitle: "Context over noise",
+        conclusionDescription:
+          "The entity catalog connects news, people and corporations into one navigable system. Explore relationships, compare mentions and understand how events fit together.",
+      };
 
   const cards = [
     { title: content.personsTitle, description: content.personsDescription, Icon: Users },

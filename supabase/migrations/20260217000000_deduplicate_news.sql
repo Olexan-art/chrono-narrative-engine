@@ -13,4 +13,7 @@ WHERE id IN (
 ALTER TABLE news_rss_items DROP CONSTRAINT IF EXISTS news_rss_items_feed_id_url_key;
 
 -- 3. Add new unique constraint on URL only
+-- 3. Add new unique constraint on url (safely)
+ALTER TABLE news_rss_items DROP CONSTRAINT IF EXISTS news_rss_items_url_key;
+
 ALTER TABLE news_rss_items ADD CONSTRAINT news_rss_items_url_key UNIQUE (url);

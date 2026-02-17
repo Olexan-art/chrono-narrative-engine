@@ -68,20 +68,7 @@ export function NewsHubSeoContent() {
                   <span className="text-muted-foreground"> Current events, frontline updates, and societal changes.</span>
                 </div>
               </li>
-              <li className="flex items-start gap-3">
-                <span className="text-xl">🇵🇱</span>
-                <div>
-                  <span className="font-semibold text-foreground">Poland:</span>
-                  <span className="text-muted-foreground"> News from the European neighborhood and significant regional shifts.</span>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-xl">🇮🇳</span>
-                <div>
-                  <span className="font-semibold text-foreground">India:</span>
-                  <span className="text-muted-foreground"> Insights into events from one of Asia's most dynamic economies.</span>
-                </div>
-              </li>
+
             </ul>
           </CardContent>
         </Card>

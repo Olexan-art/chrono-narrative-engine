@@ -38,18 +38,27 @@ serve(async (req) => {
             throw new Error(`Country ${country_code} not found`);
         }
 
+        // Determine which field to check for "retold" status based on country
+        // UA uses 'content' (native), others use 'content_en' (translated/retold)
+        const targetContentField = country.code === 'UA' ? 'content' : 'content_en';
+        console.log(`[bulk-retell-news] Checking field '${targetContentField}' for completion`);
+
         // Build query for unretold news
         let query = supabase
             .from('news_rss_items')
             .select('id, title, slug')
             .eq('country_id', country.id)
-            .is('content_en', null) // Not yet retold
+            .is(targetContentField, null) // Not yet retold
             .order('fetched_at', { ascending: false });
 
         // Apply time range filter
+        const now = Date.now();
         if (time_range === 'last_1h') {
-            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+            const oneHourAgo = new Date(now - 60 * 60 * 1000).toISOString();
             query = query.gte('fetched_at', oneHourAgo);
+        } else if (time_range === 'last_24h') {
+            const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+            query = query.gte('fetched_at', twentyFourHoursAgo);
         }
 
         const { data: newsItems, error: newsError } = await query.limit(100); // Process max 100 items per run

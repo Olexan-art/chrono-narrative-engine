@@ -112,17 +112,17 @@ export default function NewsHubPage() {
     return item.content_en && item.content_en.length > 100;
   };
 
-  const pageTitle = language === 'en' 
-    ? 'World News & Events Digest: USA, UK, Ukraine, Poland, India' 
+  const pageTitle = language === 'en'
+    ? 'World News & Events Digest: USA, UK, Ukraine'
     : language === 'pl'
-    ? 'Przegląd Wiadomości Światowych: USA, UK, Ukraina, Polska, Indie'
-    : 'Дайджест Світових Новин: США, UK, Україна, Польща, Індія';
+      ? 'Przegląd Wiadomości Światowych: USA, UK, Ukraina'
+      : 'Дайджест Світових Новин: США, UK, Україна';
 
   const pageDescription = language === 'en'
-    ? 'Read the latest world news on Synchronization Point. A daily digest of events from the USA, UK, Ukraine, Poland, and India. Real facts and structured updates serving as the foundation for the AI Archive of Human History.'
+    ? 'Read the latest world news on Synchronization Point. A daily digest of events from the USA, UK, and Ukraine. Real facts and structured updates serving as the foundation for the AI Archive of Human History.'
     : language === 'pl'
-    ? 'Przegląd wiadomości ze świata z AI-streszczeniami i dialogami postaci z USA, UK, Ukrainy, Polski i Indii.'
-    : 'AI-дайджест новин з усього світу з переказом та діалогами персонажів зі США, UK, України, Польщі та Індії.';
+      ? 'Przegląd wiadomości ze świata z AI-streszczeniami i dialogami postaci z USA, UK i Ukrainy.'
+      : 'AI-дайджест новин з усього світу з переказом та діалогами персонажів зі США, UK та України.';
 
   if (isLoading) {
     return (
@@ -140,7 +140,7 @@ export default function NewsHubPage() {
         canonicalUrl="https://bravennow.com/news"
       />
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-10">
@@ -160,7 +160,7 @@ export default function NewsHubPage() {
         <div className="grid md:grid-cols-2 gap-6">
           {countriesWithNews.map(({ country, news, totalCount }) => {
             const countryName = getCountryName(country);
-            
+
             return (
               <Card key={country.id} className="cosmic-card overflow-hidden group">
                 <CardHeader className="pb-3">
@@ -174,7 +174,7 @@ export default function NewsHubPage() {
                         </p>
                       </div>
                     </CardTitle>
-                    <Link 
+                    <Link
                       to={`/news/${country.code.toLowerCase()}`}
                       className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                     >
@@ -192,7 +192,7 @@ export default function NewsHubPage() {
                   ) : (
                     <div className="space-y-2">
                       {news.map((item, idx) => {
-                        const localizedTitle = language === 'en' 
+                        const localizedTitle = language === 'en'
                           ? (item.title_en || item.title)
                           : item.title;
                         const isRetold = hasRetoldContent(item);
@@ -203,16 +203,15 @@ export default function NewsHubPage() {
                             to={`/news/${country.code.toLowerCase()}/${item.slug}`}
                             className="group/item block"
                           >
-                            <article 
-                              className={`flex gap-3 p-2.5 rounded-lg border transition-all duration-200 ${
-                                isRetold 
-                                  ? 'border-primary/30 bg-primary/5 hover:border-primary/50' 
+                            <article
+                              className={`flex gap-3 p-2.5 rounded-lg border transition-all duration-200 ${isRetold
+                                  ? 'border-primary/30 bg-primary/5 hover:border-primary/50'
                                   : 'border-border/50 hover:border-primary/50 hover:bg-primary/5'
-                              }`}
+                                }`}
                             >
                               {item.image_url && (
-                                <img 
-                                  src={item.image_url} 
+                                <img
+                                  src={item.image_url}
                                   alt={language === 'en' ? (item.title_en || item.title) : item.title}
                                   width={64}
                                   height={64}
@@ -250,15 +249,15 @@ export default function NewsHubPage() {
 
                   {/* View more link */}
                   {totalCount > NEWS_PREVIEW_COUNT && (
-                    <Link 
+                    <Link
                       to={`/news/${country.code.toLowerCase()}`}
                       className="mt-4 flex items-center justify-center gap-2 py-2 text-sm text-primary hover:underline"
                     >
-                      {language === 'en' 
-                        ? `+${totalCount - NEWS_PREVIEW_COUNT} more articles` 
+                      {language === 'en'
+                        ? `+${totalCount - NEWS_PREVIEW_COUNT} more articles`
                         : language === 'pl'
-                        ? `+${totalCount - NEWS_PREVIEW_COUNT} więcej artykułów`
-                        : `+${totalCount - NEWS_PREVIEW_COUNT} ще статей`}
+                          ? `+${totalCount - NEWS_PREVIEW_COUNT} więcej artykułów`
+                          : `+${totalCount - NEWS_PREVIEW_COUNT} ще статей`}
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                   )}

@@ -750,23 +750,7 @@ export function NewsDigestPanel({ password }: Props) {
                             </div>
                           </div>
                         </div>
-                        {/* India translation button */}
-                        {country.code === 'IN' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => translateIndianMutation.mutate('in')}
-                            disabled={translateIndianMutation.isPending}
-                            className="gap-2"
-                          >
-                            {translateIndianMutation.isPending ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Languages className="w-4 h-4" />
-                            )}
-                            Перекласти на індійські мови
-                          </Button>
-                        )}
+
                       </div>
 
                       {/* Retold stats row */}

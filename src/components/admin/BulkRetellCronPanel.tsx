@@ -118,9 +118,7 @@ function BulkRetellForm({ onSuccess, password }: { onSuccess: () => void; passwo
     const allCountries = [
         { code: 'us', label: 'United States' },
         { code: 'ua', label: 'Ukraine' },
-        { code: 'pl', label: 'Poland' },
         { code: 'gb', label: 'United Kingdom' },
-        { code: 'in', label: 'India' },
     ];
 
     const handleCreate = async () => {
@@ -270,9 +268,7 @@ export function BulkRetellCronPanel({ password }: { password: string }) {
     const allCountries = [
         { code: 'us', label: 'United States' },
         { code: 'ua', label: 'Ukraine' },
-        { code: 'pl', label: 'Poland' },
         { code: 'gb', label: 'United Kingdom' },
-        { code: 'in', label: 'India' },
     ];
 
     if (isLoading) return <div>Loading crons...</div>;

@@ -282,7 +282,6 @@ export default function NewsProcessingPage() {
     const allCountries = [
         { code: 'us', label: 'United States' },
         { code: 'ua', label: 'Ukraine' },
-        { code: 'pl', label: 'Poland' },
     ];
 
     const processingOptions = [

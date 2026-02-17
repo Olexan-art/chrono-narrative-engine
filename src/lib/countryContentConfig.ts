@@ -25,15 +25,9 @@ export const COUNTRY_CONTENT_CONFIG: Record<string, CountryContentConfig> = {
     retoldMinLength: 300,
     dialogueField: 'chat_dialogue',
   },
-  
+
   // Poland - retold content stored in native content field
-  PL: {
-    code: 'PL',
-    retoldFields: ['content'],
-    retoldMinLength: 500,
-    dialogueField: 'chat_dialogue',
-  },
-  
+
   // Ukraine - retold content stored in native content field
   UA: {
     code: 'UA',
@@ -41,15 +35,9 @@ export const COUNTRY_CONTENT_CONFIG: Record<string, CountryContentConfig> = {
     retoldMinLength: 500,
     dialogueField: 'chat_dialogue',
   },
-  
+
   // India - retold content stored in Indian language fields
-  IN: {
-    code: 'IN',
-    retoldFields: ['content_hi', 'content_ta', 'content_te', 'content_bn'],
-    retoldMinLength: 300,
-    dialogueField: 'chat_dialogue',
-  },
-  
+
   // United Kingdom - retold content stored in content_en (same as US)
   GB: {
     code: 'GB',
@@ -84,7 +72,7 @@ export function isNewsRetold(
   countryCode: string
 ): boolean {
   const config = getCountryConfig(countryCode);
-  
+
   for (const field of config.retoldFields) {
     const value = item[field];
     if (
@@ -95,7 +83,7 @@ export function isNewsRetold(
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -104,19 +92,19 @@ export function isNewsRetold(
  */
 export function hasNewsDialogue(item: Record<string, unknown>): boolean {
   const dialogue = item['chat_dialogue'];
-  
+
   if (!dialogue) return false;
-  
+
   // Check if it's a non-empty array
   if (Array.isArray(dialogue) && dialogue.length > 0) {
     return true;
   }
-  
+
   // Check if it's a non-empty object
   if (typeof dialogue === 'object' && Object.keys(dialogue).length > 0) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -125,7 +113,7 @@ export function hasNewsDialogue(item: Record<string, unknown>): boolean {
  */
 export function getStatsLabels(countryCode: string): { retoldLabel: string; dialogueLabel: string } {
   const config = getCountryConfig(countryCode);
-  
+
   const fieldLabels: Record<string, string> = {
     content_en: 'EN',
     content: 'Native',
@@ -134,11 +122,11 @@ export function getStatsLabels(countryCode: string): { retoldLabel: string; dial
     content_te: 'TE',
     content_bn: 'BN',
   };
-  
+
   const retoldLabel = config.retoldFields
     .map(f => fieldLabels[f] || f)
     .join('/');
-  
+
   return {
     retoldLabel: `Переказано (${retoldLabel})`,
     dialogueLabel: 'Діалоги',
