@@ -27,7 +27,7 @@ import { SitemapManagementPanel } from "@/components/SitemapManagementPanel";
 import { SEOAuditPanel } from "@/components/SEOAuditPanel";
 import { SEOSettingsPanel } from "@/components/SEOSettingsPanel";
 import { BotVisitsPanel } from "@/components/BotVisitsPanel";
-import { BotCacheAnalyticsPanel } from "@/components/BotCacheAnalyticsPanel";
+
 import { BotErrorsPanel } from "@/components/BotErrorsPanel";
 import { StatisticsPanel } from "@/components/StatisticsPanel";
 import { WikiEntitiesPanel } from "@/components/admin/WikiEntitiesPanel";
@@ -739,10 +739,7 @@ export default function AdminPage() {
               <Bot className="w-4 h-4 text-emerald-500" />
               Боти
             </TabsTrigger>
-            <TabsTrigger value="cache-analytics" className="gap-2">
-              <Database className="w-4 h-4 text-cyan-500" />
-              Кеш
-            </TabsTrigger>
+
 
             {/* Генерація контенту */}
             <TabsTrigger value="generate" className="gap-2">
@@ -935,9 +932,7 @@ export default function AdminPage() {
             <BotVisitsPanel password={password} />
           </TabsContent>
 
-          <TabsContent value="cache-analytics" className="mt-6">
-            <BotCacheAnalyticsPanel password={password} />
-          </TabsContent>
+
 
           <TabsContent value="settings" className="mt-6">
             <SettingsPanel password={password} />

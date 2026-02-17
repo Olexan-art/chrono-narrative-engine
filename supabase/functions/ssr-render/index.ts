@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
     const body = req.method !== "GET" ? await req.json().catch(() => null) : null;
     const path = url.searchParams.get("path") || body?.url || body?.path || "/";
     const lang = url.searchParams.get("lang") || body?.lang || "en";
-    const useCache = (url.searchParams.get("cache") || body?.cache) !== "false"; // Default: use cache
+    const useCache = (url.searchParams.get("cache") || body?.cache) === "true"; // Default: NO internal cache (Cloudflare only)
     const userAgent = req.headers.get("user-agent") || "";
     const referer = req.headers.get("referer");
 

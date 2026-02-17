@@ -13,7 +13,7 @@ import { uk } from "date-fns/locale";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { AutoGenChart } from "@/components/AutoGenChart";
-import { CacheStatsPanel } from "@/components/CacheStatsPanel";
+
 import { RecentRetoldNewsList } from "@/components/RecentRetoldNewsList";
 
 interface Props {
@@ -104,7 +104,7 @@ export function StatisticsPanel({ password }: Props) {
           const itemDate = i.published_at ? new Date(i.published_at) : new Date(i.fetched_at);
           return itemDate >= last7d;
         }).length;
-        
+
         return { id: c.id, name: c.name, flag: c.flag, code: c.code, total, last24h: last24hCount, last7d: last7dCount };
       }).sort((a, b) => b.total - a.total) || [];
 
@@ -166,7 +166,7 @@ export function StatisticsPanel({ password }: Props) {
 
       // Aggregate by date
       const grouped: Record<string, { date: string; parts: number; chapters: number; volumes: number; news: number; total: number }> = {};
-      
+
       for (let i = 0; i < daysCount; i++) {
         const d = format(subDays(new Date(), daysCount - 1 - i), 'yyyy-MM-dd');
         grouped[d] = { date: d, parts: 0, chapters: 0, volumes: 0, news: 0, total: 0 };
@@ -219,7 +219,7 @@ export function StatisticsPanel({ password }: Props) {
 
       // Aggregate views by country
       const byCountry: Record<string, { id: string; code: string; name: string; flag: string; views: number }> = {};
-      
+
       for (const view of newsViews) {
         const countryId = newsCountryMap.get(view.entity_id);
         if (countryId) {
@@ -556,7 +556,7 @@ export function StatisticsPanel({ password }: Props) {
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
-          
+
           {/* News Views by Country */}
           {newsViewsByCountry.length > 0 && (
             <div className="mt-6 pt-4 border-t border-border">
@@ -592,17 +592,17 @@ export function StatisticsPanel({ password }: Props) {
               <BarChart data={botStats.topBots.slice(0, 8)} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis 
-                  dataKey="name" 
-                  type="category" 
-                  stroke="hsl(var(--muted-foreground))" 
-                  fontSize={10} 
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  stroke="hsl(var(--muted-foreground))"
+                  fontSize={10}
                   width={120}
                   tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value}
                 />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px'
                   }}
@@ -632,7 +632,7 @@ export function StatisticsPanel({ password }: Props) {
                   <span className="text-sm">Всього відвідувань</span>
                   <Badge variant="secondary" className="font-bold">{botStats.total}</Badge>
                 </div>
-                
+
                 {botStats.daily && botStats.daily.length > 0 && (
                   <div className="h-[120px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -688,8 +688,7 @@ export function StatisticsPanel({ password }: Props) {
         </Card>
       </div>
 
-      {/* Cache Stats Panel */}
-      <CacheStatsPanel password={password} />
+
 
       {/* Top Content */}
       <Card className="cosmic-card">
