@@ -131,26 +131,27 @@ async function fetchFromSSRRender(pathname, userAgent) {
  * Handle API proxy routes with Cloudflare cache
  */
 async function handleApiRoute(request, pathname, env) {
-  // Explicitly match known routes to avoid any lookup issues
+  // Normalize pathname to remove trailing slashes for matching
+  const cleanPath = pathname.replace(/\/$/, '');
   let fn = null;
   let ttl = CACHE_TTL.api;
 
-  if (pathname === '/sitemap.xml' || pathname === '/api/sitemap') {
+  if (cleanPath === '/sitemap.xml' || cleanPath === '/api/sitemap') {
     fn = 'sitemap';
     ttl = CACHE_TTL.sitemap;
-  } else if (pathname === '/api/news-sitemap') {
+  } else if (cleanPath === '/api/news-sitemap') {
     fn = 'news-sitemap';
     ttl = CACHE_TTL.sitemap;
-  } else if (pathname === '/api/wiki-sitemap') {
+  } else if (cleanPath === '/api/wiki-sitemap') {
     fn = 'wiki-sitemap';
     ttl = CACHE_TTL.sitemap;
-  } else if (pathname === '/api/ssr-render') {
+  } else if (cleanPath === '/api/ssr-render') {
     fn = 'ssr-render';
     ttl = CACHE_TTL.api;
-  } else if (pathname === '/api/llms-txt') {
+  } else if (cleanPath === '/api/llms-txt') {
     fn = 'llms-txt';
     ttl = CACHE_TTL.sitemap;
-  } else if (pathname === '/api/rss-feed') {
+  } else if (cleanPath === '/api/rss-feed') {
     fn = 'rss-feed';
     ttl = CACHE_TTL.api;
   }
