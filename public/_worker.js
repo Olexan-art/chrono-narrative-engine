@@ -18,7 +18,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const CACHE_TTL = {
   ssr: 1800,       // 30 min Cloudflare edge cache for SSR pages
   api: 3600,       // 1 hour for API responses
-  sitemap: 86400,  // 24 hours for sitemaps
+  sitemap: 60,     // Reduced to 60s for debugging (was 86400)
 };
 
 // Bot detection for analytics headers
@@ -35,7 +35,7 @@ const BOT_PATTERNS = [
 const EXCLUDED_EXTENSIONS = [
   '.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico',
   '.woff', '.woff2', '.ttf', '.eot', '.map', '.webp', '.avif',
-  '.json', '.xml', '.txt', '.webmanifest',
+  '.json', '.txt', '.webmanifest',
 ];
 
 // SSR-eligible path patterns
@@ -140,24 +140,33 @@ async function fetchFromSSRRender(pathname, userAgent) {
  * Handle API proxy routes with Cloudflare cache
  */
 async function handleApiRoute(request, pathname, env) {
-  // Normalize pathname to remove trailing slashes for matching
-  const cleanPath = pathname.replace(/\/$/, '');
+  // Explicitly match known routes to avoid any lookup issues
+  let fn = null;
+  let ttl = CACHE_TTL.api;
 
-  let routeConfig = API_ROUTES[cleanPath];
-
-  // If not exact match, check if it's an API route prefix
-  if (!routeConfig) {
-    const routeKey = Object.keys(API_ROUTES).find(key =>
-      key.startsWith('/api/') && cleanPath.startsWith(key)
-    );
-    if (routeKey) {
-      routeConfig = API_ROUTES[routeKey];
-    }
+  if (pathname === '/sitemap.xml' || pathname === '/api/sitemap') {
+    fn = 'sitemap';
+    ttl = CACHE_TTL.sitemap;
+  } else if (pathname === '/api/news-sitemap') {
+    fn = 'news-sitemap';
+    ttl = CACHE_TTL.sitemap;
+  } else if (pathname === '/api/wiki-sitemap') {
+    fn = 'wiki-sitemap';
+    ttl = CACHE_TTL.sitemap;
+  } else if (pathname === '/api/ssr-render') {
+    fn = 'ssr-render';
+    ttl = CACHE_TTL.api;
+  } else if (pathname === '/api/llms-txt') {
+    fn = 'llms-txt';
+    ttl = CACHE_TTL.sitemap;
+  } else if (pathname === '/api/rss-feed') {
+    fn = 'rss-feed';
+    ttl = CACHE_TTL.api;
   }
 
-  if (!routeConfig) return null;
+  // If no explicit match, return null to let other handlers try
+  if (!fn) return null;
 
-  const { fn, ttl } = routeConfig;
   const url = new URL(request.url);
 
   // Construct target URL for Supabase Function
@@ -182,14 +191,11 @@ async function handleApiRoute(request, pathname, env) {
     });
 
     if (!response.ok) {
-      // If Supabase returns 404, we should probably let the SPA handle it? 
-      // Or return the error if it's clearly an API call?
-      // For sitemaps, we want to see the error.
       return new Response(`API Error: ${response.status} ${response.statusText}`, { status: response.status });
     }
 
     const body = await response.text();
-    constcontentType = response.headers.get('Content-Type') || 'application/xml';
+    const contentType = response.headers.get('Content-Type') || 'application/xml';
 
     const result = new Response(body, {
       status: 200,
