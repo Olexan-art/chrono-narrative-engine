@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
     let html = "";
     let title = "BravenNow | Brave New World";
     let description = "Brave New World — A book that writes itself through smart news based on real news events.";
-    let image = `${BASE_URL}/favicon.png`;
+    let image = `${BASE_URL}/favicon.svg`;
     let canonicalUrl = BASE_URL + path;
     let faqItems: { question: string; answer: string }[] = [];
 
@@ -1042,9 +1042,9 @@ function generateHeaderHTML(lang: string, baseUrl: string) {
 function generateFooterHTML(lang: string, baseUrl: string) {
   const t = (key: string) => {
     const map: any = {
-      'en': { 'footer.style': 'Synchronization Point - AI Generated History' },
-      'uk': { 'footer.style': 'Точка Синхронізації - Історія, згенерована ШІ' },
-      'pl': { 'footer.style': 'Punkt Synchronizacji - Historia generowana przez SI' }
+      'en': { 'footer.style': 'BravenNow - AI Generated History' },
+      'uk': { 'footer.style': 'BravenNow - Історія, згенерована ШІ' },
+      'pl': { 'footer.style': 'BravenNow - Historia generowana przez SI' }
     };
     return map[lang]?.[key] || map['en'][key] || key;
   };
@@ -1088,12 +1088,12 @@ function generateFullDocument(opts: {
     inLanguage: lang === "uk" ? "uk-UA" : lang === "pl" ? "pl-PL" : "en-US",
     publisher: {
       "@type": "Organization",
-      name: "Synchronization Point",
-      logo: { "@type": "ImageObject", url: `${BASE_URL}/favicon.png` },
+      name: "BravenNow",
+      logo: { "@type": "ImageObject", url: `${BASE_URL}/favicon.svg` },
     },
     author: {
       "@type": "Organization",
-      name: "Synchronization Point AI",
+      name: "BravenNow AI",
     },
   };
 
@@ -1116,6 +1116,8 @@ function generateFullDocument(opts: {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/favicon.svg" />
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}">
   
