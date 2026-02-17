@@ -140,71 +140,86 @@ async function fetchFromSSRRender(pathname, userAgent) {
  * Handle API proxy routes with Cloudflare cache
  */
 async function handleApiRoute(request, pathname, env) {
-  // Check for exact match first (e.g. /sitemap.xml) or prefix match for /api/
-  const matchedRoute = Object.entries(API_ROUTES).find(([path]) =>
-    path === pathname || (path.startsWith('/api/') && pathname.startsWith(path))
-  );
-  if (!matchedRoute) return null;
+  // Normalize pathname to remove trailing slashes for matching
+  const cleanPath = pathname.replace(/\/$/, '');
 
-  const [, { fn, ttl }] = matchedRoute;
-  const url = new URL(request.url);
-  const cache = caches.default;
+  let routeConfig = API_ROUTES[cleanPath];
 
-  const cacheKey = new Request(request.url, { method: 'GET' });
-
-  let cached = await cache.match(cacheKey);
-  if (cached) {
-    return new Response(cached.body, {
-      status: cached.status,
-      headers: {
-        ...Object.fromEntries(cached.headers),
-        'X-Cache': 'HIT',
-        'X-Cache-Source': 'cloudflare-edge',
-      },
-    });
+  // If not exact match, check if it's an API route prefix
+  if (!routeConfig) {
+    const routeKey = Object.keys(API_ROUTES).find(key =>
+      key.startsWith('/api/') && cleanPath.startsWith(key)
+    );
+    if (routeKey) {
+      routeConfig = API_ROUTES[routeKey];
+    }
   }
 
+  if (!routeConfig) return null;
+
+  const { fn, ttl } = routeConfig;
+  const url = new URL(request.url);
+
+  // Construct target URL for Supabase Function
   const targetUrl = new URL(`${SUPABASE_FUNCTIONS_URL}/${fn}`);
-  url.searchParams.forEach((v, k) => targetUrl.searchParams.set(k, v));
+
+  // Copy all search params (query string) from original request
+  url.searchParams.forEach((value, key) => {
+    targetUrl.searchParams.append(key, value);
+  });
 
   const userAgent = request.headers.get('User-Agent') || '';
-  const response = await fetch(targetUrl.toString(), {
-    headers: {
-      'User-Agent': userAgent || 'Cloudflare-Worker',
-      'Accept': 'text/html, application/xml, */*',
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-  });
 
-  if (!response.ok) {
-    return new Response('API Error', { status: response.status });
+  try {
+    const response = await fetch(targetUrl.toString(), {
+      method: request.method,
+      headers: {
+        'User-Agent': userAgent || 'Cloudflare-Worker',
+        'Accept': 'text/html, application/xml, application/json, */*',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    });
+
+    if (!response.ok) {
+      // If Supabase returns 404, we should probably let the SPA handle it? 
+      // Or return the error if it's clearly an API call?
+      // For sitemaps, we want to see the error.
+      return new Response(`API Error: ${response.status} ${response.statusText}`, { status: response.status });
+    }
+
+    const body = await response.text();
+    constcontentType = response.headers.get('Content-Type') || 'application/xml';
+
+    const result = new Response(body, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': `public, max-age=${ttl}, s-maxage=${ttl}`,
+        'Access-Control-Allow-Origin': '*',
+        'X-Cache': 'MISS',
+        'X-Cache-Source': 'supabase-edge',
+      },
+    });
+
+    const cache = caches.default;
+    const cacheKey = new Request(request.url, { method: 'GET' });
+
+    const cacheResponse = new Response(body, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': `public, max-age=${ttl}, s-maxage=${ttl}`,
+      },
+    });
+
+    ctx_waitUntil_put(cache, cacheKey, cacheResponse);
+
+    return result;
+  } catch (error) {
+    console.error(`[worker] API fetch failed for ${pathname}:`, error);
+    return new Response('Internal Worker Error', { status: 500 });
   }
-
-  const body = await response.text();
-  const contentType = response.headers.get('Content-Type') || 'application/xml';
-
-  const result = new Response(body, {
-    status: 200,
-    headers: {
-      'Content-Type': contentType,
-      'Cache-Control': `public, max-age=${ttl}, s-maxage=${ttl}`,
-      'Access-Control-Allow-Origin': '*',
-      'X-Cache': 'MISS',
-      'X-Cache-Source': 'supabase-edge',
-    },
-  });
-
-  const cacheResponse = new Response(body, {
-    status: 200,
-    headers: {
-      'Content-Type': contentType,
-      'Cache-Control': `public, max-age=${ttl}, s-maxage=${ttl}`,
-    },
-  });
-  ctx_waitUntil_put(cache, cacheKey, cacheResponse);
-
-  return result;
 }
 
 let _ctx = null;
