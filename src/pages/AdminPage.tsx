@@ -26,7 +26,7 @@ import { NewsArchivePanel } from "@/components/NewsArchivePanel";
 import { SitemapManagementPanel } from "@/components/SitemapManagementPanel";
 import { SEOAuditPanel } from "@/components/SEOAuditPanel";
 import { SEOSettingsPanel } from "@/components/SEOSettingsPanel";
-import { BotVisitsPanel } from "@/components/BotVisitsPanel";
+
 
 import { BotErrorsPanel } from "@/components/BotErrorsPanel";
 import { StatisticsPanel } from "@/components/StatisticsPanel";
@@ -735,10 +735,7 @@ export default function AdminPage() {
               <TrendingUp className="w-4 h-4 text-primary" />
               Статистика
             </TabsTrigger>
-            <TabsTrigger value="bots" className="gap-2">
-              <Bot className="w-4 h-4 text-emerald-500" />
-              Боти
-            </TabsTrigger>
+
 
 
             {/* Генерація контенту */}
@@ -928,9 +925,7 @@ export default function AdminPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="bots" className="mt-6">
-            <BotVisitsPanel password={password} />
-          </TabsContent>
+
 
 
 

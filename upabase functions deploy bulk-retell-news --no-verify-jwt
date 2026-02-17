@@ -1,0 +1,29 @@
+[33mcommit 73a1e707fb78ee7ca943fdc51d9b6770585b1d55[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Chrono Narrative Bot <olexan.art@users.noreply.github.com>
+Date:   Tue Feb 17 11:45:54 2026 +0100
+
+    feat: redesign header and logo (BravenNow)
+
+[33mcommit 015a9275aa7963fdc2a7398929aeec1eefbb881d[m
+Author: Chrono Narrative Bot <olexan.art@users.noreply.github.com>
+Date:   Tue Feb 17 11:33:20 2026 +0100
+
+    feat: Redesign header with BravenNow logo and deeper background
+
+[33mcommit 6a2b46bc0cf98698682c37ed702b5c6acd3e7c69[m
+Author: Chrono Narrative Bot <olexan.art@users.noreply.github.com>
+Date:   Tue Feb 17 11:14:46 2026 +0100
+
+    feat: Continuous bulk retell, rm India/Poland, fix stats
+
+[33mcommit e0f03a9db94a24f1d4453bf646cc271cc9bd7299[m
+Author: Chrono Narrative Bot <olexan.art@users.noreply.github.com>
+Date:   Tue Feb 17 01:57:47 2026 +0100
+
+    fix: news duplication - deterministic slug and unique constraint handling
+
+[33mcommit 593d05378d0e51658e0bbbb6082f11c2ca36b840[m
+Author: Chrono Narrative Bot <olexan.art@users.noreply.github.com>
+Date:   Tue Feb 17 01:42:57 2026 +0100
+
+    fix: bulk retell automation - statistics query and frequency display

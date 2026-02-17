@@ -283,49 +283,7 @@ export function StatisticsPanel({ password }: Props) {
     }
   });
 
-  // Bot visits stats
-  const { data: botStats } = useQuery({
-    queryKey: ['statistics-bots'],
-    queryFn: async () => {
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const { data } = await supabase
-        .from('bot_visits')
-        .select('bot_type, bot_category, created_at')
-        .gte('created_at', sevenDaysAgo);
 
-      if (!data) return { total: 0, byCategory: {}, byBot: {}, daily: [] };
-
-      const byCategory: Record<string, number> = {};
-      const byBot: Record<string, number> = {};
-      const dailyMap: Record<string, number> = {};
-
-      for (const v of data) {
-        byCategory[v.bot_category] = (byCategory[v.bot_category] || 0) + 1;
-        byBot[v.bot_type] = (byBot[v.bot_type] || 0) + 1;
-        const day = v.created_at.split('T')[0];
-        dailyMap[day] = (dailyMap[day] || 0) + 1;
-      }
-
-      // Create daily array for chart
-      const daily = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = format(subDays(new Date(), i), 'yyyy-MM-dd');
-        daily.push({
-          date: d,
-          label: format(subDays(new Date(), i), 'd MMM', { locale: uk }),
-          visits: dailyMap[d] || 0
-        });
-      }
-
-      const categoryData = Object.entries(byCategory).map(([name, value]) => ({ name, value }));
-      const topBots = Object.entries(byBot)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 5)
-        .map(([name, value]) => ({ name, value }));
-
-      return { total: data.length, byCategory: categoryData, topBots, daily };
-    }
-  });
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -336,7 +294,7 @@ export function StatisticsPanel({ password }: Props) {
       queryClient.invalidateQueries({ queryKey: ['statistics-news-views-by-country'] }),
       queryClient.invalidateQueries({ queryKey: ['statistics-top-content'] }),
       queryClient.invalidateQueries({ queryKey: ['statistics-auto-gen'] }),
-      queryClient.invalidateQueries({ queryKey: ['statistics-bots'] }),
+
       queryClient.invalidateQueries({ queryKey: ['recent-retold-news'] }),
     ]);
     setIsRefreshing(false);
@@ -577,79 +535,11 @@ export function StatisticsPanel({ password }: Props) {
         </CardContent>
       </Card>
 
-      {/* Bot Stats Bar Chart - same as in BotCacheAnalyticsPanel */}
-      {botStats && botStats.topBots && botStats.topBots.length > 0 && (
-        <Card className="cosmic-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Bot className="w-4 h-4 text-emerald-500" />
-              Статистика ботів (7 днів)
-            </CardTitle>
-            <CardDescription>Топ боти по кількості запитів</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={botStats.topBots.slice(0, 8)} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis
-                  dataKey="name"
-                  type="category"
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={10}
-                  width={120}
-                  tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Bar dataKey="value" name="Запитів" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Bot Stats & News by Country Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Bot Visits Daily */}
-        <Card className="cosmic-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Bot className="w-4 h-4 text-emerald-500" />
-              Бот-трафік (7 днів)
-            </CardTitle>
-            <CardDescription>Відвідування пошуковими та AI ботами</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {botStats && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <span className="text-sm">Всього відвідувань</span>
-                  <Badge variant="secondary" className="font-bold">{botStats.total}</Badge>
-                </div>
 
-                {botStats.daily && botStats.daily.length > 0 && (
-                  <div className="h-[120px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={botStats.daily}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} />
-                        <Tooltip />
-                        <Area type="monotone" dataKey="visits" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.2)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {/* News by Country */}
         <Card className="cosmic-card">
