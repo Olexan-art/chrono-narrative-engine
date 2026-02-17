@@ -136,8 +136,8 @@ function generateSlug(title: string): string {
     .replace(/\s+/g, '-') // Replace spaces with hyphens
     .replace(/-+/g, '-') // Replace multiple hyphens with single
     .trim()
-    .slice(0, 100) // Limit length
-    + '-' + Date.now().toString(36); // Add unique suffix
+    .slice(0, 100); // Limit length
+  // Removed Date.now() to ensure deterministic slugs
 }
 
 function extractImageFromContent(content: string): string | null {
@@ -602,8 +602,11 @@ serve(async (req) => {
 
           const pubDate = item.pubDate ? parseRSSDate(item.pubDate) : null;
 
+
+
           // Generate slug from title
-          const slug = generateSlug(item.title);
+          // If title is same, slug will be same. Uniqueness is enforced by URL in DB.
+          let slug = generateSlug(item.title);
 
           // Store original RSS content for AI retelling
           const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
@@ -636,7 +639,9 @@ serve(async (req) => {
               published_at: pubDate?.toISOString() || null,
               fetched_at: new Date().toISOString(),
               slug: slug
-            });
+            })
+            .select() // Return inserted data
+            .single();
 
           if (!insertError) {
             insertedCount++;
@@ -644,8 +649,14 @@ serve(async (req) => {
 
             // Auto-cache the newly inserted news page
             autoCacheNewsPage(countryCode, slug, supabaseUrl);
+          } else if (insertError.code === '23505') { // Unique violation (duplicate URL)
+            console.log(`Duplicate URL skipped: ${item.link}`);
+            existingUrls.add(item.link); // Mark as existing
+          } else {
+            console.error(`Error inserting item ${item.link}:`, insertError);
           }
         }
+
 
         // Update feed status
         await supabase
