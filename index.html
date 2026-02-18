@@ -206,9 +206,25 @@
       </section>
     </main>
 
-    <footer>
-      <p id="footer-year">© 2024-<span id="footer-year-span"></span> Synchronization Point. AI-generated content based on real news events.</p>
-      <p>Contact: <a href="https://bravennow.com">bravennow.com</a></p>
+    <footer class="border-t border-border/40 bg-[#030711]/95 backdrop-blur-md transition-colors duration-300">
+      <div class="container mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between">
+        <a href="/" class="flex items-center gap-2">
+          <img src="/favicon.svg" alt="logo" class="h-6 w-6" />
+        </a>
+        <nav class="flex flex-wrap items-center gap-2 justify-center">
+          <a href="/" class="text-sm hover:underline">Read</a>
+          <a href="/news-digest" class="text-sm hover:underline">News Digest</a>
+          <a href="/ink-abyss" class="text-sm hover:underline">Ink Abyss</a>
+          <a href="/media-calendar" class="text-sm hover:underline">Calendar</a>
+          <a href="/wiki" class="text-sm hover:underline">Wiki</a>
+        </nav>
+        <div class="mt-2 md:mt-0"></div>
+      </div>
+      <div class="container mx-auto px-4 text-center text-sm text-muted-foreground font-mono py-2">
+        <span id="footer-year">© <span id="footer-year-span"></span> Synchronization Point. AI-generated content based on real news events.</span>
+        <br />
+        Contact: <a href="https://bravennow.com" class="hover:text-primary transition-colors">bravennow.com</a>
+      </div>
     </footer>
     <script>
       document.getElementById('footer-year-span').textContent = new Date().getFullYear();

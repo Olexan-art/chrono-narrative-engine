@@ -1050,15 +1050,22 @@ function generateFooterHTML(lang: string, baseUrl: string) {
   };
 
   return `
-    <footer class="py-8 border-t border-border mt-12 bg-card/30">
-      <div class="container mx-auto px-4 text-center">
-        <p class="text-sm text-muted-foreground font-mono">
-          ${t('footer.style')} © ${new Date().getFullYear()}
-        </p>
-        <p class="text-xs text-muted-foreground mt-2">
-           <a href="${baseUrl}/" class="hover:text-primary transition-colors">Home</a> | 
-           <a href="${baseUrl}/sitemap" class="hover:text-primary transition-colors">Sitemap</a>
-        </p>
+    <footer class="border-t border-border/40 bg-[#030711]/95 backdrop-blur-md transition-colors duration-300">
+      <div class="container mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between">
+        <a href="${baseUrl}/" class="flex items-center gap-2">
+          <img src="${baseUrl}/favicon.svg" alt="logo" class="h-6 w-6" />
+        </a>
+        <nav class="flex flex-wrap items-center gap-2 justify-center">
+          <a href="${baseUrl}/" class="inline-flex items-center gap-1 text-sm hover:underline">${t('nav.read')}</a>
+          <a href="${baseUrl}/news-digest" class="inline-flex items-center gap-1 text-sm hover:underline">${t('nav.newsdigest')}</a>
+          <a href="${baseUrl}/ink-abyss" class="inline-flex items-center gap-1 text-sm hover:underline">Ink Abyss</a>
+          <a href="${baseUrl}/media-calendar" class="inline-flex items-center gap-1 text-sm hover:underline">${t('nav.calendar')}</a>
+          <a href="${baseUrl}/wiki" class="inline-flex items-center gap-1 text-sm hover:underline">Wiki</a>
+        </nav>
+        <div class="mt-2 md:mt-0"></div>
+      </div>
+      <div class="container mx-auto px-4 text-center text-sm text-muted-foreground font-mono py-2">
+        ${t('footer.style')} © ${new Date().getFullYear()}
       </div>
     </footer>
   `;

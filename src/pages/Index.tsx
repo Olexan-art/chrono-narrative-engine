@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { HeroSection } from "@/components/home/HeroSection";
 import { LatestUsaNews } from "@/components/home/LatestUsaNews";
@@ -138,13 +139,7 @@ export default function Index() {
       </main>
 
       {/* Footer */}
-      <footer className="py-8 border-t border-border">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-sm text-muted-foreground font-mono">
-            {t('footer.style')} © {new Date().getFullYear()}
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -276,17 +277,13 @@ export default function InkAbyssPage() {
       </main>
 
       {/* Footer */}
-      <footer className="py-8 border-t border-border mt-12">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-sm text-muted-foreground font-mono">
-            {language === 'en' 
-              ? 'Art speaks where words fail' 
-              : language === 'pl' 
-              ? 'Sztuka mówi tam, gdzie słowa zawodzą'
-              : 'Мистецтво говорити там, де слова безсилі'} © {new Date().getFullYear()}
-          </p>
-        </div>
-      </footer>
+      <Footer>
+        {language === 'en' 
+          ? 'Art speaks where words fail' 
+          : language === 'pl' 
+          ? 'Sztuka mówi tam, gdzie słowa zawodżą'
+          : 'Мистецтво говорити там, де слова безсилі'}
+      </Footer>
     </div>
   );
 }
