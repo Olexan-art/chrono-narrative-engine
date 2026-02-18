@@ -856,13 +856,12 @@ serve(async (req: Request) => {
         const h1 = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
         const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
-        // Fetching stats (news_rss_items)
+        // 1. Fetch current counts (existing logic)
         const [fetchingH1, fetchingH24] = await Promise.all([
           supabase.from('news_rss_items').select('id', { count: 'exact', head: true }).gte('fetched_at', h1),
           supabase.from('news_rss_items').select('id', { count: 'exact', head: true }).gte('fetched_at', h24),
         ]);
 
-        // Retelling stats (llm_usage_logs)
         const [retellingH1, retellingH24] = await Promise.all([
           supabase.from('llm_usage_logs').select('id', { count: 'exact', head: true })
             .eq('operation', 'retell-news')
@@ -872,12 +871,49 @@ serve(async (req: Request) => {
             .gte('created_at', h24),
         ]);
 
+        // 2. Fetch history for graphs (last 24 hours, hourly buckets)
+        // We Use RPC or raw SQL via supabase frontend is not possible, so we fetch all items and group by hour 
+        // OR better: we can use multiple queries or a single query with grouping if we had a view.
+        // Since we are in an Edge Function, we can execute a custom query via supabase.rpc if available, 
+        // but let's try to fetch grouped data or just counts for each hour.
+
+        // For simplicity and performance in Edge Function, we'll fetch daily stats via a simpler approach:
+        // We'll fetch the counts for each of the last 24 hours.
+        const history = [];
+        for (let i = 23; i >= 0; i--) {
+          const start = new Date(now.getTime() - (i + 1) * 60 * 60 * 1000).toISOString();
+          const end = new Date(now.getTime() - i * 60 * 60 * 1000).toISOString();
+
+          history.push({
+            hour: new Date(now.getTime() - i * 60 * 60 * 1000).getHours(),
+            timestamp: end,
+            start,
+            end
+          });
+        }
+
+        const historyData = await Promise.all(history.map(async (slot) => {
+          const [f, r] = await Promise.all([
+            supabase.from('news_rss_items').select('id', { count: 'exact', head: true })
+              .gte('fetched_at', slot.start).lt('fetched_at', slot.end),
+            supabase.from('llm_usage_logs').select('id', { count: 'exact', head: true })
+              .eq('operation', 'retell-news')
+              .gte('created_at', slot.start).lt('created_at', slot.end),
+          ]);
+          return {
+            time: `${slot.hour}:00`,
+            fetching: f.count || 0,
+            retelling: r.count || 0
+          };
+        }));
+
         return new Response(
           JSON.stringify({
             success: true,
             stats: {
               fetching: { h1: fetchingH1.count || 0, h24: fetchingH24.count || 0 },
               retelling: { h1: retellingH1.count || 0, h24: retellingH24.count || 0 },
+              history: historyData
             }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

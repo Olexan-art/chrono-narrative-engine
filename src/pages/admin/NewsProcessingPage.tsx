@@ -8,8 +8,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { callEdgeFunction } from '@/lib/api';
-import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
+import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, RefreshCw, BarChart3 } from 'lucide-react';
 import { LLM_MODELS } from '@/types/database';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 interface CronConfig {
     id: string;
@@ -21,6 +22,83 @@ interface CronConfig {
     last_run_at: string | null;
     last_run_status: string | null;
     last_run_details: any;
+}
+
+function NewsProcessingChart({ data }: { data: any[] }) {
+    if (!data || data.length === 0) return null;
+
+    return (
+        <Card className="mt-6">
+            <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-primary" />
+                    Last 24 Hours Activity
+                </CardTitle>
+                <CardDescription>Hourly processing volume for fetching and retelling</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="h-[300px] w-full mt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={data}>
+                            <defs>
+                                <linearGradient id="colorFetching" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                                </linearGradient>
+                                <linearGradient id="colorRetelling" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+                            <XAxis
+                                dataKey="time"
+                                stroke="#888888"
+                                fontSize={12}
+                                tickLine={false}
+                                axisLine={false}
+                                interval={2}
+                            />
+                            <YAxis
+                                stroke="#888888"
+                                fontSize={12}
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={(value) => `${value}`}
+                            />
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: 'rgba(0,0,0,0.8)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: '8px',
+                                    fontSize: '12px'
+                                }}
+                            />
+                            <Legend />
+                            <Area
+                                type="monotone"
+                                dataKey="fetching"
+                                name="News Fetched"
+                                stroke="#22c55e"
+                                fillOpacity={1}
+                                fill="url(#colorFetching)"
+                                strokeWidth={2}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="retelling"
+                                name="News Retold"
+                                stroke="#a855f7"
+                                fillOpacity={1}
+                                fill="url(#colorRetelling)"
+                                strokeWidth={2}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </CardContent>
+        </Card>
+    );
 }
 
 // Helper component for displaying bulk retell statistics
@@ -198,6 +276,8 @@ function BulkRetellForm({ onSuccess, password }: { onSuccess: () => void; passwo
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                        <SelectItem value="5">Every 5 minutes</SelectItem>
+                        <SelectItem value="15">Every 15 minutes</SelectItem>
                         <SelectItem value="30">Every 30 minutes</SelectItem>
                         <SelectItem value="60">Every 1 hour</SelectItem>
                         <SelectItem value="180">Every 3 hours</SelectItem>
@@ -320,6 +400,10 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                 <h1 className="text-3xl font-bold">News Processing</h1>
                 <p className="text-muted-foreground">Manage automated news fetching and retelling</p>
             </div>
+
+            {globalStats?.history && (
+                <NewsProcessingChart data={globalStats.history} />
+            )}
 
             {/* News Fetching Section */}
             <Card>
@@ -558,6 +642,8 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="5">Every 5 minutes</SelectItem>
+                                    <SelectItem value="15">Every 15 minutes</SelectItem>
                                     <SelectItem value="60">Every hour</SelectItem>
                                     <SelectItem value="180">Every 3 hours</SelectItem>
                                     <SelectItem value="360">Every 6 hours</SelectItem>
