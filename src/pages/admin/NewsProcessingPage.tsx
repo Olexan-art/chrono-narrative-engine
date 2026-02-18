@@ -28,16 +28,16 @@ function NewsProcessingChart({ data }: { data: any[] }) {
     if (!data || data.length === 0) return null;
 
     return (
-        <Card className="mt-6">
+        <Card>
             <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-primary" />
-                    Last 24 Hours Activity
+                    News Volume (24h)
                 </CardTitle>
-                <CardDescription>Hourly processing volume for fetching and retelling</CardDescription>
+                <CardDescription>Hourly volume for fetching and successful retelling</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="h-[300px] w-full mt-4">
+                <div className="h-[250px] w-full mt-4">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={data}>
                             <defs>
@@ -45,7 +45,7 @@ function NewsProcessingChart({ data }: { data: any[] }) {
                                     <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
                                     <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                                 </linearGradient>
-                                <linearGradient id="colorRetelling" x1="0" y1="0" x2="0" y2="1">
+                                <linearGradient id="colorSuccess" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
                                     <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
                                 </linearGradient>
@@ -54,31 +54,30 @@ function NewsProcessingChart({ data }: { data: any[] }) {
                             <XAxis
                                 dataKey="time"
                                 stroke="#888888"
-                                fontSize={12}
+                                fontSize={10}
                                 tickLine={false}
                                 axisLine={false}
-                                interval={2}
+                                interval={3}
                             />
                             <YAxis
                                 stroke="#888888"
-                                fontSize={12}
+                                fontSize={10}
                                 tickLine={false}
                                 axisLine={false}
-                                tickFormatter={(value) => `${value}`}
                             />
                             <Tooltip
                                 contentStyle={{
                                     backgroundColor: 'rgba(0,0,0,0.8)',
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     borderRadius: '8px',
-                                    fontSize: '12px'
+                                    fontSize: '11px'
                                 }}
                             />
-                            <Legend />
+                            <Legend wrapperStyle={{ fontSize: '11px' }} />
                             <Area
                                 type="monotone"
                                 dataKey="fetching"
-                                name="News Fetched"
+                                name="Fetched"
                                 stroke="#22c55e"
                                 fillOpacity={1}
                                 fill="url(#colorFetching)"
@@ -86,12 +85,90 @@ function NewsProcessingChart({ data }: { data: any[] }) {
                             />
                             <Area
                                 type="monotone"
-                                dataKey="retelling"
-                                name="News Retold"
+                                dataKey="success"
+                                name="Retold"
                                 stroke="#a855f7"
                                 fillOpacity={1}
-                                fill="url(#colorRetelling)"
+                                fill="url(#colorSuccess)"
                                 strokeWidth={2}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+function ProcessingHealthChart({ data }: { data: any[] }) {
+    if (!data || data.length === 0) return null;
+
+    return (
+        <Card>
+            <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-orange-500" />
+                    Processing Health (24h)
+                </CardTitle>
+                <CardDescription>Success vs Error ratio during retelling</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="h-[250px] w-full mt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={data}>
+                            <defs>
+                                <linearGradient id="colorRS" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.2} />
+                                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                                </linearGradient>
+                                <linearGradient id="colorRE" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+                            <XAxis
+                                dataKey="time"
+                                stroke="#888888"
+                                fontSize={10}
+                                tickLine={false}
+                                axisLine={false}
+                                interval={3}
+                            />
+                            <YAxis
+                                stroke="#888888"
+                                fontSize={10}
+                                tickLine={false}
+                                axisLine={false}
+                            />
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: 'rgba(0,0,0,0.8)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: '8px',
+                                    fontSize: '11px'
+                                }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: '11px' }} />
+                            <Area
+                                type="monotone"
+                                dataKey="success"
+                                name="Success"
+                                stroke="#22c55e"
+                                fillOpacity={1}
+                                fill="url(#colorRS)"
+                                strokeWidth={2}
+                                stackId="1"
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="errors"
+                                name="Errors"
+                                stroke="#ef4444"
+                                fillOpacity={1}
+                                fill="url(#colorRE)"
+                                strokeWidth={2}
+                                stackId="1"
                             />
                         </AreaChart>
                     </ResponsiveContainer>
@@ -573,7 +650,10 @@ export default function NewsProcessingPage({ password }: { password: string }) {
             </div>
 
             {globalStats?.history && (
-                <NewsProcessingChart data={globalStats.history} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <NewsProcessingChart data={globalStats.history} />
+                    <ProcessingHealthChart data={globalStats.history} />
+                </div>
             )}
 
             {/* Dashboard Stats */}

@@ -893,17 +893,23 @@ serve(async (req: Request) => {
         }
 
         const historyData = await Promise.all(history.map(async (slot) => {
-          const [f, r] = await Promise.all([
+          const [f, rs, re] = await Promise.all([
             supabase.from('news_rss_items').select('id', { count: 'exact', head: true })
               .gte('fetched_at', slot.start).lt('fetched_at', slot.end),
             supabase.from('llm_usage_logs').select('id', { count: 'exact', head: true })
               .eq('operation', 'retell-news')
+              .eq('success', true)
+              .gte('created_at', slot.start).lt('created_at', slot.end),
+            supabase.from('llm_usage_logs').select('id', { count: 'exact', head: true })
+              .eq('operation', 'retell-news')
+              .eq('success', false)
               .gte('created_at', slot.start).lt('created_at', slot.end),
           ]);
           return {
             time: `${slot.hour}:00`,
             fetching: f.count || 0,
-            retelling: r.count || 0
+            success: rs.count || 0,
+            errors: re.count || 0
           };
         }));
 
