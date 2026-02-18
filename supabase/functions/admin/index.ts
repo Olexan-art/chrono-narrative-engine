@@ -1030,18 +1030,23 @@ serve(async (req: Request) => {
       }
 
       case 'getProcessingDashboardStats': {
-        // 1. Queue Depth (Pending news items)
-        const { data: queueData, error: queueError } = await supabase
-          .from('news_rss_items')
-          .select('country_id', { count: 'exact' })
-          .is('key_points', null);
+        // 1. Get countries
+        const { data: countries, error: countriesError } = await supabase.from('news_countries').select('id, code');
+        if (countriesError) throw countriesError;
 
-        // Group by country (needs country names/codes)
-        const { data: countries } = await supabase.from('news_countries').select('id, code');
-        const queueStats = countries?.map((c: any) => ({
-          code: c.code.toLowerCase(),
-          pending: queueData?.filter((item: any) => item.country_id === c.id).length || 0
-        })) || [];
+        // 2. Queue Depth (Pending news items) - Query each country for exact count
+        const queueStats = await Promise.all((countries || []).map(async (c: any) => {
+          const { count, error } = await supabase
+            .from('news_rss_items')
+            .select('*', { count: 'exact', head: true })
+            .eq('country_id', c.id)
+            .is('key_points', null);
+
+          return {
+            code: c.code.toLowerCase(),
+            pending: count || 0
+          };
+        }));
 
         // 2. Throughput (items per hour)
         const now = new Date();

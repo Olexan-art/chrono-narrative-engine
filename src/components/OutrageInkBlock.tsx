@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { callEdgeFunction } from "@/lib/api";
+import { useAdminStore } from "@/stores/adminStore";
 
 interface OutrageInkBlockProps {
   newsItemId: string;
@@ -39,6 +40,7 @@ export function OutrageInkBlock({
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<string>('standard');
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const { password: adminPwd } = useAdminStore();
 
   // Unified style options matching NewsImageBlock + additional Outrage Ink styles
   const styleOptions = [
@@ -212,7 +214,6 @@ export function OutrageInkBlock({
       queryClient.invalidateQueries({ queryKey: ['outrage-ink', newsItemId] });
 
       // Refresh cache for relevant pages
-      const adminPwd = useAdminStore.getState().password;
       if (adminPwd) {
         callEdgeFunction('cache-pages', { action: 'refresh-single', path: '/', password: adminPwd }).catch(console.error);
         callEdgeFunction('cache-pages', { action: 'refresh-single', path: '/ink-abyss', password: adminPwd }).catch(console.error);
@@ -290,7 +291,6 @@ export function OutrageInkBlock({
       queryClient.invalidateQueries({ queryKey: ['outrage-ink', newsItemId] });
 
       // Refresh cache for relevant pages
-      const adminPwd = useAdminStore.getState().password;
       if (adminPwd) {
         callEdgeFunction('cache-pages', { action: 'refresh-single', path: '/', password: adminPwd }).catch(console.error);
         callEdgeFunction('cache-pages', { action: 'refresh-single', path: '/ink-abyss', password: adminPwd }).catch(console.error);

@@ -67,7 +67,7 @@ serve(async (req) => {
         // Sort by oldest first to catch up
         query = query.order('fetched_at', { ascending: true });
 
-        const { data: newsItems, error: newsError } = await query.limit(50);
+        const { data: newsItems, error: newsError } = await query.limit(100);
 
         if (newsError) {
             throw new Error(`Failed to fetch news: ${newsError.message}`);
