@@ -538,6 +538,24 @@ export default function WikiEntityPage() {
     staleTime: 1000 * 60 * 10,
   });
 
+  // Fetch categories from our DB (for SSR parity)
+  const { data: dbCategories = [] } = useQuery({
+    queryKey: ['entity-db-categories', entity?.id],
+    queryFn: async (): Promise<string[]> => {
+      if (!entity?.id) return [];
+      
+      const { data } = await supabase
+        .from('wiki_entity_categories')
+        .select('category')
+        .eq('wiki_entity_id', entity.id)
+        .limit(50);
+      
+      return (data || []).map(c => c.category).filter(Boolean);
+    },
+    enabled: !!entity?.id,
+    staleTime: 1000 * 60 * 10,
+  });
+
   // Fetch Wikipedia categories automatically
   const { data: wikiCategories = [] } = useQuery({
     queryKey: ['wiki-categories', entity?.id, entity?.wiki_url],
@@ -2238,42 +2256,61 @@ export default function WikiEntityPage() {
                       </AdminTextSelectionPopover>
 
                       {/* Categories Sub-block */}
-                      {wikiCategories.length > 0 && (
+                      {(dbCategories.length > 0 || wikiCategories.length > 0) && (
                         <div className="pt-4 border-t border-border/50">
-                          <h4 className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
-                            <FolderOpen className="w-4 h-4" />
-                            {language === 'uk' ? 'Категорії Wikipedia' : 'Wikipedia Categories'}
-                          </h4>
-                          <div className="flex flex-wrap gap-2">
-                            {wikiCategories.slice(0, 12).map((category, idx) => {
-                              // Determine wiki language from entity URL
-                              const wikiLang = entity?.wiki_url?.includes('uk.wikipedia') ? 'uk' : 'en';
-                              const wikiSearchUrl = `https://${wikiLang}.wikipedia.org/wiki/Category:${encodeURIComponent(category.replace(/ /g, '_'))}`;
-
-                              return (
-                                <a
-                                  key={idx}
-                                  href={wikiSearchUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex"
-                                >
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs cursor-pointer hover:bg-primary/10 hover:border-primary transition-colors gap-1"
-                                  >
-                                    <ExternalLink className="w-2.5 h-2.5" />
+                          {dbCategories.length > 0 && (
+                            <div className="mb-4">
+                              <h4 className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
+                                <FolderOpen className="w-4 h-4" />
+                                {language === 'uk' ? 'Категорії' : 'Categories'}
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {dbCategories.slice(0, 12).map((category, idx) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs">
                                     {category}
                                   </Badge>
-                                </a>
-                              );
-                            })}
-                            {wikiCategories.length > 12 && (
-                              <Badge variant="secondary" className="text-xs">
-                                +{wikiCategories.length - 12}
-                              </Badge>
-                            )}
-                          </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {wikiCategories.length > 0 && (
+                            <div>
+                              <h4 className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
+                                <ExternalLink className="w-4 h-4" />
+                                {language === 'uk' ? 'Категорії Wikipedia' : 'Wikipedia Categories'}
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {wikiCategories.slice(0, 12).map((category, idx) => {
+                                  // Determine wiki language from entity URL
+                                  const wikiLang = entity?.wiki_url?.includes('uk.wikipedia') ? 'uk' : 'en';
+                                  const wikiSearchUrl = `https://${wikiLang}.wikipedia.org/wiki/Category:${encodeURIComponent(category.replace(/ /g, '_'))}`;
+
+                                  return (
+                                    <a
+                                      key={idx}
+                                      href={wikiSearchUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex"
+                                    >
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs cursor-pointer hover:bg-primary/10 hover:border-primary transition-colors gap-1"
+                                      >
+                                        <ExternalLink className="w-2.5 h-2.5" />
+                                        {category}
+                                      </Badge>
+                                    </a>
+                                  );
+                                })}
+                                {wikiCategories.length > 12 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{wikiCategories.length - 12}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
