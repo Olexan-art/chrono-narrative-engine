@@ -198,6 +198,29 @@ function ProcessingDashboard({ password }: { password: string }) {
 
     if (!dashboardStats) return null;
 
+    // Additional stats: bot visits and unique visitors
+    const { data: botVisits } = useQuery({
+        queryKey: ['bot-visits-stats'],
+        queryFn: async () => {
+            const resp = await callEdgeFunction('admin', { action: 'getBotVisitsStats', password }) as { success: boolean; stats?: any };
+            if (!resp.success) throw new Error('Failed to fetch bot visits');
+            return resp.stats;
+        },
+        refetchInterval: 15000,
+        enabled: !!password,
+    });
+
+    const { data: uniqueVisitors } = useQuery({
+        queryKey: ['unique-visitors-stats'],
+        queryFn: async () => {
+            const resp = await callEdgeFunction('admin', { action: 'getUniqueVisitorsStats', password }) as { success: boolean; stats?: any };
+            if (!resp.success) throw new Error('Failed to fetch unique visitors');
+            return resp.stats;
+        },
+        refetchInterval: 30000,
+        enabled: !!password,
+    });
+
     const totalPending = dashboardStats.queueStats.reduce((acc, curr) => acc + curr.pending, 0);
     const estFinishMinutes = totalPending > 0 && dashboardStats.throughput.h1 > 0
         ? Math.round((totalPending / (dashboardStats.throughput.h1)) * 60)
@@ -274,6 +297,63 @@ function ProcessingDashboard({ password }: { password: string }) {
                     </div>
                 </CardContent>
             </Card>
+
+                {/* Bot visits + Unique Visitors */}
+                <div className="col-span-1 md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="md:col-span-2">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Activity className="w-5 h-5 text-primary" />
+                                Bot Visits (24h)
+                            </CardTitle>
+                            <CardDescription>Search bots vs LLM bots hourly visits</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {botVisits?.history && (
+                                <div className="h-[220px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={botVisits.history}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="time" tickLine={false} axisLine={false} />
+                                            <YAxis tickLine={false} axisLine={false} />
+                                            <Tooltip />
+                                            <Legend />
+                                            <Area type="monotone" dataKey="search_bots" name="Search Bots" stroke="#60a5fa" fill="#60a5fa33" />
+                                            <Area type="monotone" dataKey="llm_bots" name="LLM Bots" stroke="#a78bfa" fill="#a78bfa33" />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            )}
+                            {!botVisits?.history && <p className="text-sm text-muted-foreground">No bot visit data available</p>}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm">Unique Visitors — News</CardTitle>
+                            <CardDescription>Unique visitors on news pages (24h / 7d)</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{uniqueVisitors?.news?.h24 ?? '—'}</div>
+                            <div className="text-sm text-muted-foreground">24h</div>
+                            <div className="mt-2 text-3xl font-semibold">{uniqueVisitors?.news?.d7 ?? '—'}</div>
+                            <div className="text-sm text-muted-foreground">7d</div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm">Unique Visitors — Wiki Entities</CardTitle>
+                            <CardDescription>Unique visitors on wiki entity pages (24h / 7d)</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{uniqueVisitors?.wiki?.h24 ?? '—'}</div>
+                            <div className="text-sm text-muted-foreground">24h</div>
+                            <div className="mt-2 text-3xl font-semibold">{uniqueVisitors?.wiki?.d7 ?? '—'}</div>
+                            <div className="text-sm text-muted-foreground">7d</div>
+                        </CardContent>
+                    </Card>
+                </div>
         </div>
     );
 }
