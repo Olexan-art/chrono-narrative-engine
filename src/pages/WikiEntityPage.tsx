@@ -843,14 +843,15 @@ export default function WikiEntityPage() {
     },
     onSuccess: (_, newExtract) => {
       toast.success('Збережено');
-      // Update cache immediately to prevent desync
+      // Optimistically update cache so UI reflects changes immediately
       queryClient.setQueryData(['wiki-entity', entityId], (oldData: any) => {
         if (!oldData) return oldData;
         const field = language === 'en' ? 'extract_en' : 'extract';
         return { ...oldData, [field]: newExtract };
       });
       setIsEditingExtract(false);
-      queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] });
+      // no invalidation here; cache already up-to-date and refetch
+      // could briefly pull stale data from server, causing flicker
     },
   });
 
