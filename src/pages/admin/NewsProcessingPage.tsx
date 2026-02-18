@@ -237,6 +237,22 @@ export default function NewsProcessingPage({ password }: { password: string }) {
     const fetchingConfig = configsData?.configs?.find((c: CronConfig) => c.job_name === 'news_fetching');
     const retellingConfig = configsData?.configs?.find((c: CronConfig) => c.job_name === 'news_retelling');
 
+    // Fetch global stats
+    const { data: globalStats } = useQuery({
+        queryKey: ['global-news-stats'],
+        queryFn: async () => {
+            const response = await callEdgeFunction('admin', {
+                action: 'getGlobalNewsStats',
+                password
+            }) as { success: boolean; stats: any; error?: string };
+
+            if (!response.success) throw new Error(response.error);
+            return response.stats;
+        },
+        refetchInterval: 30000,
+        enabled: !!password,
+    });
+
     // Pause/Resume mutation
     const toggleMutation = useMutation({
         mutationFn: async ({ jobName, action }: { jobName: string; action: 'pause' | 'resume' }) => {
@@ -457,6 +473,19 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                                 <div className="text-2xl font-bold text-red-500">
                                     {fetchingConfig.last_run_details.errors || 0}
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {globalStats && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border rounded-lg bg-green-500/5 mt-4">
+                            <div>
+                                <div className="text-sm text-muted-foreground">Global (1h)</div>
+                                <div className="text-xl font-bold">{globalStats.fetching?.h1 || 0}</div>
+                            </div>
+                            <div>
+                                <div className="text-sm text-muted-foreground">Global (24h)</div>
+                                <div className="text-xl font-bold">{globalStats.fetching?.h24 || 0}</div>
                             </div>
                         </div>
                     )}
@@ -701,6 +730,19 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                             </div>
                         )
                     }
+
+                    {globalStats && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border rounded-lg bg-purple-500/5 mt-4">
+                            <div>
+                                <div className="text-sm text-muted-foreground">Global (1h)</div>
+                                <div className="text-xl font-bold">{globalStats.retelling?.h1 || 0}</div>
+                            </div>
+                            <div>
+                                <div className="text-sm text-muted-foreground">Global (24h)</div>
+                                <div className="text-xl font-bold">{globalStats.retelling?.h24 || 0}</div>
+                            </div>
+                        </div>
+                    )}
                 </CardContent >
             </Card >
 

@@ -851,6 +851,39 @@ serve(async (req: Request) => {
         );
       }
 
+      case 'getGlobalNewsStats': {
+        const now = new Date();
+        const h1 = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+        const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+        // Fetching stats (news_rss_items)
+        const [fetchingH1, fetchingH24] = await Promise.all([
+          supabase.from('news_rss_items').select('id', { count: 'exact', head: true }).gte('fetched_at', h1),
+          supabase.from('news_rss_items').select('id', { count: 'exact', head: true }).gte('fetched_at', h24),
+        ]);
+
+        // Retelling stats (llm_usage_logs)
+        const [retellingH1, retellingH24] = await Promise.all([
+          supabase.from('llm_usage_logs').select('id', { count: 'exact', head: true })
+            .eq('operation', 'retell-news')
+            .gte('created_at', h1),
+          supabase.from('llm_usage_logs').select('id', { count: 'exact', head: true })
+            .eq('operation', 'retell-news')
+            .gte('created_at', h24),
+        ]);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            stats: {
+              fetching: { h1: fetchingH1.count || 0, h24: fetchingH24.count || 0 },
+              retelling: { h1: retellingH1.count || 0, h24: retellingH24.count || 0 },
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       case 'getBulkRetellStats': {
         const { country_code } = data;
 

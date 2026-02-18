@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { callEdgeFunction } from '@/lib/api';
-import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, Trash2, Globe } from 'lucide-react';
+import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, Trash2, Globe, RefreshCw } from 'lucide-react';
 import { LLM_MODELS } from '@/types/database';
 
 interface CronConfig {
@@ -267,6 +267,22 @@ export function BulkRetellCronPanel({ password }: { password: string }) {
         enabled: !!password,
     });
 
+    // Fetch global stats
+    const { data: globalStats } = useQuery({
+        queryKey: ['global-news-stats'],
+        queryFn: async () => {
+            const response = await callEdgeFunction('admin', {
+                action: 'getGlobalNewsStats',
+                password
+            }) as { success: boolean; stats: any; error?: string };
+
+            if (!response.success) throw new Error(response.error);
+            return response.stats;
+        },
+        refetchInterval: 30000,
+        enabled: !!password,
+    });
+
     const allCountries = [
         { code: 'us', label: 'United States' },
         { code: 'ua', label: 'Ukraine' },
@@ -291,6 +307,44 @@ export function BulkRetellCronPanel({ password }: { password: string }) {
                 </div>
             </CardHeader>
             <CardContent className="space-y-6">
+                {globalStats && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 border rounded-lg bg-green-500/5 space-y-2">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                                <Activity className="w-4 h-4 text-green-500" />
+                                Global News Fetching
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <div className="text-xs text-muted-foreground">Last hour</div>
+                                    <div className="text-lg font-bold">{globalStats.fetching?.h1 || 0}</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs text-muted-foreground">Today (24h)</div>
+                                    <div className="text-lg font-bold">{globalStats.fetching?.h24 || 0}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border rounded-lg bg-purple-500/5 space-y-2">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                                <RefreshCw className="w-4 h-4 text-purple-500" />
+                                Global News Retelling
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <div className="text-xs text-muted-foreground">Last hour</div>
+                                    <div className="text-lg font-bold">{globalStats.retelling?.h1 || 0}</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs text-muted-foreground">Today (24h)</div>
+                                    <div className="text-lg font-bold">{globalStats.retelling?.h24 || 0}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* List of Active Bulk Retell Crons */}
                 <div className="space-y-4">
                     <h4 className="font-medium flex items-center gap-2">
