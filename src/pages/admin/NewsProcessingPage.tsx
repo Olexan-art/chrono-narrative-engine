@@ -11,6 +11,7 @@ import { callEdgeFunction } from '@/lib/api';
 import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, RefreshCw, BarChart3, Zap, Timer, AlertCircle } from 'lucide-react';
 import { LLM_MODELS } from '@/types/database';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { BulkRetellCronPanelEnhanced } from '@/components/admin/BulkRetellCronPanelEnhanced';
 
 interface CronConfig {
     id: string;
@@ -1086,133 +1087,8 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                 </CardContent >
             </Card >
 
-            {/* Bulk News Retelling Card */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="flex items-center gap-2">
-                                <Settings className="w-5 h-5" />
-                                Bulk News Retelling
-                            </CardTitle>
-                            <CardDescription>Country-specific automated retelling crons</CardDescription>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {/* List of Active Bulk Retell Crons */}
-                    <div className="space-y-4">
-                        <h4 className="font-medium">Active Crons</h4>
-                        {configsData?.configs
-                            ?.filter((c: CronConfig) => c.job_name.startsWith('bulk_retell_'))
-                            .map((cron: CronConfig) => {
-                                const countryCode = cron.processing_options?.country_code || '';
-                                const country = allCountries.find(c => c.code === countryCode);
-
-                                return (
-                                    <div key={cron.id} className="p-4 border rounded-lg space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-2xl">{country?.label || countryCode}</span>
-                                                <div>
-                                                    <div className="font-medium">{country?.label || countryCode.toUpperCase()}</div>
-                                                    <div className="text-sm text-muted-foreground">
-                                                        Every {cron.frequency_minutes}min • {cron.processing_options?.llm_model} • {cron.processing_options?.time_range === 'last_1h' ? 'Last 1h' : 'All news'}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant={cron.enabled ? 'default' : 'secondary'}>
-                                                    {cron.enabled ? 'Enabled' : 'Paused'}
-                                                </Badge>
-                                                <Button
-                                                    size="sm"
-                                                    variant="secondary"
-                                                    className="bg-primary/20 hover:bg-primary/30 text-primary-foreground border-primary/30"
-                                                    onClick={async () => {
-                                                        const confirmFast = confirm(`Trigger FAST CATCH-UP mode for ${country?.label}? This will process 100+ items immediately.`);
-                                                        if (!confirmFast) return;
-
-                                                        toast.info(`Starting catch-up for ${countryCode.toUpperCase()}...`);
-                                                        try {
-                                                            const result = await callEdgeFunction('bulk-retell-news', {
-                                                                country_code: countryCode,
-                                                                force_all: true,
-                                                                job_name: cron.job_name,
-                                                                llm_model: cron.processing_options?.llm_model
-                                                            }) as any;
-                                                            toast.success(`Processed ${result.processed} items. Success: ${result.success_count}`);
-                                                            queryClient.invalidateQueries({ queryKey: ['cron-configs'] });
-                                                            queryClient.invalidateQueries({ queryKey: ['processing-dashboard-stats'] });
-                                                        } catch (e) {
-                                                            toast.error('Failed to trigger bulk processing');
-                                                        }
-                                                    }}
-                                                >
-                                                    <Zap className="w-4 h-4 mr-1" />
-                                                    Process All
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => {
-                                                        toggleMutation.mutate({
-                                                            jobName: cron.job_name,
-                                                            action: cron.enabled ? 'pause' : 'resume'
-                                                        });
-                                                    }}
-                                                >
-                                                    {cron.enabled ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="destructive"
-                                                    onClick={async () => {
-                                                        if (!confirm(`Delete bulk retell cron for ${country?.label}?`)) return;
-
-                                                        try {
-                                                            const result = await callEdgeFunction('admin', {
-                                                                action: 'deleteBulkRetellCron',
-                                                                password,
-                                                                data: { jobName: cron.job_name }
-                                                            }) as { success: boolean; error?: string };
-
-                                                            if (result.success) {
-                                                                toast.success('Cron deleted');
-                                                                queryClient.invalidateQueries({ queryKey: ['cron-configs'] });
-                                                            } else {
-                                                                throw new Error(result.error);
-                                                            }
-                                                        } catch (error) {
-                                                            toast.error(error instanceof Error ? error.message : 'Failed to delete');
-                                                        }
-                                                    }}
-                                                >
-                                                    Delete
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        {/* Statistics */}
-                                        <BulkRetellStats countryCode={countryCode} password={password} />
-                                    </div>
-                                );
-                            })}
-
-                        {(!configsData?.configs || configsData.configs.filter((c: CronConfig) => c.job_name.startsWith('bulk_retell_')).length === 0) && (
-                            <div className="text-center text-muted-foreground py-8">
-                                No bulk retell crons configured yet
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Add New Cron Form */}
-                    <div className="border-t pt-6">
-                        <h4 className="font-medium mb-4">Create New Bulk Retell Cron</h4>
-                        <BulkRetellForm onSuccess={() => queryClient.invalidateQueries({ queryKey: ['cron-configs'] })} password={password} />
-                    </div>
-                </CardContent>
-            </Card>
+            {/* Bulk News Retelling - Use Enhanced Component */}
+            <BulkRetellCronPanelEnhanced password={adminPassword || ''} />
 
             {/* Diagnostics Section */}
             <DiagnosticInfo password={password} />
