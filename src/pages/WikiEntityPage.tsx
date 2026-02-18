@@ -841,8 +841,14 @@ export default function WikiEntityPage() {
         .eq('id', entity?.id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, newExtract) => {
       toast.success('Збережено');
+      // Update cache immediately to prevent desync
+      queryClient.setQueryData(['wiki-entity', entityId], (oldData: any) => {
+        if (!oldData) return oldData;
+        const field = language === 'en' ? 'extract_en' : 'extract';
+        return { ...oldData, [field]: newExtract };
+      });
       setIsEditingExtract(false);
       queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] });
     },
@@ -867,6 +873,19 @@ export default function WikiEntityPage() {
     },
     onSuccess: () => {
       toast.success('Збережено');
+      // Update cache immediately to prevent desync
+      queryClient.setQueryData(['wiki-entity', entityId], (oldData: any) => {
+        if (!oldData) return oldData;
+        const updates: any = {};
+        if (language === 'en') {
+          updates.name_en = editedName;
+          updates.description_en = editedDescription;
+        } else {
+          updates.name = editedName;
+          updates.description = editedDescription;
+        }
+        return { ...oldData, ...updates };
+      });
       setIsEditingInfo(false);
       queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] });
     },
@@ -881,8 +900,13 @@ export default function WikiEntityPage() {
         .eq('id', entity?.id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, imageUrl) => {
       toast.success('Зображення оновлено');
+      // Update cache immediately to prevent desync
+      queryClient.setQueryData(['wiki-entity', entityId], (oldData: any) => {
+        if (!oldData) return oldData;
+        return { ...oldData, image_url: imageUrl };
+      });
       queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] });
     },
   });
