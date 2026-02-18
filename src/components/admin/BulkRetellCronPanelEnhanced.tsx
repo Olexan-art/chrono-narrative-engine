@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { callEdgeFunction } from '@/lib/api';
-import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, Trash2, Globe, RefreshCw, TrendingUp, AlertCircle, Zap } from 'lucide-react';
+import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, Trash2, Globe, RefreshCw, TrendingUp, AlertCircle, Zap, Edit } from 'lucide-react';
 import { LLM_MODELS } from '@/types/database';
 import { LineChart, Line, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
@@ -367,6 +368,8 @@ function BulkRetellFormEnhanced({ onSuccess, password }: { onSuccess: () => void
 
 export function BulkRetellCronPanelEnhanced({ password }: { password: string }) {
     const queryClient = useQueryClient();
+    const [editingCron, setEditingCron] = useState<CronConfig | null>(null);
+    const [editFrequency, setEditFrequency] = useState(60);
 
     // Fetch cron configs
     const { data: configsData, isLoading } = useQuery({
@@ -629,6 +632,21 @@ export function BulkRetellCronPanelEnhanced({ password }: { password: string }) 
                                             <Button
                                                 size="sm"
                                                 variant="outline"
+                                                className="bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/30 text-cyan-400"
+                                                onClick={() => {
+                                                    setEditingCron(cron);
+                                                    setEditFrequency(cron.frequency_minutes);
+                                                }}
+                                                title="Edit cron schedule"
+                                                aria-label={`Edit cron ${cron.job_name}`}
+                                            >
+                                                <Edit className="w-4 h-4 mr-2" />
+                                                <span className="text-sm font-medium">Edit</span>
+                                            </Button>
+
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
                                                 onClick={async () => {
                                                     try {
                                                         await callEdgeFunction('admin', {
@@ -700,6 +718,64 @@ export function BulkRetellCronPanelEnhanced({ password }: { password: string }) 
                     <BulkRetellFormEnhanced onSuccess={() => queryClient.invalidateQueries({ queryKey: ['cron-configs'] })} password={password} />
                 </CardContent>
             </Card>
+
+            {/* Edit Cron Modal */}
+            <Dialog open={!!editingCron} onOpenChange={(open) => !open && setEditingCron(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Edit className="w-5 h-5 text-cyan-500" />
+                            Edit Cron Job
+                        </DialogTitle>
+                        <DialogDescription>
+                            Update the schedule for {editingCron?.processing_options?.country_code?.toUpperCase()} cron
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div>
+                            <Label>Check Every</Label>
+                            <Select value={editFrequency.toString()} onValueChange={(v) => setEditFrequency(parseInt(v))}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="5">5 minutes ⚡</SelectItem>
+                                    <SelectItem value="15">15 minutes</SelectItem>
+                                    <SelectItem value="30">30 minutes</SelectItem>
+                                    <SelectItem value="60">1 hour</SelectItem>
+                                    <SelectItem value="120">2 hours</SelectItem>
+                                    <SelectItem value="360">6 hours</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setEditingCron(null)}>Cancel</Button>
+                            <Button
+                                onClick={async () => {
+                                    if (!editingCron) return;
+                                    try {
+                                        await callEdgeFunction('admin', {
+                                            action: 'updateCronConfig',
+                                            password,
+                                            data: {
+                                                jobName: editingCron.job_name,
+                                                config: { frequency_minutes: editFrequency }
+                                            }
+                                        });
+                                        queryClient.invalidateQueries({ queryKey: ['cron-configs'] });
+                                        toast.success('Cron schedule updated');
+                                        setEditingCron(null);
+                                    } catch (e) {
+                                        toast.error('Failed to update cron');
+                                    }
+                                }}
+                            >
+                                Save Changes
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
