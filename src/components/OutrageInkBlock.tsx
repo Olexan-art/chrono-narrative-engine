@@ -133,12 +133,15 @@ export function OutrageInkBlock({
   const { data: ink, isLoading } = useQuery({
     queryKey: ['outrage-ink', newsItemId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('outrage_ink')
         .select('*')
         .eq('news_item_id', newsItemId)
-        .maybeSingle();
-      return data as OutrageInk | null;
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      return (data?.[0] || null) as OutrageInk | null;
     },
   });
 
@@ -232,12 +235,14 @@ export function OutrageInkBlock({
         const prompt = getStylePrompt(selectedStyle, newsTitle);
 
         // Call edge function to generate satire image
+        // The edge function itself now saves the DB record!
         const result = await callEdgeFunction<{ success: boolean; imageUrl?: string; error?: string }>(
           'generate-image',
           {
             prompt,
             newsId: newsItemId,
-            type: 'satire'
+            type: 'satire',
+            newsTitle // Pass title so Edge Function can save it
           }
         );
 
@@ -245,43 +250,7 @@ export function OutrageInkBlock({
           throw new Error(result.error || 'Failed to generate image');
         }
 
-        const imageUrl = result.imageUrl;
-
-        // Save to outrage_ink with style-adjusted prompt
-        if (ink) {
-          const { error: updateError } = await supabase
-            .from('outrage_ink')
-            .update({ image_url: imageUrl, title: newsTitle, image_prompt: prompt })
-            .eq('id', ink.id);
-
-          if (updateError) throw updateError;
-        } else {
-          const { data: newInk, error: insertError } = await supabase
-            .from('outrage_ink')
-            .insert({
-              news_item_id: newsItemId,
-              image_url: imageUrl,
-              title: newsTitle,
-              image_prompt: prompt
-            })
-            .select()
-            .single();
-
-          if (insertError) throw insertError;
-
-          // Link to wiki entities
-          if (wikiEntityIds.length > 0 && newInk) {
-            const { error: linkError } = await supabase.from('outrage_ink_entities').insert(
-              wikiEntityIds.map(entityId => ({
-                outrage_ink_id: newInk.id,
-                wiki_entity_id: entityId
-              }))
-            );
-            if (linkError) console.error('Failed to link entities:', linkError);
-          }
-        }
-
-        return imageUrl;
+        return result.imageUrl;
       } finally {
         setIsGenerating(false);
       }

@@ -221,6 +221,7 @@ serve(async (req) => {
   }
 
   try {
+    const body = await req.json();
     const {
       prompt: reqPrompt,
       model,
@@ -233,8 +234,9 @@ serve(async (req) => {
       imageIndex = 1,
       originalContent,
       action,
-      imageUrl
-    } = await req.json();
+      imageUrl,
+      ...metadata
+    } = body;
     const prompt = reqPrompt;
 
     const supabase = createClient(
@@ -386,7 +388,31 @@ serve(async (req) => {
         : `general/satire_${timestamp}.png`;
 
       finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath, bucket);
-      console.log('Generated satire image for news:', newsId);
+
+      // Save to database using service_role
+      if (newsId) {
+        const { data: existing } = await supabase
+          .from('outrage_ink')
+          .select('id')
+          .eq('news_item_id', newsId)
+          .maybeSingle();
+
+        if (existing) {
+          await supabase.from('outrage_ink').update({
+            image_url: finalImageUrl,
+            title: metadata.newsTitle || newsId,
+            image_prompt: finalPrompt
+          }).eq('id', existing.id);
+        } else {
+          await supabase.from('outrage_ink').insert({
+            news_item_id: newsId,
+            image_url: finalImageUrl,
+            image_prompt: finalPrompt,
+            title: metadata.newsTitle || newsId
+          });
+        }
+      }
+      console.log('Generated and saved satire image for news:', newsId);
     } else if (newsId) {
       // News article image
       storagePath = `news/${newsId}/cover.png`;
