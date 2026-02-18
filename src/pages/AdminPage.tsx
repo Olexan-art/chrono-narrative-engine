@@ -29,7 +29,6 @@ import { SEOSettingsPanel } from "@/components/SEOSettingsPanel";
 
 
 import { BotErrorsPanel } from "@/components/BotErrorsPanel";
-import { StatisticsPanel } from "@/components/StatisticsPanel";
 import { WikiEntitiesPanel } from "@/components/admin/WikiEntitiesPanel";
 import { NewsSearchPanel } from "@/components/admin/NewsSearchPanel";
 import { NewsCalendarPanel } from "@/components/admin/NewsCalendarPanel";
@@ -732,10 +731,6 @@ export default function AdminPage() {
               <BarChart3 className="w-4 h-4" />
               Дашборд
             </TabsTrigger>
-            <TabsTrigger value="statistics" className="gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              Статистика
-            </TabsTrigger>
 
 
 
@@ -864,9 +859,6 @@ export default function AdminPage() {
             <NewsProcessingPage password={password} />
           </TabsContent>
 
-          <TabsContent value="statistics" className="mt-6">
-            <StatisticsPanel password={password} />
-          </TabsContent>
 
           <TabsContent value="generate" className="mt-6">
             <GenerationPanel password={password} />

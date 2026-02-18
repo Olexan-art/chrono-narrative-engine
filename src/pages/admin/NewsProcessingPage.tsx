@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { callEdgeFunction } from '@/lib/api';
-import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, RefreshCw, BarChart3 } from 'lucide-react';
+import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, RefreshCw, BarChart3, Zap, Timer, AlertCircle } from 'lucide-react';
 import { LLM_MODELS } from '@/types/database';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
@@ -98,6 +98,105 @@ function NewsProcessingChart({ data }: { data: any[] }) {
                 </div>
             </CardContent>
         </Card>
+    );
+}
+
+// Advanced statistics component for the entire processing pipeline
+function ProcessingDashboard({ password }: { password: string }) {
+    const { data: dashboardStats, refetch } = useQuery({
+        queryKey: ['processing-dashboard-stats'],
+        queryFn: async () => {
+            const response = await callEdgeFunction('admin', {
+                action: 'getProcessingDashboardStats',
+                password
+            }) as { success: boolean; queueStats: any[]; throughput: { h1: number }; recentFailures: any[] };
+
+            if (!response.success) throw new Error('Failed to fetch dashboard stats');
+            return response;
+        },
+        refetchInterval: 15000,
+        enabled: !!password,
+    });
+
+    if (!dashboardStats) return null;
+
+    const totalPending = dashboardStats.queueStats.reduce((acc, curr) => acc + curr.pending, 0);
+    const estFinishMinutes = totalPending > 0 && dashboardStats.throughput.h1 > 0
+        ? Math.round((totalPending / (dashboardStats.throughput.h1)) * 60)
+        : null;
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground uppercase">Queue Depth</p>
+                            <p className="text-3xl font-bold text-primary">{totalPending}</p>
+                        </div>
+                        <Activity className="w-8 h-8 text-primary/40" />
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-1">
+                        {dashboardStats.queueStats.map(s => (
+                            <Badge key={s.code} variant="outline" className="text-[10px] px-1 h-5">
+                                {s.code}: {s.pending}
+                            </Badge>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="bg-green-500/5 border-green-500/20">
+                <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground uppercase">Throughput (1h)</p>
+                            <p className="text-3xl font-bold text-green-500">{dashboardStats.throughput.h1}</p>
+                        </div>
+                        <Zap className="w-8 h-8 text-green-500/40" />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-2 italic">
+                        Items processed per hour
+                    </p>
+                </CardContent>
+            </Card>
+
+            <Card className="bg-orange-500/5 border-orange-500/20">
+                <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground uppercase">Est. Completion</p>
+                            <p className="text-3xl font-bold text-orange-500">
+                                {estFinishMinutes ? `${Math.floor(estFinishMinutes / 60)}h ${estFinishMinutes % 60}m` : 'N/A'}
+                            </p>
+                        </div>
+                        <Timer className="w-8 h-8 text-orange-500/40" />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-2 italic">
+                        Based on last hour speed
+                    </p>
+                </CardContent>
+            </Card>
+
+            <Card className="bg-red-500/5 border-red-500/20">
+                <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground uppercase">Recent Errors</p>
+                            <p className="text-3xl font-bold text-red-500">{dashboardStats.recentFailures.length}</p>
+                        </div>
+                        <AlertCircle className="w-8 h-8 text-red-500/40" />
+                    </div>
+                    <div className="mt-4 text-[10px] space-y-1 overflow-hidden">
+                        {dashboardStats.recentFailures.slice(0, 2).map((f, i) => (
+                            <div key={i} className="truncate text-red-400">
+                                {f.error_message}
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
     );
 }
 
@@ -294,6 +393,77 @@ function BulkRetellForm({ onSuccess, password }: { onSuccess: () => void; passwo
     );
 }
 
+// Diagnostic component to inspect raw logs
+function DiagnosticInfo({ password }: { password: string }) {
+    const { data: diagData, refetch, isFetching } = useQuery({
+        queryKey: ['admin-diagnostics'],
+        queryFn: async () => {
+            const response = await callEdgeFunction('admin', {
+                action: 'getDiagnosticLogs',
+                password
+            }) as { success: boolean; logs: any[]; cronConfigs: any[]; error?: string };
+
+            if (!response.success) throw new Error(response.error);
+            return response;
+        },
+        enabled: false, // Only manual trigger
+    });
+
+    return (
+        <Card className="mt-8 border-dashed border-primary/30">
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">Admin Diagnostics</CardTitle>
+                        <CardDescription>Raw logs and configurations for troubleshooting</CardDescription>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}>
+                        {isFetching ? 'Fetching...' : 'Show Raw Data'}
+                    </Button>
+                </div>
+            </CardHeader>
+            {diagData && (
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <h4 className="text-xs font-bold uppercase">Last 10 LLM Usage Logs (retell-news)</h4>
+                        <div className="max-h-60 overflow-auto border rounded p-2 bg-black/50 font-mono text-[10px]">
+                            {diagData.logs.length === 0 ? (
+                                <p className="text-muted-foreground italic">No logs found</p>
+                            ) : (
+                                diagData.logs.map((log: any) => (
+                                    <div key={log.id} className="mb-2 border-b border-white/5 pb-1">
+                                        <div className="flex justify-between text-primary">
+                                            <span>{new Date(log.created_at).toLocaleString()}</span>
+                                            <span>{log.model}</span>
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            Success: {String(log.success)} | Duration: {log.duration_ms}ms
+                                        </div>
+                                        <div className="text-amber-500 whitespace-pre-wrap">
+                                            Metadata: {JSON.stringify(log.metadata)}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <h4 className="text-xs font-bold uppercase">Internal Cron Configs</h4>
+                        <div className="max-h-40 overflow-auto border rounded p-2 bg-black/50 font-mono text-[10px]">
+                            {diagData.cronConfigs.map((cfg: any) => (
+                                <div key={cfg.id} className="mb-1">
+                                    {cfg.job_name}: {cfg.last_run_status} ({cfg.last_run_at ? new Date(cfg.last_run_at).toLocaleString() : 'never'})
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </CardContent>
+            )}
+        </Card>
+    );
+}
+
 export default function NewsProcessingPage({ password }: { password: string }) {
     const queryClient = useQueryClient();
 
@@ -385,6 +555,7 @@ export default function NewsProcessingPage({ password }: { password: string }) {
     const allCountries = [
         { code: 'us', label: 'United States' },
         { code: 'ua', label: 'Ukraine' },
+        { code: 'pl', label: 'Poland' },
     ];
 
     const processingOptions = [
@@ -404,6 +575,9 @@ export default function NewsProcessingPage({ password }: { password: string }) {
             {globalStats?.history && (
                 <NewsProcessingChart data={globalStats.history} />
             )}
+
+            {/* Dashboard Stats */}
+            <ProcessingDashboard password={password} />
 
             {/* News Fetching Section */}
             <Card>
@@ -873,6 +1047,33 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                                                 </Badge>
                                                 <Button
                                                     size="sm"
+                                                    variant="secondary"
+                                                    className="bg-primary/20 hover:bg-primary/30 text-primary-foreground border-primary/30"
+                                                    onClick={async () => {
+                                                        const confirmFast = confirm(`Trigger FAST CATCH-UP mode for ${country?.label}? This will process 100+ items immediately.`);
+                                                        if (!confirmFast) return;
+
+                                                        toast.info(`Starting catch-up for ${countryCode.toUpperCase()}...`);
+                                                        try {
+                                                            const result = await callEdgeFunction('bulk-retell-news', {
+                                                                country_code: countryCode,
+                                                                force_all: true,
+                                                                job_name: cron.job_name,
+                                                                llm_model: cron.processing_options?.llm_model
+                                                            }) as any;
+                                                            toast.success(`Processed ${result.processed} items. Success: ${result.success_count}`);
+                                                            queryClient.invalidateQueries({ queryKey: ['cron-configs'] });
+                                                            queryClient.invalidateQueries({ queryKey: ['processing-dashboard-stats'] });
+                                                        } catch (e) {
+                                                            toast.error('Failed to trigger bulk processing');
+                                                        }
+                                                    }}
+                                                >
+                                                    <Zap className="w-4 h-4 mr-1" />
+                                                    Process All
+                                                </Button>
+                                                <Button
+                                                    size="sm"
                                                     variant="outline"
                                                     onClick={() => {
                                                         toggleMutation.mutate({
@@ -932,6 +1133,9 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                     </div>
                 </CardContent>
             </Card>
-        </div >
+
+            {/* Diagnostics Section */}
+            <DiagnosticInfo password={password} />
+        </div>
     );
 }

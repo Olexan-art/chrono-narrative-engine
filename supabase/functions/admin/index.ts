@@ -947,7 +947,7 @@ serve(async (req: Request) => {
             .from('llm_usage_logs')
             .select('id', { count: 'exact', head: true })
             .eq('operation', 'retell-news')
-            .eq('metadata->>country_code', country_code.toLowerCase());
+            .contains('metadata', { country_code: country_code.toLowerCase() });
 
           if (since) {
             query = query.gte('created_at', since.toISOString());
@@ -983,6 +983,77 @@ serve(async (req: Request) => {
               d3,
               d7
             }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'getDiagnosticLogs': {
+        const { data: logs, error: logsError } = await supabase
+          .from('llm_usage_logs')
+          .select('*')
+          .eq('operation', 'retell-news')
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        const { data: cronConfigs, error: cronError } = await supabase
+          .from('cron_job_configs')
+          .select('*')
+          .order('updated_at', { ascending: false });
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            logs: logs || [],
+            cronConfigs: cronConfigs || [],
+            logsError,
+            cronError
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'getProcessingDashboardStats': {
+        // 1. Queue Depth (Pending news items)
+        const { data: queueData, error: queueError } = await supabase
+          .from('news_rss_items')
+          .select('country_id', { count: 'exact' })
+          .is('key_points', null);
+
+        // Group by country (needs country names/codes)
+        const { data: countries } = await supabase.from('news_countries').select('id, code');
+        const queueStats = countries?.map((c: any) => ({
+          code: c.code.toLowerCase(),
+          pending: queueData?.filter((item: any) => item.country_id === c.id).length || 0
+        })) || [];
+
+        // 2. Throughput (items per hour)
+        const now = new Date();
+        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+        const { count: h1Count } = await supabase
+          .from('llm_usage_logs')
+          .select('*', { count: 'exact', head: true })
+          .eq('operation', 'retell-news')
+          .eq('success', true)
+          .gte('created_at', oneHourAgo);
+
+        // 3. Recent Failures
+        const { data: failures } = await supabase
+          .from('llm_usage_logs')
+          .select('created_at, error_message, metadata')
+          .eq('operation', 'retell-news')
+          .eq('success', false)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            queueStats,
+            throughput: {
+              h1: h1Count || 0,
+            },
+            recentFailures: failures || []
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );

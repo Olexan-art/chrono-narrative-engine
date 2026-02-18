@@ -15,7 +15,7 @@ serve(async (req) => {
     let countryCodeForUpdate: string | undefined;
 
     try {
-        const { country_code, time_range, llm_model, llm_provider, job_name } = await req.json();
+        const { country_code, time_range, llm_model, job_name, force_all } = await req.json();
 
         jobNameForUpdate = job_name;
         countryCodeForUpdate = country_code;
@@ -31,7 +31,7 @@ serve(async (req) => {
         const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        console.log(`[bulk-retell-news] Starting for country: ${country_code}, time_range: ${time_range}, model: ${llm_model}`);
+        console.log(`[bulk-retell-news] CPU-Intensive mode starting for: ${country_code}, time_range: ${time_range || 'all'}`);
 
         // Get country ID
         const { data: country, error: countryError } = await supabase
@@ -44,142 +44,111 @@ serve(async (req) => {
             throw new Error(`Country ${country_code} not found`);
         }
 
-        // IMPROVED LOGIC: Check key_points to determine if news is already retold.
-        // retell-news always populates key_points, themes, keywords.
-        // Checking content/content_en is unreliable if fetch-rss fills them or if they overlap.
-        console.log(`[bulk-retell-news] Checking 'key_points' is null to find unretold news`);
-
         // Build query for unretold news
+        // We look for oldest news first to ensure we close the gap
         let query = supabase
             .from('news_rss_items')
             .select('id, title, slug, fetched_at')
             .eq('country_id', country.id)
-            .is('key_points', null) // Primary check: if no key_points, it needs retelling
-            .order('fetched_at', { ascending: false });
+            .is('key_points', null);
 
-        // Apply time range filter
-        const now = Date.now();
-        if (time_range === 'last_1h') {
-            const oneHourAgo = new Date(now - 60 * 60 * 1000).toISOString();
-            query = query.gte('fetched_at', oneHourAgo);
-        } else if (time_range === 'last_24h') {
-            const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();
-            query = query.gte('fetched_at', twentyFourHoursAgo);
+        // Apply time range filter only if not force_all
+        if (!force_all) {
+            const now = Date.now();
+            if (time_range === 'last_1h') {
+                const oneHourAgo = new Date(now - 60 * 60 * 1000).toISOString();
+                query = query.gte('fetched_at', oneHourAgo);
+            } else if (time_range === 'last_24h') {
+                const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+                query = query.gte('fetched_at', twentyFourHoursAgo);
+            }
         }
 
-        const { data: newsItems, error: newsError } = await query.limit(20); // Process max 20 items per run (reduced from 100 to avoid timeout)
+        // Sort by oldest first to catch up
+        query = query.order('fetched_at', { ascending: true });
+
+        const { data: newsItems, error: newsError } = await query.limit(50);
 
         if (newsError) {
             throw new Error(`Failed to fetch news: ${newsError.message}`);
         }
 
         if (!newsItems || newsItems.length === 0) {
-            console.log(`[bulk-retell-news] No unretold news found for ${country_code} in range ${time_range}`);
-            const summary = {
-                success: true,
-                processed: 0,
-                success_count: 0,
-                error_count: 0,
-                message: 'No news to process',
-                country_code,
-                time_range,
-                llm_model
-            };
-
-            // Update cron job status
+            console.log(`[bulk-retell-news] Queue empty for ${country_code}`);
+            const summary = { success: true, processed: 0, message: 'Queue empty' };
             if (job_name) {
-                await supabase
-                    .from('cron_job_configs')
-                    .update({
-                        last_run_at: new Date().toISOString(),
-                        last_run_status: 'success',
-                        last_run_details: summary
-                    })
-                    .eq('job_name', job_name);
+                await supabase.from('cron_job_configs').update({
+                    last_run_at: new Date().toISOString(),
+                    last_run_status: 'success',
+                    last_run_details: summary
+                }).eq('job_name', job_name);
             }
-
-            return new Response(JSON.stringify(summary), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
+            return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        console.log(`[bulk-retell-news] Found ${newsItems.length} news items to process`);
+        console.log(`[bulk-retell-news] Processing backlog of ${newsItems.length} items with concurrency 5`);
 
-        // Process in batches (parallel)
-        const batchSize = 3; // Concurrency limit
+        // Parallel processing with controlled concurrency
+        const concurrency = 5;
         let successCount = 0;
         let errorCount = 0;
-        const errors: string[] = [];
+        const errors: any[] = [];
 
-        for (let i = 0; i < newsItems.length; i += batchSize) {
-            const batch = newsItems.slice(i, i + batchSize);
-            const promises = batch.map(async (newsItem) => {
-                try {
-                    console.log(`[bulk-retell-news] Processing: ${newsItem.slug}`);
-                    const retellResponse = await fetch(`${supabaseUrl}/functions/v1/retell-news`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${supabaseKey}`,
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            newsId: newsItem.id,
-                            model: llm_model || undefined,
-                        }),
-                    });
+        const processItem = async (newsItem: any) => {
+            try {
+                const retellResponse = await fetch(`${supabaseUrl}/functions/v1/retell-news`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        newsId: newsItem.id,
+                        model: llm_model || undefined,
+                    }),
+                });
 
-                    if (!retellResponse.ok) {
-                        const errorText = await retellResponse.text();
-                        throw new Error(`Failed: ${retellResponse.status} - ${errorText}`);
-                    }
-
-                    const retellResult = await retellResponse.json();
-                    if (retellResult.success) {
-                        return { success: true, slug: newsItem.slug };
-                    } else {
-                        return { success: false, slug: newsItem.slug, error: retellResult.error || 'Unknown error' };
-                    }
-                } catch (error) {
-                    return { success: false, slug: newsItem.slug, error: error instanceof Error ? error.message : String(error) };
-                }
-            });
-
-            const results = await Promise.all(promises);
-
-            results.forEach(r => {
-                if (r.success) {
+                if (!retellResponse.ok) throw new Error(`Status ${retellResponse.status}`);
+                const result = await retellResponse.json();
+                if (result.success) {
                     successCount++;
-                    console.log(`[bulk-retell-news] ✓ Verified: ${r.slug}`);
                 } else {
                     errorCount++;
-                    errors.push(`${r.slug}: ${r.error}`);
-                    console.error(`[bulk-retell-news] ✗ Failed: ${r.slug}: ${r.error}`);
+                    errors.push({ slug: newsItem.slug, error: result.error });
                 }
-            });
-        }
+            } catch (error) {
+                errorCount++;
+                errors.push({ slug: newsItem.slug, error: error instanceof Error ? error.message : String(error) });
+            }
+        };
+
+        // Simple worker pool
+        const queue = [...newsItems];
+        const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
+            while (queue.length > 0) {
+                const item = queue.shift();
+                if (item) await processItem(item);
+            }
+        });
+
+        await Promise.all(workers);
 
         const summary = {
-            success: true, // Function ran successfully even if some items failed
+            success: true,
             processed: newsItems.length,
             success_count: successCount,
             error_count: errorCount,
-            errors: errors.slice(0, 10),
+            errors: errors.slice(0, 5),
             country_code,
-            time_range
+            mode: force_all ? 'catch-up' : 'normal'
         };
 
-        console.log(`[bulk-retell-news] Complete:`, summary);
-
-        // Update cron job status
         if (job_name) {
-            await supabase
-                .from('cron_job_configs')
-                .update({
-                    last_run_at: new Date().toISOString(),
-                    last_run_status: errorCount === 0 ? 'success' : 'warning',
-                    last_run_details: summary
-                })
-                .eq('job_name', job_name);
+            await supabase.from('cron_job_configs').update({
+                last_run_at: new Date().toISOString(),
+                last_run_status: errorCount === 0 ? 'success' : 'warning',
+                last_run_details: summary
+            }).eq('job_name', job_name);
         }
 
         return new Response(JSON.stringify(summary), {
@@ -188,31 +157,7 @@ serve(async (req) => {
 
     } catch (error) {
         console.error('[bulk-retell-news] Fatal Error:', error);
-
-        // Attempt to update status to error, even if main logic failed
-        // Re-create supabase client since variables might be available
-        try {
-            if (jobNameForUpdate) {
-                const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-                const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-                const supabase = createClient(supabaseUrl, supabaseKey);
-
-                await supabase
-                    .from('cron_job_configs')
-                    .update({
-                        last_run_at: new Date().toISOString(),
-                        last_run_status: 'error',
-                        last_run_details: { error: error instanceof Error ? error.message : 'Unknown fatal error' }
-                    })
-                    .eq('job_name', jobNameForUpdate);
-            }
-        } catch (e) {
-            console.error('Failed to update error status:', e);
-        }
-
-        return new Response(JSON.stringify({
-            error: error instanceof Error ? error.message : 'Unknown error'
-        }), {
+        return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown' }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
