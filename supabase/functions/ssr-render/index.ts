@@ -586,8 +586,9 @@ Deno.serve(async (req) => {
         image = entity.image_url || image;
         canonicalUrl = `${BASE_URL}/wiki/${entity.slug || entity.id}`;
 
-        // Fetch related news, wiki entity links, and narrative analysis in parallel
-        const [{ data: newsLinks }, { data: wikiLinksOut }, { data: wikiLinksIn }, { data: narrativeData }] = await Promise.all([
+        // Fetch related news, wiki entity links, narrative analysis, caricatures, and categories in parallel
+        const [{ data: newsLinks }, { data: wikiLinksOut }, { data: wikiLinksIn }, { data: narrativeData }, { data: caricaturesData }, { data: categoriesData }] = await Promise.all([
+          // Fetch ALL linked news (not just 30, to match React component)
           supabase
             .from("news_wiki_entities")
             .select(`
@@ -595,22 +596,37 @@ Deno.serve(async (req) => {
             `)
             .eq("wiki_entity_id", entity.id)
             .order("created_at", { ascending: false })
-            .limit(30),
+            .limit(500),
+          // Wiki entity links (outbound)
           supabase
             .from("wiki_entity_links")
             .select("target_entity:wiki_entities!wiki_entity_links_target_entity_id_fkey(id, name, name_en, slug, image_url, entity_type, description_en, description)")
             .eq("source_entity_id", entity.id),
+          // Wiki entity links (inbound)
           supabase
             .from("wiki_entity_links")
             .select("source_entity:wiki_entities!wiki_entity_links_source_entity_id_fkey(id, name, name_en, slug, image_url, entity_type, description_en, description)")
             .eq("target_entity_id", entity.id),
+          // Latest narrative analysis
           supabase
             .from("narrative_analyses")
             .select("analysis, year_month, language, news_count")
             .eq("entity_id", entity.id)
             .eq("language", "en")
             .order("year_month", { ascending: false })
-            .limit(1)
+            .limit(1),
+          // Caricatures (both direct and via linked news items)
+          supabase
+            .from("outrage_ink_entities")
+            .select("outrage_ink_id")
+            .eq("wiki_entity_id", entity.id)
+            .limit(100),
+          // Wiki categories
+          supabase
+            .from("wiki_entity_categories")
+            .select("category")
+            .eq("wiki_entity_id", entity.id)
+            .limit(50)
         ]);
 
         const linkedNews = (newsLinks || [])
@@ -675,7 +691,27 @@ Deno.serve(async (req) => {
         const totalLikes = linkedNews.reduce((s: number, n: any) => s + (n.likes || 0), 0);
         const totalDislikes = linkedNews.reduce((s: number, n: any) => s + (n.dislikes || 0), 0);
 
-        html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl, topTopics, topKeywords, totalLikes, totalDislikes, wikiLinkedEntities, latestNarrative);
+        // Extract caricature IDs and categories
+        const caricatureIds = (caricaturesData || []).map((c: any) => c.outrage_ink_id).filter(Boolean);
+        const categories = (categoriesData || []).map((c: any) => c.category).filter(Boolean);
+
+        // Expand caricatures to include those linked via news items
+        let expandedCaricatureIds = new Set<string>(caricatureIds);
+        const newsItemIds = linkedNews.map((n: any) => n.id).filter(Boolean);
+        if (newsItemIds.length > 0) {
+          const { data: newsBasedInks } = await supabase
+            .from("outrage_ink")
+            .select("id")
+            .in("news_item_id", newsItemIds)
+            .limit(100);
+          
+          if (newsBasedInks) {
+            newsBasedInks.forEach(ink => expandedCaricatureIds.add(ink.id));
+          }
+        }
+        const finalCaricatureIds = Array.from(expandedCaricatureIds);
+
+        html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl, topTopics, topKeywords, totalLikes, totalDislikes, wikiLinkedEntities, latestNarrative, finalCaricatureIds, categories);
       }
     } else if (dateMatch) {
       // Date stories page
@@ -2225,7 +2261,7 @@ function generateStaticIntersectionGraph(mainEntity: any, relatedEntities: any[]
   `;
 }
 
-function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string, topTopics: [string, number][] = [], topKeywords: [string, number][] = [], totalLikes = 0, totalDislikes = 0, wikiLinkedEntities: any[] = [], latestNarrative: any = null) {
+function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string, topTopics: [string, number][] = [], topKeywords: [string, number][] = [], totalLikes = 0, totalDislikes = 0, wikiLinkedEntities: any[] = [], latestNarrative: any = null, caricatureIds: string[] = [], categories: string[] = []) {
   const name = entity.name_en || entity.name;
   const description = entity.description_en || entity.description || '';
   const extract = entity.extract_en || entity.extract || '';
@@ -2372,6 +2408,20 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
               `;
   }).join("")}
           </ul>
+        </section>
+      ` : ''}
+      
+      ${categories.length > 0 ? `
+        <section>
+          <h2>📂 Categories</h2>
+          <p>${categories.map(c => `<span style="display: inline-block; padding: 4px 12px; background: hsl(var(--muted)); border-radius: 6px; margin: 4px; font-size: 14px;">${escapeHtml(c)}</span>`).join('')}</p>
+        </section>
+      ` : ''}
+      
+      ${caricatureIds.length > 0 ? `
+        <section>
+          <h2>🎨 Caricatures & Art</h2>
+          <p>${caricatureIds.length} caricature(s) created about ${escapeHtml(name)}. <a href="${BASE_URL}/ink-abyss?entity=${entity.slug}">View in Ink Abyss →</a></p>
         </section>
       ` : ''}
       
