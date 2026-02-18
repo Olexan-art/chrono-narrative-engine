@@ -37,6 +37,7 @@ function BulkRetellStats({ countryCode, password }: { countryCode: string; passw
             return response.stats;
         },
         refetchInterval: 30000, // Refresh every 30 seconds
+        enabled: !!password,
     });
 
     if (!statsData) return null;
@@ -262,7 +263,8 @@ export function BulkRetellCronPanel({ password }: { password: string }) {
             const response = await callEdgeFunction('admin', { action: 'getCronConfigs', password }) as { success: boolean; configs: CronConfig[] };
             if (!response.success) throw new Error('Failed to fetch configs');
             return response;
-        }
+        },
+        enabled: !!password,
     });
 
     const allCountries = [
@@ -360,6 +362,7 @@ export function BulkRetellCronPanel({ password }: { password: string }) {
                                                 toast.info(description);
                                                 try {
                                                     const result = await callEdgeFunction('bulk-retell-news', {
+                                                        password,
                                                         country_code: cron.processing_options?.country_code,
                                                         time_range: cron.processing_options?.time_range,
                                                         llm_model: cron.processing_options?.llm_model,
@@ -392,11 +395,11 @@ export function BulkRetellCronPanel({ password }: { password: string }) {
                                                 // But `callEdgeFunction` can do it.
                                                 try {
                                                     await callEdgeFunction('admin', {
-                                                        action: 'updateCron',
+                                                        action: 'updateCronConfig',
                                                         password,
                                                         data: {
                                                             jobName: cron.job_name,
-                                                            enabled: !cron.enabled
+                                                            config: { enabled: !cron.enabled }
                                                         }
                                                     });
                                                     queryClient.invalidateQueries({ queryKey: ['cron-configs'] });

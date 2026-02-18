@@ -24,12 +24,13 @@ interface CronConfig {
 }
 
 // Helper component for displaying bulk retell statistics
-function BulkRetellStats({ countryCode }: { countryCode: string }) {
+function BulkRetellStats({ countryCode, password }: { countryCode: string; password: string }) {
     const { data: statsData } = useQuery({
         queryKey: ['bulk-retell-stats', countryCode],
         queryFn: async () => {
             const response = await callEdgeFunction('admin', {
                 action: 'getBulkRetellStats',
+                password,
                 data: { country_code: countryCode }
             }) as { success: boolean; stats?: any; error?: string };
 
@@ -37,6 +38,7 @@ function BulkRetellStats({ countryCode }: { countryCode: string }) {
             return response.stats;
         },
         refetchInterval: 30000, // Refresh every 30 seconds
+        enabled: !!password,
     });
 
     if (!statsData) return null;
@@ -229,6 +231,7 @@ export default function NewsProcessingPage({ password }: { password: string }) {
             return response;
         },
         refetchInterval: 10000, // Refresh every 10 seconds
+        enabled: !!password,
     });
 
     const fetchingConfig = configsData?.configs?.find((c: CronConfig) => c.job_name === 'news_fetching');
@@ -761,6 +764,7 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                                                         try {
                                                             const result = await callEdgeFunction('admin', {
                                                                 action: 'deleteBulkRetellCron',
+                                                                password,
                                                                 data: { jobName: cron.job_name }
                                                             }) as { success: boolean; error?: string };
 
@@ -781,7 +785,7 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                                         </div>
 
                                         {/* Statistics */}
-                                        <BulkRetellStats countryCode={countryCode} />
+                                        <BulkRetellStats countryCode={countryCode} password={password} />
                                     </div>
                                 );
                             })}

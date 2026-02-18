@@ -243,11 +243,21 @@ serve(async (req) => {
     );
 
     // Get LLM settings from database
-    const { data: settingsData } = await supabase
+    const { data: settingsData, error: settingsError } = await supabase
       .from('settings')
-      .select('llm_provider, llm_image_provider, llm_image_model, openai_api_key, gemini_api_key, gemini_v22_api_key, zai_api_key, mistral_api_key')
+      .select('*')
       .limit(1)
-      .single();
+      .maybeSingle();
+
+    if (settingsError) {
+      console.error('Error fetching settings:', settingsError);
+    }
+
+    console.log('Settings data found:', settingsData ? 'Yes' : 'No');
+    if (settingsData) {
+      console.log('Available keys:', Object.keys(settingsData).filter(k => k.includes('api_key')));
+      console.log('ZAI key present:', !!settingsData.zai_api_key);
+    }
 
     const llmSettings: LLMSettings = settingsData || {
       llm_provider: 'gemini',

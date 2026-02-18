@@ -280,7 +280,8 @@ export function StatisticsPanel({ password }: Props) {
         d30: { retold: 0, dialogues: 0, tweets: 0, entities: 0 },
         daily: [],
       };
-    }
+    },
+    enabled: !!password,
   });
 
 

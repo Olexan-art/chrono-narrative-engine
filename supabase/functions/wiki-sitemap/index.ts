@@ -7,38 +7,7 @@ const corsHeaders = {
 
 const BASE_URL = "https://bravennow.com";
 const CACHE_TTL_HOURS = 24;
-const MAX_SITEMAP_ENTRIES = 2000;
-
-async function fetchAllRows<T>(
-  supabase: any,
-  tableName: string,
-  selectQuery: string,
-  orderBy?: { column: string; ascending: boolean }
-): Promise<T[]> {
-  const PAGE_SIZE = 1000;
-  let allRows: T[] = [];
-  let offset = 0;
-  let hasMore = true;
-
-  while (hasMore) {
-    let query = supabase.from(tableName).select(selectQuery);
-    if (orderBy) {
-      query = query.order(orderBy.column, { ascending: orderBy.ascending });
-    }
-    query = query.range(offset, offset + PAGE_SIZE - 1);
-    const { data, error } = await query;
-    if (error || !data || data.length === 0) {
-      hasMore = false;
-    } else {
-      allRows = allRows.concat(data);
-      offset += PAGE_SIZE;
-      hasMore = data.length === PAGE_SIZE;
-    }
-  }
-  return allRows;
-}
-
-// gzip compression is done inline via CompressionStream below
+const ENTRIES_PER_PAGE = 40000;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -51,8 +20,20 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const url = new URL(req.url);
+    const pageParam = url.searchParams.get("page");
+    const page = pageParam ? parseInt(pageParam, 10) : null;
     const forceRefresh = url.searchParams.get("refresh") === "true";
-    const cachePath = "/api/wiki-sitemap";
+
+    // Get total count of wiki entities
+    const { count, error: countError } = await supabase
+      .from("wiki_entities")
+      .select("*", { count: "exact", head: true });
+
+    if (countError) throw countError;
+    const totalCount = count || 0;
+    const totalPages = Math.ceil(totalCount / ENTRIES_PER_PAGE);
+
+    const cachePath = page ? `/api/wiki-sitemap?page=${page}` : "/api/wiki-sitemap";
 
     // Check cache first
     if (!forceRefresh) {
@@ -63,18 +44,11 @@ Deno.serve(async (req) => {
         .single();
 
       if (cached && new Date(cached.expires_at) > new Date()) {
-        console.log("Wiki sitemap cache HIT");
-
-        // Compress cached XML
-        const xmlBytes = new TextEncoder().encode(cached.html);
-        const compressedStream = new Response(cached.html).body!.pipeThrough(new CompressionStream("gzip"));
-        const compressedBody = await new Response(compressedStream).arrayBuffer();
-
-        return new Response(compressedBody, {
+        console.log(`Wiki sitemap cache HIT: ${cachePath}`);
+        return new Response(cached.html, {
           headers: {
             ...corsHeaders,
             "Content-Type": "application/xml; charset=utf-8",
-            "Content-Encoding": "gzip",
             "X-Cache": "HIT",
             "Cache-Control": "public, max-age=21600",
           },
@@ -83,46 +57,48 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fetch top 1000 by search_count
-    const popularEntities = await supabase
-      .from("wiki_entities")
-      .select("id, slug, updated_at, search_count")
-      .order("search_count", { ascending: false })
-      .range(0, 999);
-
-    // Fetch top 1000 by updated_at (most recent)
-    const recentEntities = await supabase
-      .from("wiki_entities")
-      .select("id, slug, updated_at, search_count")
-      .order("updated_at", { ascending: false })
-      .range(0, 999);
-
-    if (popularEntities.error) throw popularEntities.error;
-    if (recentEntities.error) throw recentEntities.error;
-
-    // Merge and remove duplicates
-    const entityMap = new Map<string, any>();
-    [...popularEntities.data, ...recentEntities.data].forEach(e => {
-      entityMap.set(e.id, e);
-    });
-
-    const combinedEntities = Array.from(entityMap.values());
-
-    // Sort combined by search_count for priority logic, limit to MAX_SITEMAP_ENTRIES
-    const limitedEntities = combinedEntities
-      .sort((a, b) => (b.search_count || 0) - (a.search_count || 0))
-      .slice(0, MAX_SITEMAP_ENTRIES);
-
-    const entities = combinedEntities; // For the generation comment
+    let xml = "";
     const now = new Date().toISOString();
 
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+    if (page === null) {
+      // 1. Generate Sitemap Index
+      xml = `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Wiki Entities Sitemap Index -->
+  <!-- Generated: ${now} -->
+  <!-- Total entities: ${totalCount} -->
+  <!-- Pages: ${totalPages} (Limit: ${ENTRIES_PER_PAGE} per page) -->
+`;
+
+      for (let i = 1; i <= totalPages; i++) {
+        xml += `  <sitemap>
+    <loc>${BASE_URL}/api/wiki-sitemap?page=${i}</loc>
+    <lastmod>${now}</lastmod>
+  </sitemap>\n`;
+      }
+      xml += `</sitemapindex>`;
+
+    } else {
+      // 2. Generate specific Sitemap page
+      if (page < 1 || page > totalPages) {
+        return new Response("Page not found", { status: 404 });
+      }
+
+      const offset = (page - 1) * ENTRIES_PER_PAGE;
+      const { data: entities, error: entitiesError } = await supabase
+        .from("wiki_entities")
+        .select("id, slug, updated_at")
+        .order("search_count", { ascending: false }) // Prioritize popular
+        .range(offset, offset + ENTRIES_PER_PAGE - 1);
+
+      if (entitiesError) throw entitiesError;
+
+      xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
-
-  <!-- Wiki Entities Sitemap for ${BASE_URL} -->
+  <!-- Wiki Entities Sitemap - Page ${page} -->
   <!-- Generated: ${now} -->
-  <!-- Total entities: ${limitedEntities.length} (of ${entities.length}) -->
+  <!-- Entries: ${entities?.length || 0} (Offset: ${offset}) -->
 
   <url>
     <loc>${BASE_URL}/wiki</loc>
@@ -132,30 +108,26 @@ Deno.serve(async (req) => {
   </url>
 `;
 
-    for (const entity of limitedEntities) {
-      const path = entity.slug || entity.id;
-      const entityUrl = `${BASE_URL}/wiki/${path}`;
-      const priority = entity.search_count > 50 ? "0.7" : entity.search_count > 10 ? "0.6" : "0.5";
-      xml += `
-  <url>
-    <loc>${entityUrl}</loc>
+      for (const entity of entities || []) {
+        const path = entity.slug || entity.id;
+        xml += `  <url>
+    <loc>${BASE_URL}/wiki/${path}</loc>
     <lastmod>${entity.updated_at || now}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>${priority}</priority>
-  </url>`;
+    <priority>0.6</priority>
+  </url>\n`;
+      }
+      xml += `</urlset>`;
     }
 
-    xml += `
-</urlset>`;
-
-    // Save uncompressed to cache
+    // Save to cache
     const expiresAt = new Date(Date.now() + CACHE_TTL_HOURS * 60 * 60 * 1000);
     await supabase
       .from("cached_pages")
       .upsert({
         path: cachePath,
         html: xml,
-        title: `Wiki Sitemap`,
+        title: `Wiki Sitemap ${page ? 'Page ' + page : 'Index'}`,
         description: `XML Wiki Sitemap for ${BASE_URL}`,
         canonical_url: `${BASE_URL}${cachePath}`,
         expires_at: expiresAt.toISOString(),
@@ -163,29 +135,22 @@ Deno.serve(async (req) => {
         html_size_bytes: new TextEncoder().encode(xml).length,
       }, { onConflict: 'path' });
 
-    console.log(`Wiki sitemap generated & cached: ${limitedEntities.length} of ${entities.length} entities`);
+    console.log(`Wiki sitemap generated & cached: ${cachePath}`);
 
-    // Return GZIP compressed
-    const compressedStream = new Response(xml).body!.pipeThrough(new CompressionStream("gzip"));
-    const compressedBody = await new Response(compressedStream).arrayBuffer();
-
-    return new Response(compressedBody, {
+    return new Response(xml, {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/xml; charset=utf-8",
-        "Content-Encoding": "gzip",
         "X-Cache": "MISS",
         "Cache-Control": "public, max-age=21600",
       },
       status: 200,
     });
+
   } catch (error) {
     console.error("Wiki sitemap error:", error);
     return new Response(
-      `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>${BASE_URL}/wiki</loc><priority>0.8</priority></url>
-</urlset>`,
+      `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${BASE_URL}/wiki</loc></url></urlset>`,
       { headers: { ...corsHeaders, "Content-Type": "application/xml; charset=utf-8" }, status: 200 }
     );
   }

@@ -86,7 +86,8 @@ function SettingsPanel({ password }: { password: string }) {
     queryFn: async () => {
       const result = await adminAction<{ settings: SettingsType }>('getSettings', password);
       return result.settings;
-    }
+    },
+    enabled: !!password
   });
 
   const updateMutation = useMutation({
