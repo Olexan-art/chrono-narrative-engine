@@ -1088,7 +1088,7 @@ export default function NewsProcessingPage({ password }: { password: string }) {
             </Card >
 
             {/* Bulk News Retelling - Use Enhanced Component */}
-            <BulkRetellCronPanelEnhanced password={adminPassword || ''} />
+            <BulkRetellCronPanelEnhanced password={password || ''} />
 
             {/* Diagnostics Section */}
             <DiagnosticInfo password={password} />
