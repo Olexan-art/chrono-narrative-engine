@@ -31,6 +31,7 @@ import { adminAction, callEdgeFunction } from "@/lib/api";
 import { toast } from "sonner";
 import { useAdminStore } from "@/stores/adminStore";
 import { LLM_MODELS, LLMProvider } from "@/types/database";
+import { useTrackView } from '@/hooks/useTrackView';
 
 // Default ZAI models (always available if ZAI_API_KEY is set)
 const ZAI_MODELS = LLM_MODELS.zai.text;
@@ -78,6 +79,8 @@ export default function NewsArticlePage() {
     retry: 2,
   });
 
+  // Track views for analytics
+  useTrackView('news', article?.id);
   // Build available models list based on configured API keys
   const availableModels = useMemo(() => {
     const models: { value: string; label: string; provider?: LLMProvider }[] = [];

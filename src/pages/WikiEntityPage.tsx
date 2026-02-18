@@ -35,6 +35,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useAdminStore } from "@/stores/adminStore";
 import { callEdgeFunction, adminAction } from "@/lib/api";
 import { toast } from "sonner";
+import { useTrackView } from '@/hooks/useTrackView';
 import { LLM_MODELS, LLMProvider } from "@/types/database";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -280,6 +281,9 @@ export default function WikiEntityPage() {
     enabled: !!entityId,
     staleTime: 1000 * 60 * 10,
   });
+
+  // Track views for wiki entity pages
+  useTrackView('wiki', entity?.id);
 
   // Fetch ALL linked news (no limit for proper counting and pagination)
   const { data: allLinkedNews = [] } = useQuery({
