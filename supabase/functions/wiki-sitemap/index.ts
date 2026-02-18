@@ -83,18 +83,37 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fetch top entities by search_count, limited to MAX_SITEMAP_ENTRIES
-    const entities = await fetchAllRows<{
-      id: string; slug: string | null; updated_at: string; search_count: number;
-    }>(
-      supabase,
-      "wiki_entities",
-      "id, slug, updated_at, search_count",
-      { column: "search_count", ascending: false }
-    );
+    // Fetch top 1000 by search_count
+    const popularEntities = await supabase
+      .from("wiki_entities")
+      .select("id, slug, updated_at, search_count")
+      .order("search_count", { ascending: false })
+      .range(0, 999);
 
-    // Limit to top entries
-    const limitedEntities = entities.slice(0, MAX_SITEMAP_ENTRIES);
+    // Fetch top 1000 by updated_at (most recent)
+    const recentEntities = await supabase
+      .from("wiki_entities")
+      .select("id, slug, updated_at, search_count")
+      .order("updated_at", { ascending: false })
+      .range(0, 999);
+
+    if (popularEntities.error) throw popularEntities.error;
+    if (recentEntities.error) throw recentEntities.error;
+
+    // Merge and remove duplicates
+    const entityMap = new Map<string, any>();
+    [...popularEntities.data, ...recentEntities.data].forEach(e => {
+      entityMap.set(e.id, e);
+    });
+
+    const combinedEntities = Array.from(entityMap.values());
+
+    // Sort combined by search_count for priority logic, limit to MAX_SITEMAP_ENTRIES
+    const limitedEntities = combinedEntities
+      .sort((a, b) => (b.search_count || 0) - (a.search_count || 0))
+      .slice(0, MAX_SITEMAP_ENTRIES);
+
+    const entities = combinedEntities; // For the generation comment
     const now = new Date().toISOString();
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>

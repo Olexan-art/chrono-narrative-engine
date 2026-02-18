@@ -26,11 +26,11 @@ interface OutrageInk {
   created_at: string;
 }
 
-export function OutrageInkBlock({ 
-  newsItemId, 
+export function OutrageInkBlock({
+  newsItemId,
   newsTitle,
   wikiEntityIds = [],
-  isAdmin 
+  isAdmin
 }: OutrageInkBlockProps) {
   const { language } = useLanguage();
   const queryClient = useQueryClient();
@@ -106,12 +106,12 @@ export function OutrageInkBlock({
   // Handle share to X
   const handleShareToX = () => {
     if (!ink?.image_url) return;
-    const shareText = language === 'en' 
+    const shareText = language === 'en'
       ? `Check out this satirical caricature: ${newsTitle}`
       : language === 'pl'
-      ? `Zobacz tę satyryczną karykaturę: ${newsTitle}`
-      : `Дивіться цю сатиричну карикатуру: ${newsTitle}`;
-    
+        ? `Zobacz tę satyryczną karykaturę: ${newsTitle}`
+        : `Дивіться цю сатиричну карикатуру: ${newsTitle}`;
+
     const currentUrl = window.location.href;
     const xUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(currentUrl)}`;
     window.open(xUrl, '_blank', 'noopener,noreferrer');
@@ -163,7 +163,7 @@ export function OutrageInkBlock({
       try {
         const ext = file.name.split('.').pop();
         const fileName = `${newsItemId}-${Date.now()}.${ext}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from('outrage-ink')
           .upload(fileName, file, { upsert: true });
@@ -183,10 +183,10 @@ export function OutrageInkBlock({
         } else {
           const { data: newInk } = await supabase
             .from('outrage_ink')
-            .insert({ 
-              news_item_id: newsItemId, 
-              image_url: publicUrl, 
-              title: newsTitle 
+            .insert({
+              news_item_id: newsItemId,
+              image_url: publicUrl,
+              title: newsTitle
             })
             .select()
             .single();
@@ -210,6 +210,13 @@ export function OutrageInkBlock({
     onSuccess: () => {
       toast.success(language === 'en' ? 'Image uploaded!' : 'Зображення завантажено!');
       queryClient.invalidateQueries({ queryKey: ['outrage-ink', newsItemId] });
+
+      // Refresh cache for relevant pages
+      const adminPwd = useAdminStore.getState().password;
+      if (adminPwd) {
+        callEdgeFunction('cache-pages', { action: 'refresh-single', path: '/', password: adminPwd }).catch(console.error);
+        callEdgeFunction('cache-pages', { action: 'refresh-single', path: '/ink-abyss', password: adminPwd }).catch(console.error);
+      }
     },
     onError: (e) => {
       toast.error(e instanceof Error ? e.message : 'Upload failed');
@@ -222,12 +229,13 @@ export function OutrageInkBlock({
       setIsGenerating(true);
       try {
         const prompt = getStylePrompt(selectedStyle, newsTitle);
-        
+
         // Call edge function to generate satire image
         const result = await callEdgeFunction<{ success: boolean; imageUrl?: string; error?: string }>(
           'generate-image',
           {
             prompt,
+            newsId: newsItemId,
             type: 'satire'
           }
         );
@@ -244,14 +252,14 @@ export function OutrageInkBlock({
             .from('outrage_ink')
             .update({ image_url: imageUrl, title: newsTitle, image_prompt: prompt })
             .eq('id', ink.id);
-          
+
           if (updateError) throw updateError;
         } else {
           const { data: newInk, error: insertError } = await supabase
             .from('outrage_ink')
-            .insert({ 
-              news_item_id: newsItemId, 
-              image_url: imageUrl, 
+            .insert({
+              news_item_id: newsItemId,
+              image_url: imageUrl,
               title: newsTitle,
               image_prompt: prompt
             })
@@ -280,6 +288,13 @@ export function OutrageInkBlock({
     onSuccess: () => {
       toast.success(language === 'en' ? 'Caricature generated!' : 'Карикатуру згенеровано!');
       queryClient.invalidateQueries({ queryKey: ['outrage-ink', newsItemId] });
+
+      // Refresh cache for relevant pages
+      const adminPwd = useAdminStore.getState().password;
+      if (adminPwd) {
+        callEdgeFunction('cache-pages', { action: 'refresh-single', path: '/', password: adminPwd }).catch(console.error);
+        callEdgeFunction('cache-pages', { action: 'refresh-single', path: '/ink-abyss', password: adminPwd }).catch(console.error);
+      }
     },
     onError: (e) => {
       console.error('Generate mutation error:', e);
@@ -303,7 +318,7 @@ export function OutrageInkBlock({
   const voteMutation = useMutation({
     mutationFn: async (voteType: 'like' | 'dislike') => {
       if (!ink) return;
-      
+
       const visitorId = getVisitorId();
 
       // Insert vote
@@ -314,7 +329,7 @@ export function OutrageInkBlock({
       }, { onConflict: 'outrage_ink_id,visitor_id' });
 
       // Update counts (simple increment)
-      const updates = voteType === 'like' 
+      const updates = voteType === 'like'
         ? { likes: ink.likes + 1 }
         : { dislikes: ink.dislikes + 1 };
 
@@ -365,15 +380,15 @@ export function OutrageInkBlock({
       <CardContent className="space-y-4">
         {ink?.image_url ? (
           <div className="relative group">
-            <img 
-              src={ink.image_url} 
+            <img
+              src={ink.image_url}
               alt={newsTitle}
               title={newsTitle}
               className="w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
               loading="lazy"
               onClick={() => setIsLightboxOpen(true)}
             />
-            
+
             {/* Action buttons overlay */}
             <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <Button
@@ -395,7 +410,7 @@ export function OutrageInkBlock({
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            
+
             {/* Like/Dislike overlay */}
             <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2">
               <Button
@@ -444,7 +459,7 @@ export function OutrageInkBlock({
                 </SelectContent>
               </Select>
             </div>
-            
+
             {/* Action buttons */}
             <div className="flex flex-wrap gap-2">
               <input
@@ -496,8 +511,8 @@ export function OutrageInkBlock({
         <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 bg-background/95 backdrop-blur-sm border-none">
           <div className="relative flex items-center justify-center p-4">
             {ink?.image_url && (
-              <img 
-                src={ink.image_url} 
+              <img
+                src={ink.image_url}
                 alt={newsTitle}
                 className="max-w-full max-h-[85vh] object-contain rounded-lg"
               />

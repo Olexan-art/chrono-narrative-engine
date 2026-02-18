@@ -78,8 +78,9 @@ Disallow: /admin
 Disallow: /edit/
 Disallow: /install
 
-# Resources - Single sitemap index contains all sitemaps
+# Resources - Sitemaps
 Sitemap: https://bravennow.com/sitemap.xml
+Sitemap: https://bravennow.com/api/wiki-sitemap
 
 # LLM-optimized documentation (dynamic)
 # See https://bravennow.com/llms.txt for AI-friendly site overview with latest content

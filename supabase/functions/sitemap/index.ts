@@ -340,27 +340,8 @@ Deno.serve(async (req) => {
   </url>`;
     }
 
-    // Add wiki entity pages with proper slugs
-    const { data: wikiEntities, error: wikiError } = await supabase
-      .from("wiki_entities")
-      .select("id, slug, updated_at")
-      .order("search_count", { ascending: false })
-      .limit(500); // Top 500 entities
-
-    if (!wikiError && wikiEntities) {
-      for (const entity of wikiEntities) {
-        // Prefer slug over id for SEO-friendly URLs
-        const entityPath = entity.slug || entity.id;
-        const url = `${BASE_URL}/wiki/${entityPath}`;
-        xml += `
-  <url>
-    <loc>${url}</loc>
-    <lastmod>${entity.updated_at || now}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>${addHreflangLinks(url)}
-  </url>`;
-      }
-    }
+    // Wiki entities are now handled by a separate sitemap (/api/wiki-sitemap)
+    // linked in robots.txt for better scalability.
 
     xml += `
 </urlset>`;

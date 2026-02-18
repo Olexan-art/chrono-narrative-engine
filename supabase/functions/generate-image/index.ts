@@ -13,13 +13,16 @@ interface LLMSettings {
   llm_image_model: string;
   openai_api_key: string | null;
   gemini_api_key: string | null;
+  gemini_v22_api_key: string | null;
   zai_api_key: string | null;
+  mistral_api_key: string | null;
 }
 
 async function uploadBase64ToStorage(
   supabase: any,
   base64Data: string,
-  path: string
+  path: string,
+  bucket: string = "covers"
 ): Promise<string> {
   const matches = base64Data.match(/^data:(.+);base64,(.+)$/);
   if (!matches) throw new Error("Invalid base64 format");
@@ -34,7 +37,7 @@ async function uploadBase64ToStorage(
   }
 
   const { error } = await supabase.storage
-    .from("covers")
+    .from(bucket)
     .upload(path, bytes, {
       contentType: mimeType,
       upsert: true
@@ -42,11 +45,9 @@ async function uploadBase64ToStorage(
 
   if (error) throw error;
 
-  const { data: urlData } = supabase.storage.from("covers").getPublicUrl(path);
+  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
   return urlData.publicUrl;
 }
-
-
 
 async function generateWithOpenAI(prompt: string, apiKey: string, model: string): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/images/generations', {
@@ -59,7 +60,7 @@ async function generateWithOpenAI(prompt: string, apiKey: string, model: string)
       model: model || 'dall-e-3',
       prompt: prompt,
       n: 1,
-      size: '1792x1024',
+      size: '1024x1024',
       response_format: 'b64_json'
     }),
   });
@@ -84,14 +85,13 @@ async function generateWithGemini(prompt: string, apiKey: string, model: string)
     body: JSON.stringify({
       prompt: { text: prompt },
       numberOfImages: 1,
-      aspectRatio: "16:9"
+      aspectRatio: "1:1"
     }),
   });
 
   if (!response.ok) {
-    // Fallback to Lovable if Gemini image fails
     console.log('Gemini image failed:', response.status);
-    throw new Error('Gemini image generation failed');
+    throw new Error(`Gemini image generation failed: ${response.status}`);
   }
 
   const data = await response.json();
@@ -103,9 +103,45 @@ async function generateWithGemini(prompt: string, apiKey: string, model: string)
   return `data:image/png;base64,${b64}`;
 }
 
+async function generateWithZai(prompt: string, apiKey: string, model: string): Promise<string> {
+  const response = await fetch('https://api.z.ai/api/paas/v4/images/generations', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: model || 'cogview-3-plus',
+      prompt: prompt,
+      n: 1,
+      size: '1024x1024'
+    }),
+  });
 
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Z.ai image error:', response.status, errorText);
+    throw new Error(`Z.ai error: ${response.status}`);
+  }
 
+  const data = await response.json();
+  const b64 = data.data?.[0]?.b64_json || data.data?.[0]?.url;
 
+  if (!b64) throw new Error('No image generated from Z.ai');
+
+  // If it's a URL, we need to fetch it and convert to base64, 
+  // but usually Z.ai can return b64_json like OpenAI.
+  // If it's just a URL, we'd fetch it here.
+  if (b64.startsWith('http')) {
+    const imgRes = await fetch(b64);
+    const blob = await imgRes.blob();
+    const buffer = await blob.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    return `data:image/png;base64,${base64}`;
+  }
+
+  return b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
+}
 
 async function generateImage(
   supabase: SupabaseClient,
@@ -113,21 +149,39 @@ async function generateImage(
   prompt: string,
   metadata: any = {}
 ): Promise<string> {
-  const provider = settings.llm_image_provider || settings.llm_provider || 'gemini';
+  // Use provider/model from metadata if provided (passed from frontend)
+  let provider = metadata.provider || settings.llm_image_provider || settings.llm_provider || 'gemini';
+  let model = metadata.model || settings.llm_image_model || (provider === 'openai' ? 'dall-e-3' : 'imagen-3');
+
   const startTime = Date.now();
-  let model = settings.llm_image_model || (provider === 'openai' ? 'dall-e-3' : 'imagen-3');
+
+  // Handle lovable provider - pick what's available
+  if (provider === 'lovable') {
+    if (settings.gemini_api_key || settings.gemini_v22_api_key) {
+      provider = 'gemini';
+    } else if (settings.openai_api_key) {
+      provider = 'openai';
+    } else if (settings.zai_api_key) {
+      provider = 'zai';
+    }
+  }
 
   try {
     let result: string;
 
     if (provider === 'openai' && settings.openai_api_key) {
       result = await generateWithOpenAI(prompt, settings.openai_api_key, model);
-    } else if (provider === 'gemini' && settings.gemini_api_key) {
-      result = await generateWithGemini(prompt, settings.gemini_api_key, model);
+    } else if (provider === 'gemini') {
+      const apiKey = settings.gemini_api_key || settings.gemini_v22_api_key;
+      if (!apiKey) throw new Error('No Gemini API key available');
+      result = await generateWithGemini(prompt, apiKey, model);
     } else if (provider === 'zai' && settings.zai_api_key) {
       result = await generateWithZai(prompt, settings.zai_api_key, model);
-    } else if ((!provider || provider === 'gemini') && settings.gemini_api_key) {
-      result = await generateWithGemini(prompt, settings.gemini_api_key, model);
+    } else if (settings.gemini_api_key || settings.gemini_v22_api_key) {
+      // Last resort fallback to Gemini
+      console.log('Falling back to Gemini for provider:', provider);
+      provider = 'gemini';
+      result = await generateWithGemini(prompt, settings.gemini_api_key || settings.gemini_v22_api_key!, model);
     } else {
       throw new Error(`No valid image provider configured for ${provider} (or missing API key)`);
     }
@@ -167,7 +221,21 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, partId, chapterId, volumeId, newsId, imageIndex = 1, originalContent, action, imageUrl } = await req.json();
+    const {
+      prompt: reqPrompt,
+      model,
+      provider,
+      partId,
+      chapterId,
+      volumeId,
+      newsId,
+      type,
+      imageIndex = 1,
+      originalContent,
+      action,
+      imageUrl
+    } = await req.json();
+    const prompt = reqPrompt;
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -177,7 +245,7 @@ serve(async (req) => {
     // Get LLM settings from database
     const { data: settingsData } = await supabase
       .from('settings')
-      .select('llm_provider, llm_image_provider, llm_image_model, openai_api_key, gemini_api_key, zai_api_key')
+      .select('llm_provider, llm_image_provider, llm_image_model, openai_api_key, gemini_api_key, gemini_v22_api_key, zai_api_key, mistral_api_key')
       .limit(1)
       .single();
 
@@ -187,7 +255,9 @@ serve(async (req) => {
       llm_image_model: 'imagen-3',
       openai_api_key: null,
       gemini_api_key: null,
-      zai_api_key: null
+      gemini_v22_api_key: null,
+      zai_api_key: null,
+      mistral_api_key: null
     };
 
     // Handle image enhancement action
@@ -210,8 +280,6 @@ serve(async (req) => {
         ? `news/${newsId}/cover_enhanced.png`
         : `temp/${crypto.randomUUID()}_enhanced.png`;
 
-
-
       const finalImageUrl = await uploadBase64ToStorage(supabase, enhancedBase64, storagePath);
       console.log('Enhanced image uploaded to:', storagePath);
 
@@ -221,17 +289,27 @@ serve(async (req) => {
       );
     }
 
+    // Determine generation parameters based on type
+    let finalPrompt = prompt;
+    let stylePrompt = ' Ultra high resolution, 16:9 aspect ratio, sci-fi digital art style, cosmic atmosphere with deep space blues and cyan glows, cinematic lighting, detailed futuristic elements.';
+    let bucket = 'covers';
+
+    if (type === 'satire') {
+      stylePrompt = ' Satirical political caricature style, expressive and exaggerated features, sharp ink lines, vibrant but gritty comic book aesthetics, deep shadows, detailed background.';
+      bucket = 'outrage-ink';
+    }
+
     // Use original_content context if provided for better image generation
     const contextHint = originalContent
       ? ` Context from article: ${originalContent.substring(0, 500)}.`
       : '';
-    const enhancedPrompt = `${prompt}${contextHint} Ultra high resolution, 16:9 aspect ratio, sci-fi digital art style, cosmic atmosphere with deep space blues and cyan glows, cinematic lighting, detailed futuristic elements.`;
+    finalPrompt = `${prompt}${contextHint}${stylePrompt}`;
 
     const effectiveProvider = llmSettings.llm_image_provider || llmSettings.llm_provider || 'gemini';
-    console.log('Generating image with provider:', effectiveProvider, 'prompt:', prompt.slice(0, 50));
+    console.log('Generating image with provider:', effectiveProvider, 'type:', type, 'prompt:', prompt.slice(0, 50));
 
-    const base64ImageUrl = await generateImage(supabase, llmSettings, enhancedPrompt, {
-      newsId, partId, chapterId, volumeId, imageIndex
+    const base64ImageUrl = await generateImage(supabase, llmSettings, finalPrompt, {
+      newsId, partId, chapterId, volumeId, type, imageIndex, model, provider
     });
 
     if (!base64ImageUrl) {
@@ -244,7 +322,7 @@ serve(async (req) => {
 
     if (partId) {
       storagePath = `parts/${partId}/cover${imageIndex > 1 ? imageIndex : ''}.png`;
-      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath);
+      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath, bucket);
 
       const updateData = imageIndex === 2
         ? { cover_image_url_2: finalImageUrl, cover_image_prompt_2: prompt }
@@ -255,14 +333,14 @@ serve(async (req) => {
       await supabase.from('generations').insert({
         part_id: partId,
         type: 'image',
-        prompt: enhancedPrompt,
+        prompt: finalPrompt,
         result: finalImageUrl,
-        model_used: llmSettings.llm_image_model || 'google/gemini-2.5-flash-image-preview',
+        model_used: model || 'auto',
         success: true
       });
     } else if (chapterId) {
       storagePath = `chapters/${chapterId}/cover${imageIndex > 1 ? imageIndex : ''}.png`;
-      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath);
+      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath, bucket);
 
       let updateData: Record<string, string> = {};
       if (imageIndex === 1) {
@@ -277,33 +355,42 @@ serve(async (req) => {
 
       await supabase.from('generations').insert({
         type: 'image',
-        prompt: enhancedPrompt,
+        prompt: finalPrompt,
         result: finalImageUrl,
-        model_used: llmSettings.llm_image_model || 'google/gemini-2.5-flash-image-preview',
+        model_used: model || 'auto',
         success: true
       });
     } else if (volumeId) {
       storagePath = `volumes/${volumeId}/cover.png`;
-      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath);
+      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath, bucket);
 
       await supabase.from('volumes').update({
         cover_image_url: finalImageUrl,
         cover_image_prompt: prompt
       }).eq('id', volumeId);
+    } else if (type === 'satire') {
+      // Satire (caricature) image
+      const timestamp = new Date().getTime();
+      storagePath = newsId
+        ? `news/${newsId}/satire_${timestamp}.png`
+        : `general/satire_${timestamp}.png`;
+
+      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath, bucket);
+      console.log('Generated satire image for news:', newsId);
     } else if (newsId) {
       // News article image
       storagePath = `news/${newsId}/cover.png`;
-      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath);
+      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath, bucket);
 
       // Note: news_rss_items table update is handled by the caller
       console.log('Generated news image for:', newsId);
     } else {
       // No ID provided, just return the storage URL
       storagePath = `temp/${crypto.randomUUID()}.png`;
-      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath);
+      finalImageUrl = await uploadBase64ToStorage(supabase, base64ImageUrl, storagePath, bucket);
     }
 
-    console.log('Generated and uploaded image', imageIndex, 'to:', storagePath);
+    console.log('Generated and uploaded image', imageIndex, 'to:', storagePath, 'in bucket:', bucket);
 
     return new Response(
       JSON.stringify({ success: true, imageUrl: finalImageUrl, imageIndex }),

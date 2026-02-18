@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -314,7 +314,7 @@ serve(async (req) => {
           else if (finalMins === 10080) schedule = '0 9 * * 1';
 
           try {
-            // Always try to unschedule first
+            // Always try to unschedule first using direct SQL
             await supabase.rpc('exec_sql', {
               sql: `SELECT cron.unschedule('${jobName}')`
             });
@@ -323,52 +323,18 @@ serve(async (req) => {
               let cronCommand = '';
 
               if (jobName === 'news_fetching' || jobName === 'fetch-rss-feeds-hourly') {
-                cronCommand = `
-                            SELECT net.http_post(
-                              url:='${supabaseUrl}/functions/v1/fetch-rss',
-                              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb,
-                              body:='{"action": "fetch_all"}'::jsonb
-                            ) as request_id;
-                          `;
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/fetch-rss', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "fetch_all"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName === 'fetch-us-rss') {
-                cronCommand = `
-                            SELECT net.http_post(
-                              url:='${supabaseUrl}/functions/v1/fetch-rss',
-                              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb,
-                              body:='{"action": "fetch_us_rss"}'::jsonb
-                            ) as request_id;
-                          `;
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/fetch-rss', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "fetch_us_rss"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName === 'generate-week') {
-                // For weekly generation
-                cronCommand = `
-                            SELECT net.http_post(
-                              url:='${supabaseUrl}/functions/v1/generate-week',
-                              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb,
-                              body:='{"mode": "auto"}'::jsonb
-                            ) as request_id;
-                          `;
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/generate-week', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"mode": "auto"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName === 'news_retelling') {
-                // Retelling separate job?
-                // Logic from original cron-control/migrations might help. 
-                // For now, mapping 'news_retelling' to a retell-news call if structure allows, 
-                // or assuming it's part of fetch-rss logic. 
-                // But if strictly separate:
-                cronCommand = `
-                            SELECT net.http_post(
-                              url:='${supabaseUrl}/functions/v1/retell-news',
-                              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb,
-                              body:='{"action": "process_queue"}'::jsonb
-                            ) as request_id;
-                       `;
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/retell-news', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "process_queue"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName === 'cache_refresh') {
-                // Cache refresh job
-                cronCommand = `
-                            SELECT net.http_post(
-                              url:='${supabaseUrl}/functions/v1/cache-pages',
-                              headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb,
-                              body:='{"action": "refresh-all"}'::jsonb
-                            ) as request_id;
-                        `;
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/cache-pages', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "refresh-all"}'::jsonb, timeout:=60000) as request_id;`;
+              } else if (jobName.startsWith('bulk_retell_')) {
+                const opts = updatedConfig.processing_options || {};
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/bulk-retell-news', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"country_code": "${opts.country_code}", "time_range": "${opts.time_range}", "llm_model": "${opts.llm_model}", "llm_provider": "${opts.llm_provider}", "job_name": "${jobName}"}'::jsonb, timeout:=60000) as request_id;`;
               }
 
               if (cronCommand) {
@@ -829,24 +795,21 @@ serve(async (req) => {
         if (insertError) throw insertError;
 
         // Schedule in pg_cron
-        const cronExpression = frequency_minutes === 30 ? '*/30 * * * *' :
-          frequency_minutes === 60 ? '0 * * * *' :
-            frequency_minutes === 180 ? '0 */3 * * *' :
-              `*/${frequency_minutes} * * * *`;
+        const cronExpression = frequency_minutes === 15 ? '*/15 * * * *' :
+          frequency_minutes === 30 ? '*/30 * * * *' :
+            frequency_minutes === 60 ? '0 * * * *' :
+              frequency_minutes === 180 ? '0 */3 * * *' :
+                `*/${frequency_minutes} * * * *`;
 
-        const { error: cronError } = await supabase.rpc('schedule_cron_job', {
-          job_name: jobName,
-          schedule: cronExpression,
-          command: `SELECT net.http_post(
-            url:='${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-retell-news',
-            headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}"}'::jsonb,
-            body:='{"country_code": "${country_code.toLowerCase()}", "time_range": "${time_range}", "llm_model": "${llm_model}", "llm_provider": "${llm_provider}", "job_name": "${jobName}"}'::jsonb
-          ) AS request_id;`
-        });
+        const cronCommand = `SELECT net.http_post(url:='${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-retell-news', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}"}'::jsonb, body:='{"country_code": "${country_code.toLowerCase()}", "time_range": "${time_range}", "llm_model": "${llm_model}", "llm_provider": "${llm_provider}", "job_name": "${jobName}"}'::jsonb, timeout:=60000) AS request_id;`;
 
-        if (cronError) {
+        try {
+          // Use exec_sql RPC to interface with pg_cron
+          await supabase.rpc('exec_sql', {
+            sql: `SELECT cron.schedule('${jobName}', '${cronExpression}', $$${cronCommand}$$)`
+          });
+        } catch (cronError) {
           console.error('Failed to schedule cron job:', cronError);
-          // Don't fail the whole operation, just log the error
         }
 
         return new Response(
@@ -873,12 +836,12 @@ serve(async (req) => {
 
         if (deleteError) throw deleteError;
 
-        // Unschedule from pg_cron
-        const { error: cronError } = await supabase.rpc('unschedule_cron_job', {
-          job_name: jobName
-        });
-
-        if (cronError) {
+        // Unschedule from pg_cron using exec_sql RPC
+        try {
+          await supabase.rpc('exec_sql', {
+            sql: `SELECT cron.unschedule('${jobName}')`
+          });
+        } catch (cronError) {
           console.error('Failed to unschedule cron job:', cronError);
         }
 
