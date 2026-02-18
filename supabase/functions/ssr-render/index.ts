@@ -1053,7 +1053,7 @@ function generateFooterHTML(lang: string, baseUrl: string) {
     <footer class="py-8 border-t border-border mt-12 bg-card/30">
       <div class="container mx-auto px-4 text-center">
         <p class="text-sm text-muted-foreground font-mono">
-          ${t('footer.style')}
+          ${t('footer.style')} © ${new Date().getFullYear()}
         </p>
         <p class="text-xs text-muted-foreground mt-2">
            <a href="${baseUrl}/" class="hover:text-primary transition-colors">Home</a> | 

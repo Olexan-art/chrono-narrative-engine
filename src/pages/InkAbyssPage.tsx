@@ -283,7 +283,7 @@ export default function InkAbyssPage() {
               ? 'Art speaks where words fail' 
               : language === 'pl' 
               ? 'Sztuka mówi tam, gdzie słowa zawodzą'
-              : 'Мистецтво говорить там, де слова безсилі'}
+              : 'Мистецтво говорити там, де слова безсилі'} © {new Date().getFullYear()}
           </p>
         </div>
       </footer>

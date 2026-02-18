@@ -207,9 +207,12 @@
     </main>
 
     <footer>
-      <p>© 2024-2025 Synchronization Point. AI-generated content based on real news events.</p>
+      <p id="footer-year">© 2024-<span id="footer-year-span"></span> Synchronization Point. AI-generated content based on real news events.</p>
       <p>Contact: <a href="https://bravennow.com">bravennow.com</a></p>
     </footer>
+    <script>
+      document.getElementById('footer-year-span').textContent = new Date().getFullYear();
+    </script>
   </div>
 
   <!-- React App Root -->
