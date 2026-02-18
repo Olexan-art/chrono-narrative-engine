@@ -559,7 +559,14 @@ Original content: ${getContent() || 'No content'}
 Category: ${news.category || 'general'}`;
 
     // Get country code for metadata tracking
-    const newsCountryCode = news.country?.code?.toLowerCase() || 'unknown';
+    const getCountryCode = () => {
+      if (!news.country) return 'unknown';
+      if (Array.isArray(news.country)) return news.country[0]?.code?.toLowerCase() || 'unknown';
+      return (news.country as any).code?.toLowerCase() || 'unknown';
+    };
+
+    const newsCountryCode = getCountryCode();
+    console.log(`Tracking usage for country: ${newsCountryCode}`);
 
     const rawResponse = await callLLM(supabase, settings as LLMSettings, prompt.system, userPrompt, model, {
       newsId,

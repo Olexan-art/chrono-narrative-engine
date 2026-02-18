@@ -956,10 +956,20 @@ serve(async (req: Request) => {
           const { count, error } = await query;
           if (error) {
             console.error(`Error fetching bulk retell stats for ${country_code}:`, error);
-            console.error('Query details - operation: retell-news, country_code:', country_code.toLowerCase(), 'since:', since?.toISOString());
             throw error;
           }
           console.log(`Stats for ${country_code} since ${since?.toISOString() || 'all time'}: ${count || 0}`);
+
+          // Debugging log for first request
+          if (!since) {
+            const { data: sample } = await supabase
+              .from('llm_usage_logs')
+              .select('metadata')
+              .eq('operation', 'retell-news')
+              .limit(1);
+            console.log(`Sample metadata from DB:`, JSON.stringify(sample?.[0]?.metadata));
+          }
+
           return count || 0;
         };
 
