@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { callEdgeFunction } from '@/lib/api';
-import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, Trash2, Globe, RefreshCw } from 'lucide-react';
+import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, Trash2, Globe, RefreshCw, TrendingUp, AlertCircle, Zap } from 'lucide-react';
 import { LLM_MODELS } from '@/types/database';
+import { LineChart, Line, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 interface CronConfig {
     id: string;
@@ -22,7 +23,7 @@ interface CronConfig {
     last_run_details: any;
 }
 
-// Helper component for displaying bulk retell statistics
+// Helper component for displaying bulk retell statistics with charts
 function BulkRetellStats({ countryCode, password }: { countryCode: string; password: string }) {
     const { data: statsData } = useQuery({
         queryKey: ['bulk-retell-stats', countryCode],
@@ -36,38 +37,149 @@ function BulkRetellStats({ countryCode, password }: { countryCode: string; passw
             if (!response.success) throw new Error(response.error);
             return response.stats;
         },
-        refetchInterval: 30000, // Refresh every 30 seconds
+        refetchInterval: 15000, // Refresh every 15 seconds for real-time updates
         enabled: !!password,
     });
 
     if (!statsData) return null;
 
+    // Prepare chart data from hourly statistics
+    const chartData = Array.from({ length: 24 }, (_, i) => {
+        const hour = new Date();
+        hour.setHours(hour.getHours() - (23 - i));
+        const hourKey = hour.getHours().toString().padStart(2, '0') + ':00';
+        const hourlyStats = statsData.hourly?.[i] || { processed: 0, success: 0, failed: 0 };
+        
+        return {
+            time: hourKey,
+            processed: hourlyStats.processed || 0,
+            success: hourlyStats.success || 0,
+            failed: hourlyStats.failed || 0,
+            successRate: hourlyStats.processed > 0 ? Math.round((hourlyStats.success / hourlyStats.processed) * 100) : 0
+        };
+    });
+
+    const successRate = statsData.all_time > 0 
+        ? Math.round(((statsData.all_time - (statsData.failed || 0)) / statsData.all_time) * 100)
+        : 0;
+
+    const avgProcessingTime = statsData.avg_processing_time_ms || 0;
+    const itemsPerMinute = statsData.recent_rate || 0;
+
     return (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm mt-2">
-            <div>
-                <div className="text-muted-foreground text-xs">All-time</div>
-                <div className="font-bold">{statsData.all_time || 0}</div>
+        <div className="space-y-4 mt-3">
+            {/* Key Metrics Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm">
+                <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                    <div className="text-muted-foreground text-xs uppercase tracking-wide">All-time</div>
+                    <div className="font-bold text-lg text-green-500">{statsData.all_time || 0}</div>
+                </div>
+                <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                    <div className="text-muted-foreground text-xs uppercase tracking-wide">Last 24h</div>
+                    <div className="font-bold text-lg text-blue-500">{statsData.h24 || 0}</div>
+                </div>
+                <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                    <div className="text-muted-foreground text-xs uppercase tracking-wide">Last Hour</div>
+                    <div className="font-bold text-lg text-purple-500">{statsData.h1 || 0}</div>
+                </div>
+                <div className={`p-3 rounded-lg border ${successRate >= 90 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-orange-500/10 border-orange-500/20'}`}>
+                    <div className="text-muted-foreground text-xs uppercase tracking-wide">Success Rate</div>
+                    <div className={`font-bold text-lg ${successRate >= 90 ? 'text-emerald-500' : 'text-orange-500'}`}>{successRate}%</div>
+                </div>
+                <div className="p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/20">
+                    <div className="text-muted-foreground text-xs uppercase tracking-wide">Avg Time</div>
+                    <div className="font-bold text-lg text-cyan-500">{Math.round(avgProcessingTime)}ms</div>
+                </div>
+                <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                    <div className="text-muted-foreground text-xs uppercase tracking-wide">Rate</div>
+                    <div className="font-bold text-lg text-amber-500">{itemsPerMinute.toFixed(1)}/min</div>
+                </div>
             </div>
-            <div>
-                <div className="text-muted-foreground text-xs">1h</div>
-                <div className="font-bold">{statsData.h1 || 0}</div>
-            </div>
-            <div>
-                <div className="text-muted-foreground text-xs">6h</div>
-                <div className="font-bold">{statsData.h6 || 0}</div>
-            </div>
-            <div>
-                <div className="text-muted-foreground text-xs">24h</div>
-                <div className="font-bold">{statsData.h24 || 0}</div>
-            </div>
-            <div>
-                <div className="text-muted-foreground text-xs">3d</div>
-                <div className="font-bold">{statsData.d3 || 0}</div>
-            </div>
-            <div>
-                <div className="text-muted-foreground text-xs">7d</div>
-                <div className="font-bold">{statsData.d7 || 0}</div>
-            </div>
+
+            {/* Charts */}
+            {chartData && chartData.length > 0 && (
+                <>
+                    {/* Processing Volume Chart */}
+                    <Card className="bg-muted/30 border border-muted">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4 text-green-500" />
+                                Processing Volume (24h)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="h-[180px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={chartData}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                        <XAxis 
+                                            dataKey="time" 
+                                            stroke="#666"
+                                            fontSize={11}
+                                            interval={Math.floor(chartData.length / 6)}
+                                        />
+                                        <YAxis stroke="#666" fontSize={11} />
+                                        <Tooltip 
+                                            contentStyle={{
+                                                backgroundColor: 'rgba(0,0,0,0.9)',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                borderRadius: '6px',
+                                                fontSize: '12px'
+                                            }}
+                                        />
+                                        <Legend />
+                                        <Bar dataKey="success" stackId="a" fill="#22c55e" name="Success" />
+                                        <Bar dataKey="failed" stackId="a" fill="#ef4444" name="Failed" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Success Rate Trend */}
+                    <Card className="bg-muted/30 border border-muted">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-purple-500" />
+                                Success Rate Trend (24h)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="h-[140px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={chartData}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                        <XAxis 
+                                            dataKey="time" 
+                                            stroke="#666"
+                                            fontSize={11}
+                                            interval={Math.floor(chartData.length / 6)}
+                                        />
+                                        <YAxis stroke="#666" fontSize={11} domain={[0, 100]} />
+                                        <Tooltip 
+                                            contentStyle={{
+                                                backgroundColor: 'rgba(0,0,0,0.9)',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                borderRadius: '6px',
+                                                fontSize: '12px'
+                                            }}
+                                            formatter={(value) => `${value}%`}
+                                        />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="successRate" 
+                                            stroke="#a855f7" 
+                                            dot={false}
+                                            strokeWidth={2}
+                                            name="Success %"
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </>
+            )}
         </div>
     );
 }
@@ -236,6 +348,7 @@ function BulkRetellForm({ onSuccess, password }: { onSuccess: () => void; passwo
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                        <SelectItem value="5">Every 5 mins</SelectItem>
                         <SelectItem value="15">Every 15 mins</SelectItem>
                         <SelectItem value="30">Every 30 mins</SelectItem>
                         <SelectItem value="60">Every 1 hour</SelectItem>
@@ -358,49 +471,66 @@ export function BulkRetellCronPanel({ password }: { password: string }) {
                         return (
                             <div key={cron.id} className="p-4 border rounded-lg space-y-3 bg-muted/20">
                                 <div className="flex items-center justify-between flex-wrap gap-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-xl font-bold">
-                                            {countryCode.toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <div className="font-medium flex items-center gap-2">
-                                                {country?.label || countryCode.toUpperCase()}
-                                                <Badge variant={cron.enabled ? 'default' : 'secondary'} className="text-xs">
-                                                    {cron.enabled ? 'Active' : 'Paused'}
-                                                </Badge>
+<div className="flex items-center gap-3 flex-1">
+                                            <div className={`flex items-center justify-center w-12 h-12 rounded-full text-lg font-bold relative ${
+                                                cron.enabled 
+                                                    ? 'bg-green-500/20 border border-green-500/40 text-green-400' 
+                                                    : 'bg-muted/50 border border-muted-foreground/20 text-muted-foreground'
+                                            }`}>
+                                                {countryCode.toUpperCase()}
+                                                {cron.enabled && (
+                                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                                                )}
                                             </div>
-                                            <div className="text-sm text-muted-foreground flex items-center gap-2">
-                                                <Clock className="w-3 h-3" />
-                                                Every {cron.frequency_minutes} mins
-                                                {cron.enabled && (() => {
-                                                    const nextRun = getNextRunInfo(cron.last_run_at, cron.frequency_minutes);
-                                                    return (
-                                                        <>
-                                                            <span className="text-border">|</span>
-                                                            <span className={nextRun.isOverdue ? 'text-orange-500 font-medium' : 'text-muted-foreground'}>
-                                                                Next: {nextRun.text}
-                                                            </span>
-                                                        </>
-                                                    );
-                                                })()}
-                                                <span className="text-border">|</span>
-                                                Looking at: {cron.processing_options?.time_range}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground mt-1">
-                                                Model: {cron.processing_options?.llm_model}
-                                            </div>
-                                            {cron.last_run_at && (
-                                                <div className="text-xs mt-1 flex items-center gap-2">
-                                                    <span className="text-muted-foreground">Last run: {new Date(cron.last_run_at).toLocaleString()}</span>
-                                                    {cron.last_run_status === 'success' ? (
-                                                        <CheckCircle2 className="w-3 h-3 text-green-500" />
-                                                    ) : (
-                                                        <XCircle className="w-3 h-3 text-red-500" />
-                                                    )}
-                                                    {cron.last_run_details?.processed !== undefined && (
-                                                        <span className="text-muted-foreground">
-                                                            ({cron.last_run_details.processed} items)
+                                            <div className="flex-1">
+                                                <div className="font-medium flex items-center gap-2">
+                                                    {country?.label || countryCode.toUpperCase()}
+                                                    <Badge 
+                                                        variant={cron.enabled ? 'default' : 'secondary'} 
+                                                        className={`text-xs ${cron.enabled ? 'bg-green-500/30 text-green-400' : ''}`}
+                                                    >
+                                                        {cron.enabled ? '● Active' : '○ Paused'}
+                                                    </Badge>
+                                                </div>
+                                                <div className="text-sm text-muted-foreground space-y-1 mt-1">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="flex items-center gap-1">
+                                                            <Clock className="w-3 h-3" />
+                                                            Every {cron.frequency_minutes}m
                                                         </span>
+                                                        {cron.enabled && (() => {
+                                                            const nextRun = getNextRunInfo(cron.last_run_at, cron.frequency_minutes);
+                                                            return (
+                                                                <>
+                                                                    <span className="text-border">●</span>
+                                                                    <span className={`font-medium ${nextRun.isOverdue ? 'text-orange-500 animate-pulse' : 'text-cyan-400'}`}>
+                                                                        {nextRun.isOverdue ? '⚠️' : '⏱️'} Next: {nextRun.text}
+                                                                    </span>
+                                                                </>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                    <div className="text-xs">
+                                                        📋 Scope: {cron.processing_options?.time_range === 'all' ? 'All unprocessed' : cron.processing_options?.time_range || 'default'}
+                                                    </div>
+                                                    <div className="text-xs">
+                                                        🤖 Model: {cron.processing_options?.llm_model}
+                                                    </div>
+                                                </div>
+                                                {cron.last_run_at && (
+                                                    <div className="text-xs mt-2 flex flex-wrap items-center gap-2">
+                                                        <span className="text-muted-foreground">Last: {new Date(cron.last_run_at).toLocaleTimeString()}</span>
+                                                        {cron.last_run_status === 'success' ? (
+                                                            <CheckCircle2 className="w-3 h-3 text-green-500" />
+                                                        ) : cron.last_run_status === 'running' ? (
+                                                            <Activity className="w-3 h-3 text-blue-500 animate-spin" />
+                                                        ) : (
+                                                            <XCircle className="w-3 h-3 text-red-500" />
+                                                        )}
+                                                        {cron.last_run_details?.processed !== undefined && (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {cron.last_run_details.processed} items
+                                                            </Badge>
                                                     )}
                                                 </div>
                                             )}
@@ -411,9 +541,8 @@ export function BulkRetellCronPanel({ password }: { password: string }) {
                                         <Button
                                             size="sm"
                                             variant="outline"
+                                            className="bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-400"
                                             onClick={async () => {
-                                                const description = `Running bulk retell for ${cron.job_name}...`;
-                                                toast.info(description);
                                                 try {
                                                     const result = await callEdgeFunction('bulk-retell-news', {
                                                         password,
@@ -425,8 +554,9 @@ export function BulkRetellCronPanel({ password }: { password: string }) {
                                                     }) as any;
 
                                                     if (result.success) {
-                                                        toast.success(`Processed ${result.processed} items. Success: ${result.success_count}, Errors: ${result.error_count}`);
+                                                        toast.success(`✓ Processed ${result.processed} items. Success: ${result.success_count}, Errors: ${result.error_count}`);
                                                         queryClient.invalidateQueries({ queryKey: ['cron-configs'] });
+                                                        queryClient.invalidateQueries({ queryKey: ['bulk-retell-stats', cron.processing_options?.country_code] });
                                                     } else {
                                                         toast.error('Run failed: ' + (result.message || 'Unknown error'));
                                                     }
@@ -435,7 +565,7 @@ export function BulkRetellCronPanel({ password }: { password: string }) {
                                                 }
                                             }}
                                         >
-                                            <Play className="w-4 h-4 mr-2" />
+                                            <Play className="w-4 h-4 mr-1" />
                                             Run Now
                                         </Button>
                                         <Button

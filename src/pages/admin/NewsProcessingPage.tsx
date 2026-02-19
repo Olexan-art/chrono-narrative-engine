@@ -196,8 +196,6 @@ function ProcessingDashboard({ password }: { password: string }) {
         enabled: !!password,
     });
 
-    if (!dashboardStats) return null;
-
     // Additional stats: bot visits and unique visitors
     const { data: botVisits } = useQuery({
         queryKey: ['bot-visits-stats'],
@@ -220,6 +218,9 @@ function ProcessingDashboard({ password }: { password: string }) {
         refetchInterval: 30000,
         enabled: !!password,
     });
+
+    // Guard: return early after all hooks are called
+    if (!dashboardStats) return null;
 
     const totalPending = dashboardStats.queueStats.reduce((acc, curr) => acc + curr.pending, 0);
     const estFinishMinutes = totalPending > 0 && dashboardStats.throughput.h1 > 0
