@@ -12,7 +12,7 @@
 const SUPABASE_URL = 'https://tuledxqigzufkecztnlo.supabase.co';
 const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 const SSR_ENDPOINT = `${SUPABASE_FUNCTIONS_URL}/ssr-render`;
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZHd4bm9pbGR2dmVwc29heHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTM2MzQsImV4cCI6MjA4NDc2OTYzNH0.FaLsz1zWVZMLCWizBnKG1ARFFO3N_I1Vmri9xMVVXFk';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NDUyODgsImV4cCI6MjA4NjQyMTI4OH0.XKqWqIwfy5BoKzQNNUhs5uYC_QI0GLLKXw1pBDgkCi0';
 
 // Cache TTLs (seconds)
 const CACHE_TTL = {
@@ -275,6 +275,10 @@ export default {
     _ctx = ctx;
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const userAgent = request.headers.get('User-Agent') || '';
+    
+    // Check if upstream worker asked to skip SSR
+    const skipSSR = request.headers.get('X-Skip-SSR') === 'true';
 
     // 1. Static assets → serve directly
     if (isStaticAsset(pathname)) {
@@ -285,12 +289,12 @@ export default {
     const apiResponse = await handleApiRoute(request, pathname, env);
     if (apiResponse) return apiResponse;
 
-    // 3. SSR-eligible pages → serve cached HTML
+    // 3. SSR-eligible pages → serve cached HTML (only for bots and if not skipped)
     const accept = request.headers.get('Accept') || '';
     const secFetchDest = request.headers.get('Sec-Fetch-Dest') || '';
     const isDocumentRequest = secFetchDest === 'document' || accept.includes('text/html');
 
-    if (isDocumentRequest && shouldSSR(pathname)) {
+    if (!skipSSR && isDocumentRequest && isBot(userAgent) && shouldSSR(pathname)) {
       const ssrResponse = await handleSSR(request, pathname, env);
       if (ssrResponse) return ssrResponse;
     }
