@@ -597,7 +597,8 @@ export function BulkRetellCronPanelEnhanced({ password }: { password: string }) 
                                                             time_range: cron.processing_options?.time_range,
                                                             llm_model: cron.processing_options?.llm_model,
                                                             llm_provider: cron.processing_options?.llm_provider,
-                                                            job_name: cron.job_name
+                                                            job_name: cron.job_name,
+                                                            trigger: 'manual'
                                                         }) as any;
 
                                                         if (result.success) {
@@ -632,7 +633,8 @@ export function BulkRetellCronPanelEnhanced({ password }: { password: string }) 
                                                             llm_model: cron.processing_options?.llm_model,
                                                             llm_provider: cron.processing_options?.llm_provider,
                                                             job_name: cron.job_name,
-                                                            force_quick: true
+                                                            force_quick: true,
+                                                            trigger: 'manual'
                                                         }) as any;
 
                                                         if (result.success) {

@@ -249,6 +249,107 @@ serve(async (req: Request) => {
         );
       }
 
+      case 'getCronEvents': {
+        try {
+          const limit = (data && data.limit) || 25;
+          const { data: events, error } = await supabase
+            .from('cron_job_events')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+          if (error) throw error;
+          return new Response(JSON.stringify({ success: true, events }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (outerErr) {
+          console.error('getCronEvents failed:', outerErr);
+          return new Response(JSON.stringify({ success: false, error: outerErr instanceof Error ? outerErr.message : String(outerErr) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      // Inspect pg_cron table (job entries)
+      case 'inspectPgCron': {
+        const jobName = (data && data.jobName) ? String(data.jobName) : '%bulk_retell_%';
+        try {
+          const sql = `SELECT jobid, jobname, schedule, next_run, nodename, active, last_run, last_status FROM cron.job WHERE jobname LIKE '${jobName.replace("'", "''")}'`;
+          const { data: rows } = await supabase.rpc('exec_sql', { sql });
+          return new Response(JSON.stringify({ success: true, rows }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('inspectPgCron failed:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      // Force-run a pg_cron job by job_name (cron.run(jobid)) — admin-only utility
+      case 'runPgCronNow': {
+        const { jobName } = data || {};
+        if (!jobName) {
+          return new Response(JSON.stringify({ error: 'jobName required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        try {
+          const { data: found } = await supabase.rpc('exec_sql', { sql: `SELECT jobid FROM cron.job WHERE jobname = '${String(jobName).replace("'", "''")}' LIMIT 1` });
+          const jobid = Array.isArray(found) && found.length > 0 ? (found[0] && found[0].jobid) : null;
+          if (!jobid) return new Response(JSON.stringify({ success: false, error: 'job not found in pg_cron' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+          await supabase.rpc('exec_sql', { sql: `SELECT cron.run(${jobid})` });
+
+          // Log forced run
+          try { await supabase.from('cron_job_events').insert({ job_name: jobName, event_type: 'run_forced', origin: 'admin', details: { jobid } }); } catch (e) { console.error('Failed to write cron_job_events (run_forced):', e); }
+
+          return new Response(JSON.stringify({ success: true, jobid }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('runPgCronNow failed:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      // Force-run a pg_cron job by numeric job id — useful when jobname isn't visible via cron.job
+      case 'runCronById': {
+        const { jobId } = data || {};
+        if (jobId === undefined || jobId === null) {
+          return new Response(JSON.stringify({ error: 'jobId required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        try {
+          await supabase.rpc('exec_sql', { sql: `SELECT cron.run(${Number(jobId)})` });
+          try { await supabase.from('cron_job_events').insert({ job_name: null, event_type: 'run_forced_by_id', origin: 'admin', details: { jobId } }); } catch (e) { console.error('Failed to write cron_job_events (run_forced_by_id):', e); }
+          return new Response(JSON.stringify({ success: true, jobId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('runCronById failed:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      // Simulate pg_cron HTTP invoke (call the same net.http_post target directly using service role key)
+      case 'testCronInvoke': {
+        const { country_code, time_range, job_name } = data || {};
+        try {
+          const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+          const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-retell-news`;
+          const resp = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceKey}`
+            },
+            body: JSON.stringify({ country_code, time_range, job_name, trigger: 'cron' })
+          });
+
+          let body = null;
+          try { body = await resp.json(); } catch (e) { body = await resp.text().catch(() => null); }
+
+          // Log test invoke
+          try {
+            await supabase.from('cron_job_events').insert({ job_name: job_name || null, event_type: 'test_invoke', origin: 'admin', details: { status: resp.status, body } });
+          } catch (e) { console.error('Failed to write cron_job_events (test_invoke):', e); }
+
+          return new Response(JSON.stringify({ success: resp.ok, status: resp.status, body }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('testCronInvoke failed:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
       case 'updateCronConfig': {
         const { jobName, config } = data;
         if (!jobName) {
@@ -319,6 +420,11 @@ serve(async (req: Request) => {
               sql: `SELECT cron.unschedule('${jobName}')`
             });
 
+            // Log unschedule event (best-effort)
+            try {
+              await supabase.from('cron_job_events').insert({ job_name: jobName, event_type: 'unscheduled', origin: 'admin', details: {} });
+            } catch (e) { console.error('Failed to write cron_job_events (unscheduled):', e); }
+
             if (finalEnabled) {
               let cronCommand = '';
 
@@ -334,14 +440,24 @@ serve(async (req: Request) => {
                 cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/cache-pages', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "refresh-all"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName.startsWith('bulk_retell_')) {
                 const opts = updatedConfig.processing_options || {};
-                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/bulk-retell-news', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"country_code": "${opts.country_code}", "time_range": "${opts.time_range}", "llm_model": "${opts.llm_model}", "llm_provider": "${opts.llm_provider}", "job_name": "${jobName}"}'::jsonb, timeout:=60000) as request_id;`;
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/bulk-retell-news', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"country_code": "${opts.country_code}", "time_range": "${opts.time_range}", "llm_model": "${opts.llm_model}", "llm_provider": "${opts.llm_provider}", "job_name": "${jobName}", "trigger": "cron"}'::jsonb, timeout:=60000) as request_id;`;
               }
 
               if (cronCommand) {
-                await supabase.rpc('exec_sql', {
-                  sql: `SELECT cron.schedule('${jobName}', '${schedule}', $$${cronCommand}$$)`
-                });
-                console.log(`Scheduled ${jobName} at ${schedule}`);
+                let scheduleResult = null;
+                try {
+                  scheduleResult = await supabase.rpc('exec_sql', {
+                    sql: `SELECT cron.schedule('${jobName}', '${schedule}', $$${cronCommand}$$)`
+                  });
+                  console.log(`Scheduled ${jobName} at ${schedule}`, scheduleResult);
+                } catch (scheduleErr) {
+                  console.error('cron.schedule returned error:', scheduleErr);
+                  try { await supabase.from('cron_job_events').insert({ job_name: jobName, event_type: 'schedule_failed', origin: 'admin', details: { error: scheduleErr instanceof Error ? scheduleErr.message : String(scheduleErr) } }); } catch (e) { console.error('Failed to write cron_job_events (schedule_failed):', e); }
+                }
+
+                try {
+                  await supabase.from('cron_job_events').insert({ job_name: jobName, event_type: 'scheduled', origin: 'admin', details: { schedule, scheduleResult } });
+                } catch (e) { console.error('Failed to write cron_job_events (scheduled from update):', e); }
               }
             } else {
               console.log(`Unscheduled ${jobName}`);
@@ -801,15 +917,30 @@ serve(async (req: Request) => {
               frequency_minutes === 180 ? '0 */3 * * *' :
                 `*/${frequency_minutes} * * * *`;
 
-        const cronCommand = `SELECT net.http_post(url:='${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-retell-news', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}"}'::jsonb, body:='{"country_code": "${country_code.toLowerCase()}", "time_range": "${time_range}", "llm_model": "${llm_model}", "llm_provider": "${llm_provider}", "job_name": "${jobName}"}'::jsonb, timeout:=60000) AS request_id;`;
+        const cronCommand = `SELECT net.http_post(url:='${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-retell-news', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}"}'::jsonb, body:='{"country_code": "${country_code.toLowerCase()}", "time_range": "${time_range}", "llm_model": "${llm_model}", "llm_provider": "${llm_provider}", "job_name": "${jobName}", "trigger": "cron"}'::jsonb, timeout:=60000) AS request_id;`;
 
         try {
           // Use exec_sql RPC to interface with pg_cron
           await supabase.rpc('exec_sql', {
             sql: `SELECT cron.schedule('${jobName}', '${cronExpression}', $$${cronCommand}$$)`
           });
+
+          // Log scheduling event
+          try {
+            await supabase.from('cron_job_events').insert({
+              job_name: jobName,
+              event_type: 'scheduled',
+              origin: 'admin',
+              details: { cron_expression: cronExpression, processing_options: { country_code: country_code.toLowerCase(), time_range, llm_model, llm_provider } }
+            });
+          } catch (e) {
+            console.error('Failed to write cron_job_events (scheduled):', e);
+          }
         } catch (cronError) {
           console.error('Failed to schedule cron job:', cronError);
+          try {
+            await supabase.from('cron_job_events').insert({ job_name: jobName, event_type: 'schedule_failed', origin: 'admin', details: { error: cronError instanceof Error ? cronError.message : String(cronError) } });
+          } catch (e) { console.error('Failed to write cron_job_events (schedule_failed):', e); }
         }
 
         return new Response(
@@ -841,6 +972,11 @@ serve(async (req: Request) => {
           await supabase.rpc('exec_sql', {
             sql: `SELECT cron.unschedule('${jobName}')`
           });
+
+          try {
+            await supabase.from('cron_job_events').insert({ job_name: jobName, event_type: 'deleted', origin: 'admin', details: {} });
+          } catch (e) { console.error('Failed to write cron_job_events (deleted):', e); }
+
         } catch (cronError) {
           console.error('Failed to unschedule cron job:', cronError);
         }
@@ -1075,10 +1211,41 @@ serve(async (req: Request) => {
           .select('*')
           .order('updated_at', { ascending: false });
 
+        // Enrich logs with news slug / path when possible
+        let enrichedLogs = logs || [];
+        try {
+          const newsIds = (enrichedLogs || [])
+            .map((l: any) => l?.metadata?.newsId)
+            .filter(Boolean);
+
+          if (newsIds.length > 0) {
+            const { data: newsRows } = await supabase
+              .from('news_rss_items')
+              .select('id, slug, country:news_countries(code)')
+              .in('id', newsIds);
+
+            const newsMap: Record<string, any> = {};
+            (newsRows || []).forEach((r: any) => {
+              const countryCode = r?.country?.code || (r.country && r.country.code) || null;
+              newsMap[r.id] = { slug: r.slug, country_code: countryCode };
+            });
+
+            enrichedLogs = (enrichedLogs || []).map((l: any) => {
+              const nid = l?.metadata?.newsId;
+              if (nid && newsMap[nid] && newsMap[nid].slug) {
+                l.article_path = `/news/${(newsMap[nid].country_code || 'us').toLowerCase()}/${newsMap[nid].slug}`;
+              }
+              return l;
+            });
+          }
+        } catch (e) {
+          console.warn('Failed to enrich diagnostic logs with article path:', e?.message || e);
+        }
+
         return new Response(
           JSON.stringify({
             success: true,
-            logs: logs || [],
+            logs: enrichedLogs,
             cronConfigs: cronConfigs || [],
             logsError,
             cronError

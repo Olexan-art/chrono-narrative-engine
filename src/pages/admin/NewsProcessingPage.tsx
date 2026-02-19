@@ -601,6 +601,15 @@ function DiagnosticInfo({ password }: { password: string }) {
                                         <div className="text-amber-500 whitespace-pre-wrap">
                                             Metadata: {JSON.stringify(log.metadata)}
                                         </div>
+
+                                        {log.article_path ? (
+                                            <div className="mt-2">
+                                                <a href={log.article_path} target="_blank" rel="noopener noreferrer" className="text-cyan-300 underline text-sm">
+                                                    🔗 Open retold article
+                                                </a>
+                                            </div>
+                                        ) : null}
+
                                     </div>
                                 ))
                             )}

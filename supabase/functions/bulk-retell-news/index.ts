@@ -15,7 +15,7 @@ serve(async (req) => {
     let countryCodeForUpdate: string | undefined;
 
     try {
-        const { country_code, time_range, llm_model, job_name, force_all } = await req.json();
+        const { country_code, time_range, llm_model, job_name, force_all, trigger } = await req.json();
 
         jobNameForUpdate = job_name;
         countryCodeForUpdate = country_code;
@@ -30,6 +30,19 @@ serve(async (req) => {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         const supabase = createClient(supabaseUrl, supabaseKey);
+
+        const origin = trigger === 'cron' ? 'automatic' : 'manual';
+        // Log run start (best-effort)
+        try {
+            await supabase.from('cron_job_events').insert({
+                job_name: job_name || null,
+                event_type: 'run_started',
+                origin,
+                details: { country_code, time_range, llm_model, job_name, force_all }
+            });
+        } catch (e) {
+            console.error('Failed to write cron_job_events (run_started):', e);
+        }
 
         console.log(`[bulk-retell-news] CPU-Intensive mode starting for: ${country_code}, time_range: ${time_range || 'all'}`);
 
@@ -204,12 +217,31 @@ serve(async (req) => {
             }).eq('job_name', job_name);
         }
 
+        // Log run finished (best-effort)
+        try {
+            await supabase.from('cron_job_events').insert({
+                job_name: job_name || null,
+                event_type: 'run_finished',
+                origin: trigger === 'cron' ? 'automatic' : 'manual',
+                status: errorCount === 0 ? 'success' : 'warning',
+                details: summary
+            });
+        } catch (e) {
+            console.error('Failed to write cron_job_events (run_finished):', e);
+        }
+
         return new Response(JSON.stringify(summary), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
 
     } catch (error) {
         console.error('[bulk-retell-news] Fatal Error:', error);
+        // Log failure (best-effort)
+        try {
+            const origin = (await (async () => { try { const body = await req.json(); return body.trigger || 'manual'; } catch { return 'manual'; } })()) || 'manual';
+            await createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!).from('cron_job_events').insert({ job_name: jobNameForUpdate || null, event_type: 'run_failed', origin, details: { error: error instanceof Error ? error.message : String(error) } });
+        } catch (e) { console.error('Failed to write cron_job_events (run_failed):', e); }
+
         return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown' }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
