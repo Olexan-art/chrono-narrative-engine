@@ -133,8 +133,10 @@ export default async function handler(request: Request, context: Context) {
   // This ensures correct canonical URLs and content for users with JS disabled.
   // The SSR page contains a JS redirect that sends real users to the SPA,
   // so users with JS enabled will seamlessly transition to the React app.
-  if (shouldSSR(pathname)) {
-    const isBotRequest = isBot(userAgent);
+  const ssrEnabled = shouldSSR(pathname);
+  const isBotRequest = isBot(userAgent);
+  
+  if (ssrEnabled) {
     
     // For bots: always try SSR (cache + live)
     // For regular users: only serve from cache (fast path, no latency penalty)
