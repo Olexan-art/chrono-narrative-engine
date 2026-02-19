@@ -187,6 +187,22 @@ function BulkRetellStatsEnhanced({ countryCode, password }: { countryCode: strin
     );
 }
 
+// Helper function to calculate next run time in HH:MM format
+function getNextRunTime(lastRunAt: string | null, frequencyMinutes: number): string {
+    if (!lastRunAt) {
+        return '—';
+    }
+
+    const lastRun = new Date(lastRunAt).getTime();
+    const frequencyMs = frequencyMinutes * 60 * 1000;
+    const nextRun = new Date(lastRun + frequencyMs);
+    
+    const hours = String(nextRun.getHours()).padStart(2, '0');
+    const minutes = String(nextRun.getMinutes()).padStart(2, '0');
+    
+    return `${hours}:${minutes}`;
+}
+
 // Helper function to calculate time until next run
 function getNextRunInfo(lastRunAt: string | null, frequencyMinutes: number): { text: string; isOverdue: boolean } {
     if (!lastRunAt) {
@@ -524,6 +540,11 @@ export function BulkRetellCronPanelEnhanced({ password }: { password: string }) 
                                                             <Clock className="w-3 h-3" />
                                                             Every {cron.frequency_minutes}m
                                                         </span>
+                                                        {cron.last_run_at && (
+                                                            <span className="inline-flex items-center gap-1 bg-purple-500/20 text-purple-300 px-2 py-1 rounded text-xs font-medium">
+                                                                🕐 {getNextRunTime(cron.last_run_at, cron.frequency_minutes)}
+                                                            </span>
+                                                        )}
                                                         {cron.enabled && (() => {
                                                             const nextRun = getNextRunInfo(cron.last_run_at, cron.frequency_minutes);
                                                             return (
