@@ -1,0 +1,61 @@
+name: Fallback — Bulk Retell (US)
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'    # every 15 minutes
+  workflow_dispatch:
+
+jobs:
+  fallback-bulk-retell-us:
+    name: Fallback bulk-retell-news (US)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required secrets
+        run: |
+          : "Ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in repo secrets"
+          if [ -z "${{ secrets.SUPABASE_URL }}" ] || [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then
+            echo "ERROR: add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to repository secrets."; exit 1;
+          fi
+
+      - name: Query cron_job_configs (skip if disabled)
+        id: check
+        run: |
+          RESP=$(curl -s -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/cron_job_configs?select=enabled,processing_options&job_name=eq.bulk_retell_us")
+          echo "resp=$RESP" >> $GITHUB_OUTPUT
+          ENABLED=$(echo "$RESP" | jq -r 'if .[0] then .[0].enabled else "false" end')
+          echo "enabled=$ENABLED" >> $GITHUB_OUTPUT
+          if [ "$ENABLED" != "true" ]; then
+            echo "bulk_retell_us is disabled in cron_job_configs — skipping fallback run.";
+            exit 0;
+          fi
+
+      - name: Invoke bulk-retell-news (fallback)
+        id: invoke
+        run: |
+          echo "Calling bulk-retell-news for US (fallback cron)..."
+          BODY='{"country_code":"us","time_range":"last_3h","job_name":"bulk_retell_us","trigger":"cron"}'
+          HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/bulk-retell-news" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" --max-time 300)
+
+          # split body and status
+          HTTP_BODY=$(printf "%s" "$HTTP_RESPONSE" | sed '$d')
+          HTTP_STATUS=$(printf "%s" "$HTTP_RESPONSE" | tail -n1)
+          echo "status=$HTTP_STATUS" >> $GITHUB_OUTPUT
+          echo "body=$HTTP_BODY" >> $GITHUB_OUTPUT
+
+          echo "Response status: $HTTP_STATUS"
+          echo "$HTTP_BODY" | jq -C '.' || true
+
+          if [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "Invocation failed (HTTP $HTTP_STATUS)"; exit 1;
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "Fallback run finished — status: ${{ steps.invoke.outputs.status }}"
+          echo "Response body: ${{ steps.invoke.outputs.body }}"
