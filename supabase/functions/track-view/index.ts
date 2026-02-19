@@ -12,7 +12,10 @@ serve(async (req) => {
   }
 
   try {
-    const { entityType, entityId } = await req.json();
+    const body = await req.json();
+    const { entityType, entityId } = body;
+    // Prefer header 'x-visitor-id' for uniqueness tracking, fallback to body.visitor_id
+    const visitorId = req.headers.get('x-visitor-id') || body?.visitor_id || null;
 
     if (!entityType || !entityId) {
       throw new Error('entityType and entityId are required');
@@ -27,10 +30,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Update or insert view count
+    // Update or insert view count (include unique_visitors)
     const { data: existing } = await supabase
       .from('view_counts')
-      .select('id, views')
+      .select('id, views, unique_visitors')
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .maybeSingle();
@@ -46,7 +49,8 @@ serve(async (req) => {
         .insert({
           entity_type: entityType,
           entity_id: entityId,
-          views: 1
+          views: 1,
+          unique_visitors: 0
         });
     }
 
@@ -75,6 +79,34 @@ serve(async (req) => {
           views: 1
         });
     }
+
+    // Handle unique visitor tracking when visitorId is provided
+    if (visitorId) {
+      try {
+        const { data: existingVisitor } = await supabase
+          .from('view_visitors')
+          .select('id')
+          .eq('entity_type', entityType)
+          .eq('entity_id', entityId)
+          .eq('visitor_id', visitorId)
+          .maybeSingle();
+
+        if (!existingVisitor) {
+          // Insert visitor record and increment unique_visitors
+          await supabase
+            .from('view_visitors')
+            .insert({ entity_type: entityType, entity_id: entityId, visitor_id: visitorId });
+
+          // Update unique_visitors counter (best-effort)
+          await supabase
+            .from('view_counts')
+            .update({ unique_visitors: (existing?.unique_visitors || 0) + 1 })
+            .eq('entity_type', entityType)
+            .eq('entity_id', entityId);
+        }
+      } catch (err) {
+        console.error('Unique visitor tracking failed:', err);
+      }
 
     console.log(`Tracked view: ${entityType} ${entityId}`);
 
