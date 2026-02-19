@@ -249,6 +249,174 @@ serve(async (req: Request) => {
         );
       }
 
+      // --- Ollama staging helpers (dev-only) -------------------------------------------------
+      case 'ensureOllamaTable': {
+        // Creates ollama_retell_staging table if not exists (one-time setup for dev)
+        try {
+          const { data: exists } = await supabase
+            .from('information_schema.tables' as any)
+            .select('table_name')
+            .eq('table_schema', 'public')
+            .eq('table_name', 'ollama_retell_staging')
+            .maybeSingle();
+
+          if (exists) {
+            return new Response(JSON.stringify({ success: true, created: false, message: 'Table already exists' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
+
+          // Use pg directly for DDL
+          const { default: postgres } = await import('npm:postgres');
+          const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!);
+          await sql`
+            CREATE TABLE IF NOT EXISTS public.ollama_retell_staging (
+              id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+              news_id uuid NOT NULL REFERENCES public.news_rss_items(id) ON DELETE CASCADE,
+              model text NOT NULL,
+              language text NOT NULL DEFAULT 'en',
+              content text NOT NULL DEFAULT '',
+              key_points jsonb,
+              themes jsonb,
+              keywords jsonb,
+              created_at timestamptz DEFAULT now(),
+              pushed boolean DEFAULT false,
+              pushed_at timestamptz
+            )
+          `;
+          await sql`
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_ollama_retell_staging_news_model
+              ON public.ollama_retell_staging(news_id, model)
+          `;
+          await sql`ALTER TABLE public.ollama_retell_staging ENABLE ROW LEVEL SECURITY`;
+          await sql`
+            CREATE POLICY "ollama_staging_allow_all" ON public.ollama_retell_staging
+              FOR ALL USING (true) WITH CHECK (true)
+          `;
+          await sql.end();
+          return new Response(JSON.stringify({ success: true, created: true, message: 'Table created' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('ensureOllamaTable error:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      case 'saveOllamaStaged': {
+        // data: { retells: Array<{ newsId, model, language, content, key_points?, themes?, keywords? }> }
+        if (!data || !data.retells) {
+          return new Response(JSON.stringify({ error: 'Missing retells data' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        const rows = Array.isArray(data.retells) ? data.retells : [data.retells];
+        try {
+          const { error } = await supabase
+            .from('ollama_retell_staging')
+            .upsert(rows.map(r => ({
+              news_id: r.newsId,
+              model: r.model,
+              language: r.language || 'en',
+              content: r.content,
+              key_points: r.key_points || null,
+              themes: r.themes || null,
+              keywords: r.keywords || null,
+              pushed: false
+            })), { onConflict: 'news_id,model' });
+
+          if (error) throw error;
+          return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('saveOllamaStaged error:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      case 'listOllamaStaged': {
+        // Optional filters: pushed (true/false), limit
+        const pushedFilter = data?.pushed;
+        const limit = data?.limit || 200;
+        try {
+          let q = supabase.from('ollama_retell_staging').select('*').order('created_at', { ascending: false }).limit(limit);
+          if (pushedFilter === true) q = q.eq('pushed', true);
+          if (pushedFilter === false) q = q.eq('pushed', false);
+
+          const { data: rows, error } = await q;
+          if (error) throw error;
+          return new Response(JSON.stringify({ success: true, rows }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('listOllamaStaged error:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      case 'pushOllamaStagedToLive': {
+        // data: { ids?: string[] } - if omitted, push all unpushed
+        try {
+          const ids: string[] | undefined = data?.ids;
+          let stagedQuery = supabase.from('ollama_retell_staging').select('*').order('created_at', { ascending: true });
+          if (ids && Array.isArray(ids) && ids.length > 0) stagedQuery = stagedQuery.in('id', ids);
+          else stagedQuery = stagedQuery.eq('pushed', false);
+
+          const { data: stagedRows, error: stagedErr } = await stagedQuery;
+          if (stagedErr) throw stagedErr;
+          if (!stagedRows || stagedRows.length === 0) return new Response(JSON.stringify({ success: true, processed: 0, pushed: 0, skipped: 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+          let processed = 0;
+          let pushed = 0;
+          let skipped = 0;
+
+          for (const row of stagedRows) {
+            processed++;
+            const lang = (row.language || 'en').toLowerCase();
+            // determine target field
+            const targetField = lang === 'en' ? 'content_en' : (lang === 'hi' ? 'content_hi' : (lang === 'ta' ? 'content_ta' : (lang === 'te' ? 'content_te' : (lang === 'bn' ? 'content_bn' : 'content'))));
+
+            // Check if the target field already has a retell (length > 100)
+            const { data: existing, error: existingErr } = await supabase.from('news_rss_items').select(`${targetField}`).eq('id', row.news_id).limit(1).single();
+            if (existingErr) {
+              console.error('Failed to fetch news item for push:', existingErr);
+              skipped++;
+              continue;
+            }
+
+            const existingContent = existing ? (existing[targetField] as string | null) : null;
+            if (existingContent && existingContent.length > 100) {
+              // already has retell — skip
+              skipped++;
+              // still mark staging row as pushed=false (keep it) — or keep as-is
+              continue;
+            }
+
+            // Prepare update payload for news_rss_items
+            const updatePayload: any = {};
+            updatePayload[targetField] = row.content;
+            if (row.key_points) updatePayload.key_points = row.key_points;
+            if (row.themes) updatePayload.themes = row.themes;
+            if (row.keywords) updatePayload.keywords = row.keywords;
+
+            const { error: updateErr } = await supabase.from('news_rss_items').update(updatePayload).eq('id', row.news_id);
+            if (updateErr) {
+              console.error('Failed to apply staged retell to news item:', updateErr);
+              skipped++;
+              continue;
+            }
+
+            // mark staging row as pushed
+            const { error: markErr } = await supabase.from('ollama_retell_staging').update({ pushed: true, pushed_at: new Date().toISOString() }).eq('id', row.id);
+            if (markErr) console.error('Failed to mark staging row as pushed:', markErr);
+
+            pushed++;
+          }
+
+          return new Response(JSON.stringify({ success: true, processed, pushed, skipped }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('pushOllamaStagedToLive error:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      // --------------------------------------------------------------------------------------
+
       case 'getCronEvents': {
         try {
           const limit = (data && data.limit) || 25;

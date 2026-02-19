@@ -490,14 +490,20 @@ serve(async (req) => {
               category: feed.category,
               published_at: pubDate?.toISOString() || null,
               fetched_at: new Date().toISOString()
-            });
+            })
+            .select('id')
+            .single();
 
-          if (!insertError) {
+          if (!insertError && insertedData) {
             insertedCount++;
             existingUrls.add(item.link); // Track newly added
 
             // Auto-cache the newly inserted news page
             autoCacheNewsPage(countryCode, slug, supabaseUrl);
+
+            // Auto-retell using requested or default model
+            console.log(`Auto-retelling news item from fetch_feed_limited: ${insertedData.id}`);
+            await autoRetellNews(insertedData.id, supabaseUrl, 'GLM-4.5-Air');
           }
         }
 
@@ -620,7 +626,7 @@ serve(async (req) => {
             console.log(`Scraped full content for ${item.link}: ${scrapedContent.length} chars`);
           }
 
-          const { error: insertError } = await supabase
+          const { data: insertedData, error: insertError } = await supabase
             .from('news_rss_items')
             .insert({
               feed_id: feed.id,
@@ -643,13 +649,17 @@ serve(async (req) => {
             .select() // Return inserted data
             .single();
 
-          if (!insertError) {
+          if (!insertError && insertedData) {
             insertedCount++;
             existingUrls.add(item.link);
 
             // Auto-cache the newly inserted news page
             autoCacheNewsPage(countryCode, slug, supabaseUrl);
-          } else if (insertError.code === '23505') { // Unique violation (duplicate URL)
+
+            // Auto-retell using requested or default model
+            console.log(`Auto-retelling news item from fetch_feed: ${insertedData.id}`);
+            await autoRetellNews(insertedData.id, supabaseUrl, 'GLM-4.5-Air');
+          } else if (insertError?.code === '23505') { // Unique violation (duplicate URL)
             console.log(`Duplicate URL skipped: ${item.link}`);
             existingUrls.add(item.link); // Mark as existing
           } else {
@@ -773,7 +783,7 @@ serve(async (req) => {
       const globalRetellRatio = settings?.news_retell_ratio ?? 1; // Fallback if per-country not set
       const dialogueCount = settings?.news_dialogue_count ?? 7;
       const tweetCount = settings?.news_tweet_count ?? 4;
-      const llmModel = settings?.llm_text_model || 'GLM-4.7';
+      const llmModel = settings?.llm_text_model || 'GLM-4.5-Air';
 
       console.log(`Fetching all ${feeds?.length || 0} active RSS feeds with settings: retell=${autoRetellEnabled}, dialogue=${autoDialogueEnabled}, tweets=${autoTweetsEnabled}`);
 
@@ -850,7 +860,15 @@ serve(async (req) => {
 
             // Store original RSS content for AI retelling
             const originalDescription = item.description ? decodeHTMLEntities(item.description).slice(0, 1000) : null;
-            const originalContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
+            const rssContent = item.content ? decodeHTMLEntities(item.content).slice(0, 5000) : null;
+
+            // Priority scraping: fetch full article content first
+            let originalContent = rssContent || originalDescription;
+            const scrapedContent = await scrapeArticleContent(item.link, supabaseUrl);
+            if (scrapedContent && scrapedContent.length > (originalContent?.length || 0)) {
+              originalContent = scrapedContent;
+              console.log(`Scraped full content for ${item.link}: ${scrapedContent.length} chars`);
+            }
 
             // Insert new item
             const { data: insertedData, error: insertError } = await supabase
@@ -863,9 +881,9 @@ serve(async (req) => {
                 title_en: decodeHTMLEntities(item.title).slice(0, 500),
                 description: originalDescription,
                 description_en: originalDescription,
-                content: originalContent,
-                content_en: originalContent,
-                original_content: originalContent || originalDescription, // Store original for AI retelling
+                content: rssContent,
+                content_en: rssContent,
+                original_content: originalContent, // Store scraped/original for AI retelling
                 url: item.link,
                 slug: slug,
                 image_url: item.enclosure?.url || null,
@@ -1146,7 +1164,7 @@ serve(async (req) => {
       const tweetCount = settings?.news_tweet_count ?? 4;
 
       // Use requested model from UI, fallback to settings, then default
-      const llmModel = requestedModel || settings?.llm_text_model || 'GLM-4.7';
+      const llmModel = requestedModel || settings?.llm_text_model || 'GLM-4.5-Air';
       const llmDisplayName = llmModel.split('/').pop() || llmModel;
       console.log('[process_pending] requestedModel:', requestedModel, 'llmModel:', llmModel);
 
@@ -1793,7 +1811,7 @@ serve(async (req) => {
           .select('llm_text_model')
           .limit(1)
           .single();
-        llmModel = settings?.llm_text_model || 'GLM-4.7';
+        llmModel = settings?.llm_text_model || 'GLM-4.5-Air';
       }
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 

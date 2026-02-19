@@ -827,6 +827,10 @@ export default function AdminPage() {
               <Clock className="w-4 h-4 text-green-500" />
               Cron
             </TabsTrigger>
+            <TabsTrigger value="local-retell" className="gap-2">
+              <Bot className="w-4 h-4 text-blue-500" />
+              Локальний переказ
+            </TabsTrigger>
             <TabsTrigger value="bot-errors" className="gap-2">
               <AlertTriangle className="w-4 h-4 text-destructive" />
               Помилки
@@ -856,6 +860,14 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="news-processing" className="mt-6">
+            <div className="flex justify-end mb-4">
+              <Button asChild variant="outline" size="sm" className="gap-2">
+                <Link to="/admin/local-retell">
+                  <Bot className="w-4 h-4 text-purple-500" />
+                  Local Retell (Dev)
+                </Link>
+              </Button>
+            </div>
             <NewsProcessingPage password={password} />
           </TabsContent>
 
@@ -900,6 +912,21 @@ export default function AdminPage() {
             {/* <CronJobsPanel password={password} /> Removed in favor of NewsProcessingPage */}
             <div className="p-4 text-center">
               <p>Керування новинами перенесено на сторінку <Link to="/admin/news-processing" className="text-primary hover:underline">News Processing</Link></p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="local-retell" className="mt-6">
+            <div className="p-12 text-center border-2 border-dashed rounded-xl bg-card">
+              <Bot className="w-12 h-12 mx-auto mb-4 text-blue-500 animate-pulse" />
+              <h2 className="text-2xl font-bold mb-2">Локальний переказ (Dev)</h2>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Цей модуль дозволяє підключатись до локальних LLM (Ollama, LM Studio) через браузер для генерації переказів новин.
+              </p>
+              <Link to="/admin/local-retell">
+                <Button size="lg" className="px-8">
+                  Відкрити Local Retell
+                </Button>
+              </Link>
             </div>
           </TabsContent>
 
