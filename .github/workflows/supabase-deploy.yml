@@ -5,6 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'supabase/functions/**'
+  workflow_dispatch:
 
 concurrency:
   group: 'supabase-functions-deploy'
