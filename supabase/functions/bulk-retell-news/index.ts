@@ -45,7 +45,7 @@ serve(async (req) => {
         }
 
         // Build query for unretold news
-        // We look for oldest news first to ensure we close the gap
+        // Prioritize newest items first (user requested recent-first processing)
         let query = supabase
             .from('news_rss_items')
             .select('id, title, slug, fetched_at')
@@ -64,38 +64,22 @@ serve(async (req) => {
             }
         }
 
-        // Sort by oldest first to catch up
-        query = query.order('fetched_at', { ascending: true });
+        // Sort by newest first so cron moves to most recent items when they appear
+        query = query.order('fetched_at', { ascending: false });
 
-        const { data: newsItems, error: newsError } = await query.limit(100);
-
-        if (newsError) {
-            throw new Error(`Failed to fetch news: ${newsError.message}`);
-        }
-
-        if (!newsItems || newsItems.length === 0) {
-            console.log(`[bulk-retell-news] Queue empty for ${country_code}`);
-            const summary = { success: true, processed: 0, message: 'Queue empty' };
-            if (job_name) {
-                await supabase.from('cron_job_configs').update({
-                    last_run_at: new Date().toISOString(),
-                    last_run_status: 'success',
-                    last_run_details: summary
-                }).eq('job_name', job_name);
-            }
-            return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        }
-
-        console.log(`[bulk-retell-news] Processing backlog of ${newsItems.length} items with concurrency 5`);
-
-        // Parallel processing with controlled concurrency
+        // If caller requested a narrow recent window (last_1h) — run progressive multi‑pass
         const concurrency = 5;
         let successCount = 0;
         let errorCount = 0;
         const errors: any[] = [];
+        const processedIds = new Set<number>();
 
         const processItem = async (newsItem: any) => {
             try {
+                // Avoid double-processing same item across windows
+                if (processedIds.has(newsItem.id)) return;
+                processedIds.add(newsItem.id);
+
                 const retellResponse = await fetch(`${supabaseUrl}/functions/v1/retell-news`, {
                     method: 'POST',
                     headers: {
@@ -122,25 +106,94 @@ serve(async (req) => {
             }
         };
 
-        // Simple worker pool
-        const queue = [...newsItems];
-        const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
-            while (queue.length > 0) {
-                const item = queue.shift();
-                if (item) await processItem(item);
-            }
-        });
+        // Progressive multi-pass for "last_1h" (newest-first, then expand backwards)
+        let totalProcessed = 0;
+        if (!force_all && time_range === 'last_1h') {
+            const windows = [15, 15, 20]; // minutes: 0-15, 15-30, 30-50
+            let cumulativeOffset = 0;
 
-        await Promise.all(workers);
+            for (const minutes of windows) {
+                const windowEnd = new Date(Date.now() - cumulativeOffset * 60 * 1000);
+                const windowStart = new Date(windowEnd.getTime() - minutes * 60 * 1000);
+
+                const { data: windowItems, error: windowError } = await supabase
+                    .from('news_rss_items')
+                    .select('id, title, slug, fetched_at')
+                    .eq('country_id', country.id)
+                    .is('key_points', null)
+                    .gte('fetched_at', windowStart.toISOString())
+                    .lt('fetched_at', windowEnd.toISOString())
+                    .order('fetched_at', { ascending: false })
+                    .limit(50);
+
+                if (windowError) {
+                    throw new Error(`Failed to fetch news (window ${minutes}m): ${windowError.message}`);
+                }
+
+                if (!windowItems || windowItems.length === 0) {
+                    cumulativeOffset += minutes;
+                    continue; // nothing in this window — move to next
+                }
+
+                console.log(`[bulk-retell-news] Processing ${windowItems.length} items for ${country_code} (window ${minutes}m)`);
+
+                const queue = [...windowItems];
+                const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
+                    while (queue.length > 0) {
+                        const item = queue.shift();
+                        if (item) await processItem(item);
+                    }
+                });
+
+                await Promise.all(workers);
+
+                totalProcessed += windowItems.length;
+                cumulativeOffset += minutes;
+            }
+        } else {
+            // Fallback: original single-pass fetch (newest-first or force_all behaviour)
+            const { data: newsItems, error: newsError } = await query.limit(100);
+
+            if (newsError) {
+                throw new Error(`Failed to fetch news: ${newsError.message}`);
+            }
+
+            if (!newsItems || newsItems.length === 0) {
+                console.log(`[bulk-retell-news] Queue empty for ${country_code}`);
+                const summary = { success: true, processed: 0, message: 'Queue empty' };
+                if (job_name) {
+                    await supabase.from('cron_job_configs').update({
+                        last_run_at: new Date().toISOString(),
+                        last_run_status: 'success',
+                        last_run_details: summary
+                    }).eq('job_name', job_name);
+                }
+                return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
+
+            console.log(`[bulk-retell-news] Processing backlog of ${newsItems.length} items with concurrency ${concurrency}`);
+
+            const queue = [...newsItems];
+            const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
+                while (queue.length > 0) {
+                    const item = queue.shift();
+                    if (item) await processItem(item);
+                }
+            });
+
+            await Promise.all(workers);
+
+            totalProcessed = newsItems.length;
+        }
 
         const summary = {
             success: true,
-            processed: newsItems.length,
+            processed: totalProcessed,
             success_count: successCount,
             error_count: errorCount,
             errors: errors.slice(0, 5),
             country_code,
-            mode: force_all ? 'catch-up' : 'normal'
+            mode: force_all ? 'catch-up' : (time_range === 'last_1h' ? 'progressive' : 'normal')
         };
 
         if (job_name) {

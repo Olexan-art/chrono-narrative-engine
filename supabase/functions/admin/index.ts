@@ -988,6 +988,61 @@ serve(async (req: Request) => {
           getCount(timeRanges.d7),
         ]);
 
+        // Build hourly buckets for last 24 hours (used by front-end charts)
+        const hourlySlots = [];
+        for (let i = 23; i >= 0; i--) {
+          const start = new Date(now.getTime() - (i + 1) * 60 * 60 * 1000).toISOString();
+          const end = new Date(now.getTime() - i * 60 * 60 * 1000).toISOString();
+          hourlySlots.push({ start, end });
+        }
+
+        const hourly = await Promise.all(hourlySlots.map(async (slot) => {
+          const [processedRes, successRes, failedRes] = await Promise.all([
+            supabase.from('llm_usage_logs').select('id', { count: 'exact', head: true })
+              .eq('operation', 'retell-news')
+              .contains('metadata', { country_code: country_code.toLowerCase() })
+              .gte('created_at', slot.start).lt('created_at', slot.end),
+            supabase.from('llm_usage_logs').select('id', { count: 'exact', head: true })
+              .eq('operation', 'retell-news')
+              .contains('metadata', { country_code: country_code.toLowerCase() })
+              .eq('success', true)
+              .gte('created_at', slot.start).lt('created_at', slot.end),
+            supabase.from('llm_usage_logs').select('id', { count: 'exact', head: true })
+              .eq('operation', 'retell-news')
+              .contains('metadata', { country_code: country_code.toLowerCase() })
+              .eq('success', false)
+              .gte('created_at', slot.start).lt('created_at', slot.end),
+          ]);
+
+          return {
+            processed: processedRes.count || 0,
+            success: successRes.count || 0,
+            failed: failedRes.count || 0
+          };
+        }));
+
+        // Average processing time (last 24h)
+        let avgProcessingTime = 0;
+        try {
+          const { data: durations } = await supabase
+            .from('llm_usage_logs')
+            .select('duration_ms')
+            .eq('operation', 'retell-news')
+            .contains('metadata', { country_code: country_code.toLowerCase() })
+            .gte('created_at', timeRanges.h24.toISOString())
+            .limit(1000);
+
+          if (durations && durations.length > 0) {
+            const sum = durations.reduce((s: number, r: any) => s + (r.duration_ms || 0), 0);
+            avgProcessingTime = Math.round(sum / durations.length);
+          }
+        } catch (e) {
+          console.error('Failed to compute avg processing time:', e);
+        }
+
+        // Recent rate (items per minute over last hour)
+        const recentRate = h1 / 60;
+
         return new Response(
           JSON.stringify({
             success: true,
@@ -997,7 +1052,10 @@ serve(async (req: Request) => {
               h6,
               h24,
               d3,
-              d7
+              d7,
+              hourly,
+              avg_processing_time_ms: avgProcessingTime,
+              recent_rate: Math.round((recentRate + Number.EPSILON) * 10) / 10
             }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
