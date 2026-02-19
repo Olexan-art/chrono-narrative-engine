@@ -39,33 +39,41 @@ export default {
       return newResponse;
     }
 
-    // For HTML pages and bots: bypass Cloudflare cache to ensure fresh SSR content from origin
-    // This ensures that Netlify edge function (bot-ssr.ts) can properly handle the request
+    // For HTML pages and bots: fetch SSR directly from Supabase
     const isHtmlPath = !url.pathname.includes('.') && !url.pathname.startsWith('/api/');
     
     if (isBotRequest && isHtmlPath) {
-      // For bots requesting HTML pages: bypass cache and fetch directly from origin
-      // This allows Netlify's bot-ssr edge function to serve proper SSR content
-      const originRequest = new Request(request, {
-        cf: {
-          // Bypass Cloudflare cache completely for bots on HTML routes
-          cacheEverything: false,
-          cacheTtl: 0,
+      // Call Supabase SSR endpoint directly for bots
+      const ssrUrl = `https://tuledxqigzufkecztnlo.supabase.co/functions/v1/ssr-render?path=${encodeURIComponent(url.pathname)}&lang=en`;
+      const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NDUyODgsImV4cCI6MjA4NjQyMTI4OH0.XKqWqIwfy5BoKzQNNUhs5uYC_QI0GLLKXw1pBDgkCi0';
+
+      try {
+        const ssrResponse = await fetch(ssrUrl, {
+          headers: {
+            'Authorization': `Bearer ${anonKey}`,
+            'User-Agent': userAgent,
+            'Accept': 'text/html',
+          },
+        });
+
+        if (ssrResponse.ok) {
+          const html = await ssrResponse.text();
+          return new Response(html, {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+              'X-Worker-Version': WORKER_VERSION,
+              'X-Bot-Detected': 'true',
+              'X-SSR-Source': 'cloudflare-worker-direct',
+            },
+          });
         }
-      });
-
-      const response = await fetch(originRequest);
-      const newResponse = new Response(response.body, response);
-      newResponse.headers.set('X-Worker-Version', WORKER_VERSION);
-      newResponse.headers.set('X-Bot-Detected', 'true');
-      newResponse.headers.set('X-CF-Cache-Status', 'BYPASS');
-      
-      // Ensure proper content type for HTML
-      if (!newResponse.headers.get('Content-Type')) {
-        newResponse.headers.set('Content-Type', 'text/html; charset=utf-8');
+        // If SSR fails, fall through to serve SPA
+      } catch (error) {
+        console.error('SSR fetch failed:', error);
+        // Fall through to serve SPA
       }
-
-      return newResponse;
     }
 
     // For all other requests (regular users, static assets), use normal caching

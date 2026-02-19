@@ -1,10 +1,5 @@
 [build]
-  publish = "dist"
+ publish = "dist"
   command = "npm run build"
 
-[[edge_functions]]
-  function = "bot-ssr"
-  path = "/*"
 
-[build.environment]
-  NODE_VERSION = "20"
