@@ -28,8 +28,8 @@ const BOT_PATTERNS = [
 const SSR_PATTERNS = [
   /^\/$/,
   /^\/news$/,
-  /^\/news\/[a-z]{2}$/,
-  /^\/news\/[a-z]{2}\/[a-z0-9-]+$/,
+  /^\/news\/[a-zA-Z]{2}$/,
+  /^\/news\/[a-zA-Z]{2}\/[a-z0-9-]+$/,
   /^\/read\/\d{4}-\d{2}-\d{2}\/\d+$/,
   /^\/read\/\d{4}-\d{2}-\d{2}$/,
   /^\/date\/\d{4}-\d{2}-\d{2}$/,
@@ -40,7 +40,7 @@ const SSR_PATTERNS = [
   /^\/calendar$/,
   /^\/sitemap$/,
   /^\/wiki$/,
-  /^\/wiki\/[a-z0-9-]+$/,
+  /^\/wiki\/[a-zA-Z0-9-]+$/i,
   /^\/ink-abyss$/,
 ];
 
