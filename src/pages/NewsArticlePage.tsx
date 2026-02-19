@@ -79,8 +79,6 @@ export default function NewsArticlePage() {
     retry: 2,
   });
 
-  // Track views for analytics
-  useTrackView('news', article?.id);
   // Build available models list based on configured API keys
   const availableModels = useMemo(() => {
     const models: { value: string; label: string; provider?: LLMProvider }[] = [];
@@ -151,6 +149,9 @@ export default function NewsArticlePage() {
     },
     enabled: !!country && !!slug
   });
+
+  // Track views for analytics (call after `article` is available)
+  useTrackView('news', article?.id);
 
   // Fetch adjacent news articles for navigation
   const { data: adjacentNews } = useQuery({
