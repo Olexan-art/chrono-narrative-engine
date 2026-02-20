@@ -492,89 +492,63 @@ serve(async (req) => {
       }
 
       const systemPrompt = lang === 'en'
-        ? `You are an encyclopedic analyst. You receive data about an entity and generate a structured information block in Markdown format. Respond only with Markdown text, no explanations or unnecessary introductions.`
-        : `Ти аналітик-енциклопедист. Отримуєш дані про сутність і генеруєш структурований інформаційний блок у форматі Markdown. Відповідай тільки Markdown-текстом без пояснень і без зайвих вступів.`;
+        ? `You are an encyclopedic analyst. Generate a concise structured information card in Markdown. Be brief and factual. Respond only with Markdown, no preamble.`
+        : `Ти аналітик-енциклопедист. Згенеруй стислу інформаційну картку в Markdown. Будь коротким і фактичним. Відповідай тільки Markdown без вступу.`;
 
       const userPrompt = lang === 'en'
-        ? `Create an information card for the entity "${entityName}" (type: ${entityType}).
+        ? `Create a brief information card for "${entityName}" (${entityType}).
 
-Available data:
+Data:
 - Description: ${entityDescription || 'none'}
-- Wikipedia text: ${entityExtract ? entityExtract.slice(0, 3000) : 'none'}
+- Wikipedia: ${entityExtract ? entityExtract.slice(0, 1500) : 'none'}
+
+Respond with exactly these sections in Markdown:
+
+## Who / What
+(1 sentence)
+
+## Why Notable
+(2 sentences — role, impact)
+
+## In the News
+(1–2 sentences — current relevance)
+
+## Key Facts
 - Type: ${entityType}
+- Also known as: (variants, abbreviations)
+- Key dates: (founding/birth, major events)
+- Geography: (country, city — if relevant)
 
-Response structure (must be Markdown, follow this exact order):
-
-## Who / What is this
-(1–2 sentences — brief and clear)
-
-## Why it is notable
-(2–3 sentences — practical value, role, impact)
-
-## Why it appears in the news now
-(1 paragraph — "why in news": context of current events around this entity)
-
-## Alternative names / synonyms
-(spelling variants, transliteration, abbreviations — comma-separated or as a list)
-
-## Category / type
-(one of: Person / Organization / Place / Event / Drug / Policy / Technology / Other — with clarification)
-
-## Key dates
-(founding / birth / launch / dissolution / first mention — in format "event: year")
-
-## Geography
-(headquarters, country, city — if relevant)
-
-## Identifiers & links
-(Wikipedia, Wikidata, Crunchbase, ISIN, ticker, ORCID, IMDb — only relevant ones)
-
----
-> ℹ️ Information sourced from open data.
-
-Reference links:
-${wikiUrl ? `- [Wikipedia (UK)](${wikiUrl})` : ''}
-${wikiUrlEn ? `- [Wikipedia (EN)](${wikiUrlEn})` : ''}
+## Links
+${wikiUrl ? `- [Wikipedia](${wikiUrl})` : ''}
+${wikiUrlEn && wikiUrlEn !== wikiUrl ? `- [Wikipedia EN](${wikiUrlEn})` : ''}
 `
-        : `Створи інформаційну картку для сутності "${entityName}" (тип: ${entityType}).
+        : `Створи стислу інформаційну картку для "${entityName}" (${entityType}).
 
-Доступні дані:
+Дані:
 - Опис: ${entityDescription || 'немає'}
-- Текст Wikipedia: ${entityExtract ? entityExtract.slice(0, 3000) : 'немає'}
+- Wikipedia: ${entityExtract ? entityExtract.slice(0, 1500) : 'немає'}
+
+Рівно такі секції Markdown:
+
+## Хто / Що
+(1 речення)
+
+## Чим відоме
+(2 речення — роль, вплив)
+
+## В новинах
+(1–2 речення — поточна актуальність)
+
+## Ключові факти
 - Тип: ${entityType}
+- Також відомий як: (варіанти, скорочення)
+- Ключові дати: (заснування/народження, ключові події)
+- Географія: (країна, місто — якщо релевантно)
 
-Структура відповіді (обов'язково Markdown, дотримуйся саме такого порядку):
-
-## Хто / що це
-(1–2 речення — коротко і чітко)
-
-## Чим відоме / навіщо користувачу
-(2–3 речення — практична цінність, роль, вплив)
-
-## Чому згадується в новинах зараз
-(1 абзац — "why in news": контекст поточних подій навколо цієї сутності)
-
-## Альтернативні назви / синоніми
-(варіанти написання, транслітерація, скорочення — через кому або список)
-
-## Категорія / тип
-(одне з: Person / Organization / Place / Event / Drug / Policy / Technology / Other — та уточнення)
-
-## Ключові дати
-(заснування / народження / запуск / розпуск / перша згадка — у форматі "подія: рік")
-
-## Географія
-(штаб-квартира, країна, місто — якщо релевантно)
-
-## Ідентифікатори та посилання
-(Wikipedia, Wikidata, Crunchbase, ISIN, ticker, ORCID, IMDb — тільки релевантні)
-
----
-> ℹ️ Інформація взята з відкритих джерел.
-
-Посилання для перевірки:
-${wikiUrl ? `- [Wikipedia (UK)](${wikiUrl})` : ''}
-${wikiUrlEn ? `- [Wikipedia (EN)](${wikiUrlEn})` : ''}
+## Посилання
+${wikiUrl ? `- [Wikipedia](${wikiUrl})` : ''}
+${wikiUrlEn && wikiUrlEn !== wikiUrl ? `- [Wikipedia EN](${wikiUrlEn})` : ''}
 `;
 
       try {

@@ -185,7 +185,7 @@ export default function WikiEntityPage() {
   const [infoCardContent, setInfoCardContent] = useState<string | null>(null);
   const [infoCardSources, setInfoCardSources] = useState<{ title: string; url: string }[]>([]);
   const [isGeneratingInfoCard, setIsGeneratingInfoCard] = useState(false);
-  const [selectedInfoCardModel, setSelectedInfoCardModel] = useState(ZAI_MODELS.find(m => m.value === 'GLM-4.7-Flash')?.value || ZAI_MODELS[0]?.value || '');
+  const [selectedInfoCardModel, setSelectedInfoCardModel] = useState(ZAI_MODELS.find(m => m.value === 'GLM-4.5-Air')?.value || ZAI_MODELS.find(m => m.value === 'GLM-4.7-Flash')?.value || ZAI_MODELS[0]?.value || '');
   const queryClient = useQueryClient();
 
   // Fetch LLM availability
@@ -971,17 +971,40 @@ export default function WikiEntityPage() {
     if (!entity) return;
     setIsGeneratingInfoCard(true);
     try {
-      const result = await callEdgeFunction<{ success: boolean; content?: string; sources?: { title: string; url: string }[]; error?: string }>('search-wiki', {
-        action: 'generate_info_card',
-        entityName: entity.name_en || entity.name,
-        entityExtract: (entity.extract_en || entity.extract || '').slice(0, 10000),
-        entityDescription: entity.description_en || entity.description || '',
-        entityType: entity.entity_type,
-        wikiUrl: entity.wiki_url,
-        wikiUrlEn: entity.wiki_url_en || '',
-        language: 'en',
-        model: selectedInfoCardModel,
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
+      let result: { success: boolean; content?: string; sources?: { title: string; url: string }[]; error?: string };
+      try {
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-wiki`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            action: 'generate_info_card',
+            entityName: entity.name_en || entity.name,
+            entityExtract: (entity.extract_en || entity.extract || '').slice(0, 10000),
+            entityDescription: entity.description_en || entity.description || '',
+            entityType: entity.entity_type,
+            wikiUrl: entity.wiki_url,
+            wikiUrlEn: entity.wiki_url_en || '',
+            language: 'en',
+            model: selectedInfoCardModel,
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        result = await response.json().catch(() => ({ success: false, error: 'Failed to parse response' }));
+        if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        if (fetchErr.name === 'AbortError') {
+          throw new Error(language === 'uk' ? 'Час очікування вичерпано (45с). Спробуйте ще раз.' : 'Request timed out (45s). Please try again.');
+        }
+        throw fetchErr;
+      }
+
       if (result.success && result.content) {
         setInfoCardContent(result.content);
         setInfoCardSources(result.sources || []);
