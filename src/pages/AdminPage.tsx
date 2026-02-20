@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock, Archive, Map, Search, Activity, ChartArea, Database, AlertTriangle, Building2, Flame, GitMerge, Rss } from "lucide-react";
+import { Lock, BarChart3, Settings, BookOpen, FileText, Image, RefreshCw, LogOut, Loader2, Sparkles, Calendar, TrendingUp, Key, Eye, EyeOff, Bot, Trash2, Users, MessageSquare, Zap, Globe, Clock, Archive, Map, Search, Activity, ChartArea, Database, AlertTriangle, Building2, Flame, GitMerge, Rss, Tags } from "lucide-react";
 import { AdminLogin } from "@/components/AdminLogin";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import { BulkScrapePanel } from "@/components/admin/BulkScrapePanel";
 import { ViralityPanel } from "@/components/admin/ViralityPanel";
 import { NewsMergePanel } from "@/components/admin/NewsMergePanel";
 import { RSSFeedPanel } from "@/components/admin/RSSFeedPanel";
+import { TopicsStatsPanel } from "@/components/admin/TopicsStatsPanel";
 import LLMManagementPage from "@/pages/admin/LLMManagementPage";
 import NewsProcessingPage from "@/pages/admin/NewsProcessingPage";
 import { useToast } from "@/hooks/use-toast";
@@ -799,6 +800,10 @@ export default function AdminPage() {
               <Rss className="w-4 h-4 text-orange-500" />
               RSS
             </TabsTrigger>
+            <TabsTrigger value="topics-stats" className="gap-2">
+              <Tags className="w-4 h-4 text-green-500" />
+              Topics
+            </TabsTrigger>
 
             {/* База даних */}
             <TabsTrigger value="wiki-entities" className="gap-2">
@@ -1006,6 +1011,10 @@ export default function AdminPage() {
 
           <TabsContent value="rss-feed" className="mt-6">
             <RSSFeedPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="topics-stats" className="mt-6">
+            <TopicsStatsPanel password={password} />
           </TabsContent>
         </Tabs>
       </main>
