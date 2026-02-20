@@ -34,6 +34,7 @@ const EditChapterPage = lazy(() => import("./pages/EditChapterPage"));
 const LLMManagementPage = lazy(() => import("./pages/admin/LLMManagementPage"));
 const NewsProcessingPage = lazy(() => import("./pages/admin/NewsProcessingPage"));
 const LocalRetellPage = lazy(() => import("./pages/admin/LocalRetellPage"));
+const LocalWikiPage = lazy(() => import("./pages/admin/LocalWikiPage"));
 const InstallPage = lazy(() => import("./pages/InstallPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const WikiCatalogPage = lazy(() => import("./pages/WikiCatalogPage"));
@@ -80,6 +81,7 @@ const App = () => (
                   <Route path="/admin/llm" element={<LLMManagementPage />} />
                   <Route path="/admin/news-processing" element={<NewsProcessingPage />} />
                   <Route path="/admin/local-retell" element={<LocalRetellPage />} />
+                  <Route path="/admin/local-wiki" element={<LocalWikiPage />} />
                 </Route>
                 <Route path="/install" element={<InstallPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />

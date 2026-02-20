@@ -477,7 +477,7 @@ serve(async (req) => {
 
     // Handle Information Card generation
     if (action === 'generate_info_card') {
-      const { entityName, entityExtract, entityDescription, entityType, wikiUrl, wikiUrlEn, language: lang = 'uk', model } = body;
+      const { entityId, entityName, entityExtract, entityDescription, entityType, wikiUrl, wikiUrlEn, language: lang = 'uk', model } = body;
 
       const { data: settings } = await supabase
         .from('settings')
@@ -566,6 +566,40 @@ ${wikiUrlEn && wikiUrlEn !== wikiUrl ? `- [Wikipedia EN](${wikiUrlEn})` : ''}
         const sources: { title: string; url: string }[] = [];
         if (wikiUrl) sources.push({ title: 'Wikipedia', url: wikiUrl });
         if (wikiUrlEn && wikiUrlEn !== wikiUrl) sources.push({ title: 'Wikipedia (EN)', url: wikiUrlEn });
+
+        // Save to raw_data so all users can see it (using service role)
+        if (entityId) {
+          console.log('Saving info card for entity:', entityId);
+          const { data: entity, error: fetchError } = await supabase
+            .from('wiki_entities')
+            .select('raw_data')
+            .eq('id', entityId)
+            .single();
+
+          if (fetchError) {
+            console.error('Error fetching entity:', fetchError);
+          } else {
+            const updatedRawData = {
+              ...(entity?.raw_data as Record<string, unknown> || {}),
+              info_card_content: content,
+              info_card_sources: sources,
+            };
+
+            console.log('Updating entity with raw_data containing info_card_content');
+            const { error: updateError } = await supabase
+              .from('wiki_entities')
+              .update({ raw_data: updatedRawData })
+              .eq('id', entityId);
+
+            if (updateError) {
+              console.error('Error updating entity:', updateError);
+            } else {
+              console.log('Successfully saved info card to DB');
+            }
+          }
+        } else {
+          console.warn('No entityId provided, info card not saved to DB');
+        }
 
         return new Response(JSON.stringify({ success: true, content, sources }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

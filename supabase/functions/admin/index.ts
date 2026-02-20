@@ -415,6 +415,142 @@ serve(async (req: Request) => {
         }
       }
 
+      // --- Ollama Wiki staging helpers (dev-only) -------------------------------------------
+      case 'ensureOllamaWikiTable': {
+        // Creates ollama_wiki_staging table if not exists (one-time setup for dev)
+        try {
+          const { data: exists } = await supabase
+            .from('information_schema.tables' as any)
+            .select('table_name')
+            .eq('table_schema', 'public')
+            .eq('table_name', 'ollama_wiki_staging')
+            .maybeSingle();
+
+          if (exists) {
+            return new Response(JSON.stringify({ success: true, created: false, message: 'Table already exists' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
+
+          // Use pg directly for DDL
+          const { default: postgres } = await import('npm:postgres');
+          const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!);
+          await sql`
+            CREATE TABLE IF NOT EXISTS public.ollama_wiki_staging (
+              id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+              entity_id uuid NOT NULL REFERENCES public.wiki_entities(id) ON DELETE CASCADE,
+              model text NOT NULL,
+              language text NOT NULL DEFAULT 'uk',
+              content text NOT NULL DEFAULT '',
+              sources jsonb,
+              created_at timestamptz DEFAULT now(),
+              pushed boolean DEFAULT false,
+              pushed_at timestamptz
+            )
+          `;
+          await sql`
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_ollama_wiki_staging_entity_model_lang
+              ON public.ollama_wiki_staging(entity_id, model, language)
+          `;
+          await sql`ALTER TABLE public.ollama_wiki_staging ENABLE ROW LEVEL SECURITY`;
+          await sql`
+            CREATE POLICY "ollama_wiki_staging_allow_all" ON public.ollama_wiki_staging
+              FOR ALL USING (true) WITH CHECK (true)
+          `;
+          await sql.end();
+          return new Response(JSON.stringify({ success: true, created: true, message: 'Table created' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('ensureOllamaWikiTable error:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      case 'pushOllamaWikiStagedToLive': {
+        // data: { ids?: string[] } - if omitted, push all unpushed
+        try {
+          const ids: string[] | undefined = data?.ids;
+          let stagedQuery = supabase.from('ollama_wiki_staging').select('*').order('created_at', { ascending: true });
+          if (ids && Array.isArray(ids) && ids.length > 0) stagedQuery = stagedQuery.in('id', ids);
+          else stagedQuery = stagedQuery.eq('pushed', false);
+
+          const { data: stagedRows, error: stagedErr } = await stagedQuery;
+          if (stagedErr) throw stagedErr;
+          if (!stagedRows || stagedRows.length === 0) {
+            return new Response(JSON.stringify({ success: true, processed: 0, pushed: 0, skipped: 0 }), 
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
+
+          let processed = 0;
+          let pushed = 0;
+          let skipped = 0;
+
+          for (const row of stagedRows) {
+            processed++;
+
+            // Fetch the entity's current raw_data
+            const { data: entity, error: entityErr } = await supabase
+              .from('wiki_entities')
+              .select('raw_data')
+              .eq('id', row.entity_id)
+              .single();
+
+            if (entityErr) {
+              console.error('Failed to fetch wiki entity for push:', entityErr);
+              skipped++;
+              continue;
+            }
+
+            // Check if entity already has info_card_content
+            const existingRawData = entity?.raw_data as Record<string, any> || {};
+            const existingInfoCard = existingRawData?.info_card_content || '';
+            
+            if (existingInfoCard && existingInfoCard.length > 100) {
+              // already has info card — skip
+              skipped++;
+              continue;
+            }
+
+            // Update raw_data with info_card_content and info_card_sources
+            const updatedRawData = {
+              ...existingRawData,
+              info_card_content: row.content,
+              info_card_sources: row.sources || [],
+              info_card_language: row.language,
+              info_card_model: row.model,
+            };
+
+            const { error: updateErr } = await supabase
+              .from('wiki_entities')
+              .update({ raw_data: updatedRawData })
+              .eq('id', row.entity_id);
+
+            if (updateErr) {
+              console.error('Failed to apply staged info card to wiki entity:', updateErr);
+              skipped++;
+              continue;
+            }
+
+            // mark staging row as pushed
+            const { error: markErr } = await supabase
+              .from('ollama_wiki_staging')
+              .update({ pushed: true, pushed_at: new Date().toISOString() })
+              .eq('id', row.id);
+
+            if (markErr) console.error('Failed to mark staging row as pushed:', markErr);
+
+            pushed++;
+          }
+
+          return new Response(JSON.stringify({ success: true, processed, pushed, skipped }), 
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('pushOllamaWikiStagedToLive error:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }), 
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
       // --------------------------------------------------------------------------------------
 
       case 'getCronEvents': {

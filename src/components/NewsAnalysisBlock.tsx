@@ -213,7 +213,7 @@ export function NewsAnalysisBlock({ newsId, newsTitle, newsContent, className = 
 
           {/* FAQ */}
           {analysisData.faq && analysisData.faq.length > 0 && (
-            <Card className="border-green-500/30 bg-gradient-to-br from-green-500/10 to-transparent">
+            <Card className="border-green-500/30 bg-gradient-to-br from-green-500/10 to-transparent" itemScope itemType="https://schema.org/FAQPage">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <HelpCircle className="w-4 h-4 text-green-500" />
@@ -224,17 +224,19 @@ export function NewsAnalysisBlock({ newsId, newsTitle, newsContent, className = 
               </CardHeader>
               <CardContent className="space-y-4">
                 {analysisData.faq.map((item, idx) => (
-                  <div key={idx} className="space-y-2">
+                  <div key={idx} className="space-y-2" itemProp="mainEntity" itemScope itemType="https://schema.org/Question">
                     {idx > 0 && <Separator className="my-3" />}
                     <div className="flex items-start gap-2">
                       <Badge variant="outline" className="mt-0.5 flex-shrink-0">
                         Q{idx + 1}
                       </Badge>
-                      <p className="text-sm font-medium leading-relaxed">{item.question}</p>
+                      <p className="text-sm font-medium leading-relaxed" itemProp="name">{item.question}</p>
                     </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed pl-8">
-                      {item.answer}
-                    </p>
+                    <div itemProp="acceptedAnswer" itemScope itemType="https://schema.org/Answer">
+                      <p className="text-sm text-muted-foreground leading-relaxed pl-8" itemProp="text">
+                        {item.answer}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </CardContent>

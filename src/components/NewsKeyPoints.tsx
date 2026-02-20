@@ -47,10 +47,10 @@ function KeyTakeawaysCard({
     : 'bg-yellow-500/10 text-yellow-300';
 
   return (
-    <Card className="mb-4 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+    <Card className="mb-4 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent" itemScope itemType="https://schema.org/ItemList">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-lg font-semibold">
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-2" itemProp="name">
             <Lightbulb className="w-5 h-5 text-primary" />
             {title}
           </span>
@@ -62,11 +62,12 @@ function KeyTakeawaysCard({
       <CardContent className="space-y-4">
         <ul className="space-y-2">
           {points.map((point, index) => (
-            <li key={index} className="flex items-start gap-3 text-sm">
+            <li key={index} className="flex items-start gap-3 text-sm" itemProp="itemListElement" itemScope itemType="https://schema.org/ListItem">
+              <meta itemProp="position" content={String(index + 1)} />
               <span className={`flex-shrink-0 w-6 h-6 rounded-full ${pointBgClasses} flex items-center justify-center text-xs font-bold`}>
                 {index + 1}
               </span>
-              <span className="text-foreground/90 leading-relaxed">{point}</span>
+              <span className="text-foreground/90 leading-relaxed" itemProp="name">{point}</span>
             </li>
           ))}
         </ul>
@@ -151,9 +152,9 @@ export function NewsKeyPoints({
   };
 
   return (
-    <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+    <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent" itemScope itemType="https://schema.org/ItemList">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold" itemProp="name">
           <Lightbulb className="w-5 h-5 text-primary" />
           {getTitle()}
         </CardTitle>
@@ -166,11 +167,15 @@ export function NewsKeyPoints({
               <li 
                 key={index}
                 className="flex items-start gap-3 text-sm"
+                itemProp="itemListElement"
+                itemScope
+                itemType="https://schema.org/ListItem"
               >
+                <meta itemProp="position" content={String(index + 1)} />
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
                   {index + 1}
                 </span>
-                <span className="text-foreground/90 leading-relaxed">{point}</span>
+                <span className="text-foreground/90 leading-relaxed" itemProp="name">{point}</span>
               </li>
             ))}
           </ul>
@@ -226,6 +231,7 @@ export function NewsKeywords({ keywords }: NewsKeywordsProps) {
           variant="outline"
           className="text-[10px] px-1.5 py-0 h-5 font-normal text-muted-foreground hover:text-foreground transition-colors"
         >
+          <meta itemProp="keywords" content={keyword} />
           {keyword}
         </Badge>
       ))}

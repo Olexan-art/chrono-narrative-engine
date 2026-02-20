@@ -831,6 +831,10 @@ export default function AdminPage() {
               <Bot className="w-4 h-4 text-blue-500" />
               Локальний переказ
             </TabsTrigger>
+            <TabsTrigger value="local-wiki" className="gap-2">
+              <BookOpen className="w-4 h-4 text-purple-500" />
+              Локальна Wiki
+            </TabsTrigger>
             <TabsTrigger value="bot-errors" className="gap-2">
               <AlertTriangle className="w-4 h-4 text-destructive" />
               Помилки
@@ -925,6 +929,21 @@ export default function AdminPage() {
               <Link to="/admin/local-retell">
                 <Button size="lg" className="px-8">
                   Відкрити Local Retell
+                </Button>
+              </Link>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="local-wiki" className="mt-6">
+            <div className="p-12 text-center border-2 border-dashed rounded-xl bg-card">
+              <BookOpen className="w-12 h-12 mx-auto mb-4 text-purple-500 animate-pulse" />
+              <h2 className="text-2xl font-bold mb-2">Локальна Wiki генерація (Dev)</h2>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Цей модуль дозволяє генерувати Information Card для Wiki сутностей через локально запущені LLM (Ollama, LM Studio).
+              </p>
+              <Link to="/admin/local-wiki">
+                <Button size="lg" className="px-8">
+                  Відкрити Local Wiki
                 </Button>
               </Link>
             </div>

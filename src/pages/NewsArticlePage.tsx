@@ -294,6 +294,29 @@ export default function NewsArticlePage() {
     staleTime: 1000 * 60 * 10,
   });
 
+  // Fetch news analysis for Schema.org structured data
+  const { data: newsAnalysis } = useQuery({
+    queryKey: ['news-analysis', article?.id],
+    queryFn: async () => {
+      if (!article?.id) return null;
+      const { data, error } = await supabase
+        .from('news_rss_items')
+        .select('news_analysis')
+        .eq('id', article.id)
+        .single();
+
+      if (error) return null;
+      return data?.news_analysis as {
+        why_it_matters?: string;
+        context_background?: string[];
+        what_happens_next?: string;
+        faq?: Array<{ question: string; answer: string }>;
+      } | null;
+    },
+    enabled: !!article?.id,
+    staleTime: 1000 * 60 * 5,
+  });
+
   const detectNewsLanguage = (): string => {
     if (!article) return 'en';
 
@@ -620,6 +643,84 @@ export default function NewsArticlePage() {
     { name: getLocalizedField('title')?.slice(0, 50) || 'Article', url: canonicalUrl }
   ];
 
+  // Generate additional Schema.org structured data for enhanced SEO
+  const generateAdditionalSchemas = (): Record<string, unknown>[] => {
+    const schemas: Record<string, unknown>[] = [];
+
+    // FAQPage schema for news analysis FAQ
+    if (newsAnalysis?.faq && newsAnalysis.faq.length > 0) {
+      schemas.push({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: newsAnalysis.faq.map((item) => ({
+          '@type': 'Question',
+          name: item.question,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: item.answer
+          }
+        }))
+      });
+    }
+
+    // ItemList schema for Key Takeaways
+    const relevantKeyPoints = isUkrainianNews && keyPointsEn.length > 0 ? keyPointsEn : keyPoints;
+    if (relevantKeyPoints.length > 0) {
+      schemas.push({
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: language === 'en' ? 'Key Takeaways' : language === 'pl' ? 'Główne wnioski' : 'Головні тези',
+        description: 'Summary of main points from the article',
+        itemListElement: relevantKeyPoints.map((point, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          name: point
+        }))
+      });
+    }
+
+    // Publisher Organization with logo
+    if (article.feed?.name && article.url) {
+      try {
+        const domain = new URL(article.url).hostname;
+        schemas.push({
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: article.feed.name,
+          url: article.url,
+          logo: {
+            '@type': 'ImageObject',
+            url: `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
+          }
+        });
+      } catch {
+        // Invalid URL, skip
+      }
+    }
+
+    // Mentioned entities as Organization or Person
+    if (mainEntityData?.mainEntity) {
+      const entity = mainEntityData.mainEntity;
+      const entitySchema: Record<string, unknown> = {
+        '@context': 'https://schema.org',
+        '@type': entity.entity_type === 'person' ? 'Person' : 'Organization',
+        name: language === 'en' && entity.name_en ? entity.name_en : entity.name,
+      };
+      
+      if (entity.image_url) {
+        entitySchema.image = entity.image_url;
+      }
+      
+      if (entity.wiki_url) {
+        entitySchema.sameAs = entity.wiki_url;
+      }
+
+      schemas.push(entitySchema);
+    }
+
+    return schemas;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <SEOHead
@@ -632,6 +733,7 @@ export default function NewsArticlePage() {
         publishedAt={article.published_at || undefined}
         author={article.feed?.name || 'RSS Feed'}
         breadcrumbs={breadcrumbs}
+        additionalSchemas={generateAdditionalSchemas()}
       />
       <Header />
 
@@ -662,30 +764,40 @@ export default function NewsArticlePage() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            <article className="space-y-6">
+            <article className="space-y-6" itemScope itemType="https://schema.org/NewsArticle">
+              {/* Hidden meta tags for Schema.org microdata */}
+              <meta itemProp="url" content={canonicalUrl} />
+              {article.published_at && <meta itemProp="datePublished" content={article.published_at} />}
+              {article.updated_at && <meta itemProp="dateModified" content={article.updated_at} />}
+              {article.image_url && <meta itemProp="image" content={article.image_url} />}
+              
               {/* Header */}
               <header>
                 <div className="flex items-center gap-2 mb-3">
                   <Badge variant="outline" className="font-mono text-xs">
                     {article.country.flag} {countryName}
                   </Badge>
-                  <Badge variant="secondary" className="font-mono text-xs">
+                  <Badge variant="secondary" className="font-mono text-xs" itemProp="articleSection">
                     {article.category || article.feed?.category || 'general'}
                   </Badge>
                   {article.published_at && (
-                    <span className="text-xs text-muted-foreground">
+                    <time 
+                      className="text-xs text-muted-foreground"
+                      dateTime={article.published_at}
+                      itemProp="datePublished"
+                    >
                       {format(new Date(article.published_at), 'd MMM yyyy, HH:mm', { locale: dateLocale })}
-                    </span>
+                    </time>
                   )}
                 </div>
 
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-serif leading-tight mb-2">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-serif leading-tight mb-2" itemProp="headline">
                   {getLocalizedField('title')}
                 </h1>
 
                 {/* Verified source badge - after title */}
                 {article.feed?.name && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3" itemProp="publisher" itemScope itemType="https://schema.org/Organization">
                     <Badge variant="outline" className="gap-1.5 bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400">
                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round" />
@@ -699,6 +811,7 @@ export default function NewsArticlePage() {
                       target="_blank"
                       rel="nofollow noopener noreferrer"
                       className="hover:text-primary transition-colors underline-offset-2 hover:underline"
+                      itemProp="name"
                     >
                       {article.feed.name}
                     </a>
@@ -746,9 +859,9 @@ export default function NewsArticlePage() {
                 themesEn={themesEn}
               />
               <AdminTextSelectionPopover newsId={article.id} onEntityAdded={() => queryClient.invalidateQueries({ queryKey: ['news-wiki-entities', article.id] })}>
-                <div className="prose prose-invert max-w-none">
+                <div className="prose prose-invert max-w-none" itemProp="articleBody">
                   {getLocalizedField('description') && (
-                    <p className="text-lg text-muted-foreground font-serif leading-relaxed">
+                    <p className="text-lg text-muted-foreground font-serif leading-relaxed" itemProp="description">
                       {getLocalizedField('description')}
                     </p>
                   )}
@@ -1166,7 +1279,7 @@ export default function NewsArticlePage() {
             )}
 
             {/* Source Info */}
-            <Card className="relative overflow-hidden">
+            <Card className="relative overflow-hidden" itemScope itemType="https://schema.org/Organization">
               {/* Background logo watermark */}
               {article.url && (() => {
                 try {
@@ -1176,6 +1289,7 @@ export default function NewsArticlePage() {
                       src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`}
                       alt=""
                       className="absolute -top-2 -right-2 w-[35%] h-auto opacity-[0.08] pointer-events-none select-none"
+                      itemProp="logo"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
                   );
@@ -1197,15 +1311,17 @@ export default function NewsArticlePage() {
                           src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
                           alt=""
                           className="w-6 h-6 rounded"
+                          itemProp="logo"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                         <div className="flex flex-col min-w-0">
-                          <span className="font-medium truncate">{article.feed?.name || domain}</span>
+                          <span className="font-medium truncate" itemProp="name">{article.feed?.name || domain}</span>
                           <a
                             href={article.url}
                             target="_blank"
                             rel="nofollow noopener noreferrer"
                             className="text-xs text-muted-foreground hover:text-primary truncate"
+                            itemProp="url"
                           >
                             {domain}
                           </a>
@@ -1225,7 +1341,7 @@ export default function NewsArticlePage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('news.feed')}</span>
-                  <span>{article.feed?.name}</span>
+                  <span itemProp="name">{article.feed?.name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('news.category')}</span>
