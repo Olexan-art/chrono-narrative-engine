@@ -2504,7 +2504,8 @@ export default function WikiEntityPage() {
 
             {/* Sidebar */}
             <div className="space-y-6">
-              {/* Information Card */}
+              {/* Information Card - Admin only */}
+              {isAdmin && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-lg">
@@ -2615,6 +2616,7 @@ export default function WikiEntityPage() {
                   )}
                 </CardContent>
               </Card>
+              )}
 
               {/* Related Entities */}
               <Card>
