@@ -405,11 +405,11 @@ Deno.serve(async (req) => {
       // News article page: /news/us/slug - include "More from country" and "Other countries" links
       const [, countryCode, slug] = newsArticleMatch;
 
-      // Fetch article and all countries for cross-linking (include original_content for SSR)
+      // Fetch article and all countries for cross-linking (include original_content and news_analysis for SSR)
       const [{ data: newsItem }, { data: allCountries }] = await Promise.all([
         supabase
           .from("news_rss_items")
-          .select("*, original_content, country:news_countries(*)")
+          .select("*, original_content, news_analysis, country:news_countries(*)")
           .eq("slug", slug)
           .maybeSingle(),
         supabase
@@ -711,7 +711,12 @@ Deno.serve(async (req) => {
         }
         const finalCaricatureIds = Array.from(expandedCaricatureIds);
 
-        html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl, topTopics, topKeywords, totalLikes, totalDislikes, wikiLinkedEntities, latestNarrative, finalCaricatureIds, categories);
+        // Extract Information Card from raw_data
+        const rawData = entity.raw_data as Record<string, any> | null;
+        const infoCardContent = rawData?.info_card_content || null;
+        const infoCardSources = (rawData?.info_card_sources as { title: string; url: string }[]) || [];
+
+        html = generateWikiEntityHTML(entity, linkedNews, relatedEntities, lang, canonicalUrl, topTopics, topKeywords, totalLikes, totalDislikes, wikiLinkedEntities, latestNarrative, finalCaricatureIds, categories, infoCardContent, infoCardSources);
       }
     } else if (dateMatch) {
       // Date stories page
@@ -1603,6 +1608,78 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
         </section>
       ` : ""}
       
+      ${newsItem.news_analysis ? `
+        <section style="margin-top:24px;padding:20px;border:1px solid hsl(var(--border));border-radius:12px;background:linear-gradient(to bottom right, hsl(var(--card)), hsl(var(--muted)/0.3));">
+          <h3 style="margin:0 0 16px 0;font-size:1.25rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+            <svg style="width:20px;height:20px;color:hsl(var(--primary));" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Deep Analysis
+          </h3>
+          
+          ${newsItem.news_analysis.why_it_matters ? `
+            <div style="margin-bottom:16px;padding:12px;border-left:3px solid #f97316;background:rgba(249,115,22,0.05);border-radius:6px;">
+              <h4 style="margin:0 0 8px 0;font-size:0.95rem;font-weight:600;color:#f97316;display:flex;align-items:center;gap:6px;">
+                <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                Why It Matters
+              </h4>
+              <p style="margin:0;font-size:0.875rem;line-height:1.6;color:hsl(var(--foreground));">${escapeHtml(newsItem.news_analysis.why_it_matters)}</p>
+            </div>
+          ` : ""}
+          
+          ${newsItem.news_analysis.context_background && newsItem.news_analysis.context_background.length > 0 ? `
+            <div style="margin-bottom:16px;padding:12px;border-left:3px solid #3b82f6;background:rgba(59,130,246,0.05);border-radius:6px;">
+              <h4 style="margin:0 0 8px 0;font-size:0.95rem;font-weight:600;color:#3b82f6;display:flex;align-items:center;gap:6px;">
+                <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                Context & Background
+              </h4>
+              <ul style="margin:0;padding-left:20px;font-size:0.875rem;line-height:1.6;color:hsl(var(--foreground));">
+                ${newsItem.news_analysis.context_background.map((item: string) => `<li>${escapeHtml(item)}</li>`).join("")}
+              </ul>
+            </div>
+          ` : ""}
+          
+          ${newsItem.news_analysis.what_happens_next ? `
+            <div style="margin-bottom:16px;padding:12px;border-left:3px solid #8b5cf6;background:rgba(139,92,246,0.05);border-radius:6px;">
+              <h4 style="margin:0 0 8px 0;font-size:0.95rem;font-weight:600;color:#8b5cf6;display:flex;align-items:center;gap:6px;">
+                <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14"></path>
+                  <path d="m12 5 7 7-7 7"></path>
+                </svg>
+                What Happens Next
+              </h4>
+              <p style="margin:0;font-size:0.875rem;line-height:1.6;color:hsl(var(--foreground));">${escapeHtml(newsItem.news_analysis.what_happens_next)}</p>
+            </div>
+          ` : ""}
+          
+          ${newsItem.news_analysis.faq && newsItem.news_analysis.faq.length > 0 ? `
+            <div style="padding:12px;border-left:3px solid #10b981;background:rgba(16,185,129,0.05);border-radius:6px;">
+              <h4 style="margin:0 0 12px 0;font-size:0.95rem;font-weight:600;color:#10b981;display:flex;align-items:center;gap:6px;">
+                <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                Frequently Asked Questions
+              </h4>
+              ${newsItem.news_analysis.faq.map((item: any) => `
+                <div style="margin-bottom:12px;font-size:0.875rem;">
+                  <strong style="color:hsl(var(--foreground));">${escapeHtml(item.question)}</strong>
+                  <p style="margin:4px 0 0 0;color:hsl(var(--muted-foreground));line-height:1.6;">${escapeHtml(item.answer)}</p>
+                </div>
+              `).join("")}
+            </div>
+          ` : ""}
+        </section>
+      ` : ""}
+      
       ${newsItem.original_content && newsItem.original_content.length > 100 ? `
         <section style="margin-top:24px;padding:16px;border:1px dashed hsl(var(--border));border-radius:8px;background:hsl(var(--muted)/0.3);">
           <details open>
@@ -2261,7 +2338,7 @@ function generateStaticIntersectionGraph(mainEntity: any, relatedEntities: any[]
   `;
 }
 
-function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string, topTopics: [string, number][] = [], topKeywords: [string, number][] = [], totalLikes = 0, totalDislikes = 0, wikiLinkedEntities: any[] = [], latestNarrative: any = null, caricatureIds: string[] = [], categories: string[] = []) {
+function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities: any[], lang: string, canonicalUrl: string, topTopics: [string, number][] = [], topKeywords: [string, number][] = [], totalLikes = 0, totalDislikes = 0, wikiLinkedEntities: any[] = [], latestNarrative: any = null, caricatureIds: string[] = [], categories: string[] = [], infoCardContent: string | null = null, infoCardSources: { title: string; url: string }[] = []) {
   const name = entity.name_en || entity.name;
   const description = entity.description_en || entity.description || '';
   const extract = entity.extract_en || entity.extract || '';
@@ -2322,6 +2399,39 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
         <h2>📊 Rating</h2>
         <p>${linkedNews.length} news mentions · 👍 ${totalLikes} likes · 👎 ${totalDislikes} dislikes</p>
       </section>
+      
+      ${infoCardContent ? `
+        <section itemscope itemtype="https://schema.org/Article">
+          <h2>💡 Information Card</h2>
+          <meta itemprop="name" content="AI Overview: ${escapeHtml(name)}" />
+          <meta itemprop="description" content="Quick AI overview from open sources" />
+          <div itemprop="articleBody" style="line-height: 1.6; color: hsl(var(--foreground));">
+            ${infoCardContent.split('\n').map(line => {
+              // Simple markdown to HTML conversion
+              line = line.trim();
+              if (!line) return '<br>';
+              if (line.startsWith('## ')) return `<h3>${escapeHtml(line.substring(3))}</h3>`;
+              if (line.startsWith('- ')) return `<li>${escapeHtml(line.substring(2))}</li>`;
+              if (line.startsWith('> ')) return `<blockquote>${escapeHtml(line.substring(2))}</blockquote>`;
+              return `<p>${escapeHtml(line)}</p>`;
+            }).join('')}
+          </div>
+          ${infoCardSources.length > 0 ? `
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid hsl(var(--border));">
+              <p style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: hsl(var(--muted-foreground)); margin-bottom: 8px;">Sources</p>
+              <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px;">
+                ${infoCardSources.map(src => `
+                  <li style="display: inline;">
+                    <a href="${escapeHtml(src.url)}" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: hsl(var(--primary)); text-decoration: underline;">
+                      🔗 ${escapeHtml(src.title)}
+                    </a>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          ` : ''}
+        </section>
+      ` : ''}
       
       ${narrativeHtml}
       
