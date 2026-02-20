@@ -187,16 +187,6 @@ export default function WikiEntityPage() {
   const [isGeneratingInfoCard, setIsGeneratingInfoCard] = useState(false);
   const [selectedInfoCardModel, setSelectedInfoCardModel] = useState(ZAI_MODELS.find(m => m.value === 'GLM-4.5-Air')?.value || ZAI_MODELS.find(m => m.value === 'GLM-4.7-Flash')?.value || ZAI_MODELS[0]?.value || '');
 
-  // Load persisted info card from entity.raw_data
-  useEffect(() => {
-    if (entity?.raw_data) {
-      const raw = entity.raw_data as Record<string, unknown>;
-      if (typeof raw.info_card_content === 'string' && raw.info_card_content) {
-        setInfoCardContent(raw.info_card_content);
-        setInfoCardSources((raw.info_card_sources as { title: string; url: string }[]) || []);
-      }
-    }
-  }, [entity?.id]);
   const queryClient = useQueryClient();
 
   // Fetch LLM availability
@@ -297,6 +287,17 @@ export default function WikiEntityPage() {
     enabled: !!entityId,
     staleTime: 1000 * 60 * 10,
   });
+
+  // Load persisted info card from entity.raw_data
+  useEffect(() => {
+    if (entity?.raw_data) {
+      const raw = entity.raw_data as Record<string, unknown>;
+      if (typeof raw.info_card_content === 'string' && raw.info_card_content) {
+        setInfoCardContent(raw.info_card_content);
+        setInfoCardSources((raw.info_card_sources as { title: string; url: string }[]) || []);
+      }
+    }
+  }, [entity?.id]);
 
   // Track views for wiki entity pages
   useTrackView('wiki', entity?.id);
