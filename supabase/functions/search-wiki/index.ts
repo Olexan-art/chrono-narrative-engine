@@ -492,59 +492,69 @@ serve(async (req) => {
       }
 
       const systemPrompt = lang === 'en'
-        ? `You are an encyclopedic analyst. Generate a concise structured information card in Markdown. Be brief and factual. Respond only with Markdown, no preamble.`
-        : `Ти аналітик-енциклопедист. Згенеруй стислу інформаційну картку в Markdown. Будь коротким і фактичним. Відповідай тільки Markdown без вступу.`;
+        ? `You are an expert encyclopedic analyst. Generate a comprehensive, well-structured information card in Markdown. Be accurate, informative, and factual. Use only information from the provided data. Respond only with Markdown, no preamble or commentary.`
+        : `Ти експерт-аналітик-енциклопедист. Згенеруй детальну, добре структуровану інформаційну картку в Markdown. Будь точним, інформативним і фактичним. Використовуй тільки надані дані. Відповідай тільки Markdown без вступу і коментарів.`;
 
       const userPrompt = lang === 'en'
-        ? `Create a brief information card for "${entityName}" (${entityType}).
+        ? `Create a comprehensive information card for "${entityName}" (${entityType}).
 
-Data:
+Source data:
 - Description: ${entityDescription || 'none'}
-- Wikipedia: ${entityExtract ? entityExtract.slice(0, 1500) : 'none'}
+- Wikipedia extract: ${entityExtract ? entityExtract.slice(0, 3000) : 'none'}
 
-Respond with exactly these sections in Markdown:
+Generate exactly these sections in Markdown:
 
 ## Who / What
-(1 sentence)
+(2–3 sentences — clear definition of what this entity is)
+
+## Background & History
+(3–4 sentences — origin, founding, historical context, key milestones)
 
 ## Why Notable
-(2 sentences — role, impact)
+(3–4 sentences — significance, role, impact, achievements)
 
 ## In the News
-(1–2 sentences — current relevance)
+(2–3 sentences — current relevance, recent developments, why it matters now)
 
 ## Key Facts
 - Type: ${entityType}
-- Also known as: (variants, abbreviations)
-- Key dates: (founding/birth, major events)
-- Geography: (country, city — if relevant)
+- Also known as: (alternative names, abbreviations, acronyms)
+- Founded / Born: (year and place if known)
+- Key dates: (major events, milestones)
+- Geography: (country, region, city — if relevant)
+- Affiliation: (parent organization, industry, field — if relevant)
 
 ## Links
 ${wikiUrl ? `- [Wikipedia](${wikiUrl})` : ''}
 ${wikiUrlEn && wikiUrlEn !== wikiUrl ? `- [Wikipedia EN](${wikiUrlEn})` : ''}
 `
-        : `Створи стислу інформаційну картку для "${entityName}" (${entityType}).
+        : `Створи детальну інформаційну картку для "${entityName}" (${entityType}).
 
-Дані:
+Вхідні дані:
 - Опис: ${entityDescription || 'немає'}
-- Wikipedia: ${entityExtract ? entityExtract.slice(0, 1500) : 'немає'}
+- Wikipedia extract: ${entityExtract ? entityExtract.slice(0, 3000) : 'немає'}
 
-Рівно такі секції Markdown:
+Створи рівно такі секції Markdown:
 
 ## Хто / Що
-(1 речення)
+(2–3 речення — чітке визначення цієї сутності)
+
+## Передісторія та Історія
+(3–4 речення — походження, заснування, históричний контекст, ключові віхи)
 
 ## Чим відоме
-(2 речення — роль, вплив)
+(3–4 речення — значення, роль, вплив, досягнення)
 
 ## В новинах
-(1–2 речення — поточна актуальність)
+(2–3 речення — поточна актуальність, нещодавні події, чому важливо зараз)
 
 ## Ключові факти
 - Тип: ${entityType}
-- Також відомий як: (варіанти, скорочення)
-- Ключові дати: (заснування/народження, ключові події)
-- Географія: (країна, місто — якщо релевантно)
+- Також відомий як: (альтернативні назви, абревіатури)
+- Засновано / Народжено: (рік і місце, якщо відомо)
+- Ключові дати: (важливі події, вехи)
+- Географія: (країна, регіон, місто — якщо релевантно)
+- Приналежність: (організація, галузь, сфера — якщо релевантно)
 
 ## Посилання
 ${wikiUrl ? `- [Wikipedia](${wikiUrl})` : ''}

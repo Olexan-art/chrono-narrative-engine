@@ -2504,8 +2504,8 @@ export default function WikiEntityPage() {
 
             {/* Sidebar */}
             <div className="space-y-6">
-              {/* Information Card - Admin only */}
-              {isAdmin && (
+              {/* Information Card — generation admin-only, content visible to all */}
+              {(isAdmin || infoCardContent) && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-lg">
@@ -2519,7 +2519,8 @@ export default function WikiEntityPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {!infoCardContent && (
+                  {/* Generate button — admin only, shown when no content yet */}
+                  {!infoCardContent && isAdmin && (
                     <div className="flex flex-col gap-2">
                       <Select value={selectedInfoCardModel} onValueChange={setSelectedInfoCardModel}>
                         <SelectTrigger className="h-8 text-xs">
@@ -2556,34 +2557,36 @@ export default function WikiEntityPage() {
 
                   {infoCardContent && (
                     <div className="space-y-3">
-                      {/* Regenerate controls */}
-                      <div className="flex gap-2">
-                        <Select value={selectedInfoCardModel} onValueChange={setSelectedInfoCardModel}>
-                          <SelectTrigger className="h-7 text-xs flex-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableModels.map(m => (
-                              <SelectItem key={m.value} value={m.value} className="text-xs">
-                                {m.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 px-2 shrink-0"
-                          onClick={generateInfoCard}
-                          disabled={isGeneratingInfoCard}
-                          title={language === 'uk' ? 'Перегенерувати' : 'Regenerate'}
-                        >
-                          {isGeneratingInfoCard
-                            ? <Loader2 className="w-3 h-3 animate-spin" />
-                            : <RefreshCw className="w-3 h-3" />
-                          }
-                        </Button>
-                      </div>
+                      {/* Regenerate controls — admin only */}
+                      {isAdmin && (
+                        <div className="flex gap-2">
+                          <Select value={selectedInfoCardModel} onValueChange={setSelectedInfoCardModel}>
+                            <SelectTrigger className="h-7 text-xs flex-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableModels.map(m => (
+                                <SelectItem key={m.value} value={m.value} className="text-xs">
+                                  {m.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 shrink-0"
+                            onClick={generateInfoCard}
+                            disabled={isGeneratingInfoCard}
+                            title={language === 'uk' ? 'Перегенерувати' : 'Regenerate'}
+                          >
+                            {isGeneratingInfoCard
+                              ? <Loader2 className="w-3 h-3 animate-spin" />
+                              : <RefreshCw className="w-3 h-3" />
+                            }
+                          </Button>
+                        </div>
+                      )}
 
                       {/* Generated content */}
                       <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1 [&_h2]:text-primary [&_p]:text-xs [&_p]:text-muted-foreground [&_ul]:text-xs [&_ul]:text-muted-foreground [&_li]:text-xs [&_blockquote]:text-xs [&_blockquote]:text-muted-foreground/70 [&_blockquote]:border-l-2 [&_blockquote]:pl-2">
