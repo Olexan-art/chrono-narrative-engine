@@ -40,16 +40,18 @@ serve(async (req) => {
 
     console.log(`Generating news analysis for newsId=${newsId}, model=${model}`);
 
-    // Get LLM settings
+    // Get LLM settings (fallback to defaults if not found)
     const { data: settingsData, error: settingsError } = await supabase
       .from('llm_settings')
       .select('*')
       .single();
 
     if (settingsError) {
-      console.error('Error fetching LLM settings:', settingsError);
-      throw new Error('Failed to load LLM settings');
+      console.warn('Warning: Could not fetch LLM settings from database, using environment variables only:', settingsError.message);
+      // Continue with empty settings object - will use env vars
     }
+
+    const settings = settingsData || {};
 
     // Build analysis prompt
     const systemPrompt = `You are a professional news analyst. Your task is to provide comprehensive analysis of news articles.
@@ -80,7 +82,7 @@ Provide comprehensive analysis in JSON format as specified.`;
     console.log(`Calling LLM with model: ${model}`);
     const analysisText = await callLLM(
       supabase,
-      settingsData,
+      settings,
       systemPrompt,
       userPrompt,
       model
@@ -155,13 +157,16 @@ async function callLLM(
   userPrompt: string,
   overrideModel?: string
 ): Promise<string> {
-  const model = overrideModel || settings.llm_text_model || 'gemini-2.0-flash-exp';
+  const model = overrideModel || settings.llm_text_model || 'GLM-4.7'; // Default to ZAI (always available)
   
   // Auto-detect provider from model prefix
-  let provider = 'gemini';
-  let apiKey = settings.gemini_v22_api_key || Deno.env.get('GEMINI_V22_API_KEY');
+  let provider = 'zai'; // Default provider
+  let apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
   
-  if (model.startsWith('GLM-') || model.startsWith('glm-')) {
+  if (model.startsWith('gemini-') || model.startsWith('google/')) {
+    provider = 'gemini';
+    apiKey = settings.gemini_v22_api_key || Deno.env.get('GEMINI_V22_API_KEY');
+  } else if (model.startsWith('GLM-') || model.startsWith('glm-')) {
     provider = 'zai';
     apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
   } else if (model.startsWith('mistral-') || model.startsWith('codestral')) {

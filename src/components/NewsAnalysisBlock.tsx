@@ -30,7 +30,7 @@ export function NewsAnalysisBlock({ newsId, newsTitle, newsContent, className = 
   const { language } = useLanguage();
   const { isAuthenticated: isAdmin } = useAdminStore();
   const queryClient = useQueryClient();
-  const [selectedModel, setSelectedModel] = useState("gemini-2.0-flash-exp"); 
+  const [selectedModel, setSelectedModel] = useState("GLM-4.7"); // Default to ZAI model (always available) 
 
   // Fetch analysis from database (stored in news_analysis JSONB field)
   const { data: analysisData, isLoading } = useQuery({
