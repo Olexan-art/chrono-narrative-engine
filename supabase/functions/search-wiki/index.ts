@@ -491,9 +491,52 @@ serve(async (req) => {
         });
       }
 
-      const systemPrompt = `Ти аналітик-енциклопедист. Отримуєш дані про сутність і генеруєш структурований інформаційний блок у форматі Markdown. Відповідай тільки Markdown-текстом без пояснень і без зайвих вступів.`;
+      const systemPrompt = lang === 'en'
+        ? `You are an encyclopedic analyst. You receive data about an entity and generate a structured information block in Markdown format. Respond only with Markdown text, no explanations or unnecessary introductions.`
+        : `Ти аналітик-енциклопедист. Отримуєш дані про сутність і генеруєш структурований інформаційний блок у форматі Markdown. Відповідай тільки Markdown-текстом без пояснень і без зайвих вступів.`;
 
-      const userPrompt = `Створи інформаційну картку для сутності "${entityName}" (тип: ${entityType}).
+      const userPrompt = lang === 'en'
+        ? `Create an information card for the entity "${entityName}" (type: ${entityType}).
+
+Available data:
+- Description: ${entityDescription || 'none'}
+- Wikipedia text: ${entityExtract ? entityExtract.slice(0, 3000) : 'none'}
+- Type: ${entityType}
+
+Response structure (must be Markdown, follow this exact order):
+
+## Who / What is this
+(1–2 sentences — brief and clear)
+
+## Why it is notable
+(2–3 sentences — practical value, role, impact)
+
+## Why it appears in the news now
+(1 paragraph — "why in news": context of current events around this entity)
+
+## Alternative names / synonyms
+(spelling variants, transliteration, abbreviations — comma-separated or as a list)
+
+## Category / type
+(one of: Person / Organization / Place / Event / Drug / Policy / Technology / Other — with clarification)
+
+## Key dates
+(founding / birth / launch / dissolution / first mention — in format "event: year")
+
+## Geography
+(headquarters, country, city — if relevant)
+
+## Identifiers & links
+(Wikipedia, Wikidata, Crunchbase, ISIN, ticker, ORCID, IMDb — only relevant ones)
+
+---
+> ℹ️ Information sourced from open data.
+
+Reference links:
+${wikiUrl ? `- [Wikipedia (UK)](${wikiUrl})` : ''}
+${wikiUrlEn ? `- [Wikipedia (EN)](${wikiUrlEn})` : ''}
+`
+        : `Створи інформаційну картку для сутності "${entityName}" (тип: ${entityType}).
 
 Доступні дані:
 - Опис: ${entityDescription || 'немає'}

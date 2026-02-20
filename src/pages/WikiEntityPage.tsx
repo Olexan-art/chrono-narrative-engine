@@ -973,13 +973,13 @@ export default function WikiEntityPage() {
     try {
       const result = await callEdgeFunction<{ success: boolean; content?: string; sources?: { title: string; url: string }[]; error?: string }>('search-wiki', {
         action: 'generate_info_card',
-        entityName: entity.name,
-        entityExtract: (entity.extract || entity.extract_en || '').slice(0, 10000),
-        entityDescription: entity.description || entity.description_en || '',
+        entityName: entity.name_en || entity.name,
+        entityExtract: (entity.extract_en || entity.extract || '').slice(0, 10000),
+        entityDescription: entity.description_en || entity.description || '',
         entityType: entity.entity_type,
         wikiUrl: entity.wiki_url,
         wikiUrlEn: entity.wiki_url_en || '',
-        language: 'uk',
+        language: 'en',
         model: selectedInfoCardModel,
       });
       if (result.success && result.content) {
