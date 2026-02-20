@@ -75,6 +75,16 @@ export default function ChaptersPage() {
     setCurrentPage(1); // Reset to first page when filter changes
   };
 
+  // Build canonical URL with current filters and page
+  const getCanonicalUrl = () => {
+    const baseUrl = 'https://bravennow.com/chapters';
+    const params = new URLSearchParams();
+    if (selectedMonth !== 'all') params.append('month', selectedMonth);
+    if (currentPage > 1) params.append('page', currentPage.toString());
+    const queryString = params.toString();
+    return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+  };
+
   const pageTitle = language === 'en' ? 'Chapters Archive' : language === 'pl' ? 'Archiwum rozdziałów' : 'Архів глав';
   const pageDescription = language === 'en' 
     ? 'Weekly narrative chapters with AI-generated monologues and commentary based on real news' 
@@ -87,7 +97,7 @@ export default function ChaptersPage() {
       <SEOHead
         title={pageTitle}
         description={pageDescription}
-        canonicalUrl="https://bravennow.com/chapters"
+        canonicalUrl={getCanonicalUrl()}
         keywords={['chapters', 'weekly', 'narrative', 'AI', 'science fiction', 'глави', 'тиждень']}
       />
       <Header />

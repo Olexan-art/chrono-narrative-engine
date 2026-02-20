@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const BASE_URL = "https://bravennow.com";
-const CACHE_TTL_HOURS = 6; // Cache sitemap for 6 hours
+const CACHE_TTL_HOURS = 2; // Cache sitemap for 2 hours
 
 // Helper to add hreflang links for multilingual pages
 function addHreflangLinks(url: string): string {

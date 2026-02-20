@@ -47,6 +47,16 @@ export default function WikiCatalogPage() {
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
+  // Build canonical URL with parameters
+  const getCanonicalUrl = () => {
+    const baseUrl = 'https://bravennow.com/wiki';
+    const params = new URLSearchParams();
+    if (categoryFilter) params.append('category', categoryFilter);
+    if (letterFilter) params.append('letter', letterFilter);
+    const queryString = params.toString();
+    return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+  };
+
   // Get alphabet based on language
   const alphabet = language === 'uk' ? ALPHABET_UK : ALPHABET_EN;
 
@@ -184,7 +194,7 @@ export default function WikiCatalogPage() {
       <SEOHead
         title={`${t.title} | Echoes`}
         description={t.description}
-        canonicalUrl="https://bravennow.com/wiki"
+        canonicalUrl={getCanonicalUrl()}
         breadcrumbs={[
           {
             name: language === 'uk' ? 'Головна' : 'Home',

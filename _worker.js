@@ -279,6 +279,17 @@ export default {
     const pathname = url.pathname;
     const userAgent = request.headers.get('User-Agent') || '';
     
+    // 1. Force HTTPS redirect
+    if (url.protocol === 'http:') {
+      const httpsUrl = `https://${url.hostname}${url.pathname}${url.search}`;
+      return Response.redirect(httpsUrl, 301);
+    }
+
+    // 2. Redirect /sitemap.xml → /api/sitemap
+    if (pathname === '/sitemap.xml') {
+      return Response.redirect(`${url.origin}/api/sitemap`, 301);
+    }
+    
     // Check if upstream worker asked to skip SSR
     const skipSSR = request.headers.get('X-Skip-SSR') === 'true';
 

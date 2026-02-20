@@ -161,16 +161,6 @@ export function SEOHead({
       {/* Canonical */}
       {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
 
-      {/* Hreflang */}
-      {canonicalUrl && (
-        <>
-          <link rel="alternate" hrefLang="uk" href={canonicalUrl} />
-          <link rel="alternate" hrefLang="en" href={canonicalUrl} />
-          <link rel="alternate" hrefLang="pl" href={canonicalUrl} />
-          <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
-        </>
-      )}
-
       {/* Open Graph */}
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
