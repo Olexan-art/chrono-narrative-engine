@@ -985,6 +985,7 @@ export default function WikiEntityPage() {
     try {
       const fetchPromise = callEdgeFunction<{ success: boolean; content?: string; sources?: { title: string; url: string }[]; error?: string }>('search-wiki', {
         action: 'generate_info_card',
+        entityId: entity.id,
         entityName: entity.name_en || entity.name,
         entityExtract: (entity.extract_en || entity.extract || '').slice(0, 10000),
         entityDescription: entity.description_en || entity.description || '',
@@ -1001,13 +1002,9 @@ export default function WikiEntityPage() {
       if (result.success && result.content) {
         setInfoCardContent(result.content);
         setInfoCardSources(result.sources || []);
-        // Persist to DB in raw_data so all users see the generated card
-        const updatedRawData = {
-          ...(entity.raw_data as Record<string, unknown> || {}),
-          info_card_content: result.content,
-          info_card_sources: result.sources || [],
-        };
-        await supabase.from('wiki_entities').update({ raw_data: updatedRawData }).eq('id', entity.id);
+        // Data is now saved in Edge Function with service role
+        // Invalidate cache to force refetch with updated raw_data
+        await queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] });
         toast.success(language === 'uk' ? 'Картку згенеровано' : 'Card generated');
       } else {
         throw new Error(result.error || 'Generation failed');
@@ -2608,7 +2605,7 @@ export default function WikiEntityPage() {
                       )}
 
                       {/* Generated content */}
-                      <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1 [&_h2]:text-primary [&_p]:text-xs [&_p]:text-muted-foreground [&_ul]:text-xs [&_ul]:text-muted-foreground [&_li]:text-xs [&_blockquote]:text-xs [&_blockquote]:text-muted-foreground/70 [&_blockquote]:border-l-2 [&_blockquote]:pl-2">
+                      <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-foreground [&_p]:text-muted-foreground [&_p]:mb-3 [&_ul]:text-muted-foreground [&_li]:mb-1 [&_blockquote]:text-muted-foreground/70 [&_blockquote]:border-l-2 [&_blockquote]:pl-2">
                         <MarkdownContent content={infoCardContent} />
                       </div>
 
