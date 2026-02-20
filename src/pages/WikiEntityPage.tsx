@@ -185,7 +185,7 @@ export default function WikiEntityPage() {
   const [infoCardContent, setInfoCardContent] = useState<string | null>(null);
   const [infoCardSources, setInfoCardSources] = useState<{ title: string; url: string }[]>([]);
   const [isGeneratingInfoCard, setIsGeneratingInfoCard] = useState(false);
-  const [selectedInfoCardModel, setSelectedInfoCardModel] = useState(ZAI_MODELS[0]?.value || '');
+  const [selectedInfoCardModel, setSelectedInfoCardModel] = useState(ZAI_MODELS.find(m => m.value === 'GLM-4.7-Flash')?.value || ZAI_MODELS[0]?.value || '');
   const queryClient = useQueryClient();
 
   // Fetch LLM availability

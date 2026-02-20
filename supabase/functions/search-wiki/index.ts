@@ -73,17 +73,42 @@ interface LLMSettings {
 }
 
 async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: string, overrideModel?: string): Promise<string> {
-  const model = overrideModel || settings.llm_text_model || 'google/gemini-3-flash-preview';
-
+  // Determine provider first
   let provider = settings.llm_text_provider || settings.llm_provider || 'zai';
+  let model = overrideModel || settings.llm_text_model;
 
+  // Infer provider from overrideModel if present
   if (overrideModel) {
-    if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) provider = 'lovable';
-    else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) provider = 'lovable';
+    if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
+      if (settings.gemini_api_key || Deno.env.get('GEMINI_API_KEY')) {
+         provider = 'gemini';
+      } else {
+         provider = 'lovable';
+      }
+    }
+    else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) {
+       // Check if we have direct OpenAI key
+       if (settings.openai_api_key || Deno.env.get('OPENAI_API_KEY')) {
+         provider = 'openai';
+       } else {
+         provider = 'lovable'; 
+       }
+    }
     else if (overrideModel.startsWith('mistral-') || overrideModel.startsWith('codestral')) provider = 'mistral';
     else if (overrideModel.startsWith('GLM-') || overrideModel.startsWith('glm-')) provider = 'zai';
     else if (overrideModel.startsWith('claude')) provider = 'anthropic';
   }
+
+  // Set default models based on provider if not specified
+  if (!model) {
+    if (provider === 'zai') model = 'GLM-4.7';
+    else if (provider === 'openai') model = 'gpt-4o';
+    else if (provider === 'gemini') model = 'gemini-2.0-flash';
+    else if (provider === 'lovable') model = 'google/gemini-2.0-flash-exp';
+    else if (provider === 'mistral') model = 'mistral-large-latest';
+    else model = 'gpt-4o'; // Fallback
+  }
+
 
   if (provider === 'zai') {
     const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
@@ -92,6 +117,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: model || 'GLM-4.7', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
+      signal: AbortSignal.timeout(90000),
     });
     if (!response.ok) throw new Error(`Z.AI error: ${response.status}`);
     const data = await response.json();
@@ -105,6 +131,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
+      signal: AbortSignal.timeout(90000),
     });
     if (!response.ok) throw new Error(`Lovable AI error: ${response.status}`);
     const data = await response.json();
@@ -118,6 +145,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: 'gpt-4o', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
+      signal: AbortSignal.timeout(90000),
     });
     if (!response.ok) throw new Error(`OpenAI error: ${response.status}`);
     const data = await response.json();
@@ -131,6 +159,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }] }),
+      signal: AbortSignal.timeout(90000),
     });
     if (!response.ok) throw new Error(`Gemini error: ${response.status}`);
     const data = await response.json();
@@ -159,6 +188,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: modelName, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
+      signal: AbortSignal.timeout(90000),
     });
     if (!response.ok) throw new Error(`Mistral error: ${response.status}`);
     const data = await response.json();
