@@ -443,6 +443,83 @@ serve(async (req) => {
       }
     }
 
+    // Handle Information Card generation
+    if (action === 'generate_info_card') {
+      const { entityName, entityExtract, entityDescription, entityType, wikiUrl, wikiUrlEn, language: lang = 'uk', model } = body;
+
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('*')
+        .single();
+
+      if (!settings) {
+        return new Response(JSON.stringify({ success: false, error: 'Settings not found' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const systemPrompt = `Ти аналітик-енциклопедист. Отримуєш дані про сутність і генеруєш структурований інформаційний блок у форматі Markdown. Відповідай тільки Markdown-текстом без пояснень і без зайвих вступів.`;
+
+      const userPrompt = `Створи інформаційну картку для сутності "${entityName}" (тип: ${entityType}).
+
+Доступні дані:
+- Опис: ${entityDescription || 'немає'}
+- Текст Wikipedia: ${entityExtract ? entityExtract.slice(0, 3000) : 'немає'}
+- Тип: ${entityType}
+
+Структура відповіді (обов'язково Markdown, дотримуйся саме такого порядку):
+
+## Хто / що це
+(1–2 речення — коротко і чітко)
+
+## Чим відоме / навіщо користувачу
+(2–3 речення — практична цінність, роль, вплив)
+
+## Чому згадується в новинах зараз
+(1 абзац — "why in news": контекст поточних подій навколо цієї сутності)
+
+## Альтернативні назви / синоніми
+(варіанти написання, транслітерація, скорочення — через кому або список)
+
+## Категорія / тип
+(одне з: Person / Organization / Place / Event / Drug / Policy / Technology / Other — та уточнення)
+
+## Ключові дати
+(заснування / народження / запуск / розпуск / перша згадка — у форматі "подія: рік")
+
+## Географія
+(штаб-квартира, країна, місто — якщо релевантно)
+
+## Ідентифікатори та посилання
+(Wikipedia, Wikidata, Crunchbase, ISIN, ticker, ORCID, IMDb — тільки релевантні)
+
+---
+> ℹ️ Інформація взята з відкритих джерел.
+
+Посилання для перевірки:
+${wikiUrl ? `- [Wikipedia (UK)](${wikiUrl})` : ''}
+${wikiUrlEn ? `- [Wikipedia (EN)](${wikiUrlEn})` : ''}
+`;
+
+      try {
+        const content = await callLLM(settings as LLMSettings, systemPrompt, userPrompt, model);
+        const sources: { title: string; url: string }[] = [];
+        if (wikiUrl) sources.push({ title: 'Wikipedia', url: wikiUrl });
+        if (wikiUrlEn && wikiUrlEn !== wikiUrl) sources.push({ title: 'Wikipedia (EN)', url: wikiUrlEn });
+
+        return new Response(JSON.stringify({ success: true, content, sources }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (err: any) {
+        console.error('Info card generation error:', err);
+        return new Response(JSON.stringify({ success: false, error: err.message || 'Generation failed' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Handle extended Wikipedia parsing
     if (action === 'extended_parse') {
       const { wikiUrl, language: lang = 'en' } = body;

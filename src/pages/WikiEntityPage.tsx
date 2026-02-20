@@ -181,6 +181,11 @@ export default function WikiEntityPage() {
   const [addingEntity, setAddingEntity] = useState(false);
   const [isCaching, setIsCaching] = useState(false);
   const [selectedFormatModel, setSelectedFormatModel] = useState(ZAI_MODELS[0]?.value || '');
+  // Information Card state
+  const [infoCardContent, setInfoCardContent] = useState<string | null>(null);
+  const [infoCardSources, setInfoCardSources] = useState<{ title: string; url: string }[]>([]);
+  const [isGeneratingInfoCard, setIsGeneratingInfoCard] = useState(false);
+  const [selectedInfoCardModel, setSelectedInfoCardModel] = useState(ZAI_MODELS[0]?.value || '');
   const queryClient = useQueryClient();
 
   // Fetch LLM availability
@@ -958,6 +963,36 @@ export default function WikiEntityPage() {
       toast.error(err.message);
     } finally {
       setIsAiProcessing(false);
+    }
+  };
+
+  // Generate Information Card
+  const generateInfoCard = async () => {
+    if (!entity) return;
+    setIsGeneratingInfoCard(true);
+    try {
+      const result = await callEdgeFunction<{ success: boolean; content?: string; sources?: { title: string; url: string }[]; error?: string }>('search-wiki', {
+        action: 'generate_info_card',
+        entityName: entity.name,
+        entityExtract: entity.extract || entity.extract_en || '',
+        entityDescription: entity.description || entity.description_en || '',
+        entityType: entity.entity_type,
+        wikiUrl: entity.wiki_url,
+        wikiUrlEn: entity.wiki_url_en || '',
+        language: 'uk',
+        model: selectedInfoCardModel,
+      });
+      if (result.success && result.content) {
+        setInfoCardContent(result.content);
+        setInfoCardSources(result.sources || []);
+        toast.success(language === 'uk' ? 'Картку згенеровано' : 'Card generated');
+      } else {
+        throw new Error(result.error || 'Generation failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsGeneratingInfoCard(false);
     }
   };
 
@@ -2465,6 +2500,118 @@ export default function WikiEntityPage() {
 
             {/* Sidebar */}
             <div className="space-y-6">
+              {/* Information Card */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Lightbulb className="w-5 h-5 text-primary" />
+                    {language === 'uk' ? 'Інформаційна картка' : 'Information Card'}
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    {language === 'uk'
+                      ? 'Короткий AI-огляд сутності з відкритих джерел'
+                      : 'Quick AI overview from open sources'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {!infoCardContent && (
+                    <div className="flex flex-col gap-2">
+                      <Select value={selectedInfoCardModel} onValueChange={setSelectedInfoCardModel}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder={language === 'uk' ? 'Оберіть модель' : 'Select model'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableModels.map(m => (
+                            <SelectItem key={m.value} value={m.value} className="text-xs">
+                              {m.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        className="w-full gap-2"
+                        onClick={generateInfoCard}
+                        disabled={isGeneratingInfoCard}
+                      >
+                        {isGeneratingInfoCard ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            {language === 'uk' ? 'Генерую...' : 'Generating...'}
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5" />
+                            {language === 'uk' ? 'Згенерувати картку' : 'Generate card'}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  {infoCardContent && (
+                    <div className="space-y-3">
+                      {/* Regenerate controls */}
+                      <div className="flex gap-2">
+                        <Select value={selectedInfoCardModel} onValueChange={setSelectedInfoCardModel}>
+                          <SelectTrigger className="h-7 text-xs flex-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableModels.map(m => (
+                              <SelectItem key={m.value} value={m.value} className="text-xs">
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 shrink-0"
+                          onClick={generateInfoCard}
+                          disabled={isGeneratingInfoCard}
+                          title={language === 'uk' ? 'Перегенерувати' : 'Regenerate'}
+                        >
+                          {isGeneratingInfoCard
+                            ? <Loader2 className="w-3 h-3 animate-spin" />
+                            : <RefreshCw className="w-3 h-3" />
+                          }
+                        </Button>
+                      </div>
+
+                      {/* Generated content */}
+                      <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1 [&_h2]:text-primary [&_p]:text-xs [&_p]:text-muted-foreground [&_ul]:text-xs [&_ul]:text-muted-foreground [&_li]:text-xs [&_blockquote]:text-xs [&_blockquote]:text-muted-foreground/70 [&_blockquote]:border-l-2 [&_blockquote]:pl-2">
+                        <MarkdownContent content={infoCardContent} />
+                      </div>
+
+                      {/* Sources footer */}
+                      {infoCardSources.length > 0 && (
+                        <div className="pt-2 border-t border-border/50">
+                          <p className="text-[10px] text-muted-foreground mb-1 font-medium uppercase tracking-wider">
+                            {language === 'uk' ? 'Джерела' : 'Sources'}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {infoCardSources.map((src) => (
+                              <a
+                                key={src.url}
+                                href={src.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                              >
+                                <ExternalLink className="w-2.5 h-2.5" />
+                                {src.title}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Related Entities */}
               <Card>
                 <CardHeader>
