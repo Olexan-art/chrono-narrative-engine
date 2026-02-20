@@ -25,6 +25,7 @@ import { OriginalSourceBlock } from "@/components/OriginalSourceBlock";
 import { NewsImageBlock } from "@/components/NewsImageBlock";
 import { NewsVoteBlock } from "@/components/NewsVoteBlock";
 import { NarrativeAnalysisBlock } from "@/components/NarrativeAnalysisBlock";
+import { NewsAnalysisBlock } from "@/components/NewsAnalysisBlock";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { adminAction, callEdgeFunction } from "@/lib/api";
@@ -933,6 +934,13 @@ export default function NewsArticlePage() {
               )}
             </article>
 
+            {/* Deep News Analysis - Why it matters, Context, What's Next, FAQ */}
+            <NewsAnalysisBlock
+              newsId={article.id}
+              newsTitle={getLocalizedField('title') || article.title}
+              newsContent={getLocalizedField('content') || article.content || getLocalizedField('description') || article.description || ''}
+              className="mt-8"
+            />
 
             {/* Dialogue disabled for news (mobile) */}
 
