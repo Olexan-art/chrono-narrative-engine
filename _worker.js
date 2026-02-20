@@ -13,6 +13,7 @@ const SUPABASE_URL = 'https://tuledxqigzufkecztnlo.supabase.co';
 const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 const SSR_ENDPOINT = `${SUPABASE_FUNCTIONS_URL}/ssr-render`;
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NDUyODgsImV4cCI6MjA4NjQyMTI4OH0.XKqWqIwfy5BoKzQNNUhs5uYC_QI0GLLKXw1pBDgkCi0';
+const WORKER_VERSION = 'v2026.02.20-fix-v10-deployed-by-agent';
 
 // Cache TTLs (seconds)
 const CACHE_TTL = {
@@ -252,6 +253,7 @@ async function handleSSR(request, pathname, env) {
     'X-Cache-Source': 'ssr-render',
     'X-SSR': 'true',
     'X-SSR-Bot': isBotReq ? 'true' : 'false',
+    'X-Worker-Version': WORKER_VERSION,
   };
 
   const result = new Response(html, { status: 200, headers: responseHeaders });
@@ -303,6 +305,7 @@ export default {
     const spaResponse = await env.ASSETS.fetch(request);
     const spaHeaders = new Headers(spaResponse.headers);
     spaHeaders.set('X-Debug-Path', pathname);
+    spaHeaders.set('X-Worker-Version', WORKER_VERSION);
     return new Response(spaResponse.body, { status: spaResponse.status, headers: spaHeaders });
   },
 };
