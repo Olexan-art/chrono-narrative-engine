@@ -1609,6 +1609,188 @@ serve(async (req: Request) => {
         );
       }
 
+      case 'getBotVisitsStats': {
+        // Get bot visits for last 24 hours, grouped by bot type
+        const now = new Date();
+        const past24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        // Get hourly data for chart
+        const { data: hourlyData, error: hourlyError } = await supabase.rpc('get_bot_visits_hourly', {
+          start_time: past24h.toISOString(),
+          end_time: now.toISOString()
+        });
+
+        if (hourlyError) {
+          console.error('Error fetching hourly bot data:', hourlyError);
+          // Fallback: query directly
+          const { data: rawBots } = await supabase
+            .from('bot_visits')
+            .select('bot_type, bot_category, created_at')
+            .gte('created_at', past24h.toISOString())
+            .order('created_at', { ascending: true });
+
+          // Group by hour manually
+          const hourlyMap = new Map<string, any>();
+          (rawBots || []).forEach((v: any) => {
+            const hour = new Date(v.created_at).toISOString().substring(0, 13) + ':00:00.000Z';
+            if (!hourlyMap.has(hour)) {
+              hourlyMap.set(hour, { 
+                time: new Date(hour).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
+                googlebot: 0, 
+                bingbot: 0, 
+                ai_bots: 0, 
+                other_bots: 0 
+              });
+            }
+            const entry = hourlyMap.get(hour)!;
+            const botType = v.bot_type.toLowerCase();
+            
+            if (botType.includes('google')) entry.googlebot++;
+            else if (botType.includes('bing')) entry.bingbot++;
+            else if (v.bot_category === 'ai' || botType.includes('gpt') || botType.includes('claude') || botType.includes('anthropic')) entry.ai_bots++;
+            else entry.other_bots++;
+          });
+
+          const history = Array.from(hourlyMap.values());
+
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              stats: {
+                history,
+                total24h: rawBots?.length || 0
+              }
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            stats: {
+              history: hourlyData || [],
+              total24h: (hourlyData || []).reduce((sum: number, h: any) => 
+                sum + (h.googlebot || 0) + (h.bingbot || 0) + (h.ai_bots || 0) + (h.other_bots || 0), 0)
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'getUniqueVisitorsStats': {
+        const now = new Date();
+        const past24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const past7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        // Count unique visitors for news (entity_type = 'news')
+        const { count: newsCount24h } = await supabase
+          .from('view_visitors')
+          .select('visitor_id', { count: 'exact', head: true })
+          .eq('entity_type', 'news')
+          .gte('first_seen', past24h.toISOString());
+
+        const { count: newsCount7d } = await supabase
+          .from('view_visitors')
+          .select('visitor_id', { count: 'exact', head: true })
+          .eq('entity_type', 'news')
+          .gte('first_seen', past7d.toISOString());
+
+        // Count unique visitors for wiki entities
+        const { count: wikiCount24h } = await supabase
+          .from('view_visitors')
+          .select('visitor_id', { count: 'exact', head: true })
+          .eq('entity_type', 'wiki')
+          .gte('first_seen', past24h.toISOString());
+
+        const { count: wikiCount7d } = await supabase
+          .from('view_visitors')
+          .select('visitor_id', { count: 'exact', head: true })
+          .eq('entity_type', 'wiki')
+          .gte('first_seen', past7d.toISOString());
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            stats: {
+              news: {
+                h24: newsCount24h || 0,
+                d7: newsCount7d || 0
+              },
+              wiki: {
+                h24: wikiCount24h || 0,
+                d7: wikiCount7d || 0
+              }
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'getCloudflareAnalytics': {
+        // Cloudflare Analytics API integration
+        const CF_ACCOUNT_ID = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
+        const CF_API_TOKEN = Deno.env.get('CLOUDFLARE_API_TOKEN');
+        const CF_ZONE_ID = Deno.env.get('CLOUDFLARE_ZONE_ID');
+
+        if (!CF_ACCOUNT_ID || !CF_API_TOKEN || !CF_ZONE_ID) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Cloudflare credentials not configured',
+              stats: null
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        try {
+          // Get analytics for last 24 hours
+          const now = new Date();
+          const past24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+          const analyticsUrl = `https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/analytics/dashboard?since=${past24h.toISOString()}&until=${now.toISOString()}`;
+          
+          const response = await fetch(analyticsUrl, {
+            headers: {
+              'Authorization': `Bearer ${CF_API_TOKEN}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`Cloudflare API error: ${response.status}`);
+          }
+
+          const cfData = await response.json();
+
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              stats: {
+                requests: cfData.result?.totals?.requests?.all || 0,
+                bandwidth: cfData.result?.totals?.bandwidth?.all || 0,
+                threats: cfData.result?.totals?.threats?.all || 0,
+                pageviews: cfData.result?.totals?.pageviews?.all || 0,
+                uniques: cfData.result?.totals?.uniques?.all || 0,
+                timeseries: cfData.result?.timeseries || []
+              }
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error('Cloudflare Analytics error:', error);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: error instanceof Error ? error.message : 'Unknown error',
+              stats: null
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: 'Unknown action' }),

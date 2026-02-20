@@ -1,16 +1,19 @@
+import { useState, useEffect } from "react";
 import { LocalRetellPanel } from "@/components/admin/LocalRetellPanel";
+import { AdminLogin } from "@/components/AdminLogin";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
+import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ChevronLeft, Cpu } from "lucide-react";
 import { useAdminStore } from "@/stores/adminStore";
 
 const LocalRetellPage = () => {
-    const { password, isAuthenticated } = useAdminStore();
+    const { password, setPassword } = useAdminStore();
 
-    // Page is already protected by AdminGuard in routing, so we should have password
-    // But as a fallback, we check if we at least have authentication
-    const effectivePassword = password || (isAuthenticated ? 'authenticated' : '');
+    if (!password) {
+        return <AdminLogin onLogin={setPassword} />;
+    }
 
     return (
         <div className="min-h-screen bg-background text-foreground bg-grid-white/[0.02]">
@@ -35,7 +38,7 @@ const LocalRetellPage = () => {
                 </div>
 
                 <div className="cosmic-card-container">
-                    <LocalRetellPanel password={effectivePassword} />
+                    <LocalRetellPanel password={password} />
                 </div>
             </main>
         </div>

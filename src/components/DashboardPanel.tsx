@@ -41,6 +41,41 @@ export function DashboardPanel({ password }: Props) {
     }
   });
 
+  // Bot visits statistics
+  const { data: botVisits } = useQuery({
+    queryKey: ['bot-visits-stats'],
+    queryFn: async () => {
+      const resp = await callEdgeFunction('admin', { action: 'getBotVisitsStats', password }) as { success: boolean; stats?: any };
+      if (!resp.success) throw new Error('Failed to fetch bot visits');
+      return resp.stats;
+    },
+    refetchInterval: 15000,
+    enabled: !!password,
+  });
+
+  // Unique visitors statistics
+  const { data: uniqueVisitors } = useQuery({
+    queryKey: ['unique-visitors-stats'],
+    queryFn: async () => {
+      const resp = await callEdgeFunction('admin', { action: 'getUniqueVisitorsStats', password }) as { success: boolean; stats?: any };
+      if (!resp.success) throw new Error('Failed to fetch unique visitors');
+      return resp.stats;
+    },
+    refetchInterval: 30000,
+    enabled: !!password,
+  });
+
+  // Cloudflare analytics
+  const { data: cloudflareStats } = useQuery({
+    queryKey: ['cloudflare-analytics'],
+    queryFn: async () => {
+      const resp = await callEdgeFunction('admin', { action: 'getCloudflareAnalytics', password }) as { success: boolean; stats?: any };
+      return resp.stats;
+    },
+    refetchInterval: 60000,
+    enabled: !!password,
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -342,6 +377,211 @@ export function DashboardPanel({ password }: Props) {
           </CardContent>
         </Card>
       </div>
+
+      {/* 🤖 Bot Analytics & Unique Visitors */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Bot Visits Chart */}
+        <Card className="md:col-span-2 cosmic-card border-t-4 border-t-violet-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Activity className="w-5 h-5 text-violet-500" />
+              Бот візити (24 год)
+            </CardTitle>
+            <CardDescription>Google, Bing, AI боти та інші за годинами</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {botVisits?.history && (
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={botVisits.history}>
+                    <defs>
+                      <linearGradient id="colorGoogle" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#4285f4" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#4285f4" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorBing" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#00a4ef" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#00a4ef" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorAI" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#a78bfa" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorOther" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#94a3b8" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                    <XAxis 
+                      dataKey="time" 
+                      tickLine={false} 
+                      axisLine={false} 
+                      className="text-[10px]"
+                    />
+                    <YAxis tickLine={false} axisLine={false} className="text-xs" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(10, 10, 15, 0.95)', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        borderRadius: '8px' 
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="googlebot" 
+                      name="Google Bot" 
+                      stroke="#4285f4" 
+                      fill="url(#colorGoogle)" 
+                      strokeWidth={2}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="bingbot" 
+                      name="Bing Bot" 
+                      stroke="#00a4ef" 
+                      fill="url(#colorBing)" 
+                      strokeWidth={2}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="ai_bots" 
+                      name="AI Боти" 
+                      stroke="#a78bfa" 
+                      fill="url(#colorAI)" 
+                      strokeWidth={2}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="other_bots" 
+                      name="Інші" 
+                      stroke="#94a3b8" 
+                      fill="url(#colorOther)" 
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {!botVisits?.history && (
+              <div className="h-[280px] flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">Завантаження даних про ботів...</p>
+              </div>
+            )}
+            {botVisits?.total24h !== undefined && (
+              <div className="mt-4 pt-4 border-t border-muted-foreground/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Всього за 24 години:</span>
+                  <span className="text-lg font-bold font-mono text-violet-500">{botVisits.total24h.toLocaleString()}</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Unique Visitors Stats */}
+        <div className="space-y-4">
+          <Card className="cosmic-card border-t-4 border-t-cyan-500">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Users className="w-4 h-4 text-cyan-500" />
+                Унікальні відвідувачі — Новини
+              </CardTitle>
+              <CardDescription className="text-xs">Унікальні візити новин за періодами</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div>
+                  <div className="text-3xl font-bold font-mono text-cyan-500">
+                    {uniqueVisitors?.news?.h24?.toLocaleString() ?? '—'}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">за останні 24 години</div>
+                </div>
+                <div className="pt-3 border-t border-muted-foreground/10">
+                  <div className="text-2xl font-semibold font-mono">
+                    {uniqueVisitors?.news?.d7?.toLocaleString() ?? '—'}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">за останні 7 днів</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="cosmic-card border-t-4 border-t-amber-500">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Library className="w-4 h-4 text-amber-500" />
+                Унікальні відвідувачі — Wiki
+              </CardTitle>
+              <CardDescription className="text-xs">Унікальні візити wiki сторінок</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div>
+                  <div className="text-3xl font-bold font-mono text-amber-500">
+                    {uniqueVisitors?.wiki?.h24?.toLocaleString() ?? '—'}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">за останні 24 години</div>
+                </div>
+                <div className="pt-3 border-t border-muted-foreground/10">
+                  <div className="text-2xl font-semibold font-mono">
+                    {uniqueVisitors?.wiki?.d7?.toLocaleString() ?? '—'}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">за останні 7 днів</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* ☁️ Cloudflare Analytics */}
+      {cloudflareStats && (
+        <Card className="cosmic-card border-t-4 border-t-orange-500">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-orange-500" />
+              Cloudflare Analytics (24 год)
+            </CardTitle>
+            <CardDescription>Статистика CDN та безпеки від Cloudflare</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="p-4 rounded-lg bg-gradient-to-br from-orange-500/10 to-transparent border border-orange-500/20">
+                <div className="text-sm text-muted-foreground mb-1">Запити</div>
+                <div className="text-2xl font-bold font-mono text-orange-500">
+                  {cloudflareStats.requests?.toLocaleString() ?? '—'}
+                </div>
+              </div>
+              <div className="p-4 rounded-lg bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20">
+                <div className="text-sm text-muted-foreground mb-1">Трафік</div>
+                <div className="text-2xl font-bold font-mono text-blue-500">
+                  {cloudflareStats.bandwidth ? `${(cloudflareStats.bandwidth / 1024 / 1024 / 1024).toFixed(2)} GB` : '—'}
+                </div>
+              </div>
+              <div className="p-4 rounded-lg bg-gradient-to-br from-red-500/10 to-transparent border border-red-500/20">
+                <div className="text-sm text-muted-foreground mb-1">Загрози</div>
+                <div className="text-2xl font-bold font-mono text-red-500">
+                  {cloudflareStats.threats?.toLocaleString() ?? '—'}
+                </div>
+              </div>
+              <div className="p-4 rounded-lg bg-gradient-to-br from-green-500/10 to-transparent border border-green-500/20">
+                <div className="text-sm text-muted-foreground mb-1">Перегляди</div>
+                <div className="text-2xl font-bold font-mono text-green-500">
+                  {cloudflareStats.pageviews?.toLocaleString() ?? '—'}
+                </div>
+              </div>
+              <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/20">
+                <div className="text-sm text-muted-foreground mb-1">Унікальні</div>
+                <div className="text-2xl font-bold font-mono text-purple-500">
+                  {cloudflareStats.uniques?.toLocaleString() ?? '—'}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

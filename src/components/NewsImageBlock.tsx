@@ -7,6 +7,7 @@ import { callEdgeFunction } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { NewsLogoMosaic } from "@/components/NewsLogoMosaic";
 
 interface NewsImageBlockProps {
   imageUrl: string | null;
@@ -19,6 +20,7 @@ interface NewsImageBlockProps {
   hasRetelling: boolean;
   isAdmin: boolean;
   sourceUrl?: string;  // Original source URL for fallback logo
+  feedName?: string;   // Feed name for display
   onImageUpdate?: () => void;
 }
 
@@ -52,6 +54,7 @@ export function NewsImageBlock({
   hasRetelling,
   isAdmin,
   sourceUrl,
+  feedName,
   onImageUpdate
 }: NewsImageBlockProps) {
   const { language } = useLanguage();
@@ -361,16 +364,18 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
     }
 
     return (
-      <div className="relative border-2 border-dashed border-border rounded-lg p-8 mb-4 flex flex-col items-center justify-center gap-3 bg-muted/20">
+      <div className="relative mb-4">
         <FileInput />
-        <ImagePlus className="w-12 h-12 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground text-center">
-          {language === 'en' ? 'No image available' :
-            language === 'pl' ? 'Brak obrazu' :
-              'Зображення відсутнє'}
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          {isAdmin && (
+        <NewsLogoMosaic 
+          feedName={feedName}
+          sourceUrl={sourceUrl}
+          className="w-full min-h-[280px] sm:min-h-[320px] rounded-lg border border-border"
+          logoSize="lg"
+        />
+        
+        {/* Admin controls overlay */}
+        {isAdmin && (
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
             <Select value={selectedModel} onValueChange={setSelectedModel}>
               <SelectTrigger className="w-[180px] h-8 text-xs">
                 <Sparkles className="w-3 h-3 mr-1" />
@@ -384,41 +389,41 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
                 ))}
               </SelectContent>
             </Select>
-          )}
-          <StyleSelector />
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={handleGenerate}
-            disabled={isGenerating || isUploading}
-          >
-            {isGenerating ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <ImagePlus className="w-4 h-4" />
-            )}
-            {language === 'en' ? 'Generate' :
-              language === 'pl' ? 'Generuj' :
-                'Згенерувати (v2)'}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="gap-2"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isGenerating || isUploading}
-          >
-            {isUploading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Upload className="w-4 h-4" />
-            )}
-            {language === 'en' ? 'Upload' :
-              language === 'pl' ? 'Prześlij' :
-                'Завантажити'}
-          </Button>
-        </div>
+            <StyleSelector />
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={handleGenerate}
+              disabled={isGenerating || isUploading}
+            >
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ImagePlus className="w-4 h-4" />
+              )}
+              {language === 'en' ? 'Generate' :
+                language === 'pl' ? 'Generuj' :
+                  'Згенерувати (v2)'}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-2"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isGenerating || isUploading}
+            >
+              {isUploading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              {language === 'en' ? 'Upload' :
+                language === 'pl' ? 'Prześlij' :
+                  'Завантажити'}
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
@@ -435,24 +440,16 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
           const target = e.target as HTMLImageElement;
           target.style.display = 'none';
           const fallback = target.parentElement?.querySelector('.image-fallback');
-          if (fallback) (fallback as HTMLElement).style.display = 'flex';
+          if (fallback) (fallback as HTMLElement).style.display = 'block';
         }}
       />
-      <div className="image-fallback hidden w-full min-h-[200px] sm:min-h-[280px] bg-gradient-to-br from-primary/5 via-card to-muted/30 rounded-xl border-2 border-dashed border-primary/20 flex-col items-center justify-center gap-5 shadow-lg">
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl scale-[3]" />
-          <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-card/80 border border-border/50 flex items-center justify-center shadow-xl relative z-10">
-            <img
-              src={getSourceLogo()}
-              alt={getSourceDomain() || "Source"}
-              className="w-16 h-16 sm:w-20 sm:h-20 opacity-90"
-              onError={(e) => { (e.target as HTMLImageElement).src = '/favicon.png'; }}
-            />
-          </div>
-        </div>
-        {getSourceDomain() && (
-          <span className="text-base sm:text-lg text-primary font-mono tracking-wide">{getSourceDomain()}</span>
-        )}
+      <div className="image-fallback hidden w-full">
+        <NewsLogoMosaic 
+          feedName={feedName}
+          sourceUrl={sourceUrl}
+          className="w-full min-h-[200px] sm:min-h-[280px] rounded-lg border border-border"
+          logoSize="lg"
+        />
       </div>
 
       {/* Full retelling badge */}

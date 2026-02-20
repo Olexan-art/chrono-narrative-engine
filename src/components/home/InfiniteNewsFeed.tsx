@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { NewsVoteCompact } from "@/components/NewsVoteBlock";
+import { NewsLogoMosaic } from "@/components/NewsLogoMosaic";
 
 const DEFAULT_PAGE_SIZE = 40;
 
@@ -21,11 +22,15 @@ interface NewsItem {
   description: string | null;
   description_en: string | null;
   image_url: string | null;
+  url: string;
   published_at: string | null;
   slug: string | null;
   category: string | null;
   likes: number;
   dislikes: number;
+  news_rss_feeds?: {
+    name: string;
+  };
   country: {
     id: string;
     code: string;
@@ -77,12 +82,14 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
           title_en,
           description,
           description_en,
-          image_url, 
+          image_url,
+          url,
           published_at, 
           slug,
           category,
           likes,
           dislikes,
+          news_rss_feeds(name),
           country:news_countries(id, code, name, name_en, flag)
         `, { count: 'exact' })
         .not('slug', 'is', null)
@@ -231,9 +238,12 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
                       />
                     ) : null}
                     {(!item.image_url) && (
-                      <div className="w-full h-full bg-gradient-to-br from-muted/30 via-muted/10 to-muted/30 flex items-center justify-center">
-                        <Newspaper className="w-10 h-10 text-muted-foreground/30" />
-                      </div>
+                      <NewsLogoMosaic 
+                        feedName={item.news_rss_feeds?.name}
+                        sourceUrl={item.url}
+                        className="w-full h-full"
+                        logoSize="md"
+                      />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
                     <div className="absolute top-2 left-2 flex items-center gap-1">

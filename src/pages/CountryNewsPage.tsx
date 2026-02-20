@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
 import { OtherCountriesNews } from "@/components/OtherCountriesNews";
+import { NewsLogoMosaic } from "@/components/NewsLogoMosaic";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -394,12 +395,22 @@ export default function CountryNewsPage() {
                           </div>
                         )}
                       </div>
-                    ) : isRetold && (
-                      <div className="px-4 pt-4">
-                        <Badge className="bg-primary/90 text-primary-foreground gap-1">
-                          <Sparkles className="w-3 h-3" />
-                          Full retelling
-                        </Badge>
+                    ) : (
+                      <div className="relative aspect-video overflow-hidden">
+                        <NewsLogoMosaic 
+                          feedName={item.news_rss_feeds?.name}
+                          sourceUrl={item.url}
+                          className="w-full h-full"
+                          logoSize="md"
+                        />
+                        {isRetold && (
+                          <div className="absolute top-2 left-2">
+                            <Badge className="bg-primary/90 text-primary-foreground gap-1">
+                              <Sparkles className="w-3 h-3" />
+                              Full retelling
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                     )}
                     <CardHeader className="pb-2">

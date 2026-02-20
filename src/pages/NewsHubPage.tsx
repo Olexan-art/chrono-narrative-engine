@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
 import { NewsHubSeoContent } from "@/components/NewsHubSeoContent";
+import { NewsLogoMosaic } from "@/components/NewsLogoMosaic";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -28,9 +29,13 @@ interface NewsItem {
   description_en: string | null;
   content_en: string | null;
   image_url: string | null;
+  url: string;
   published_at: string | null;
   slug: string | null;
   category: string | null;
+  news_rss_feeds: {
+    name: string;
+  };
 }
 
 interface CountryWithNews {
@@ -73,7 +78,8 @@ export default function NewsHubPage() {
           .from('news_rss_items')
           .select(`
             id, title, title_en, description, description_en, content_en,
-            image_url, published_at, slug, category
+            image_url, url, published_at, slug, category,
+            news_rss_feeds(name)
           `)
           .eq('country_id', country.id)
           .eq('is_archived', false)
@@ -209,7 +215,7 @@ export default function NewsHubPage() {
                                   : 'border-border/50 hover:border-primary/50 hover:bg-primary/5'
                                 }`}
                             >
-                              {item.image_url && (
+                              {item.image_url ? (
                                 <img
                                   src={item.image_url}
                                   alt={language === 'en' ? (item.title_en || item.title) : item.title}
@@ -218,6 +224,15 @@ export default function NewsHubPage() {
                                   className="w-16 h-16 object-cover rounded shrink-0"
                                   loading="lazy"
                                 />
+                              ) : (
+                                <div className="w-16 h-16 shrink-0 rounded overflow-hidden">
+                                  <NewsLogoMosaic
+                                    feedName={item.news_rss_feeds?.name}
+                                    sourceUrl={item.url}
+                                    className="w-full h-full"
+                                    logoSize="sm"
+                                  />
+                                </div>
                               )}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 mb-1">

@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { NewsVoteCompact } from "@/components/NewsVoteBlock";
+import { NewsLogoMosaic } from "@/components/NewsLogoMosaic";
 
 interface LatestUsaNewsSimpleProps {
   excludeIds?: string[];
@@ -39,13 +40,15 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
           title_en,
           description,
           description_en,
-          image_url, 
+          image_url,
+          url,
           published_at, 
           slug,
           category,
           content_en,
           likes,
-          dislikes
+          dislikes,
+          news_rss_feeds(name)
         `)
         .eq('country_id', usaCountry.id)
         .not('slug', 'is', null)
@@ -132,9 +135,12 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
                   />
                 ) : null}
                 {(!item.image_url) && (
-                  <div className="w-16 h-16 shrink-0 rounded bg-gradient-to-br from-primary/10 to-muted/50 flex items-center justify-center border border-border/50">
-                    <Newspaper className="w-6 h-6 text-muted-foreground/60" />
-                  </div>
+                  <NewsLogoMosaic 
+                    feedName={(item as any).news_rss_feeds?.name}
+                    sourceUrl={(item as any).url}
+                    className="w-16 h-16 shrink-0 rounded"
+                    logoSize="sm"
+                  />
                 )}
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">

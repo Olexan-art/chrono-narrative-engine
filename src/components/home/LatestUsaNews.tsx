@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { NewsLogoMosaic } from "@/components/NewsLogoMosaic";
 export const LatestUsaNews = memo(function LatestUsaNews() {
   const { t, language } = useLanguage();
   const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
@@ -34,10 +35,12 @@ export const LatestUsaNews = memo(function LatestUsaNews() {
           content_en,
           description,
           description_en,
-          image_url, 
+          image_url,
+          url,
           published_at, 
           slug,
-          category
+          category,
+          news_rss_feeds(name)
         `)
         .eq('country_id', usaCountry.id)
         .not('content_en', 'is', null)
@@ -108,9 +111,12 @@ export const LatestUsaNews = memo(function LatestUsaNews() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                         ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-primary/10 via-primary/5 to-primary/10 flex items-center justify-center">
-                            <Sparkles className="w-8 h-8 text-primary/30" />
-                          </div>
+                          <NewsLogoMosaic 
+                            feedName={(item as any).news_rss_feeds?.name}
+                            sourceUrl={(item as any).url}
+                            className="w-full h-full"
+                            logoSize="sm"
+                          />
                         )}
                       </div>
                       <div className="p-3 flex-1 min-w-0 flex flex-col">
