@@ -253,12 +253,21 @@ export default function CountryNewsPage() {
     ? `Najnowsze wiadomości z ${countryName} z AI-streszczeniami i dialogami postaci`
     : `Останні новини з ${countryName} з AI-переказом та діалогами персонажів`;
 
+  // Build canonical URL with category filter if selected
+  const getCanonicalUrl = () => {
+    const baseUrl = `https://bravennow.com/news/${countryCode?.toLowerCase()}`;
+    if (selectedCategory && selectedCategory !== 'all') {
+      return `${baseUrl}?category=${selectedCategory}`;
+    }
+    return baseUrl;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <SEOHead
         title={pageTitle}
         description={pageDescription}
-        canonicalUrl={`https://bravennow.com/news/${countryCode?.toLowerCase()}`}
+        canonicalUrl={getCanonicalUrl()}
       />
       <Header />
       
