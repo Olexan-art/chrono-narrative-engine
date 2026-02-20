@@ -97,6 +97,13 @@ export function NewsAnalysisBlock({ newsId, newsTitle, newsContent, className = 
     return null;
   }
 
+  // Debug info for development
+  console.log('[NewsAnalysisBlock]', { 
+    hasAnalysis: !!analysisData, 
+    isAdmin, 
+    newsId 
+  });
+
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Admin generation controls */}
