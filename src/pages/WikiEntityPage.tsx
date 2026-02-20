@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
@@ -186,6 +186,17 @@ export default function WikiEntityPage() {
   const [infoCardSources, setInfoCardSources] = useState<{ title: string; url: string }[]>([]);
   const [isGeneratingInfoCard, setIsGeneratingInfoCard] = useState(false);
   const [selectedInfoCardModel, setSelectedInfoCardModel] = useState(ZAI_MODELS.find(m => m.value === 'GLM-4.5-Air')?.value || ZAI_MODELS.find(m => m.value === 'GLM-4.7-Flash')?.value || ZAI_MODELS[0]?.value || '');
+
+  // Load persisted info card from entity.raw_data
+  useEffect(() => {
+    if (entity?.raw_data) {
+      const raw = entity.raw_data as Record<string, unknown>;
+      if (typeof raw.info_card_content === 'string' && raw.info_card_content) {
+        setInfoCardContent(raw.info_card_content);
+        setInfoCardSources((raw.info_card_sources as { title: string; url: string }[]) || []);
+      }
+    }
+  }, [entity?.id]);
   const queryClient = useQueryClient();
 
   // Fetch LLM availability
@@ -989,6 +1000,13 @@ export default function WikiEntityPage() {
       if (result.success && result.content) {
         setInfoCardContent(result.content);
         setInfoCardSources(result.sources || []);
+        // Persist to DB in raw_data so all users see the generated card
+        const updatedRawData = {
+          ...(entity.raw_data as Record<string, unknown> || {}),
+          info_card_content: result.content,
+          info_card_sources: result.sources || [],
+        };
+        await supabase.from('wiki_entities').update({ raw_data: updatedRawData }).eq('id', entity.id);
         toast.success(language === 'uk' ? 'Картку згенеровано' : 'Card generated');
       } else {
         throw new Error(result.error || 'Generation failed');
