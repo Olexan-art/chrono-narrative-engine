@@ -76,10 +76,14 @@ export function NewsAnalysisBlock({ newsId, newsTitle, newsContent, className = 
     },
     onError: (error) => {
       console.error('Error generating analysis:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Full error:', errorMessage);
+      
       toast.error(
-        language === 'en' ? 'Failed to generate analysis' :
-        language === 'pl' ? 'Nie udało się wygenerować analizy' :
-        'Помилка генерації аналізу'
+        language === 'en' ? `Failed to generate analysis: ${errorMessage}` :
+        language === 'pl' ? `Nie udało się wygenerować analizy: ${errorMessage}` :
+        `Помилка генерації аналізу: ${errorMessage}`,
+        { duration: 8000 } // Show longer for debugging
       );
     },
   });

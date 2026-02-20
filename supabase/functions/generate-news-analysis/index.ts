@@ -77,6 +77,7 @@ ${newsContent}
 Provide comprehensive analysis in JSON format as specified.`;
 
     // Call LLM
+    console.log(`Calling LLM with model: ${model}`);
     const analysisText = await callLLM(
       supabase,
       settingsData,
@@ -84,6 +85,7 @@ Provide comprehensive analysis in JSON format as specified.`;
       userPrompt,
       model
     );
+    console.log(`LLM response length: ${analysisText.length} chars`);
 
     // Parse JSON response
     let analysis: NewsAnalysis;
@@ -91,10 +93,12 @@ Provide comprehensive analysis in JSON format as specified.`;
       // Try to extract JSON from markdown code block if present
       const jsonMatch = analysisText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
       const jsonText = jsonMatch ? jsonMatch[1] : analysisText;
+      console.log(`Parsing JSON (${jsonText.length} chars)`);
       analysis = JSON.parse(jsonText.trim());
+      console.log('JSON parsed successfully');
     } catch (parseError) {
-      console.error('Failed to parse LLM response as JSON:', analysisText);
-      throw new Error('LLM response is not valid JSON');
+      console.error('Failed to parse LLM response as JSON:', analysisText.substring(0, 500));
+      throw new Error(`LLM response is not valid JSON: ${parseError instanceof Error ? parseError.message : 'Parse error'}`);
     }
 
     // Validate structure
@@ -128,8 +132,16 @@ Provide comprehensive analysis in JSON format as specified.`;
 
   } catch (error) {
     console.error('Error in generate-news-analysis:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('Error stack:', errorStack);
+    
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: errorMessage,
+        details: errorStack?.split('\n').slice(0, 3).join('\n') // First 3 lines of stack
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -164,6 +176,12 @@ async function callLLM(
   }
 
   console.log(`Calling LLM: provider=${provider}, model=${model}`);
+
+  if (!apiKey) {
+    throw new Error(`API key not configured for provider: ${provider}. Please configure ${provider.toUpperCase()}_API_KEY in Supabase Edge Function secrets or llm_settings table.`);
+  }
+
+  console.log(`API key found for ${provider}: ${apiKey.substring(0, 10)}...`);
 
   // Gemini v2.2
   if (provider === 'gemini') {
