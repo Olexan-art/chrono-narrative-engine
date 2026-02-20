@@ -974,7 +974,7 @@ export default function WikiEntityPage() {
       const result = await callEdgeFunction<{ success: boolean; content?: string; sources?: { title: string; url: string }[]; error?: string }>('search-wiki', {
         action: 'generate_info_card',
         entityName: entity.name,
-        entityExtract: entity.extract || entity.extract_en || '',
+        entityExtract: (entity.extract || entity.extract_en || '').slice(0, 10000),
         entityDescription: entity.description || entity.description_en || '',
         entityType: entity.entity_type,
         wikiUrl: entity.wiki_url,
