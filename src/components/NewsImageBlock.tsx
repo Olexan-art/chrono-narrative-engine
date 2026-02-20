@@ -305,64 +305,8 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
     </Select>
   );
 
-  // Helper to get source favicon/logo
-  const getSourceLogo = () => {
-    if (!sourceUrl) return '/favicon.png';
-    try {
-      const url = new URL(sourceUrl);
-      return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=128`;
-    } catch {
-      return '/favicon.png';
-    }
-  };
-
-  // Helper to get source domain name
-  const getSourceDomain = () => {
-    if (!sourceUrl) return null;
-    try {
-      const url = new URL(sourceUrl);
-      return url.hostname.replace('www.', '');
-    } catch {
-      return null;
-    }
-  };
-
-  // No image - show source logo for non-admins, generate/upload buttons for admin
+  // No image - show NewsLogoMosaic for all users
   if (!imageUrl) {
-    // For non-admins, show source logo as fallback with better styling
-    if (!isAdmin) {
-      const domain = getSourceDomain();
-      return (
-        <div className="relative mb-6">
-          <div className="w-full min-h-[200px] sm:min-h-[280px] bg-gradient-to-br from-primary/5 via-card to-muted/30 rounded-xl border-2 border-dashed border-primary/20 flex flex-col items-center justify-center gap-5 shadow-lg">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl scale-[3]" />
-              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-card/80 border border-border/50 flex items-center justify-center shadow-xl relative z-10">
-                <img
-                  src={getSourceLogo()}
-                  alt={domain || "Source"}
-                  className="w-16 h-16 sm:w-20 sm:h-20 opacity-90 hover:opacity-100 transition-opacity"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/favicon.png';
-                  }}
-                />
-              </div>
-            </div>
-            {domain && (
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-sm sm:text-base text-foreground/70 font-medium">
-                  {language === 'en' ? 'Source' : language === 'pl' ? 'Źródło' : 'Джерело'}
-                </span>
-                <span className="text-base sm:text-lg text-primary font-mono tracking-wide">
-                  {domain}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="relative mb-4">
         <FileInput />
