@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from "react";
+import { getLogoUrl, getFallbackLogoUrl } from "@/lib/getLogoUrl";
 
 interface NewsLogoMosaicProps {
   feedName?: string;
@@ -40,17 +41,38 @@ export function NewsLogoMosaic({
     }
   }, [sourceUrl, feedName]);
 
-  // Get logo URL using Google's favicon service
-  const logoUrl = useMemo(() => {
-    if (!sourceUrl) return '/favicon.png';
+  // Logo URLs: Clearbit (256px) with Google S2 favicon as fallback
+  const logoUrls = useMemo(() => {
+    if (!sourceUrl) return { primary: '/favicon.png', fallback: '/favicon.png' };
     try {
       const url = new URL(sourceUrl);
       const domain = url.hostname;
-      return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+      return {
+        primary: getLogoUrl(domain, 256),
+        fallback: getFallbackLogoUrl(domain, 128),
+      };
     } catch {
-      return '/favicon.png';
+      return { primary: '/favicon.png', fallback: '/favicon.png' };
     }
   }, [sourceUrl]);
+
+  const [logoSrc, setLogoSrc] = useState(logoUrls.primary);
+
+  // Reset logo when sourceUrl changes
+  useEffect(() => {
+    setLogoSrc(logoUrls.primary);
+  }, [logoUrls.primary]);
+
+  const handleLogoError = () => {
+    if (logoSrc === logoUrls.primary) {
+      setLogoSrc(logoUrls.fallback);
+    } else {
+      setLogoSrc('/favicon.png');
+    }
+  };
+
+  // Keep logoUrl alias for background mosaic instances
+  const logoUrl = logoSrc;
 
   // Generate gradient colors based on domain name - using blue tones
   const gradientColors = useMemo(() => {
@@ -283,12 +305,12 @@ export function NewsLogoMosaic({
             }`}
           >
             <img
-              src={logoUrl}
+              src={logoSrc}
               alt={sourceDomain}
-              className={`${sizes.logo} opacity-90 drop-shadow-lg transition-transform duration-300 ${
+              className={`${sizes.logo} opacity-90 drop-shadow-lg transition-transform duration-300 object-contain ${
                 isHovered ? 'scale-110' : 'scale-100'
               }`}
-              onError={(e) => { (e.target as HTMLImageElement).src = '/favicon.png'; }}
+              onError={handleLogoError}
             />
           </div>
         </div>

@@ -378,10 +378,11 @@ export default function CountryNewsPage() {
                         <img
                           src={item.image_url}
                           alt={localizedTitle}
-                          width={400}
-                          height={225}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          width={640}
+                          height={360}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           loading="lazy"
+                          decoding="async"
                           onError={(e) => {
                             (e.target as HTMLImageElement).style.display = 'none';
                           }}

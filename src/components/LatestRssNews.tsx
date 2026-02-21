@@ -72,18 +72,23 @@ export function LatestRssNews() {
             >
               <article className="flex gap-3 p-2 rounded-lg border border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200">
                 {news.image_url ? (
-                  <img 
-                    src={news.image_url} 
-                    alt="" 
-                    className="w-16 h-16 object-cover rounded shrink-0"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                      const fallback = (e.target as HTMLImageElement).nextElementSibling;
-                      if (fallback) (fallback as HTMLElement).style.display = 'flex';
-                    }}
-                  />
+                  <div className="w-24 shrink-0 rounded overflow-hidden" style={{ aspectRatio: '4/3' }}>
+                    <img 
+                      src={news.image_url} 
+                      alt="" 
+                      className="w-full h-full object-cover"
+                      decoding="async"
+                      loading="lazy"
+                      onError={(e) => {
+                        const wrap = (e.target as HTMLImageElement).closest('div')!;
+                        wrap.style.display = 'none';
+                        const fallback = wrap.nextElementSibling;
+                        if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                      }}
+                    />
+                  </div>
                 ) : null}
-                <div className={`w-16 h-16 shrink-0 rounded bg-gradient-to-br from-primary/10 to-muted/50 items-center justify-center border border-border/50 ${news.image_url ? 'hidden' : 'flex'}`}>
+                <div className={`w-24 shrink-0 rounded bg-gradient-to-br from-primary/10 to-muted/50 items-center justify-center border border-border/50 ${news.image_url ? 'hidden' : 'flex'}`} style={{ aspectRatio: '4/3' }}>
                   <Newspaper className="w-6 h-6 text-muted-foreground/60" />
                 </div>
                 <div className="flex-1 min-w-0">

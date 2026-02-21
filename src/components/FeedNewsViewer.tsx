@@ -94,19 +94,23 @@ export function FeedNewsViewer({ feedId, feedName, isOpen, onClose }: FeedNewsVi
                     className="flex gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
                   >
                     {item.image_url ? (
-                      <img 
-                        src={item.image_url} 
-                        alt="" 
-                        className="w-20 h-20 object-cover rounded-md flex-shrink-0"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          const fallback = target.nextElementSibling;
-                          if (fallback) (fallback as HTMLElement).style.display = 'flex';
-                        }}
-                      />
+                      <div className="w-32 flex-shrink-0 rounded-md overflow-hidden" style={{ aspectRatio: '16/10' }}>
+                        <img 
+                          src={item.image_url} 
+                          alt="" 
+                          className="w-full h-full object-cover"
+                          decoding="async"
+                          loading="lazy"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.closest('div')!.style.display = 'none';
+                            const fallback = target.closest('div')!.nextElementSibling;
+                            if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                          }}
+                        />
+                      </div>
                     ) : null}
-                    <div className={`w-20 h-20 bg-muted rounded-md items-center justify-center flex-shrink-0 ${item.image_url ? 'hidden' : 'flex'}`}>
+                    <div className={`w-32 flex-shrink-0 rounded-md bg-muted items-center justify-center ${item.image_url ? 'hidden' : 'flex'}`} style={{ aspectRatio: '16/10' }}>
                       <ImageIcon className="w-6 h-6 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0 space-y-1">

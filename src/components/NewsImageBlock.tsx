@@ -378,7 +378,10 @@ Style: ${styleConfig.prompt}. High quality, 16:9 aspect ratio.`;
       <img
         src={imageUrl}
         alt=""
-        className="w-full h-auto max-h-96 object-cover rounded-lg border border-border"
+        className="w-full h-auto max-h-[520px] object-cover rounded-lg border border-border shadow-md"
+        decoding="async"
+        fetchPriority="high"
+        style={{ objectPosition: 'center top' }}
         onError={(e) => {
           // Replace broken image with source logo fallback
           const target = e.target as HTMLImageElement;
