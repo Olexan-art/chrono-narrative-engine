@@ -80,6 +80,19 @@ serve(async (req) => {
         });
     }
 
+    // Log each view to entity_views for detailed analytics
+    try {
+      await supabase
+        .from('entity_views')
+        .insert({
+          entity_type: entityType,
+          entity_id: entityId,
+          visitor_id: visitorId
+        });
+    } catch (err) {
+      console.error('entity_views logging failed:', err);
+    }
+
     // Handle unique visitor tracking when visitorId is provided
     if (visitorId) {
       try {
@@ -107,6 +120,7 @@ serve(async (req) => {
       } catch (err) {
         console.error('Unique visitor tracking failed:', err);
       }
+    }
 
     console.log(`Tracked view: ${entityType} ${entityId}`);
 

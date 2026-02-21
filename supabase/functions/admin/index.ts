@@ -1610,68 +1610,113 @@ serve(async (req: Request) => {
       }
 
       case 'getBotVisitsStats': {
-        // Get bot visits for last 24 hours, grouped by bot type
+        // Get bot visits for specified time range
         const now = new Date();
-        const past24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const { timeRange = '24h' } = body || {};
+        
+        let pastDate: Date;
+        let groupByDay = false;
+        
+        switch (timeRange) {
+          case '7d':
+            pastDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            groupByDay = true;
+            break;
+          case '30d':
+            pastDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            groupByDay = true;
+            break;
+          case '24h':
+          default:
+            pastDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            groupByDay = false;
+        }
 
-        // Get hourly data for chart
-        const { data: hourlyData, error: hourlyError } = await supabase.rpc('get_bot_visits_hourly', {
-          start_time: past24h.toISOString(),
-          end_time: now.toISOString()
+        // Get all bot visits for detailed stats
+        const { data: allBots } = await supabase
+          .from('bot_visits')
+          .select('bot_type, bot_category, created_at, response_time_ms, status_code')
+          .gte('created_at', pastDate.toISOString())
+          .order('created_at', { ascending: true });
+
+        // Group by hour or day
+        const periodMap = new Map<string, any>();
+        const responseTimesByBot: Record<string, number[]> = {
+          googlebot: [],
+          bingbot: [],
+          ai_bots: [],
+          other_bots: []
+        };
+
+        (allBots || []).forEach((v: any) => {
+          let period: string;
+          let timeLabel: string;
+          
+          if (groupByDay) {
+            period = new Date(v.created_at).toISOString().substring(0, 10);
+            timeLabel = new Date(period).toLocaleDateString('uk-UA', { month: 'short', day: 'numeric' });
+          } else {
+            period = new Date(v.created_at).toISOString().substring(0, 13) + ':00:00.000Z';
+            timeLabel = new Date(period).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+          }
+          
+          if (!periodMap.has(period)) {
+            periodMap.set(period, { 
+              time: timeLabel,
+              googlebot: 0, 
+              bingbot: 0, 
+              ai_bots: 0, 
+              other_bots: 0 
+            });
+          }
+          const entry = periodMap.get(period)!;
+          const botType = v.bot_type.toLowerCase();
+          
+          let botCategory = 'other_bots';
+          if (botType.includes('google')) {
+            entry.googlebot++;
+            botCategory = 'googlebot';
+          } else if (botType.includes('bing')) {
+            entry.bingbot++;
+            botCategory = 'bingbot';
+          } else if (v.bot_category === 'ai' || botType.includes('gpt') || botType.includes('claude') || botType.includes('anthropic')) {
+            entry.ai_bots++;
+            botCategory = 'ai_bots';
+          } else {
+            entry.other_bots++;
+          }
+
+          // Collect response times
+          if (v.response_time_ms && v.response_time_ms > 0) {
+            responseTimesByBot[botCategory].push(v.response_time_ms);
+          }
         });
 
-        if (hourlyError) {
-          console.error('Error fetching hourly bot data:', hourlyError);
-          // Fallback: query directly
-          const { data: rawBots } = await supabase
-            .from('bot_visits')
-            .select('bot_type, bot_category, created_at')
-            .gte('created_at', past24h.toISOString())
-            .order('created_at', { ascending: true });
+        const history = Array.from(periodMap.values());
 
-          // Group by hour manually
-          const hourlyMap = new Map<string, any>();
-          (rawBots || []).forEach((v: any) => {
-            const hour = new Date(v.created_at).toISOString().substring(0, 13) + ':00:00.000Z';
-            if (!hourlyMap.has(hour)) {
-              hourlyMap.set(hour, { 
-                time: new Date(hour).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
-                googlebot: 0, 
-                bingbot: 0, 
-                ai_bots: 0, 
-                other_bots: 0 
-              });
-            }
-            const entry = hourlyMap.get(hour)!;
-            const botType = v.bot_type.toLowerCase();
-            
-            if (botType.includes('google')) entry.googlebot++;
-            else if (botType.includes('bing')) entry.bingbot++;
-            else if (v.bot_category === 'ai' || botType.includes('gpt') || botType.includes('claude') || botType.includes('anthropic')) entry.ai_bots++;
-            else entry.other_bots++;
-          });
+        // Calculate average response times
+        const avgResponseTimes = Object.entries(responseTimesByBot).map(([bot, times]) => ({
+          bot: bot === 'googlebot' ? 'Google Bot' : 
+               bot === 'bingbot' ? 'Bing Bot' :
+               bot === 'ai_bots' ? 'AI Боти' : 'Інші',
+          avgTime: times.length > 0 ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : 0,
+          count: times.length
+        })).filter(x => x.count > 0);
 
-          const history = Array.from(hourlyMap.values());
-
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
-              stats: {
-                history,
-                total24h: rawBots?.length || 0
-              }
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+        // Calculate success rate
+        const successfulRequests = (allBots || []).filter((b: any) => b.status_code === 200).length;
+        const totalRequests = allBots?.length || 0;
+        const successRate = totalRequests > 0 ? Math.round((successfulRequests / totalRequests) * 100) : 100;
 
         return new Response(
           JSON.stringify({ 
             success: true, 
             stats: {
-              history: hourlyData || [],
-              total24h: (hourlyData || []).reduce((sum: number, h: any) => 
-                sum + (h.googlebot || 0) + (h.bingbot || 0) + (h.ai_bots || 0) + (h.other_bots || 0), 0)
+              history,
+              totalRequests,
+              avgResponseTimes,
+              successRate,
+              timeRange
             }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -1721,6 +1766,154 @@ serve(async (req: Request) => {
                 h24: wikiCount24h || 0,
                 d7: wikiCount7d || 0
               }
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'getPageViewsHourly': {
+        const now = new Date();
+        const past24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        // Try entity_views first, fallback to view_visitors
+        let { data: views, error } = await supabase
+          .from('entity_views')
+          .select('entity_type, created_at')
+          .gte('created_at', past24h.toISOString())
+          .order('created_at', { ascending: true });
+
+        // If entity_views doesn't exist or is empty, use view_visitors
+        if (error || !views || views.length === 0) {
+          const { data: visitorViews, error: visitorError } = await supabase
+            .from('view_visitors')
+            .select('entity_type, first_seen')
+            .gte('first_seen', past24h.toISOString())
+            .order('first_seen', { ascending: true });
+          
+          if (!visitorError && visitorViews) {
+            // Map view_visitors to same format
+            views = visitorViews.map((v: any) => ({ 
+              entity_type: v.entity_type, 
+              created_at: v.first_seen 
+            }));
+          }
+        }
+
+        if (error && (!views || views.length === 0)) {
+          console.error('Error fetching page views:', error);
+        }
+
+        // Group by hour
+        const hourlyMap = new Map<string, any>();
+        (views || []).forEach((v: any) => {
+          const hour = new Date(v.created_at).toISOString().substring(0, 13) + ':00:00.000Z';
+          if (!hourlyMap.has(hour)) {
+            hourlyMap.set(hour, { 
+              time: new Date(hour).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
+              news: 0, 
+              wiki: 0,
+              total: 0
+            });
+          }
+          const entry = hourlyMap.get(hour)!;
+          if (v.entity_type === 'news') entry.news++;
+          else if (v.entity_type === 'wiki') entry.wiki++;
+          entry.total++;
+        });
+
+        const history = Array.from(hourlyMap.values());
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            stats: {
+              history,
+              total24h: views?.length || 0
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'getUniqueVisitorsHourly': {
+        const now = new Date();
+        const past24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        // Get all visitor records from last 24h
+        const { data: visitors, error } = await supabase
+          .from('view_visitors')
+          .select('visitor_id, entity_type, first_seen')
+          .gte('first_seen', past24h.toISOString())
+          .order('first_seen', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching unique visitors:', error);
+          return new Response(
+            JSON.stringify({ success: false, error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          );
+        }
+
+        // Group by hour, tracking unique visitor_ids per hour
+        const hourlyMap = new Map<string, Set<string>>();
+        (visitors || []).forEach((v: any) => {
+          const hour = new Date(v.first_seen).toISOString().substring(0, 13) + ':00:00.000Z';
+          if (!hourlyMap.has(hour)) {
+            hourlyMap.set(hour, new Set());
+          }
+          hourlyMap.get(hour)!.add(v.visitor_id);
+        });
+
+        const history = Array.from(hourlyMap.entries()).map(([hour, visitorSet]) => ({
+          time: new Date(hour).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
+          visitors: visitorSet.size
+        }));
+
+        // Sort by time
+        history.sort((a, b) => a.time.localeCompare(b.time));
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            stats: {
+              history,
+              total24h: new Set(visitors?.map((v: any) => v.visitor_id)).size || 0
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'getTopTrafficCountries': {
+        const now = new Date();
+        const past24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        // Get bot visits by country
+        const { data: botByCountry } = await supabase
+          .from('bot_visits')
+          .select('ip_country')
+          .gte('created_at', past24h.toISOString());
+
+        // Count by country
+        const countryMap = new Map<string, number>();
+        (botByCountry || []).forEach((v: any) => {
+          const country = v.ip_country || 'Unknown';
+          countryMap.set(country, (countryMap.get(country) || 0) + 1);
+        });
+
+        // Sort and get top 10
+        const topCountries = Array.from(countryMap.entries())
+          .map(([country, count]) => ({ country, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10);
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            stats: {
+              countries: topCountries,
+              total: botByCountry?.length || 0
             }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

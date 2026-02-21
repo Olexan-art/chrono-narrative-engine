@@ -69,8 +69,7 @@ export function BotVisitsPanel({ password }: { password: string }) {
         .select('*')
         .gte('created_at', getTimeRangeDate())
         .eq('status_code', 200) // Only successful requests
-        .order('created_at', { ascending: false })
-        .limit(1000);
+        .order('created_at', { ascending: false });
 
       if (categoryFilter !== 'all') {
         query = query.eq('bot_category', categoryFilter);

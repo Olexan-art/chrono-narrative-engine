@@ -1,7 +1,9 @@
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Loader2, BookOpen, FileText, Users, Globe, TrendingUp, Eye,
   Sparkles, Clock, ShieldCheck, Activity,
@@ -12,7 +14,7 @@ import { uk } from "date-fns/locale";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, Legend, RadarChart,
-  PolarGrid, PolarAngleAxis, Radar
+  PolarGrid, PolarAngleAxis, Radar, Cell
 } from "recharts";
 import { callEdgeFunction } from "@/lib/api";
 
@@ -21,6 +23,8 @@ interface Props {
 }
 
 export function DashboardPanel({ password }: Props) {
+  const [botVisitsTimeRange, setBotVisitsTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
+  
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ['dashboard-stats-unified-refined'],
     queryFn: async () => {
@@ -43,9 +47,13 @@ export function DashboardPanel({ password }: Props) {
 
   // Bot visits statistics
   const { data: botVisits } = useQuery({
-    queryKey: ['bot-visits-stats'],
+    queryKey: ['bot-visits-stats', botVisitsTimeRange],
     queryFn: async () => {
-      const resp = await callEdgeFunction('admin', { action: 'getBotVisitsStats', password }) as { success: boolean; stats?: any };
+      const resp = await callEdgeFunction('admin', { 
+        action: 'getBotVisitsStats', 
+        password,
+        timeRange: botVisitsTimeRange 
+      }) as { success: boolean; stats?: any };
       if (!resp.success) throw new Error('Failed to fetch bot visits');
       return resp.stats;
     },
@@ -70,6 +78,42 @@ export function DashboardPanel({ password }: Props) {
     queryKey: ['cloudflare-analytics'],
     queryFn: async () => {
       const resp = await callEdgeFunction('admin', { action: 'getCloudflareAnalytics', password }) as { success: boolean; stats?: any };
+      return resp.stats;
+    },
+    refetchInterval: 60000,
+    enabled: !!password,
+  });
+
+  // Page views hourly statistics
+  const { data: pageViewsHourly } = useQuery({
+    queryKey: ['page-views-hourly'],
+    queryFn: async () => {
+      const resp = await callEdgeFunction('admin', { action: 'getPageViewsHourly', password }) as { success: boolean; stats?: any };
+      if (!resp.success) throw new Error('Failed to fetch page views');
+      return resp.stats;
+    },
+    refetchInterval: 30000,
+    enabled: !!password,
+  });
+
+  // Unique visitors hourly statistics
+  const { data: uniqueVisitorsHourly } = useQuery({
+    queryKey: ['unique-visitors-hourly'],
+    queryFn: async () => {
+      const resp = await callEdgeFunction('admin', { action: 'getUniqueVisitorsHourly', password }) as { success: boolean; stats?: any };
+      if (!resp.success) throw new Error('Failed to fetch hourly unique visitors');
+      return resp.stats;
+    },
+    refetchInterval: 30000,
+    enabled: !!password,
+  });
+
+  // Top traffic countries statistics
+  const { data: topCountries } = useQuery({
+    queryKey: ['top-traffic-countries'],
+    queryFn: async () => {
+      const resp = await callEdgeFunction('admin', { action: 'getTopTrafficCountries', password }) as { success: boolean; stats?: any };
+      if (!resp.success) throw new Error('Failed to fetch top countries');
       return resp.stats;
     },
     refetchInterval: 60000,
@@ -383,11 +427,43 @@ export function DashboardPanel({ password }: Props) {
         {/* Bot Visits Chart */}
         <Card className="md:col-span-2 cosmic-card border-t-4 border-t-violet-500">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Activity className="w-5 h-5 text-violet-500" />
-              Бот візити (24 год)
-            </CardTitle>
-            <CardDescription>Google, Bing, AI боти та інші за годинами</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-violet-500" />
+                  Бот візити
+                </CardTitle>
+                <CardDescription>
+                  Google, Bing, AI боти та інші {botVisitsTimeRange === '24h' ? 'за годинами' : 'за днями'}
+                </CardDescription>
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  variant={botVisitsTimeRange === '24h' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setBotVisitsTimeRange('24h')}
+                  className="text-xs h-7"
+                >
+                  24 год
+                </Button>
+                <Button
+                  variant={botVisitsTimeRange === '7d' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setBotVisitsTimeRange('7d')}
+                  className="text-xs h-7"
+                >
+                  7 днів
+                </Button>
+                <Button
+                  variant={botVisitsTimeRange === '30d' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setBotVisitsTimeRange('30d')}
+                  className="text-xs h-7"
+                >
+                  30 днів
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {botVisits?.history && (
@@ -469,11 +545,13 @@ export function DashboardPanel({ password }: Props) {
                 <p className="text-sm text-muted-foreground">Завантаження даних про ботів...</p>
               </div>
             )}
-            {botVisits?.total24h !== undefined && (
+            {botVisits?.totalRequests !== undefined && (
               <div className="mt-4 pt-4 border-t border-muted-foreground/10">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Всього за 24 години:</span>
-                  <span className="text-lg font-bold font-mono text-violet-500">{botVisits.total24h.toLocaleString()}</span>
+                  <span className="text-sm text-muted-foreground">
+                    Всього за {botVisitsTimeRange === '24h' ? '24 години' : botVisitsTimeRange === '7d' ? '7 днів' : '30 днів'}:
+                  </span>
+                  <span className="text-lg font-bold font-mono text-violet-500">{botVisits.totalRequests.toLocaleString()}</span>
                 </div>
               </div>
             )}
@@ -535,6 +613,371 @@ export function DashboardPanel({ password }: Props) {
           </Card>
         </div>
       </div>
+
+      {/* 📊 Traffic Analytics - New Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Unique Visitors Hourly Chart */}
+        <Card className="cosmic-card border-t-4 border-t-emerald-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="w-5 h-5 text-emerald-500" />
+              Унікальні відвідувачі (24 год)
+            </CardTitle>
+            <CardDescription>Погодинна динаміка унікальних користувачів</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {uniqueVisitorsHourly?.history && (
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={uniqueVisitorsHourly.history}>
+                    <defs>
+                      <linearGradient id="colorVisitors" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                    <XAxis 
+                      dataKey="time" 
+                      tickLine={false} 
+                      axisLine={false} 
+                      className="text-[10px]"
+                    />
+                    <YAxis tickLine={false} axisLine={false} className="text-xs" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(10, 10, 15, 0.95)', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        borderRadius: '8px' 
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="visitors" 
+                      name="Унікальні" 
+                      stroke="#10b981" 
+                      fill="url(#colorVisitors)" 
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {!uniqueVisitorsHourly?.history && (
+              <div className="h-[280px] flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">
+                  {uniqueVisitorsHourly === undefined ? 'Завантаження даних...' : 'Немає даних за цей період'}
+                </p>
+              </div>
+            )}
+            {uniqueVisitorsHourly?.history && uniqueVisitorsHourly.history.length === 0 && (
+              <div className="h-[280px] flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">Немає даних за останні 24 години</p>
+              </div>
+            )}
+            {uniqueVisitorsHourly?.total24h !== undefined && (
+              <div className="mt-4 pt-4 border-t border-muted-foreground/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Всього унікальних за 24 год:</span>
+                  <span className="text-lg font-bold font-mono text-emerald-500">
+                    {uniqueVisitorsHourly.total24h.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Page Views by Type Chart */}
+        <Card className="cosmic-card border-t-4 border-t-sky-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Eye className="w-5 h-5 text-sky-500" />
+              Перегляди за типом контенту (24 год)
+            </CardTitle>
+            <CardDescription>Розподіл переглядів: Новини vs Wiki</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {pageViewsHourly?.history && (
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={pageViewsHourly.history}>
+                    <defs>
+                      <linearGradient id="colorNews" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorWiki" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                    <XAxis 
+                      dataKey="time" 
+                      tickLine={false} 
+                      axisLine={false} 
+                      className="text-[10px]"
+                    />
+                    <YAxis tickLine={false} axisLine={false} className="text-xs" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(10, 10, 15, 0.95)', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        borderRadius: '8px' 
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="news" 
+                      name="Новини" 
+                      stroke="#0ea5e9" 
+                      fill="url(#colorNews)" 
+                      strokeWidth={2}
+                      stackId="1"
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="wiki" 
+                      name="Wiki" 
+                      stroke="#f59e0b" 
+                      fill="url(#colorWiki)" 
+                      strokeWidth={2}
+                      stackId="1"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {!pageViewsHourly?.history && (
+              <div className="h-[280px] flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">
+                  {pageViewsHourly === undefined ? 'Завантаження даних...' : 'Немає даних за цей період'}
+                </p>
+              </div>
+            )}
+            {pageViewsHourly?.history && pageViewsHourly.history.length === 0 && (
+              <div className="h-[280px] flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">Немає даних про перегляди за останні 24 години</p>
+              </div>
+            )}
+            {pageViewsHourly?.total24h !== undefined && (
+              <div className="mt-4 pt-4 border-t border-muted-foreground/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Всього переглядів за 24 год:</span>
+                  <span className="text-lg font-bold font-mono text-sky-500">
+                    {pageViewsHourly.total24h.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ⚡ Performance Analytics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Bot Response Time Chart */}
+        <Card className="cosmic-card border-t-4 border-t-pink-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Activity className="w-5 h-5 text-pink-500" />
+              Час відповіді ботам (24 год)
+            </CardTitle>
+            <CardDescription>Середній час обробки запитів від різних ботів</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {botVisits?.avgResponseTimes && botVisits.avgResponseTimes.length > 0 && (
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={botVisits.avgResponseTimes} layout="vertical" margin={{ left: 80 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(255,255,255,0.06)" />
+                    <XAxis type="number" tickLine={false} axisLine={false} className="text-xs" />
+                    <YAxis 
+                      dataKey="bot" 
+                      type="category" 
+                      width={75}
+                      className="text-[11px]"
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(10, 10, 15, 0.95)', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        borderRadius: '8px' 
+                      }}
+                      formatter={(value: any) => [`${value} ms`, 'Середній час']}
+                    />
+                    <Bar 
+                      dataKey="avgTime" 
+                      fill="#ec4899" 
+                      radius={[0, 4, 4, 0]} 
+                      barSize={25}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {(!botVisits?.avgResponseTimes || botVisits.avgResponseTimes.length === 0) && (
+              <div className="h-[280px] flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">
+                  {botVisits === undefined ? 'Завантаження даних...' : 'Немає даних про response time'}
+                </p>
+              </div>
+            )}
+            {botVisits?.successRate !== undefined && (
+              <div className="mt-4 pt-4 border-t border-muted-foreground/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Успішність запитів:</span>
+                  <span className="text-lg font-bold font-mono text-green-500">
+                    {botVisits.successRate}%
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Cloudflare Bandwidth Chart */}
+        <Card className="cosmic-card border-t-4 border-t-indigo-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-indigo-500" />
+              Bandwidth & Запити (24 год)
+            </CardTitle>
+            <CardDescription>Cloudflare трафік та кількість запитів</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {cloudflareStats?.timeseries && cloudflareStats.timeseries.length > 0 && (
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={cloudflareStats.timeseries}>
+                    <defs>
+                      <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                    <XAxis 
+                      dataKey="since" 
+                      tickFormatter={(value) => new Date(value).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}
+                      tickLine={false} 
+                      axisLine={false} 
+                      className="text-[10px]"
+                    />
+                    <YAxis tickLine={false} axisLine={false} className="text-xs" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(10, 10, 15, 0.95)', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        borderRadius: '8px' 
+                      }}
+                      labelFormatter={(value) => new Date(value).toLocaleString('uk-UA')}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="requests.all" 
+                      name="Запити" 
+                      stroke="#6366f1" 
+                      fill="url(#colorRequests)" 
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {(!cloudflareStats?.timeseries || cloudflareStats.timeseries.length === 0) && (
+              <div className="h-[280px] flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">
+                  {cloudflareStats === null ? 'Cloudflare Analytics недоступна' : 
+                   cloudflareStats === undefined ? 'Завантаження даних...' : 
+                   'Немає даних від Cloudflare'}
+                </p>
+              </div>
+            )}
+            {cloudflareStats?.bandwidth && (
+              <div className="mt-4 pt-4 border-t border-muted-foreground/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Загальний трафік за 24 год:</span>
+                  <span className="text-lg font-bold font-mono text-indigo-500">
+                    {(cloudflareStats.bandwidth / 1024 / 1024 / 1024).toFixed(2)} GB
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 🌍 Geographic Analytics */}
+      <Card className="cosmic-card border-t-4 border-t-purple-500">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Globe className="w-5 h-5 text-purple-500" />
+            Top 10 країн за трафіком (24 год)
+          </CardTitle>
+          <CardDescription>Географічний розподіл запитів від ботів</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {topCountries?.countries && topCountries.countries.length > 0 && (
+            <div className="h-[320px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topCountries.countries} layout="vertical" margin={{ left: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(255,255,255,0.06)" />
+                  <XAxis type="number" tickLine={false} axisLine={false} className="text-xs" />
+                  <YAxis 
+                    dataKey="country" 
+                    type="category" 
+                    width={55}
+                    className="text-[11px]"
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(10, 10, 15, 0.95)', 
+                      border: '1px solid rgba(255,255,255,0.1)', 
+                      borderRadius: '8px' 
+                    }}
+                    formatter={(value: any) => [`${value} запитів`, 'Кількість']}
+                  />
+                  <Bar 
+                    dataKey="count" 
+                    fill="#a855f7" 
+                    radius={[0, 4, 4, 0]} 
+                    barSize={18}
+                  >
+                    {topCountries.countries.map((_: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={`hsl(${280 - index * 10}, 70%, ${55 + index * 3}%)`} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          {(!topCountries?.countries || topCountries.countries.length === 0) && (
+            <div className="h-[320px] flex items-center justify-center">
+              <p className="text-sm text-muted-foreground">
+                {topCountries === undefined ? 'Завантаження даних...' : 'Немає даних про географію запитів'}
+              </p>
+            </div>
+          )}
+          {topCountries?.total !== undefined && (
+            <div className="mt-4 pt-4 border-t border-muted-foreground/10">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Всього запитів:</span>
+                <span className="text-lg font-bold font-mono text-purple-500">
+                  {topCountries.total.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ☁️ Cloudflare Analytics */}
       {cloudflareStats && (
