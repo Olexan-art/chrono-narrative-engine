@@ -599,12 +599,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       if (saved && ['uk', 'en', 'pl'].includes(saved)) {
         return saved as Language;
       }
-      // Detect from browser
+      // Detect from browser — default to English if no match
       const browserLang = navigator.language.split('-')[0];
+      if (browserLang === 'uk') return 'uk';
       if (browserLang === 'pl') return 'pl';
-      if (browserLang === 'en') return 'en';
     }
-    return 'uk';
+    return 'en';
   });
 
   const setLanguage = (lang: Language) => {
@@ -613,7 +613,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   };
 
   const t = (key: string): string => {
-    return translations[language][key] || translations['uk'][key] || key;
+    return translations[language][key] || translations['en'][key] || key;
   };
 
   useEffect(() => {
