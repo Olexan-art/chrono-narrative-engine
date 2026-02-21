@@ -806,6 +806,32 @@ serve(async (req: Request) => {
         );
       }
 
+      case 'deleteRssFeed': {
+        const { feedId } = data;
+        if (!feedId) throw new Error('feedId is required');
+
+        // First delete all news items from this feed
+        const { error: newsError } = await supabase
+          .from('news_rss_items')
+          .delete()
+          .eq('feed_id', feedId);
+
+        if (newsError) throw newsError;
+
+        // Then delete the feed itself
+        const { error: feedError } = await supabase
+          .from('news_rss_feeds')
+          .delete()
+          .eq('id', feedId);
+
+        if (feedError) throw feedError;
+
+        return new Response(
+          JSON.stringify({ success: true, message: 'RSS feed and all related news deleted' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       case 'createChapter': {
         const { data: chapter, error } = await supabase
           .from('chapters')
