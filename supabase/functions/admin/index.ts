@@ -12,7 +12,8 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { action, password, data } = await req.json();
+    const body = await req.json();
+    const { action, password, data } = body;
 
     // Get admin password from environment variable (not hardcoded)
     const ADMIN_PASSWORD = Deno.env.get('ADMIN_PASSWORD') || '1nuendo19071';
