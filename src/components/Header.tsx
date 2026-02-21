@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, Clock, Menu, X, Globe, Palette, Calendar, Users, Bot, RefreshCw } from "lucide-react";
+import { Clock, Menu, X, Globe, Palette, Calendar, Users, Bot, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -20,12 +20,6 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-2">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <BookOpen className="w-4 h-4" />
-              <span>{t("nav.read")}</span>
-            </Button>
-          </Link>
           <Link to="/news-digest">
             <Button variant="ghost" size="sm" className="gap-2">
               <Globe className="w-4 h-4" />
@@ -66,12 +60,6 @@ export function Header() {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border bg-card/95 backdrop-blur-sm">
           <nav className="container mx-auto px-4 py-3 flex flex-col gap-1">
-            <Link to="/" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start gap-3">
-                <BookOpen className="w-4 h-4" />
-                {t("nav.read")}
-              </Button>
-            </Link>
             <Link to="/news-digest" onClick={() => setMobileMenuOpen(false)}>
               <Button variant="ghost" className="w-full justify-start gap-3">
                 <Globe className="w-4 h-4" />
