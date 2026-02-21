@@ -1638,7 +1638,8 @@ serve(async (req: Request) => {
           .from('bot_visits')
           .select('bot_type, bot_category, created_at, response_time_ms, status_code')
           .gte('created_at', pastDate.toISOString())
-          .order('created_at', { ascending: true });
+          .order('created_at', { ascending: true })
+          .limit(50000);
 
         // Group by hour or day
         const periodMap = new Map<string, any>();
