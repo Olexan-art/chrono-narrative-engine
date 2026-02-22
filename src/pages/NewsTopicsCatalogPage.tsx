@@ -299,7 +299,7 @@ export default function NewsTopicsCatalogPage() {
                                   <img
                                     src={url}
                                     alt=""
-                                    className="w-full h-full object-cover opacity-50"
+                                    className="w-full h-full object-cover opacity-70"
                                     loading="lazy"
                                     onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.opacity = '0'; }}
                                   />
