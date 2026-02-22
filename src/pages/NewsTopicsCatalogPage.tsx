@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, Tag, Hash, TrendingUp, Loader2, X,
   Newspaper, Zap, Globe, Shield, Heart, Scale,
-  Briefcase, Flame, BookOpen, Swords, Megaphone
+  Briefcase, Flame, BookOpen, Swords, Megaphone, BarChart3
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -53,6 +53,34 @@ export default function NewsTopicsCatalogPage() {
   const { language } = useLanguage();
   const [search, setSearch] = useState("");
 
+  // Mosaic images: refreshed once per week (staleTime 7 days)
+  const { data: mosaicImagesData } = useQuery({
+    queryKey: ["topics-mosaic-images"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("news_rss_items")
+        .select("themes, image_url")
+        .not("image_url", "is", null)
+        .not("themes", "is", null)
+        .order("published_at", { ascending: false })
+        .limit(500);
+      // Build theme → image[] map
+      const map = new Map<string, string[]>();
+      for (const item of data || []) {
+        if (!item.image_url || !Array.isArray(item.themes)) continue;
+        for (const t of item.themes) {
+          if (!t) continue;
+          const list = map.get(t) || [];
+          if (list.length < 6) list.push(item.image_url);
+          map.set(t, list);
+        }
+      }
+      return map;
+    },
+    staleTime: 1000 * 60 * 60 * 24 * 7, // 7 days
+    gcTime: 1000 * 60 * 60 * 24 * 7,
+  });
+
   const { data: topicsData, isLoading } = useQuery({
     queryKey: ["topics-catalog"],
     queryFn: async () => {
@@ -92,7 +120,8 @@ export default function NewsTopicsCatalogPage() {
   }, [topicsData, search]);
 
   const topTopics = filtered.slice(0, 6);
-  const restTopics = filtered.slice(6);
+  const topNextTopics = filtered.slice(6, 20);
+  const restTopics = filtered.slice(20);
 
   const seoTitle =
     language === "en"
@@ -193,10 +222,29 @@ export default function NewsTopicsCatalogPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {topTopics.map(({ topic, count }) => {
                     const { icon, color } = getTopicIconData(topic);
+                    const mosaicImgs = mosaicImagesData?.get(topic) || [];
                     return (
                       <Link key={topic} to={topicPath(topic)}>
-                        <Card className="group hover:border-primary/50 transition-all hover:scale-[1.02] cursor-pointer h-full">
-                          <CardContent className="p-5 flex flex-col gap-3">
+                        <Card className="group hover:border-primary/50 transition-all hover:scale-[1.02] cursor-pointer h-full overflow-hidden relative">
+                          {/* Mosaic background */}
+                          {mosaicImgs.length >= 2 && (
+                            <>
+                              <div className="absolute inset-0 grid gap-0" style={{ gridTemplateColumns: `repeat(${Math.min(mosaicImgs.length, 3)}, 1fr)` }}>
+                                {mosaicImgs.slice(0, 3).map((url, i) => (
+                                  <img
+                                    key={i}
+                                    src={url}
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                  />
+                                ))}
+                              </div>
+                              <div className="absolute inset-0 bg-background/82 backdrop-blur-[1px]" />
+                            </>
+                          )}
+                          <CardContent className="relative z-10 p-5 flex flex-col gap-3">
                             <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${color}`}>
                               {icon}
                             </div>
@@ -211,6 +259,44 @@ export default function NewsTopicsCatalogPage() {
                             </div>
                           </CardContent>
                         </Card>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* Top Topics (7-20) — ranked list with article counts */}
+            {topNextTopics.length > 0 && !search && (
+              <section className="mb-8">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  {language === "en" ? "Top Topics" : "Топ Теми"}
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {topNextTopics.map(({ topic, count }, index) => {
+                    const { icon, color } = getTopicIconData(topic);
+                    const rank = index + 7;
+                    return (
+                      <Link key={topic} to={topicPath(topic)}>
+                        <div className="group flex items-center gap-3 px-4 py-3 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer">
+                          <span className="flex-shrink-0 w-6 text-center text-xs font-black text-muted-foreground/50 tabular-nums">
+                            {rank}
+                          </span>
+                          <div className={`flex-shrink-0 w-7 h-7 rounded-md border flex items-center justify-center ${color}`}>
+                            {icon}
+                          </div>
+                          <span className="flex-1 text-sm font-medium leading-tight group-hover:text-primary transition-colors truncate">
+                            {topic}
+                          </span>
+                          <div className="flex-shrink-0 flex items-center gap-1">
+                            <div
+                              className="h-1 rounded-full bg-primary/30 min-w-[16px]"
+                              style={{ width: `${Math.max(16, Math.round((count / (topicsData?.[0]?.count || 1)) * 80))}px` }}
+                            />
+                            <span className="text-xs font-bold text-primary tabular-nums ml-1">{count}</span>
+                          </div>
+                        </div>
                       </Link>
                     );
                   })}

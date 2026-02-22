@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SEOHead } from "@/components/SEOHead";
+import { Header } from "@/components/Header";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const BASE_URL = 'https://bravennow.com';
@@ -96,8 +97,9 @@ export default function SitemapPage() {
         description="Complete HTML sitemap for Synchronization Point - AI Archive of Human History. Navigate all stories, chapters, volumes, and news articles."
         canonicalUrl={`${BASE_URL}/sitemap`}
       />
+      <Header />
 
-      <div className="min-h-screen py-24 px-4">
+      <div className="min-h-screen py-8 px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold mb-4 flex items-center justify-center gap-3">
