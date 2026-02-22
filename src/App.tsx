@@ -37,6 +37,7 @@ const LocalRetellPage = lazy(() => import("./pages/admin/LocalRetellPage"));
 const LocalWikiPage = lazy(() => import("./pages/admin/LocalWikiPage"));
 const InstallPage = lazy(() => import("./pages/InstallPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const DmcaPage = lazy(() => import("./pages/DmcaPage"));
 const WikiCatalogPage = lazy(() => import("./pages/WikiCatalogPage"));
 const WikiEntityPage = lazy(() => import("./pages/WikiEntityPage"));
 const NewsTopicsCatalogPage = lazy(() => import("./pages/NewsTopicsCatalogPage"));
@@ -88,6 +89,7 @@ const App = () => (
                 </Route>
                 <Route path="/install" element={<InstallPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/dmca" element={<DmcaPage />} />
                 <Route path="/wiki" element={<WikiCatalogPage />} />
                 <Route path="/wiki/:entityId" element={<WikiEntityPage />} />
                 <Route path="/topics" element={<NewsTopicsCatalogPage />} />

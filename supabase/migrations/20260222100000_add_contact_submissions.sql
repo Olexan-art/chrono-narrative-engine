@@ -21,18 +21,21 @@ CREATE TABLE IF NOT EXISTS public.contact_submissions (
 ALTER TABLE public.contact_submissions ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can insert (public contact form)
+DROP POLICY IF EXISTS "Anyone can insert contact submissions" ON public.contact_submissions;
 CREATE POLICY "Anyone can insert contact submissions"
   ON public.contact_submissions
   FOR INSERT
   WITH CHECK (true);
 
--- Anyone can select (admin panel reads via service role bypass, anon for now)
+-- Anyone can select
+DROP POLICY IF EXISTS "Allow reading contact submissions" ON public.contact_submissions;
 CREATE POLICY "Allow reading contact submissions"
   ON public.contact_submissions
   FOR SELECT
   USING (true);
 
 -- Allow updates (for admin to set status / ai_analysis)
+DROP POLICY IF EXISTS "Allow updating contact submissions" ON public.contact_submissions;
 CREATE POLICY "Allow updating contact submissions"
   ON public.contact_submissions
   FOR UPDATE

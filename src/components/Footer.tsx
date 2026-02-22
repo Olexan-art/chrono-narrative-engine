@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { BookOpen, Globe, Palette, Calendar, Users, Hash, Mail } from "lucide-react";
+import { Globe, Palette, Calendar, Users, Hash, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -17,12 +17,6 @@ export function Footer() {
         </Link>
 
         <nav className="flex flex-wrap items-center gap-2 justify-center">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <BookOpen className="w-4 h-4" />
-              <span>{t("nav.read")}</span>
-            </Button>
-          </Link>
           <Link to="/news-digest">
             <Button variant="ghost" size="sm" className="gap-2">
               <Globe className="w-4 h-4" />
@@ -65,8 +59,10 @@ export function Footer() {
           <LanguageSwitcher />
         </div>
       </div>
-      <div className="container mx-auto px-4 text-center text-sm text-muted-foreground font-mono py-2">
-        {t('footer.style')} © {year}
+      <div className="container mx-auto px-4 text-center text-sm text-muted-foreground font-mono py-2 flex flex-wrap items-center justify-center gap-3">
+        <span>{t('footer.style')} © {year}</span>
+        <Link to="/dmca" className="hover:text-foreground transition-colors">DMCA</Link>
+        <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
       </div>
     </footer>
   );

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Tag, Hash, TrendingUp, Loader2, X,
-  Newspaper, Zap, Globe, Shield, Heart, Scale,
+  Zap, Globe, Shield, Heart, Scale,
   Briefcase, Flame, BookOpen, Swords, Megaphone, BarChart3,
   ChevronLeft, ChevronRight
 } from "lucide-react";
@@ -12,7 +12,6 @@ import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
@@ -277,58 +276,54 @@ export default function NewsTopicsCatalogPage() {
                   {topTopics.map(({ topic, count }) => {
                     const { icon, color } = getTopicIconData(topic);
                     const mosaicImgs = mosaicImagesData?.get(topic) || [];
+                    const neonColor = color.includes('red') ? '#ff3855' : color.includes('blue') ? '#00b4ff' : color.includes('green') ? '#00ff9d' : color.includes('yellow') ? '#ffe600' : color.includes('pink') ? '#ff4dab' : color.includes('orange') ? '#ff6a00' : color.includes('purple') ? '#b14dff' : color.includes('cyan') ? '#00e5ff' : color.includes('indigo') ? '#6060ff' : color.includes('teal') ? '#00d4c8' : '#00e5ff';
                     return (
                       <Link key={topic} to={topicPath(topic)}>
-                        <Card className="group hover:border-primary/50 transition-all hover:scale-[1.02] cursor-pointer overflow-hidden relative" style={{ minHeight: '180px' }}>
-                          {/* Octagon mosaic: up to 30 images in a grid */}
+                        <div
+                          className="group relative overflow-hidden cursor-pointer bg-black border border-white/10 hover:border-white/30 transition-all duration-200"
+                          style={{ minHeight: '180px', boxShadow: 'inset 1px 1px 0 rgba(255,255,255,0.04)' }}
+                        >
+                          {/* Mosaic background */}
                           {mosaicImgs.length >= 4 && (
                             <div
-                              className="absolute inset-0 bg-black grid"
+                              className="absolute inset-0 grid"
                               style={{
                                 gridTemplateColumns: `repeat(6, 1fr)`,
                                 gridTemplateRows: `repeat(5, 1fr)`,
-                                gap: '3px',
-                                padding: '3px',
+                                gap: '2px',
                               }}
                             >
                               {mosaicImgs.slice(0, 30).map((url, i) => (
-                                <div
+                                <img
                                   key={i}
-                                  className="overflow-hidden"
-                                  style={{ clipPath: 'polygon(29% 0%,71% 0%,100% 29%,100% 71%,71% 100%,29% 100%,0% 71%,0% 29%)' }}
-                                >
-                                  <img
-                                    src={url}
-                                    alt=""
-                                    className="w-full h-full object-cover opacity-70"
-                                    loading="lazy"
-                                    onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.opacity = '0'; }}
-                                  />
-                                </div>
+                                  src={url}
+                                  alt=""
+                                  className="w-full h-full object-cover opacity-40 group-hover:opacity-55 transition-opacity"
+                                  loading="lazy"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0'; }}
+                                />
                               ))}
                             </div>
                           )}
-                          {/* Bottom gradient — text area only */}
-                          {mosaicImgs.length >= 4 && (
-                            <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
-                          )}
-                          <CardContent className="relative z-10 p-4 flex flex-col justify-end" style={{ minHeight: '180px' }}>
-                            <div className={`w-9 h-9 rounded-lg border flex items-center justify-center mb-2 ${mosaicImgs.length >= 4 ? 'bg-black/60 border-white/20' : color}`}>
-                              <span className={mosaicImgs.length >= 4 ? 'text-white/90' : ''}>{icon}</span>
+                          {/* Dark overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30" />
+                          {/* Left neon bar */}
+                          <div className="absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-200" style={{ background: neonColor, opacity: 0.7, boxShadow: `0 0 8px ${neonColor}` }} />
+                          {/* Rank */}
+                          <div className="absolute top-2.5 right-2.5 z-10 font-mono text-[10px] tracking-widest" style={{ color: neonColor, opacity: 0.6 }}>#{String(topTopics.indexOf(topTopics.find(t => t.topic === topic)!) + 1).padStart(2,'0')}</div>
+                          {/* Content */}
+                          <div className="relative z-10 p-4 flex flex-col justify-end" style={{ minHeight: '180px' }}>
+                            <div className="mt-auto">
+                              <p className="font-mono text-[9px] uppercase tracking-[0.25em] mb-1" style={{ color: neonColor, opacity: 0.7 }}>// TOPIC</p>
+                              <h3 className="font-mono font-bold uppercase tracking-tight text-sm text-white group-hover:text-white transition-colors leading-tight" style={{ textShadow: `0 0 12px ${neonColor}40` }}>
+                                {topic}
+                              </h3>
+                              <p className="font-mono text-[11px] mt-1.5" style={{ color: neonColor, opacity: 0.6 }}>
+                                {count.toString().padStart(4, '0')}&nbsp;ART
+                              </p>
                             </div>
-                            <h3 className={`font-bold leading-tight group-hover:text-primary transition-colors text-sm ${
-                              mosaicImgs.length >= 4 ? 'text-white drop-shadow-lg' : ''
-                            }`}>
-                              {topic}
-                            </h3>
-                            <p className={`text-xs mt-1 flex items-center gap-1 ${
-                              mosaicImgs.length >= 4 ? 'text-white/70' : 'text-muted-foreground'
-                            }`}>
-                              <Newspaper className="w-3 h-3" />
-                              {count} {language === "en" ? "articles" : "статей"}
-                            </p>
-                          </CardContent>
-                        </Card>
+                          </div>
+                        </div>
                       </Link>
                     );
                   })}
@@ -349,22 +344,20 @@ export default function NewsTopicsCatalogPage() {
                     const rank = index + 7;
                     return (
                       <Link key={topic} to={topicPath(topic)}>
-                        <div className="group flex items-center gap-3 px-4 py-3 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer">
-                          <span className="flex-shrink-0 w-6 text-center text-xs font-black text-muted-foreground/50 tabular-nums">
-                            {rank}
-                          </span>
-                          <div className={`flex-shrink-0 w-7 h-7 rounded-md border flex items-center justify-center ${color}`}>
+                        <div className="group flex items-center gap-3 px-4 py-2.5 border-b border-white/5 hover:bg-white/3 border-l-2 border-l-transparent hover:border-l-primary transition-all cursor-pointer" style={{ borderLeftColor: 'transparent' }} onMouseEnter={e => (e.currentTarget.style.borderLeftColor = 'hsl(var(--primary))')} onMouseLeave={e => (e.currentTarget.style.borderLeftColor = 'transparent')}>
+                          <span className="flex-shrink-0 w-9 font-mono text-[11px] text-primary/30 tabular-nums">[{String(rank).padStart(2,'0')}]</span>
+                          <span className={`flex-shrink-0 w-5 h-5 flex items-center justify-center ${color} rounded-none`}>
                             {icon}
-                          </div>
-                          <span className="flex-1 text-sm font-medium leading-tight group-hover:text-primary transition-colors truncate">
+                          </span>
+                          <span className="flex-1 font-mono text-sm text-foreground/80 group-hover:text-primary transition-colors truncate uppercase tracking-wide">
                             {topic}
                           </span>
-                          <div className="flex-shrink-0 flex items-center gap-1">
+                          <div className="flex-shrink-0 flex items-center gap-2">
                             <div
-                              className="h-1 rounded-full bg-primary/30 min-w-[16px]"
-                              style={{ width: `${Math.max(16, Math.round((count / (topicsData?.[0]?.count || 1)) * 80))}px` }}
+                              className="h-[2px] bg-primary/25 group-hover:bg-primary/50 transition-colors"
+                              style={{ width: `${Math.max(12, Math.round((count / (allTimeTopicsData?.[0]?.count || 1)) * 64))}px` }}
                             />
-                            <span className="text-xs font-bold text-primary tabular-nums ml-1">{count}</span>
+                            <span className="font-mono text-xs text-primary/60 tabular-nums w-10 text-right">{count}</span>
                           </div>
                         </div>
                       </Link>
@@ -388,8 +381,8 @@ export default function NewsTopicsCatalogPage() {
                 {(search ? allTimeFiltered : pagedRestTopics).map(({ topic, count }) => (
                   <Link key={topic} to={topicPath(topic)}>
                     <Badge
-                      variant="secondary"
-                      className="text-sm px-3 py-1.5 cursor-pointer hover:bg-primary/20 hover:text-primary transition-colors border border-border hover:border-primary/40"
+                      variant="outline"
+                      className="font-mono text-xs px-3 py-1.5 cursor-pointer rounded-none uppercase tracking-wider border-white/10 hover:border-primary/60 hover:bg-primary/10 hover:text-primary transition-colors bg-transparent text-foreground/60"
                     >
                       <Tag className="w-3 h-3 mr-1.5 opacity-60" />
                       {topic}
