@@ -59,7 +59,9 @@ export default function NewsTopicsCatalogPage() {
       const { data, error } = await supabase
         .from("news_rss_items")
         .select("themes")
-        .not("themes", "is", null);
+        .not("themes", "is", null)
+        .order("published_at", { ascending: false })
+        .limit(4000);
 
       if (error) throw error;
 
@@ -78,7 +80,8 @@ export default function NewsTopicsCatalogPage() {
         .sort((a, b) => b.count - a.count);
       return sorted;
     },
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 30,
+    gcTime: 1000 * 60 * 60,
   });
 
   const filtered = useMemo(() => {

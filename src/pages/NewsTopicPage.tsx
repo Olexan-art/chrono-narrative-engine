@@ -155,7 +155,8 @@ export default function NewsTopicPage() {
           country:news_countries(code, flag, name, name_en)
         `)
         .contains("themes", [topic])
-        .order("published_at", { ascending: false });
+        .order("published_at", { ascending: false })
+        .limit(150);
 
       if (error) throw error;
       return (data || []).map((item: any) => ({
@@ -169,7 +170,8 @@ export default function NewsTopicPage() {
   });
 
   // ── IDs for dependent queries ────────────────────────────────────────────
-  const newsIds = useMemo(() => newsItems.map((n) => n.id), [newsItems]);
+  // Обмежуємо entity-запити першими 80 новини (достатньо для статистики, без перевантаження)
+  const newsIds = useMemo(() => newsItems.map((n) => n.id).slice(0, 80), [newsItems]);
 
   // ── fetch wiki entities linked to these news ─────────────────────────────
   const { data: entityLinks = [], isLoading: entitiesLoading } = useQuery<EntityLink[]>({
