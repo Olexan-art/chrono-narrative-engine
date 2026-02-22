@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { GDPRConsent } from "@/components/GDPRConsent";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Eager: homepage (critical path)
 import Index from "./pages/Index";
@@ -47,9 +48,21 @@ const ContactPage = lazy(() => import("./pages/ContactPage"));
 
 import { AdminGuard } from "@/components/AdminGuard";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Don't throw query errors into React tree — show stale/empty data instead
+      throwOnError: false,
+      retry: 1,
+    },
+    mutations: {
+      throwOnError: false,
+    },
+  },
+});
 
 const App = () => (
+  <ErrorBoundary>
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
@@ -103,6 +116,7 @@ const App = () => (
       </LanguageProvider>
     </QueryClientProvider>
   </HelmetProvider>
+  </ErrorBoundary>
 );
 
 export default App;

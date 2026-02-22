@@ -15,14 +15,9 @@ export function useTrackView(entityType: EntityType, entityId: string | undefine
           return id;
         })();
 
-        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-view`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            'x-visitor-id': visitorId
-          },
-          body: JSON.stringify({ entityType, entityId, visitor_id: visitorId }),
+        await supabase.functions.invoke('track-view', {
+          body: { entityType, entityId, visitor_id: visitorId },
+          headers: { 'x-visitor-id': visitorId },
         });
       } catch (error) {
         // Silent fail - tracking is not critical
