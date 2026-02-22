@@ -271,9 +271,13 @@ export default function WikiCatalogPage() {
           <div className="mb-6 overflow-x-auto">
             <div className="flex gap-1 min-w-max pb-2">
               <Button
-                variant={!letterFilter ? 'default' : 'ghost'}
+                variant="ghost"
                 size="sm"
-                className="min-w-[32px] h-8 px-2"
+                className={`min-w-[32px] h-8 px-2 font-mono transition-all duration-200 ${
+                  !letterFilter
+                    ? 'border border-cyan-500/70 bg-cyan-950/40 text-cyan-300 shadow-[0_0_8px_rgba(0,255,255,0.25)]'
+                    : 'border border-gray-700/40 text-gray-400 hover:border-cyan-700/50 hover:text-cyan-400'
+                }`}
                 onClick={clearLetterFilter}
               >
                 {language === 'uk' ? 'Всі' : 'All'}
@@ -281,9 +285,13 @@ export default function WikiCatalogPage() {
               {alphabet.map((letter) => (
                 <Button
                   key={letter}
-                  variant={letterFilter === letter ? 'default' : 'ghost'}
+                  variant="ghost"
                   size="sm"
-                  className="min-w-[32px] h-8 px-2 font-medium"
+                  className={`min-w-[32px] h-8 px-2 font-mono font-medium transition-all duration-200 ${
+                    letterFilter === letter
+                      ? 'border border-cyan-500/70 bg-cyan-950/40 text-cyan-300 shadow-[0_0_8px_rgba(0,255,255,0.25)]'
+                      : 'border border-gray-700/40 text-gray-400 hover:border-cyan-700/50 hover:text-cyan-400'
+                  }`}
                   onClick={() => setLetterFilter(letter)}
                 >
                   {letter}
@@ -340,23 +348,38 @@ export default function WikiCatalogPage() {
 
               <div className="flex gap-1">
                 <Button
-                  variant={filterType === 'all' ? 'default' : 'outline'}
+                  variant="ghost"
                   size="sm"
+                  className={`font-mono transition-all duration-200 ${
+                    filterType === 'all'
+                      ? 'border border-purple-500/70 bg-purple-950/40 text-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.25)]'
+                      : 'border border-gray-700/40 text-gray-400 hover:border-purple-700/50 hover:text-purple-400'
+                  }`}
                   onClick={() => setFilterType('all')}
                 >
                   {t.all}
                 </Button>
                 <Button
-                  variant={filterType === 'person' ? 'default' : 'outline'}
+                  variant="ghost"
                   size="sm"
+                  className={`font-mono transition-all duration-200 ${
+                    filterType === 'person'
+                      ? 'border border-purple-500/70 bg-purple-950/40 text-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.25)]'
+                      : 'border border-gray-700/40 text-gray-400 hover:border-purple-700/50 hover:text-purple-400'
+                  }`}
                   onClick={() => setFilterType('person')}
                 >
                   <User className="w-3 h-3 mr-1" />
                   {t.persons}
                 </Button>
                 <Button
-                  variant={filterType === 'company' ? 'default' : 'outline'}
+                  variant="ghost"
                   size="sm"
+                  className={`font-mono transition-all duration-200 ${
+                    filterType === 'company'
+                      ? 'border border-purple-500/70 bg-purple-950/40 text-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.25)]'
+                      : 'border border-gray-700/40 text-gray-400 hover:border-purple-700/50 hover:text-purple-400'
+                  }`}
                   onClick={() => setFilterType('company')}
                 >
                   <Building2 className="w-3 h-3 mr-1" />
@@ -367,15 +390,25 @@ export default function WikiCatalogPage() {
 
             <div className="flex gap-1">
               <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                variant="ghost"
                 size="icon"
+                className={`transition-all duration-200 ${
+                  viewMode === 'grid'
+                    ? 'border border-cyan-500/70 bg-cyan-950/40 text-cyan-300 shadow-[0_0_8px_rgba(0,255,255,0.2)]'
+                    : 'border border-gray-700/40 text-gray-500 hover:border-cyan-700/50 hover:text-cyan-400'
+                }`}
                 onClick={() => setViewMode('grid')}
               >
                 <Grid className="w-4 h-4" />
               </Button>
               <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
+                variant="ghost"
                 size="icon"
+                className={`transition-all duration-200 ${
+                  viewMode === 'list'
+                    ? 'border border-cyan-500/70 bg-cyan-950/40 text-cyan-300 shadow-[0_0_8px_rgba(0,255,255,0.2)]'
+                    : 'border border-gray-700/40 text-gray-500 hover:border-cyan-700/50 hover:text-cyan-400'
+                }`}
                 onClick={() => setViewMode('list')}
               >
                 <List className="w-4 h-4" />
@@ -529,9 +562,10 @@ export default function WikiCatalogPage() {
               </p>
               <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   disabled={currentPage === 0}
+                  className="border border-gray-700/40 text-gray-400 hover:border-cyan-700/50 hover:text-cyan-400 font-mono disabled:opacity-30"
                   onClick={() => { setCurrentPage(p => p - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -539,18 +573,23 @@ export default function WikiCatalogPage() {
                 {Array.from({ length: totalPages }, (_, i) => (
                   <Button
                     key={i}
-                    variant={currentPage === i ? 'default' : 'outline'}
+                    variant="ghost"
                     size="sm"
-                    className="min-w-[32px]"
+                    className={`min-w-[32px] font-mono transition-all duration-200 ${
+                      currentPage === i
+                        ? 'border border-cyan-500/70 bg-cyan-950/40 text-cyan-300 shadow-[0_0_8px_rgba(0,255,255,0.25)]'
+                        : 'border border-gray-700/40 text-gray-400 hover:border-cyan-700/50 hover:text-cyan-400'
+                    }`}
                     onClick={() => { setCurrentPage(i); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   >
                     {i + 1}
                   </Button>
                 ))}
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   disabled={currentPage >= totalPages - 1}
+                  className="border border-gray-700/40 text-gray-400 hover:border-cyan-700/50 hover:text-cyan-400 font-mono disabled:opacity-30"
                   onClick={() => { setCurrentPage(p => p + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 >
                   <ChevronRight className="w-4 h-4" />

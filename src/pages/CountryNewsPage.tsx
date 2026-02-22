@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { Globe, Loader2, Calendar, Newspaper, Filter, RefreshCw, ChevronRight, Sparkles, BookUser } from "lucide-react";
+import { HolidayTimeline } from "@/components/home/HolidayTimeline";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -272,7 +273,10 @@ export default function CountryNewsPage() {
         canonicalUrl={getCanonicalUrl()}
       />
       <Header />
-      
+
+      {/* US Holiday Timeline */}
+      {countryCode?.toUpperCase() === 'US' && <HolidayTimeline />}
+
       <main className="container mx-auto px-4 py-6">
         {/* Breadcrumbs */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
@@ -304,10 +308,10 @@ export default function CountryNewsPage() {
               <Link
                 key={c.id}
                 to={`/news/${c.code.toLowerCase()}`}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm transition-all ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm font-mono transition-all duration-200 ${
                   c.code.toLowerCase() === countryCode?.toLowerCase()
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border hover:border-primary/50 hover:bg-primary/5'
+                    ? 'border-cyan-500/70 bg-cyan-950/40 text-cyan-300 shadow-[0_0_8px_rgba(0,255,255,0.25)]'
+                    : 'border-gray-700/50 bg-gray-900/30 text-gray-400 hover:border-cyan-700/50 hover:bg-cyan-950/20 hover:text-cyan-400 hover:shadow-[0_0_6px_rgba(0,255,255,0.15)]'
                 }`}
               >
                 <span>{c.flag}</span>
@@ -334,7 +338,12 @@ export default function CountryNewsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon" onClick={() => refetch()}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => refetch()}
+            className="border border-cyan-700/40 bg-cyan-950/20 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-500/70 hover:shadow-[0_0_8px_rgba(0,255,255,0.3)] transition-all duration-200"
+          >
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>

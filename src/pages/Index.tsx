@@ -9,6 +9,7 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { HomeTopicsBanner, HomeTrending14dBanner } from "@/components/home/HomeTopicsBanner";
 import { LatestUsaNews } from "@/components/home/LatestUsaNews";
 import { LatestUsaNewsSimple } from "@/components/home/LatestUsaNewsSimple";
+import { HolidayTimeline } from "@/components/home/HolidayTimeline";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Part } from "@/types/database";
 
@@ -111,6 +112,9 @@ export default function Index() {
 
         {/* Top Topics + Trending 14d */}
         <HomeTopicsBanner />
+
+        {/* US Holidays Timeline */}
+        <HolidayTimeline />
 
         {/* Latest USA Retold News */}
         <LatestUsaNews />

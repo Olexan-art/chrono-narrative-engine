@@ -298,10 +298,10 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
               <span className="text-sm font-mono">{language === 'en' ? 'Loading more...' : 'Завантаження...'}</span>
             </div>
           ) : hasNextPage ? (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="ghost"
               onClick={() => fetchNextPage()}
-              className="gap-2"
+              className="gap-2 font-mono uppercase tracking-wide border border-cyan-700/40 bg-cyan-950/20 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400 hover:text-cyan-300 hover:shadow-[0_0_12px_rgba(0,255,255,0.3)] transition-all duration-200"
             >
               <Newspaper className="w-4 h-4" />
               {language === 'en' ? 'Load More News' : 'Завантажити ще'}

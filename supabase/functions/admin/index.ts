@@ -210,6 +210,32 @@ serve(async (req: Request) => {
         return new Response(JSON.stringify({ success: true, deleted: deleted?.length ?? 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
+      case 'createHolidayEntity': {
+        const { name, date } = data as { name: string; date: string };
+        if (!name) return new Response(JSON.stringify({ error: 'name required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        // Check if exists
+        const { data: existing } = await supabase.from('wiki_entities').select('id,slug').eq('name_en', name).maybeSingle();
+        if (existing) return new Response(JSON.stringify({ success: true, existing: true, slug: existing.slug }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        // Generate slug + wiki_id
+        const kebab = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const shortId = crypto.randomUUID().split('-')[0];
+        const slug = `${kebab}-${shortId}`;
+        const wikiId = `holiday-${kebab}-${date?.slice(0,4) || new Date().getFullYear()}`;
+        const wikiUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(name.replace(/ /g, '_'))}`;
+        const { error: insErr } = await supabase.from('wiki_entities').insert({
+          wiki_id: wikiId,
+          entity_type: 'organization',
+          name,
+          name_en: name,
+          description_en: `US Federal Holiday observed annually on or around ${date || 'a fixed date'}.`,
+          wiki_url: wikiUrl,
+          wiki_url_en: wikiUrl,
+          slug,
+        });
+        if (insErr) throw insErr;
+        return new Response(JSON.stringify({ success: true, slug }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
       case 'testProvider': {
         const { provider, apiKey, model } = data;
         if (!provider || !apiKey) {
