@@ -14,8 +14,13 @@ function copyWorkerPlugin() {
       const workerSrc = path.resolve(__dirname, '_worker.js');
       const workerDest = path.resolve(__dirname, 'dist/_worker.js');
       if (fs.existsSync(workerSrc)) {
-        fs.copyFileSync(workerSrc, workerDest);
-        console.log('✓ Copied _worker.js to dist/');
+        try {
+          fs.mkdirSync(path.resolve(__dirname, 'dist'), { recursive: true });
+          fs.copyFileSync(workerSrc, workerDest);
+          console.log('✓ Copied _worker.js to dist/');
+        } catch (e) {
+          console.warn('⚠ Could not copy _worker.js:', e);
+        }
       }
     }
   };
