@@ -1258,11 +1258,16 @@ export default function WikiEntityPage() {
         let changed = false;
         savedNarratives.forEach(n => {
           if (!merged[n.year_month]) {
+            // Parse analysis if stored as string (double-encoded JSONB)
+            let analysis = n.analysis;
+            if (typeof analysis === 'string') {
+              try { analysis = JSON.parse(analysis); } catch { /* leave as-is */ }
+            }
             merged[n.year_month] = {
               success: true,
               yearMonth: n.year_month,
               newsCount: n.news_count,
-              analysis: n.analysis,
+              analysis,
               relatedEntities: n.related_entities,
               is_regenerated: n.is_regenerated,
               saved_at: n.updated_at,
