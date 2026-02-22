@@ -153,6 +153,13 @@ const NEWS_PER_PAGE = 70;
 // Default ZAI models (always available if ZAI_API_KEY is set)
 const ZAI_MODELS = LLM_MODELS.zai.text;
 
+const OPENAI_NARRATIVE_MODELS = [
+  { value: 'gpt-4o', label: 'GPT-4o' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+];
+
 export default function WikiEntityPage() {
   const { entityId } = useParams<{ entityId: string }>();
   const navigate = useNavigate();
@@ -188,6 +195,7 @@ export default function WikiEntityPage() {
   const [infoCardSources, setInfoCardSources] = useState<{ title: string; url: string }[]>([]);
   const [isGeneratingInfoCard, setIsGeneratingInfoCard] = useState(false);
   const [selectedInfoCardModel, setSelectedInfoCardModel] = useState(ZAI_MODELS.find(m => m.value === 'GLM-4.5-Air')?.value || ZAI_MODELS.find(m => m.value === 'GLM-4.7-Flash')?.value || ZAI_MODELS[0]?.value || '');
+  const [selectedNarrativeModel, setSelectedNarrativeModel] = useState('gpt-4o-mini');
 
   const queryClient = useQueryClient();
 
@@ -1266,8 +1274,30 @@ export default function WikiEntityPage() {
     }
   }, [savedNarratives]);
 
+  // Delete a saved narrative analysis
+  const deleteNarrativeAnalysis = async (yearMonth: string) => {
+    if (!entity) return;
+    try {
+      const { error } = await supabase
+        .from('narrative_analyses')
+        .delete()
+        .eq('entity_id', entity.id)
+        .eq('year_month', yearMonth);
+      if (error) throw error;
+      setNarrativeAnalyses(prev => {
+        const n = { ...prev };
+        delete n[yearMonth];
+        return n;
+      });
+      queryClient.invalidateQueries({ queryKey: ['narrative-analyses', entity.id] });
+      toast.success(language === 'uk' ? 'Аналіз видалено' : 'Analysis deleted');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   // Analyze narratives for a specific month
-  const analyzeNarratives = async (yearMonth: string, regenerate = false) => {
+  const analyzeNarratives = async (yearMonth: string, regenerate = false, model?: string) => {
     if (!entity) return;
     setAnalyzingMonth(yearMonth);
     try {
@@ -1276,6 +1306,7 @@ export default function WikiEntityPage() {
         yearMonth,
         language: language === 'uk' ? 'uk' : 'en',
         regenerate,
+        model: model || selectedNarrativeModel,
       });
       if (result.success) {
         setNarrativeAnalyses(prev => ({ ...prev, [yearMonth]: result }));
@@ -1863,20 +1894,31 @@ export default function WikiEntityPage() {
                                   </div>
                                 )}
                                 {isAdmin && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2 text-[10px] gap-1"
-                                    onClick={() => analyzeNarratives(month, true)}
-                                    disabled={analyzingMonth === month}
-                                    title={language === 'uk' ? 'Перегенерувати' : 'Regenerate'}
-                                  >
-                                    {analyzingMonth === month ? (
-                                      <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                      <RefreshCw className="w-3 h-3" />
-                                    )}
-                                  </Button>
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 px-2 text-[10px] gap-1"
+                                      onClick={() => analyzeNarratives(month, true)}
+                                      disabled={analyzingMonth === month}
+                                      title={language === 'uk' ? 'Перегенерувати' : 'Regenerate'}
+                                    >
+                                      {analyzingMonth === month ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <RefreshCw className="w-3 h-3" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 px-2 text-[10px] gap-1 text-destructive hover:text-destructive"
+                                      onClick={() => deleteNarrativeAnalysis(month)}
+                                      title={language === 'uk' ? 'Видалити аналіз' : 'Delete analysis'}
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </>
                                 )}
                                 {!isLatest && (
                                   <Button
@@ -2892,10 +2934,24 @@ export default function WikiEntityPage() {
                 return (
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center gap-2 text-sm">
-                        <FolderOpen className="w-4 h-4 text-primary" />
-                        {language === 'uk' ? 'Архів' : 'Archive'}
-                      </CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2 text-sm">
+                          <FolderOpen className="w-4 h-4 text-primary" />
+                          {language === 'uk' ? 'Архів' : 'Archive'}
+                        </CardTitle>
+                        {isAdmin && (
+                          <Select value={selectedNarrativeModel} onValueChange={setSelectedNarrativeModel}>
+                            <SelectTrigger className="h-6 text-[10px] w-28">
+                              <SelectValue placeholder="Model" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {OPENAI_NARRATIVE_MODELS.map(m => (
+                                <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
                     </CardHeader>
                     <CardContent className="pt-0">
                       <div className="space-y-1 max-h-64 overflow-y-auto">
@@ -2905,20 +2961,33 @@ export default function WikiEntityPage() {
                             <div className="flex items-center gap-1.5">
                               <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{count}</Badge>
                               {isAdmin && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-5 px-1.5 text-[10px] gap-1 text-primary hover:text-primary"
-                                  onClick={() => analyzeNarratives(month)}
-                                  disabled={analyzingMonth === month}
-                                >
-                                  {analyzingMonth === month ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : (
-                                    <BrainCircuit className="w-3 h-3" />
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 px-1.5 text-[10px] gap-1 text-primary hover:text-primary"
+                                    onClick={() => analyzeNarratives(month)}
+                                    disabled={analyzingMonth === month}
+                                  >
+                                    {analyzingMonth === month ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <BrainCircuit className="w-3 h-3" />
+                                    )}
+                                    {language === 'uk' ? 'Аналіз' : 'Analyze'}
+                                  </Button>
+                                  {narrativeAnalyses[month] && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-5 px-1.5 text-[10px] text-destructive hover:text-destructive"
+                                      onClick={() => deleteNarrativeAnalysis(month)}
+                                      title={language === 'uk' ? 'Видалити аналіз' : 'Delete analysis'}
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
                                   )}
-                                  {language === 'uk' ? 'Аналіз' : 'Analyze'}
-                                </Button>
+                                </>
                               )}
                             </div>
                           </div>

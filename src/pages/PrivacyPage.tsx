@@ -290,9 +290,6 @@ export default function PrivacyPage() {
 }
 
 
-export default function PrivacyPage() {
-  const { t, language } = useLanguage();
-
   const lastUpdated = "2025-02-01";
 
   const sections = [

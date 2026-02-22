@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { entityId, yearMonth, language = 'uk', regenerate = false } = await req.json();
+    const { entityId, yearMonth, language = 'uk', regenerate = false, model = 'gpt-4o-mini' } = await req.json();
     
     if (!entityId || !yearMonth) {
       return new Response(JSON.stringify({ error: "entityId and yearMonth required" }), {
@@ -157,7 +157,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
