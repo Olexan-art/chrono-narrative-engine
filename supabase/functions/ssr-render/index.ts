@@ -661,7 +661,7 @@ Deno.serve(async (req) => {
       if (entity) {
         const entityName = entity.name_en || entity.name;
         title = `${entityName} | Echoes Wiki`;
-        description = entity.description_en || entity.description || entity.extract_en?.substring(0, 160) || entity.extract?.substring(0, 160) || `Information about ${entityName}`;
+        description = entity.description_en || entity.description || entity.extract_en?.substring(0, 200) || entity.extract?.substring(0, 200) || `Information about ${entityName}`;
         image = entity.image_url || image;
         canonicalUrl = `${BASE_URL}/wiki/${entity.slug || entity.id}`;
 
@@ -671,7 +671,7 @@ Deno.serve(async (req) => {
           supabase
             .from("news_wiki_entities")
             .select(`
-              news_item:news_rss_items(id, slug, title, title_en, description_en, published_at, themes, themes_en, keywords, likes, dislikes, country:news_countries(code, flag, name_en))
+              news_item:news_rss_items(id, slug, title, title_en, description_en, image_url, published_at, themes, themes_en, keywords, likes, dislikes, country:news_countries(code, flag, name_en))
             `)
             .eq("wiki_entity_id", entity.id)
             .order("created_at", { ascending: false })
@@ -2545,10 +2545,13 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
     const countryFlag = (news.country as any)?.flag || '';
     const newsUrl = news.slug ? `${BASE_URL}/news/${countryCode}/${news.slug}` : null;
     return `
-                <li>
-                  ${countryFlag} ${newsUrl ? `<a href="${newsUrl}">${escapeHtml(newsTitle)}</a>` : escapeHtml(newsTitle)}
-                  ${news.published_at ? `<time>(${news.published_at.split('T')[0]})</time>` : ''}
-                  ${news.description_en ? `<p>${escapeHtml(news.description_en.substring(0, 150))}...</p>` : ''}
+                <li style="display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px;">
+                  ${news.image_url ? `<img src="${escapeHtml(news.image_url)}" alt="${escapeHtml(newsTitle)}" style="width: 80px; height: 56px; object-fit: cover; border-radius: 4px; flex-shrink: 0;">` : ''}
+                  <div>
+                    ${countryFlag} ${newsUrl ? `<a href="${newsUrl}">${escapeHtml(newsTitle)}</a>` : escapeHtml(newsTitle)}
+                    ${news.published_at ? `<time style="font-size: 12px; color: hsl(var(--muted-foreground));">(${news.published_at.split('T')[0]})</time>` : ''}
+                    ${news.description_en ? `<p style="margin: 4px 0 0; font-size: 14px;">${escapeHtml(news.description_en.substring(0, 150))}...</p>` : ''}
+                  </div>
                 </li>
               `;
   }).join("")}
@@ -2569,9 +2572,12 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
     const eSlug = e.slug || e.id;
     const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
     return `
-                <li>
-                  ${typeIcon} <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
-                  <span>(${e.shared_news_count} shared articles)</span>
+                <li style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                  ${e.image_url ? `<img src="${escapeHtml(e.image_url)}" alt="${escapeHtml(eName)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0;">` : `<span style="width: 40px; height: 40px; border-radius: 50%; background: hsl(var(--muted)); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px;">${typeIcon}</span>`}
+                  <div>
+                    <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
+                    <span style="font-size: 12px; color: hsl(var(--muted-foreground));"> · ${e.shared_news_count} shared articles</span>
+                  </div>
                 </li>
               `;
   }).join("")}
@@ -2590,9 +2596,12 @@ function generateWikiEntityHTML(entity: any, linkedNews: any[], relatedEntities:
     const eDesc = e.description_en || e.description || '';
     const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
     return `
-                <li>
-                  ${typeIcon} <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
-                  ${eDesc ? `<span> — ${escapeHtml(eDesc.substring(0, 100))}</span>` : ''}
+                <li style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                  ${e.image_url ? `<img src="${escapeHtml(e.image_url)}" alt="${escapeHtml(eName)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0;">` : `<span style="width: 40px; height: 40px; border-radius: 50%; background: hsl(var(--muted)); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px;">${typeIcon}</span>`}
+                  <div>
+                    <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
+                    ${eDesc ? `<span style="font-size: 13px; color: hsl(var(--muted-foreground));">${escapeHtml(eDesc.substring(0, 100))}</span>` : ''}
+                  </div>
                 </li>
               `;
   }).join("")}
