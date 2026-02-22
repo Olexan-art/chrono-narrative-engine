@@ -20,42 +20,51 @@ jobs:
       - name: Query cron_job_configs (skip if disabled)
         id: check
         run: |
-          RESP=$(curl -s -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+          RESP=$(curl -s --max-time 15 \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/cron_job_configs?select=enabled,processing_options&job_name=eq.bulk_retell_us")
-          echo "resp=$RESP" >> $GITHUB_OUTPUT
-          ENABLED=$(echo "$RESP" | jq -r 'if .[0] then .[0].enabled else "false" end')
+            "${{ secrets.SUPABASE_URL }}/rest/v1/cron_job_configs?select=enabled,processing_options&job_name=eq.bulk_retell_us" \
+            2>/dev/null || echo "[]")
+          # Use default "false" if jq fails to parse (non-JSON response, network error, etc.)
+          ENABLED=$(echo "$RESP" | jq -r 'if . and (.[0]) then .[0].enabled else false end' 2>/dev/null || echo "false")
           echo "enabled=$ENABLED" >> $GITHUB_OUTPUT
           if [ "$ENABLED" != "true" ]; then
-            echo "bulk_retell_us is disabled in cron_job_configs — skipping fallback run.";
+            echo "bulk_retell_us is disabled (or not found) in cron_job_configs — skipping.";
             exit 0;
           fi
 
       - name: Invoke bulk-retell-news (fallback)
         id: invoke
+        if: steps.check.outputs.enabled == 'true'
         run: |
           echo "Calling bulk-retell-news for US (fallback cron)..."
           BODY='{"country_code":"us","time_range":"last_3h","job_name":"bulk_retell_us","trigger":"cron"}'
-          HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/bulk-retell-news" \
+          # Capture curl output + status; allow curl errors without aborting the script
+          HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/bulk-retell-news" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Content-Type: application/json" \
-            -d "$BODY" --max-time 300)
+            -d "$BODY" --max-time 300 2>&1) || true
 
-          # split body and status
-          HTTP_BODY=$(printf "%s" "$HTTP_RESPONSE" | sed '$d')
+          # Split body and HTTP status code (last line written by -w flag)
+          HTTP_BODY=$(printf "%s" "$HTTP_RESPONSE" | head -n -1)
           HTTP_STATUS=$(printf "%s" "$HTTP_RESPONSE" | tail -n1)
-          echo "status=$HTTP_STATUS" >> $GITHUB_OUTPUT
-          echo "body=$HTTP_BODY" >> $GITHUB_OUTPUT
 
           echo "Response status: $HTTP_STATUS"
-          echo "$HTTP_BODY" | jq -C '.' || true
+          echo "$HTTP_BODY" | jq -C '.' 2>/dev/null || echo "$HTTP_BODY"
 
-          if [ "$HTTP_STATUS" -ge 400 ]; then
+          # Validate that we got a numeric status before comparing
+          if [[ "$HTTP_STATUS" =~ ^[0-9]+$ ]] && [ "$HTTP_STATUS" -ge 400 ]; then
             echo "Invocation failed (HTTP $HTTP_STATUS)"; exit 1;
           fi
+
+          echo "status=${HTTP_STATUS:-unknown}" >> $GITHUB_OUTPUT
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$HTTP_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Summary
         if: always()
         run: |
+          echo "Enabled: ${{ steps.check.outputs.enabled }}"
           echo "Fallback run finished — status: ${{ steps.invoke.outputs.status }}"
-          echo "Response body: ${{ steps.invoke.outputs.body }}"
