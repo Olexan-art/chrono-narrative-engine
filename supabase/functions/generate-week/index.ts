@@ -225,7 +225,9 @@ serve(async (req) => {
       part,
       totalParts,
       includeMonologue,
-      includeCommentary
+      includeCommentary,
+      overrideProvider,
+      overrideModel
     } = await req.json();
 
     // Get LLM settings from database
@@ -265,6 +267,15 @@ serve(async (req) => {
     }
     if (cronConfig?.processing_options?.llm_model) {
       llmSettings.llm_text_model = cronConfig.processing_options.llm_model;
+    }
+
+    // Apply per-request overrides (from admin UI model selector, takes precedence over cron config)
+    if (overrideProvider) {
+      llmSettings.llm_text_provider = overrideProvider;
+      llmSettings.llm_provider = overrideProvider;
+    }
+    if (overrideModel) {
+      llmSettings.llm_text_model = overrideModel;
     }
 
     const effectiveProvider = llmSettings.llm_text_provider || llmSettings.llm_provider || 'zai';

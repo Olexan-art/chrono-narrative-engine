@@ -55,6 +55,8 @@ export async function generateStory(params: {
   bradburyWeight?: number;
   clarkeWeight?: number;
   gaimanWeight?: number;
+  overrideProvider?: string;
+  overrideModel?: string;
 }) {
   return callEdgeFunction<{
     success: boolean;

@@ -273,7 +273,9 @@ serve(async (req) => {
       narrativeSpecial,
       bradburyWeight = 33,
       clarkeWeight = 33,
-      gaimanWeight = 34
+      gaimanWeight = 34,
+      overrideProvider,
+      overrideModel
     } = await req.json();
 
     // Get LLM settings from database
@@ -299,6 +301,15 @@ serve(async (req) => {
       zai_api_key: null,
       mistral_api_key: null
     };
+
+    // Apply per-request overrides (from admin UI model selector)
+    if (overrideProvider) {
+      llmSettings.llm_text_provider = overrideProvider;
+      llmSettings.llm_provider = overrideProvider;
+    }
+    if (overrideModel) {
+      llmSettings.llm_text_model = overrideModel;
+    }
 
     const effectiveProvider = llmSettings.llm_text_provider || llmSettings.llm_provider || 'zai';
     console.log('Using text LLM provider:', effectiveProvider, 'model:', llmSettings.llm_text_model);

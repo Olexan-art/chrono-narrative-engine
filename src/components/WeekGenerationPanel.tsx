@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { adminAction, generateImage } from "@/lib/api";
@@ -23,6 +25,23 @@ interface WeekGenerationPanelProps {
   password: string;
 }
 
+const MODEL_OPTIONS = [
+  { label: 'Z.AI / GLM-4.7', value: 'zai|GLM-4.7', provider: 'zai' },
+  { label: 'Z.AI / GLM-4-Plus', value: 'zai|GLM-4-Plus', provider: 'zai' },
+  { label: 'Z.AI / GLM-4-Air', value: 'zai|GLM-4-Air', provider: 'zai' },
+  { label: 'GPT-4o', value: 'openai|gpt-4o', provider: 'openai' },
+  { label: 'GPT-4o Mini', value: 'openai|gpt-4o-mini', provider: 'openai' },
+  { label: 'GPT-4 Turbo', value: 'openai|gpt-4-turbo', provider: 'openai' },
+  { label: 'Gemini 2.5 Flash', value: 'geminiV22|gemini-2.5-flash', provider: 'geminiV22' },
+  { label: 'Gemini 2.5 Pro', value: 'geminiV22|gemini-2.5-pro', provider: 'geminiV22' },
+  { label: 'Gemini 2.0 Flash', value: 'gemini|gemini-2.0-flash', provider: 'gemini' },
+  { label: 'Gemini 1.5 Pro', value: 'gemini|gemini-1.5-pro', provider: 'gemini' },
+  { label: 'Claude 3.5 Sonnet', value: 'anthropic|claude-3-5-sonnet-20241022', provider: 'anthropic' },
+  { label: 'Claude 3 Haiku', value: 'anthropic|claude-3-haiku-20240307', provider: 'anthropic' },
+  { label: 'Mistral Large', value: 'mistral|mistral-large-latest', provider: 'mistral' },
+  { label: 'Mistral Medium', value: 'mistral|mistral-medium', provider: 'mistral' },
+];
+
 interface WeekData {
   start: Date;
   end: Date;
@@ -35,11 +54,32 @@ interface WeekData {
 export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedWeek, setSelectedWeek] = useState<WeekData | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Load current default provider from settings
+  const { data: settingsData } = useQuery({
+    queryKey: ['settings-llm'],
+    queryFn: async () => {
+      const { data } = await supabase.from('settings').select('llm_text_provider, llm_provider, llm_text_model').limit(1).single();
+      return data;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Set default selection based on current DB settings
+  useEffect(() => {
+    if (!selectedModel && settingsData) {
+      const provider = settingsData.llm_text_provider || settingsData.llm_provider || 'zai';
+      const model = settingsData.llm_text_model || 'GLM-4.7';
+      const match = MODEL_OPTIONS.find(o => o.value === `${provider}|${model}`);
+      if (match) setSelectedModel(match.value);
+    }
+  }, [settingsData, selectedModel]);
 
   // Auto-scroll logs
   useEffect(() => {
@@ -215,6 +255,8 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
       // Step 4: Generate week synthesis (3 parts)
       addLog('=== ГЕНЕРАЦІЯ ТЕКСТУ (частина 1/3) ===', 'info');
       addLog('Генерація першої частини синтезу (~1000 слів)...');
+
+      const [overrideProvider, overrideModel] = (selectedModel && selectedModel !== '__default__') ? selectedModel.split('|') : [undefined, undefined];
       
       const part1Response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-week`, {
         method: 'POST',
@@ -232,7 +274,9 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
           weekStart: format(selectedWeek.start, 'yyyy-MM-dd'),
           weekEnd: format(selectedWeek.end, 'yyyy-MM-dd'),
           part: 1,
-          totalParts: 3
+          totalParts: 3,
+          ...(overrideProvider && { overrideProvider }),
+          ...(overrideModel && { overrideModel }),
         }),
       });
       
@@ -267,7 +311,9 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
           weekStart: format(selectedWeek.start, 'yyyy-MM-dd'),
           weekEnd: format(selectedWeek.end, 'yyyy-MM-dd'),
           part: 2,
-          totalParts: 3
+          totalParts: 3,
+          ...(overrideProvider && { overrideProvider }),
+          ...(overrideModel && { overrideModel }),
         }),
       });
       
@@ -304,7 +350,9 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
           part: 3,
           totalParts: 3,
           includeMonologue: true,
-          includeCommentary: true
+          includeCommentary: true,
+          ...(overrideProvider && { overrideProvider }),
+          ...(overrideModel && { overrideModel }),
         }),
       });
       
@@ -514,26 +562,54 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
         {/* Generate button */}
         {selectedWeek && (
           <div className="pt-4 border-t border-border">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
               <div>
                 <p className="text-sm font-mono text-muted-foreground">Вибрано:</p>
                 <p className="font-serif">
                   {format(selectedWeek.start, 'd MMMM', { locale: uk })} — {format(selectedWeek.end, 'd MMMM', { locale: uk })}
                 </p>
               </div>
-              <Button
-                onClick={handleGenerateWeek}
-                disabled={isGenerating || selectedWeek.partsCount === 0}
-                className="gap-2"
-                size="lg"
-              >
-                {isGenerating ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
-                {isGenerating ? 'Генерація...' : 'Згенерувати Главу'}
-              </Button>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="space-y-1 min-w-[200px]">
+                  <Label className="text-xs flex items-center gap-1 text-muted-foreground">
+                    <Sparkles className="w-3 h-3" />
+                    Модель LLM
+                  </Label>
+                  <Select value={selectedModel || '__default__'} onValueChange={setSelectedModel} disabled={isGenerating}>
+                    <SelectTrigger className="font-mono text-xs h-8">
+                      <SelectValue placeholder="З налаштувань" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__default__" className="text-muted-foreground italic text-xs">З налаштувань</SelectItem>
+                      {['zai', 'openai', 'geminiV22', 'gemini', 'anthropic', 'mistral'].map(prov => (
+                        <div key={prov}>
+                          <div className="px-2 py-1 text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider border-t first:border-t-0">
+                            {prov === 'geminiV22' ? 'Gemini v2.5' : prov === 'openai' ? 'OpenAI' : prov === 'zai' ? 'Z.AI' : prov === 'anthropic' ? 'Anthropic' : prov === 'gemini' ? 'Gemini' : 'Mistral'}
+                          </div>
+                          {MODEL_OPTIONS.filter(o => o.provider === prov).map(opt => (
+                            <SelectItem key={opt.value} value={opt.value} className="font-mono text-xs pl-4">
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </div>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={handleGenerateWeek}
+                  disabled={isGenerating || selectedWeek.partsCount === 0}
+                  className="gap-2 self-end"
+                  size="lg"
+                >
+                  {isGenerating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  {isGenerating ? 'Генерація...' : 'Згенерувати Главу'}
+                </Button>
+              </div>
             </div>
             
             {selectedWeek.partsCount === 0 && (

@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { fetchNews, generateStory, generateImage, adminAction } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import type { Part } from "@/types/database";
@@ -24,6 +25,23 @@ interface LogEntry {
 interface GenerationPanelProps {
   password: string;
 }
+
+const MODEL_OPTIONS = [
+  { label: 'Z.AI / GLM-4.7', value: 'zai|GLM-4.7', provider: 'zai' },
+  { label: 'Z.AI / GLM-4-Plus', value: 'zai|GLM-4-Plus', provider: 'zai' },
+  { label: 'Z.AI / GLM-4-Air', value: 'zai|GLM-4-Air', provider: 'zai' },
+  { label: 'GPT-4o', value: 'openai|gpt-4o', provider: 'openai' },
+  { label: 'GPT-4o Mini', value: 'openai|gpt-4o-mini', provider: 'openai' },
+  { label: 'GPT-4 Turbo', value: 'openai|gpt-4-turbo', provider: 'openai' },
+  { label: 'Gemini 2.5 Flash', value: 'geminiV22|gemini-2.5-flash', provider: 'geminiV22' },
+  { label: 'Gemini 2.5 Pro', value: 'geminiV22|gemini-2.5-pro', provider: 'geminiV22' },
+  { label: 'Gemini 2.0 Flash', value: 'gemini|gemini-2.0-flash', provider: 'gemini' },
+  { label: 'Gemini 1.5 Pro', value: 'gemini|gemini-1.5-pro', provider: 'gemini' },
+  { label: 'Claude 3.5 Sonnet', value: 'anthropic|claude-3-5-sonnet-20241022', provider: 'anthropic' },
+  { label: 'Claude 3 Haiku', value: 'anthropic|claude-3-haiku-20240307', provider: 'anthropic' },
+  { label: 'Mistral Large', value: 'mistral|mistral-large-latest', provider: 'mistral' },
+  { label: 'Mistral Medium', value: 'mistral|mistral-medium', provider: 'mistral' },
+];
 
 // Timer component for pending logs
 function PendingTimer({ startTimestamp }: { startTimestamp: number }) {
@@ -50,11 +68,33 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [storiesPerDay, setStoriesPerDay] = useState(1);
+  const [selectedModel, setSelectedModel] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Load current default provider from settings
+  const { data: settingsData } = useQuery({
+    queryKey: ['settings-llm'],
+    queryFn: async () => {
+      const { data } = await supabase.from('settings').select('llm_text_provider, llm_provider, llm_text_model').limit(1).single();
+      return data;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Set default selection based on current DB settings
+  useEffect(() => {
+    if (!selectedModel && settingsData) {
+      const provider = settingsData.llm_text_provider || settingsData.llm_provider || 'zai';
+      const model = settingsData.llm_text_model || 'GLM-4.7';
+      const match = MODEL_OPTIONS.find(o => o.value === `${provider}|${model}`);
+      if (match) setSelectedModel(match.value);
+      else setSelectedModel(`${provider}|${model}`);
+    }
+  }, [settingsData, selectedModel]);
 
   const addLog = (message: string, status: LogEntry['status'] = 'pending') => {
     const time = format(new Date(), 'HH:mm:ss');
@@ -95,6 +135,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
 
       // Step 2: Generate story with narrative settings
       addLog(`[${format(date, 'd MMM', { locale: uk })} #${storyNumber}] Генерація тексту...`);
+      const [overrideProvider, overrideModel] = (selectedModel && selectedModel !== '__default__') ? selectedModel.split('|') : [undefined, undefined];
       const storyResult = await generateStory({
         news: newsResult.articles.slice(0, 10),
         date: dateStr,
@@ -105,7 +146,9 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
         narrativeSpecial: settings?.narrative_special || undefined,
         bradburyWeight: settings?.bradbury_weight || 33,
         clarkeWeight: settings?.clarke_weight || 33,
-        gaimanWeight: settings?.gaiman_weight || 34
+        gaimanWeight: settings?.gaiman_weight || 34,
+        overrideProvider,
+        overrideModel
       });
       if (!storyResult.success) {
         updateLastLog('error');
@@ -314,7 +357,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="space-y-2">
             <Label className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
@@ -349,6 +392,32 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
               onChange={(e) => setStoriesPerDay(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))}
               disabled={isGenerating}
             />
+          </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              Модель LLM
+            </Label>
+            <Select value={selectedModel} onValueChange={setSelectedModel} disabled={isGenerating}>
+              <SelectTrigger className="font-mono text-xs">
+                <SelectValue placeholder="З налаштувань" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__default__" className="text-muted-foreground italic">З налаштувань</SelectItem>
+                {['zai', 'openai', 'geminiV22', 'gemini', 'anthropic', 'mistral'].map(prov => (
+                  <div key={prov}>
+                    <div className="px-2 py-1 text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider border-t first:border-t-0">
+                      {prov === 'geminiV22' ? 'Gemini v2.5' : prov === 'openai' ? 'OpenAI' : prov === 'zai' ? 'Z.AI' : prov === 'anthropic' ? 'Anthropic' : prov === 'gemini' ? 'Gemini' : 'Mistral'}
+                    </div>
+                    {MODEL_OPTIONS.filter(o => o.provider === prov).map(opt => (
+                      <SelectItem key={opt.value} value={opt.value} className="font-mono text-xs pl-4">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-end">
             <Button
