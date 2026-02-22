@@ -151,16 +151,20 @@ export default function NewsTopicsCatalogPage() {
     return topicsData.filter((t) => t.topic.toLowerCase().includes(q));
   }, [topicsData, search]);
 
-  const topTopics = filtered.slice(0, 6);
-  // Top Topics 7-20: from all-time data, filtered by search if active
+  // All-time data filtered by search
   const allTimeFiltered = useMemo(() => {
     if (!allTimeTopicsData) return [];
     if (!search.trim()) return allTimeTopicsData;
     const q = search.toLowerCase();
     return allTimeTopicsData.filter((t) => t.topic.toLowerCase().includes(q));
   }, [allTimeTopicsData, search]);
-  const topNextTopics = allTimeFiltered.slice(6, 20);
-  const restTopics = filtered.slice(20);
+
+  // Trending Topics: top 12 from ALL-TIME data (ensures Finance/Politics/Sports always visible)
+  const topTopics = allTimeFiltered.slice(0, 12);
+  // Top Topics 13-30: all-time ranked list
+  const topNextTopics = allTimeFiltered.slice(12, 30);
+  // All topics: positions 30+ from all-time (no duplicates with above sections)
+  const restTopics = allTimeFiltered.slice(30);
 
   // Pagination for All topics
   const totalAllPages = Math.ceil(restTopics.length / ALL_TOPICS_PAGE_SIZE);
@@ -295,7 +299,7 @@ export default function NewsTopicsCatalogPage() {
                                   <img
                                     src={url}
                                     alt=""
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-cover opacity-50"
                                     loading="lazy"
                                     onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.opacity = '0'; }}
                                   />
@@ -375,12 +379,12 @@ export default function NewsTopicsCatalogPage() {
                 <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <Tag className="w-4 h-4 text-muted-foreground" />
                   {language === "en"
-                    ? `All topics (${filtered.length})`
-                    : `Всі теми (${filtered.length})`}
+                    ? `All topics (${allTimeFiltered.length})`
+                    : `Всі теми (${allTimeFiltered.length})`}
                 </h2>
               )}
               <div className="flex flex-wrap gap-2">
-                {(search ? filtered : pagedRestTopics).map(({ topic, count }) => (
+                {(search ? allTimeFiltered : pagedRestTopics).map(({ topic, count }) => (
                   <Link key={topic} to={topicPath(topic)}>
                     <Badge
                       variant="secondary"
