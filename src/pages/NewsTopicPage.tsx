@@ -540,20 +540,18 @@ export default function NewsTopicPage() {
                   <div className="space-y-0">
                     {groupedByDay.map((group) => (
                       <div key={group.date}>
-                        {/* Day separator header — brick-style date */}
-                        <div className="relative flex items-center gap-3 py-4 px-4">
-                          <div className="relative z-10 flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center">
-                            <Calendar className="w-3 h-3 text-primary" />
-                          </div>
-                          <div className="flex-1 flex items-center gap-2.5">
-                            <span className="inline-flex items-center gap-1.5 bg-primary/15 border border-primary/35 text-primary text-sm font-bold px-3 py-1 rounded-md tracking-wide">
-                              <Calendar className="w-3.5 h-3.5" />
+                        {/* Day separator header — neon slash style */}
+                        <div className="relative flex items-center gap-3 py-3 px-4 my-1">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-2 bg-background border-l-4 border-primary text-primary font-mono text-sm font-black px-4 py-1.5 uppercase tracking-[0.12em] shadow-[0_0_14px_hsl(var(--primary)/0.25)]">
+                              <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                               {group.label}
                             </span>
-                            <span className="text-xs text-muted-foreground bg-secondary/60 border border-border px-2 py-0.5 rounded-full font-medium">
-                              {group.items.length} {language === "en" ? "articles" : "статей"}
+                            <span className="font-mono text-xs font-black text-primary/90 border border-primary/50 px-2 py-1 bg-primary/10 uppercase tracking-widest">
+                              {group.items.length}×
                             </span>
                           </div>
+                          <div className="flex-1 h-px bg-gradient-to-r from-primary/40 to-transparent" />
                         </div>
 
                         {/* News items within the day */}
