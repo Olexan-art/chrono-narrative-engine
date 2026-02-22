@@ -6,6 +6,7 @@ import {
   TrendingUp, Newspaper, ArrowRight, X
 } from "lucide-react";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -510,7 +511,9 @@ export default function WikiCatalogPage() {
 
           {/* SEO Content Section */}
           <WikiCatalogSeoContent />
+
         </main>
+        <Footer />
       </div>
     </>
   );

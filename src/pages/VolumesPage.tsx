@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Library, Eye, BookOpen, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -201,7 +202,9 @@ export default function VolumesPage() {
             </CardContent>
           </Card>
         )}
+
       </main>
+      <Footer />
     </div>
   );
 }

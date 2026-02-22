@@ -38,6 +38,7 @@ import { ViralityPanel } from "@/components/admin/ViralityPanel";
 import { NewsMergePanel } from "@/components/admin/NewsMergePanel";
 import { RSSFeedPanel } from "@/components/admin/RSSFeedPanel";
 import { TopicsStatsPanel } from "@/components/admin/TopicsStatsPanel";
+import { ContactSubmissionsPanel } from "@/components/admin/ContactSubmissionsPanel";
 import LLMManagementPage from "@/pages/admin/LLMManagementPage";
 import NewsProcessingPage from "@/pages/admin/NewsProcessingPage";
 import { useToast } from "@/hooks/use-toast";
@@ -804,6 +805,10 @@ export default function AdminPage() {
               <Tags className="w-4 h-4 text-green-500" />
               Topics
             </TabsTrigger>
+            <TabsTrigger value="feedback" className="gap-2">
+              <MessageSquare className="w-4 h-4 text-sky-400" />
+              Feedback
+            </TabsTrigger>
 
             {/* База даних */}
             <TabsTrigger value="wiki-entities" className="gap-2">
@@ -1015,6 +1020,10 @@ export default function AdminPage() {
 
           <TabsContent value="topics-stats" className="mt-6">
             <TopicsStatsPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="feedback" className="mt-6">
+            <ContactSubmissionsPanel password={password} />
           </TabsContent>
         </Tabs>
       </main>

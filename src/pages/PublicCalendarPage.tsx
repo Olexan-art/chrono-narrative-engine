@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -460,7 +461,9 @@ export default function PublicCalendarPage() {
             </div>
           </div>
         </div>
+
       </main>
+      <Footer />
     </div>
   );
 }

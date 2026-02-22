@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight
 } from "lucide-react";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -429,6 +430,7 @@ export default function NewsTopicsCatalogPage() {
           </>
         )}
       </div>
+      <Footer />
     </>
   );
 }

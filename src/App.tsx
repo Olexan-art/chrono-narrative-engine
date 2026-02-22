@@ -42,6 +42,7 @@ const WikiEntityPage = lazy(() => import("./pages/WikiEntityPage"));
 const NewsTopicsCatalogPage = lazy(() => import("./pages/NewsTopicsCatalogPage"));
 const NewsTopicPage = lazy(() => import("./pages/NewsTopicPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const ContactPage = lazy(() => import("./pages/ContactPage"));
 
 import { AdminGuard } from "@/components/AdminGuard";
 
@@ -91,6 +92,7 @@ const App = () => (
                 <Route path="/wiki/:entityId" element={<WikiEntityPage />} />
                 <Route path="/topics" element={<NewsTopicsCatalogPage />} />
                 <Route path="/topics/:topicSlug" element={<NewsTopicPage />} />
+                <Route path="/contact" element={<ContactPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

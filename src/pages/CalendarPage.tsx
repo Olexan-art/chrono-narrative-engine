@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Part } from "@/types/database";
@@ -232,7 +233,9 @@ export default function CalendarPage() {
             </div>
           )}
         </div>
+
       </main>
+      <Footer />
     </div>
   );
 }

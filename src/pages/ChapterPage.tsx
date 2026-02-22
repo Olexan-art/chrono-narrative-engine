@@ -6,6 +6,7 @@ import { uk, enUS, pl } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar, BookOpen, Loader2, Sparkles, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { ChapterTweets } from "@/components/ChapterTweets";
 import { ChapterChat } from "@/components/ChapterChat";
 import { SEOHead } from "@/components/SEOHead";
@@ -490,7 +491,9 @@ export default function ChapterPage() {
             )}
           </nav>
         </article>
+
       </main>
+      <Footer />
     </div>
   );
 }

@@ -2012,6 +2012,75 @@ serve(async (req: Request) => {
         }
       }
 
+      case 'analyzeContactSubmission': {
+        const { id, topic, name, email, message } = data || {};
+        if (!id || !message) {
+          return new Response(
+            JSON.stringify({ error: 'Missing id or message' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Get LLM settings
+        const { data: settings } = await supabase
+          .from('settings')
+          .select('zai_api_key, openai_api_key, llm_text_model')
+          .limit(1)
+          .single();
+
+        const apiKey = settings?.zai_api_key || settings?.openai_api_key;
+        const model  = settings?.llm_text_model || 'GLM-4-Flash';
+
+        const systemPrompt = `Ти — аналітик зворотнього зв'язку. Проаналізуй звернення користувача і надай:
+1. Короткий підсумок (1-2 речення)
+2. Пріоритет: низький / середній / високий
+3. Рекомендована дія
+4. Тон звернення (позитивний / нейтральний / негативний)
+Відповідай лаконічно українською мовою.`;
+
+        const userPrompt = `Тема: ${topic}\nІм'я: ${name || 'не вказано'}\nEmail: ${email || 'не вказано'}\nПовідомлення:\n${message}`;
+
+        let analysis = '';
+        if (apiKey) {
+          const endpoint = settings?.zai_api_key
+            ? 'https://api.z.ai/api/paas/v4/chat/completions'
+            : 'https://api.openai.com/v1/chat/completions';
+          const llmModel = settings?.zai_api_key ? (model || 'GLM-4-Flash') : (model || 'gpt-4o-mini');
+
+          const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: llmModel,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user',   content: userPrompt },
+              ],
+              max_tokens: 400,
+              temperature: 0.3,
+            }),
+          });
+          const llmData = await resp.json();
+          analysis = llmData?.choices?.[0]?.message?.content || 'Аналіз недоступний';
+        } else {
+          analysis = `Тема: ${topic}\nПріоритет: середній\nДія: Розглянути вручну (API ключ не налаштований)`;
+        }
+
+        // Save analysis to DB
+        await supabase
+          .from('contact_submissions')
+          .update({ ai_analysis: analysis, ai_analyzed_at: new Date().toISOString() })
+          .eq('id', id);
+
+        return new Response(
+          JSON.stringify({ success: true, analysis }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: 'Unknown action' }),

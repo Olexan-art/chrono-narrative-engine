@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { OtherCountriesNews } from "@/components/OtherCountriesNews";
 import { NewsLogoMosaic } from "@/components/NewsLogoMosaic";
@@ -504,7 +505,9 @@ export default function CountryNewsPage() {
         {countryCode && (
           <OtherCountriesNews excludeCountryCode={countryCode} />
         )}
+
       </main>
+      <Footer />
     </div>
   );
 }

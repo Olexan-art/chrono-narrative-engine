@@ -5,6 +5,7 @@ import { uk, enUS, pl } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar, BookOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { ThreadedCharacterChat } from "@/components/ThreadedCharacterChat";
 import { TweetCard } from "@/components/TweetCard";
 import { NarrativeChart } from "@/components/NarrativeChart";
@@ -490,7 +491,9 @@ export default function ReadPage() {
             )}
           </nav>
         </article>
+
       </main>
+      <Footer />
     </div>
   );
 }

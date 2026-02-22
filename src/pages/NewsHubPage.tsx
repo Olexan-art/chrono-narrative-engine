@@ -4,6 +4,7 @@ import { Globe, ArrowRight, Loader2, Newspaper, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { NewsHubSeoContent } from "@/components/NewsHubSeoContent";
 import { NewsLogoMosaic } from "@/components/NewsLogoMosaic";
@@ -284,7 +285,9 @@ export default function NewsHubPage() {
 
         {/* SEO Content Section */}
         <NewsHubSeoContent />
+
       </main>
+      <Footer />
     </div>
   );
 }

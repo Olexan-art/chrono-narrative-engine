@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -266,7 +267,9 @@ export default function InstallPage() {
             ))}
           </div>
         </div>
+
       </main>
+      <Footer />
     </div>
   );
 }

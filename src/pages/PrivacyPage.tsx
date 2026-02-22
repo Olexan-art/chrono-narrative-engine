@@ -1,4 +1,5 @@
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Shield, Cookie, Database, Lock, Users, Mail } from "lucide-react";
@@ -90,7 +91,9 @@ export default function PrivacyPage() {
             </div>
           ))}
         </div>
+
       </main>
+      <Footer />
     </div>
   );
 }

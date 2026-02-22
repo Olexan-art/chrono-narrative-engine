@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { BookOpen, Globe, Palette, Calendar, Users } from "lucide-react";
+import { BookOpen, Globe, Palette, Calendar, Users, Hash, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -45,6 +45,18 @@ export function Footer() {
             <Button variant="ghost" size="sm" className="gap-2">
               <Users className="w-4 h-4" />
               <span>Wiki</span>
+            </Button>
+          </Link>
+          <Link to="/topics">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <Hash className="w-4 h-4" />
+              <span>Topics</span>
+            </Button>
+          </Link>
+          <Link to="/contact">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <Mail className="w-4 h-4" />
+              <span>{t('nav.contact')}</span>
             </Button>
           </Link>
         </nav>

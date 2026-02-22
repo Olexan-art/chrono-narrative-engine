@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Library, Eye, BookOpen, Calendar, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -349,7 +350,9 @@ export default function VolumePage() {
             )}
           </div>
         </article>
+
       </main>
+      <Footer />
     </div>
   );
 }

@@ -14,6 +14,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.read': 'Читати',
     'nav.volumes': 'Томи',
     'nav.calendar': 'Календар',
+    'nav.contact': 'Контакт',
     'nav.admin': 'Адмінка',
     'header.subtitle': 'КРОТОВИНА ІСТОРІЇ',
     
@@ -207,6 +208,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.read': 'Read',
     'nav.volumes': 'Volumes',
     'nav.calendar': 'Calendar',
+    'nav.contact': 'Contact',
     'nav.admin': 'Admin',
     'header.subtitle': 'ARCHIVE OF HUMAN HISTORY',
     
@@ -400,6 +402,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.read': 'Czytaj',
     'nav.volumes': 'Tomy',
     'nav.calendar': 'Kalendarz',
+    'nav.contact': 'Kontakt',
     'nav.admin': 'Admin',
     'header.subtitle': 'ARCHIVE OF HUMAN HISTORY',
     
