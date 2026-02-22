@@ -959,6 +959,9 @@ export default function WikiEntityPage() {
       });
       queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] });
     },
+    onError: (err: Error) => {
+      toast.error('Помилка збереження зображення: ' + err.message);
+    },
   });
 
   // AI format extract
@@ -1532,7 +1535,7 @@ export default function WikiEntityPage() {
                                 const ext = file.name.split('.').pop() || 'jpg';
                                 const fileName = `${entity.id}.${ext}`;
 
-                                const { data, error } = await supabase.storage
+                                const { error } = await supabase.storage
                                   .from('covers')
                                   .upload(`wiki/${fileName}`, file, { upsert: true });
 
@@ -1545,7 +1548,9 @@ export default function WikiEntityPage() {
                                   .from('covers')
                                   .getPublicUrl(`wiki/${fileName}`);
 
-                                updateImageMutation.mutate(urlData.publicUrl);
+                                // Add cache-busting so browser loads the new image even if filename is same
+                                const finalUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+                                updateImageMutation.mutate(finalUrl);
                               }}
                             />
                           </label>

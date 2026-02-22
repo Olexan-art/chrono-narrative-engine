@@ -328,7 +328,10 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
                   {/* Narrative indicator with summary & sentiment */}
                   {entityNarratives[link.wiki_entity.id] && (() => {
                     const narr = entityNarratives[link.wiki_entity.id] as any;
-                    const analysis = narr.analysis || narr;
+                    let analysis = narr.analysis || narr;
+                    if (typeof analysis === 'string') {
+                      try { analysis = JSON.parse(analysis); } catch {}
+                    }
                     const sentiment = analysis.sentiment || 'neutral';
                     const sentimentConfig: Record<string, { icon: string; bg: string; border: string; text: string }> = {
                       positive: { icon: '🟢', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-600' },
