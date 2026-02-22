@@ -321,24 +321,46 @@ Deno.serve(async (req) => {
       const topicSlug = path.slice("/topics/".length);
       const topic = decodeURIComponent(topicSlug);
 
+      // Fetch topic_meta and news in parallel
+      const [{ data: topicMeta }, { data: topicNews, error: topicNewsError }] = await Promise.all([
+        supabase
+          .from("topic_meta")
+          .select("description, description_en, seo_text, seo_text_en, seo_keywords, seo_keywords_en")
+          .eq("topic", topic)
+          .maybeSingle(),
+        supabase
+          .from("news_rss_items")
+          .select("id, slug, title, title_en, description, description_en, published_at, country:news_countries(code, name, name_en, flag), image_url, themes, themes_en")
+          .contains("themes", [topic])
+          .order("published_at", { ascending: false })
+          .limit(30),
+      ]);
+
+      if (topicNewsError) console.error("[ssr-render] topics query error:", topicNewsError);
+
+      // Description: prefer topic_meta, fallback to generic
+      const metaDesc = lang === "en"
+        ? (topicMeta?.description_en || topicMeta?.description)
+        : (topicMeta?.description || topicMeta?.description_en);
+      const genericDesc = lang === "en"
+        ? `Latest news articles tagged with "${topic}". Follow the timeline of events, related topics, and entities.`
+        : `Останні новинні статті з тегом "${topic}". Відстежуйте хронологію подій, пов'язані теми та сутності.`;
+
       title = lang === "en"
         ? `${topic} | News Topics | BraveNNow`
         : `${topic} | Теми Новин | BraveNNow`;
-      description = lang === "en"
-        ? `Latest news articles tagged with "${topic}". Follow the timeline of events, related topics, and entities.`
-        : `Останні новинні статті з тегом "${topic}". Відстежуйте хронологію подій, пов'язані теми та сутності.`;
+      description = metaDesc || genericDesc;
       canonicalUrl = `${BASE_URL}/topics/${topicSlug}`;
 
-      // Fetch recent news items for this topic
-      const { data: topicNews, error: topicNewsError } = await supabase
-        .from("news_rss_items")
-        .select("id, slug, title, title_en, description, description_en, published_at, country:news_countries(code, name, name_en, flag), image_url, themes, themes_en")
-        .contains("themes", [topic])
-        .order("published_at", { ascending: false })
-        .limit(30);
+      // og:image — first news item with an image
+      const heroImage = (topicNews || []).find((n: any) => n.image_url)?.image_url;
+      if (heroImage) image = heroImage;
 
-      if (topicNewsError) console.error("[ssr-render] topics query error:", topicNewsError);
-      html = generateTopicPageHTML(topic, topicNews || [], lang);
+      const seoText = lang === "en"
+        ? (topicMeta?.seo_text_en || topicMeta?.seo_text)
+        : (topicMeta?.seo_text || topicMeta?.seo_text_en);
+
+      html = generateTopicPageHTML(topic, topicNews || [], lang, description, seoText || null);
     } else if (path === "/ink-abyss") {
       // Ink Abyss gallery page
       title = "The Ink Abyss | Satirical Art Gallery";
@@ -2680,14 +2702,22 @@ function generateTopicsCatalogHTML(topics: { topic: string; count: number }[], l
   `;
 }
 
-function generateTopicPageHTML(topic: string, newsItems: any[], lang: string) {
+function generateTopicPageHTML(topic: string, newsItems: any[], lang: string, topicDescription: string | null = null, seoText: string | null = null) {
   const titleField = lang === "en" ? "title_en" : "title";
   const descField = lang === "en" ? "description_en" : "description";
   const countryNameField = lang === "en" ? "name_en" : "name";
 
+  const descHtml = topicDescription
+    ? `<p class="topic-desc">${escapeHtml(topicDescription)}</p>`
+    : `<p>${lang === "en" ? "Latest news articles tagged with this topic." : "Останні новинні статті з цією темою."}</p>`;
+
+  const seoHtml = seoText
+    ? `<section class="topic-seo"><p>${escapeHtml(seoText)}</p></section>`
+    : "";
+
   return `
     <h1>#${escapeHtml(topic)}</h1>
-    <p>${lang === "en" ? "Latest news articles tagged with this topic." : "Останні новинні статті з цією темою."}</p>
+    ${descHtml}
 
     <section>
       <h2>${lang === "en" ? `Articles (${newsItems.length})` : `Статті (${newsItems.length})`}</h2>
@@ -2701,20 +2731,26 @@ function generateTopicPageHTML(topic: string, newsItems: any[], lang: string) {
           const slug = item.slug || item.id;
           const date = item.published_at ? new Date(item.published_at).toLocaleDateString(lang === "en" ? "en-GB" : "uk-UA") : "";
           const relatedThemes = (item.themes || []).filter((t: string) => t !== topic);
+          const imgHtml = item.image_url
+            ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(t)}" loading="lazy" style="max-width:100%;height:auto;display:block;margin:4px 0;">`
+            : "";
           return `
             <li>
+              ${imgHtml}
               <a href="${BASE_URL}/news/${country?.code || ""}/${slug}">
                 ${flag} ${escapeHtml(t)}
               </a>
               ${date ? `<time> — ${escapeHtml(date)}</time>` : ""}
               ${countryName ? `<span> [${escapeHtml(countryName)}]</span>` : ""}
-              ${s ? `<p>${escapeHtml(s.substring(0, 120))}${s.length > 120 ? "..." : ""}</p>` : ""}
+              ${s ? `<p>${escapeHtml(s.substring(0, 200))}${s.length > 200 ? "..." : ""}</p>` : ""}
               ${relatedThemes.length > 0 ? `<small>${lang === "en" ? "Related:" : "Суміжні:"} ${relatedThemes.slice(0, 4).map((rt: string) => `<a href="${BASE_URL}/topics/${encodeURIComponent(rt)}">#${escapeHtml(rt)}</a>`).join(", ")}</small>` : ""}
             </li>
           `;
         }).join("")}
       </ul>
     </section>
+
+    ${seoHtml}
 
     <nav>
       <a href="${BASE_URL}/topics">← ${lang === "en" ? "All Topics" : "Всі теми"}</a> |
