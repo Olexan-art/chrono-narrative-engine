@@ -827,7 +827,9 @@ Deno.serve(async (req) => {
         { data: countries },
         { data: trendingEntityMentions24h },
         { data: trendingEntityMentionsWeek },
-        { data: latestSimpleUsNews }
+        { data: latestSimpleUsNews },
+        { data: allTimeThemeItems },
+        { data: recentThemeItems }
       ] = await Promise.all([
         supabase
           .from("parts")
@@ -893,7 +895,20 @@ Deno.serve(async (req) => {
           .eq("country.code", "US")
           .eq("is_archived", false)
           .order("published_at", { ascending: false })
-          .limit(10)
+          .limit(10),
+        // All-time top topics: themes only (limit 10000 for speed)
+        supabase
+          .from("news_rss_items")
+          .select("themes")
+          .not("themes", "is", null)
+          .limit(10000),
+        // Trending topics last 14 days
+        supabase
+          .from("news_rss_items")
+          .select("themes")
+          .not("themes", "is", null)
+          .gte("published_at", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
+          .limit(5000)
       ]);
 
       // Process proportional news feed (50% USA, 25% PL, 25% UA - NO India)
@@ -1004,7 +1019,31 @@ Deno.serve(async (req) => {
         .order("search_count", { ascending: false })
         .limit(20);
 
-      html = generateHomeHTML(latestParts || [], lang, canonicalUrl, latestUsNews || [], latestChapters || [], countryNewsMap, latestNewsProportional, trendingEntities24h, trendingEntitiesWeek, topWikiEntities || [], latestSimpleUsNews || []);
+      // Process top topics (all-time top 3)
+      const _allTimeCounts = new Map<string, number>();
+      for (const item of (allTimeThemeItems || []) as any[]) {
+        if (!Array.isArray(item.themes)) continue;
+        for (const t of item.themes) {
+          if (t && typeof t === "string") _allTimeCounts.set(t, (_allTimeCounts.get(t) || 0) + 1);
+        }
+      }
+      const topTopics3 = Array.from(_allTimeCounts.entries())
+        .sort((a, b) => b[1] - a[1]).slice(0, 3)
+        .map(([topic, count]) => ({ topic, count }));
+
+      // Process trending topics (14d top 3)
+      const _14dCounts = new Map<string, number>();
+      for (const item of (recentThemeItems || []) as any[]) {
+        if (!Array.isArray(item.themes)) continue;
+        for (const t of item.themes) {
+          if (t && typeof t === "string") _14dCounts.set(t, (_14dCounts.get(t) || 0) + 1);
+        }
+      }
+      const trendingTopics14d3 = Array.from(_14dCounts.entries())
+        .sort((a, b) => b[1] - a[1]).slice(0, 3)
+        .map(([topic, count]) => ({ topic, count }));
+
+      html = generateHomeHTML(latestParts || [], lang, canonicalUrl, latestUsNews || [], latestChapters || [], countryNewsMap, latestNewsProportional, trendingEntities24h, trendingEntitiesWeek, topWikiEntities || [], latestSimpleUsNews || [], topTopics3, trendingTopics14d3);
     }
 
     // Generate full HTML document
@@ -1858,11 +1897,37 @@ function generateHomeHTML(
   trendingEntities24h: { entity: any; mentionCount: number; news: any[] }[] = [],
   trendingEntitiesWeek: { entity: any; mentionCount: number; news: any[] }[] = [],
   topWikiEntities: any[] = [],
-  latestSimpleUsNews: any[] = []
+  latestSimpleUsNews: any[] = [],
+  topTopics3: { topic: string; count: number }[] = [],
+  trendingTopics14d3: { topic: string; count: number }[] = []
 ) {
   const titleField = lang === "en" ? "title_en" : lang === "pl" ? "title_pl" : "title";
+  const topTopicsLabel   = lang === "uk" ? "Топ Теми"           : "Top Topics";
+  const trendingLabel    = lang === "uk" ? "Трендові за 14 днів" : "Trending Last 14 Days";
+
+  const topicItemHTML = (item: { topic: string; count: number }, rank: number) =>
+    `<li><a href="${BASE_URL}/topics/${encodeURIComponent(item.topic)}" title="${escapeHtml(item.topic)} — ${item.count} articles">#${rank} ${escapeHtml(item.topic)} (${item.count})</a></li>`;
 
   return `
+    ${topTopics3.length > 0 ? `
+    <section aria-label="${escapeHtml(topTopicsLabel)}">
+      <h2>${escapeHtml(topTopicsLabel)}</h2>
+      <ul>
+        ${topTopics3.map((t, i) => topicItemHTML(t, i + 1)).join("")}
+      </ul>
+      <p><a href="${BASE_URL}/topics">→ ${lang === "uk" ? "Всі теми" : "All topics"}</a></p>
+    </section>
+    ` : ""}
+
+    ${trendingTopics14d3.length > 0 ? `
+    <section aria-label="${escapeHtml(trendingLabel)}">
+      <h2>${escapeHtml(trendingLabel)}</h2>
+      <ul>
+        ${trendingTopics14d3.map((t, i) => topicItemHTML(t, i + 1)).join("")}
+      </ul>
+    </section>
+    ` : ""}
+
     <h2>Latest Stories</h2>
     <ul itemscope itemtype="https://schema.org/ItemList">
       ${parts.map((part, index) => `

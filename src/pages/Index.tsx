@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { HeroSection } from "@/components/home/HeroSection";
+import { HomeTopicsBanner } from "@/components/home/HomeTopicsBanner";
 import { LatestUsaNews } from "@/components/home/LatestUsaNews";
 import { LatestUsaNewsSimple } from "@/components/home/LatestUsaNewsSimple";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -107,6 +108,9 @@ export default function Index() {
       <main>
         {/* Hero Section */}
         <HeroSection />
+
+        {/* Top Topics + Trending 14d */}
+        <HomeTopicsBanner />
 
         {/* Latest USA Retold News */}
         <LatestUsaNews />
