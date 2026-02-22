@@ -330,13 +330,14 @@ Deno.serve(async (req) => {
       canonicalUrl = `${BASE_URL}/topics/${topicSlug}`;
 
       // Fetch recent news items for this topic
-      const { data: topicNews } = await supabase
+      const { data: topicNews, error: topicNewsError } = await supabase
         .from("news_rss_items")
-        .select("id, slug, title, title_en, summary, summary_en, published_at, country:news_countries(code, name, name_en, flag), image_url, themes, themes_en")
+        .select("id, slug, title, title_en, description, description_en, published_at, country:news_countries(code, name, name_en, flag), image_url, themes, themes_en")
         .contains("themes", [topic])
         .order("published_at", { ascending: false })
         .limit(30);
 
+      if (topicNewsError) console.error("[ssr-render] topics query error:", topicNewsError);
       html = generateTopicPageHTML(topic, topicNews || [], lang);
     } else if (path === "/ink-abyss") {
       // Ink Abyss gallery page
@@ -2681,7 +2682,7 @@ function generateTopicsCatalogHTML(topics: { topic: string; count: number }[], l
 
 function generateTopicPageHTML(topic: string, newsItems: any[], lang: string) {
   const titleField = lang === "en" ? "title_en" : "title";
-  const summaryField = lang === "en" ? "summary_en" : "summary";
+  const descField = lang === "en" ? "description_en" : "description";
   const countryNameField = lang === "en" ? "name_en" : "name";
 
   return `
@@ -2693,7 +2694,7 @@ function generateTopicPageHTML(topic: string, newsItems: any[], lang: string) {
       <ul>
         ${newsItems.map((item) => {
           const t = item[titleField] || item.title || "";
-          const s = item[summaryField] || item.summary || "";
+          const s = item[descField] || item.description || "";
           const country = item.country;
           const flag = country?.flag || "";
           const countryName = country?.[countryNameField] || country?.name || "";
