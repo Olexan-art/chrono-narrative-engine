@@ -53,25 +53,28 @@ export default function NewsTopicsCatalogPage() {
   const { language } = useLanguage();
   const [search, setSearch] = useState("");
 
-  // Mosaic images: refreshed once per week (staleTime 7 days)
+  // Mosaic images: last 30 days, up to 30 per topic, refreshed once per week
   const { data: mosaicImagesData } = useQuery({
     queryKey: ["topics-mosaic-images"],
     queryFn: async () => {
+      const since = new Date();
+      since.setDate(since.getDate() - 30);
       const { data } = await supabase
         .from("news_rss_items")
         .select("themes, image_url")
         .not("image_url", "is", null)
         .not("themes", "is", null)
+        .gte("published_at", since.toISOString())
         .order("published_at", { ascending: false })
-        .limit(500);
-      // Build theme → image[] map
+        .limit(3000);
+      // Build theme → image[] map (up to 30 per topic)
       const map = new Map<string, string[]>();
       for (const item of data || []) {
         if (!item.image_url || !Array.isArray(item.themes)) continue;
         for (const t of item.themes) {
           if (!t) continue;
           const list = map.get(t) || [];
-          if (list.length < 6) list.push(item.image_url);
+          if (list.length < 30) list.push(item.image_url);
           map.set(t, list);
         }
       }
@@ -79,6 +82,32 @@ export default function NewsTopicsCatalogPage() {
     },
     staleTime: 1000 * 60 * 60 * 24 * 7, // 7 days
     gcTime: 1000 * 60 * 60 * 24 * 7,
+  });
+
+  // All-time topics for Top Topics section (no recent limit)
+  const { data: allTimeTopicsData } = useQuery({
+    queryKey: ["topics-all-time"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("news_rss_items")
+        .select("themes")
+        .not("themes", "is", null)
+        .limit(30000);
+      if (error) throw error;
+      const counts = new Map<string, number>();
+      for (const item of data || []) {
+        if (Array.isArray(item.themes)) {
+          for (const t of item.themes) {
+            if (t && typeof t === "string") counts.set(t, (counts.get(t) || 0) + 1);
+          }
+        }
+      }
+      return Array.from(counts.entries())
+        .map(([topic, count]) => ({ topic, count }))
+        .sort((a, b) => b.count - a.count);
+    },
+    staleTime: 1000 * 60 * 60 * 6, // 6 hours
+    gcTime: 1000 * 60 * 60 * 12,
   });
 
   const { data: topicsData, isLoading } = useQuery({
@@ -120,7 +149,14 @@ export default function NewsTopicsCatalogPage() {
   }, [topicsData, search]);
 
   const topTopics = filtered.slice(0, 6);
-  const topNextTopics = filtered.slice(6, 20);
+  // Top Topics 7-20: from all-time data, filtered by search if active
+  const allTimeFiltered = useMemo(() => {
+    if (!allTimeTopicsData) return [];
+    if (!search.trim()) return allTimeTopicsData;
+    const q = search.toLowerCase();
+    return allTimeTopicsData.filter((t) => t.topic.toLowerCase().includes(q));
+  }, [allTimeTopicsData, search]);
+  const topNextTopics = allTimeFiltered.slice(6, 20);
   const restTopics = filtered.slice(20);
 
   const seoTitle =
@@ -226,11 +262,17 @@ export default function NewsTopicsCatalogPage() {
                     return (
                       <Link key={topic} to={topicPath(topic)}>
                         <Card className="group hover:border-primary/50 transition-all hover:scale-[1.02] cursor-pointer h-full overflow-hidden relative">
-                          {/* Mosaic background */}
+                          {/* Mosaic background: up to 30 images from last 30 days */}
                           {mosaicImgs.length >= 2 && (
                             <>
-                              <div className="absolute inset-0 grid gap-0" style={{ gridTemplateColumns: `repeat(${Math.min(mosaicImgs.length, 3)}, 1fr)` }}>
-                                {mosaicImgs.slice(0, 3).map((url, i) => (
+                              <div
+                                className="absolute inset-0 grid gap-0"
+                                style={{
+                                  gridTemplateColumns: `repeat(${Math.min(mosaicImgs.length, 6)}, 1fr)`,
+                                  gridTemplateRows: "repeat(2, 1fr)",
+                                }}
+                              >
+                                {mosaicImgs.slice(0, 12).map((url, i) => (
                                   <img
                                     key={i}
                                     src={url}
