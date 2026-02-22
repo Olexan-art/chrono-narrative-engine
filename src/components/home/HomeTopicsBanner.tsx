@@ -91,10 +91,10 @@ function TopicTile({ topic, count, rank }: TopicTileProps) {
   );
 }
 
+/** Top 3 all-time topics — shown BEFORE Latest USA News */
 export function HomeTopicsBanner() {
   const { language } = useLanguage();
 
-  // All-time top topics
   const { data: allTimeItems } = useQuery({
     queryKey: ["home-topics-alltime"],
     queryFn: async () => {
@@ -109,7 +109,34 @@ export function HomeTopicsBanner() {
     gcTime: 1000 * 60 * 60 * 12,
   });
 
-  // Trending 14-day topics
+  const topAllTime = useMemo(() => processThemes(allTimeItems || []).slice(0, 3), [allTimeItems]);
+
+  if (!topAllTime.length) return null;
+
+  return (
+    <section className="container mx-auto px-4 pt-6 pb-2 max-w-5xl">
+      <h2 className="flex items-center gap-2 text-sm font-mono uppercase tracking-[0.2em] text-muted-foreground mb-3">
+        <Hash className="w-4 h-4 text-primary" />
+        {language === "uk" ? "Топ Теми" : "Top Topics"}
+        <span className="ml-auto text-xs">
+          <Link to="/topics" className="text-primary/60 hover:text-primary transition-colors">
+            {language === "uk" ? "всі →" : "all →"}
+          </Link>
+        </span>
+      </h2>
+      <div className="grid grid-cols-3 gap-2">
+        {topAllTime.map((t, i) => (
+          <TopicTile key={t.topic} topic={t.topic} count={t.count} rank={i + 1} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Trending 14-day topics — shown AFTER Latest USA News (Full retelling) */
+export function HomeTrending14dBanner() {
+  const { language } = useLanguage();
+
   const { data: recentItems } = useQuery({
     queryKey: ["home-topics-14d"],
     queryFn: async () => {
@@ -126,47 +153,26 @@ export function HomeTopicsBanner() {
     gcTime: 1000 * 60 * 60 * 6,
   });
 
-  const topAllTime = useMemo(() => processThemes(allTimeItems || []).slice(0, 3), [allTimeItems]);
-  const top14d     = useMemo(() => processThemes(recentItems  || []).slice(0, 3), [recentItems]);
+  const top14d = useMemo(() => processThemes(recentItems || []).slice(0, 3), [recentItems]);
 
-  if (!allTimeItems && !recentItems) return null;
+  if (!top14d.length) return null;
 
   return (
     <section className="container mx-auto px-4 py-6 max-w-5xl">
-      {/* Top Topics */}
-      {topAllTime.length > 0 && (
-        <div className="mb-6">
-          <h2 className="flex items-center gap-2 text-sm font-mono uppercase tracking-[0.2em] text-muted-foreground mb-3">
-            <Hash className="w-4 h-4 text-primary" />
-            {language === "uk" ? "Топ Теми" : "Top Topics"}
-            <span className="ml-auto text-xs">
-              <Link to="/topics" className="text-primary/60 hover:text-primary transition-colors">
-                {language === "uk" ? "всі →" : "all →"}
-              </Link>
-            </span>
-          </h2>
-          <div className="grid grid-cols-3 gap-2">
-            {topAllTime.map((t, i) => (
-              <TopicTile key={t.topic} topic={t.topic} count={t.count} rank={i + 1} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Trending 14d */}
-      {top14d.length > 0 && (
-        <div>
-          <h2 className="flex items-center gap-2 text-sm font-mono uppercase tracking-[0.2em] text-muted-foreground mb-3">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            {language === "uk" ? "Трендові за 14 днів" : "Trending 14 Days"}
-          </h2>
-          <div className="grid grid-cols-3 gap-2">
-            {top14d.map((t, i) => (
-              <TopicTile key={t.topic} topic={t.topic} count={t.count} rank={i + 1} />
-            ))}
-          </div>
-        </div>
-      )}
+      <h2 className="flex items-center gap-2 text-sm font-mono uppercase tracking-[0.2em] text-muted-foreground mb-3">
+        <TrendingUp className="w-4 h-4 text-primary" />
+        {language === "uk" ? "Трендові за 14 днів" : "Trending 14 Days"}
+        <span className="ml-auto text-xs">
+          <Link to="/topics" className="text-primary/60 hover:text-primary transition-colors">
+            {language === "uk" ? "всі →" : "all →"}
+          </Link>
+        </span>
+      </h2>
+      <div className="grid grid-cols-3 gap-2">
+        {top14d.map((t, i) => (
+          <TopicTile key={t.topic} topic={t.topic} count={t.count} rank={i + 1} />
+        ))}
+      </div>
     </section>
   );
 }

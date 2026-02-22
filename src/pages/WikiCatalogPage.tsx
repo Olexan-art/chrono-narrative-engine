@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Search, User, Building2, Globe, Filter, Grid, List, 
-  TrendingUp, Newspaper, ArrowRight, X
+  TrendingUp, Newspaper, ArrowRight, X, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -35,6 +35,8 @@ interface WikiEntity {
 type FilterType = 'all' | 'person' | 'company' | 'organization';
 type ViewMode = 'grid' | 'list';
 
+const ITEMS_PER_PAGE = 80;
+
 // Ukrainian and English alphabet letters
 const ALPHABET_UK = 'АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЮЯ'.split('');
 const ALPHABET_EN = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -47,6 +49,10 @@ export default function WikiCatalogPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [currentPage, setCurrentPage] = useState(0);
+
+  // Reset pagination when any filter changes
+  useEffect(() => { setCurrentPage(0); }, [searchTerm, filterType, categoryFilter, letterFilter]);
 
   // Build canonical URL with parameters
   const getCanonicalUrl = () => {
@@ -89,7 +95,7 @@ export default function WikiCatalogPage() {
         .from('wiki_entities')
         .select('id, wiki_id, entity_type, name, name_en, description, description_en, image_url, search_count, slug')
         .order('search_count', { ascending: false })
-        .limit(100);
+        .limit(2000);
 
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%`);
@@ -140,6 +146,10 @@ export default function WikiCatalogPage() {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
+
+  // Paginated slice of entities
+  const totalPages = Math.ceil((entities?.length || 0) / ITEMS_PER_PAGE);
+  const pagedEntities = entities?.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE) || [];
 
   // Fetch stats
   const { data: stats } = useQuery({
@@ -386,7 +396,7 @@ export default function WikiCatalogPage() {
           ) : entities && entities.length > 0 ? (
             viewMode === 'grid' ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {entities.map((entity) => {
+                {pagedEntities.map((entity) => {
                   const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
                   const description = language === 'en' && entity.description_en 
                     ? entity.description_en 
@@ -447,7 +457,7 @@ export default function WikiCatalogPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {entities.map((entity) => {
+                {pagedEntities.map((entity) => {
                   const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
                   const description = language === 'en' && entity.description_en 
                     ? entity.description_en 
@@ -506,6 +516,46 @@ export default function WikiCatalogPage() {
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               {t.noResults}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {entities && entities.length > ITEMS_PER_PAGE && (
+            <div className="flex items-center justify-between mt-8 flex-wrap gap-3">
+              <p className="text-sm text-muted-foreground font-mono">
+                {language === 'uk'
+                  ? `Показано ${currentPage * ITEMS_PER_PAGE + 1}–${Math.min((currentPage + 1) * ITEMS_PER_PAGE, entities.length)} з ${entities.length}`
+                  : `Showing ${currentPage * ITEMS_PER_PAGE + 1}–${Math.min((currentPage + 1) * ITEMS_PER_PAGE, entities.length)} of ${entities.length}`}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 0}
+                  onClick={() => { setCurrentPage(p => p - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <Button
+                    key={i}
+                    variant={currentPage === i ? 'default' : 'outline'}
+                    size="sm"
+                    className="min-w-[32px]"
+                    onClick={() => { setCurrentPage(i); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  >
+                    {i + 1}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= totalPages - 1}
+                  onClick={() => { setCurrentPage(p => p + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           )}
 
