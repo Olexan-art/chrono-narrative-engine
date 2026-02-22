@@ -282,6 +282,62 @@ Deno.serve(async (req) => {
         .limit(100);
 
       html = generateWikiCatalogHTML(entities || [], lang);
+    } else if (path === "/topics") {
+      // Topics catalog page
+      title = lang === "en"
+        ? "News Topics & Categories | BraveNNow"
+        : "Теми та Категорії Новин | BraveNNow";
+      description = lang === "en"
+        ? "Browse all news topics and categories. Find articles grouped by subject, track key entities and follow chronological timelines."
+        : "Перегляньте всі теми та категорії новин. Знайдіть статті згруповані за предметом, відстежуйте ключові сутності та слідкуйте за хронологічними таймлайнами.";
+      canonicalUrl = `${BASE_URL}/topics`;
+
+      // Fetch themes from recent news items and aggregate counts
+      const { data: themeRows } = await supabase
+        .from("news_rss_items")
+        .select("themes")
+        .not("themes", "is", null)
+        .order("published_at", { ascending: false })
+        .limit(10000);
+
+      const topicCounts = new Map<string, number>();
+      for (const row of themeRows || []) {
+        if (Array.isArray(row.themes)) {
+          for (const t of row.themes) {
+            if (t && typeof t === "string") {
+              topicCounts.set(t, (topicCounts.get(t) || 0) + 1);
+            }
+          }
+        }
+      }
+      const topicList = Array.from(topicCounts.entries())
+        .filter(([, count]) => count >= 2)
+        .sort((a, b) => b[1] - a[1])
+        .map(([topic, count]) => ({ topic, count }));
+
+      html = generateTopicsCatalogHTML(topicList, lang);
+    } else if (path.startsWith("/topics/") && path.length > "/topics/".length) {
+      // Individual topic page
+      const topicSlug = path.slice("/topics/".length);
+      const topic = decodeURIComponent(topicSlug);
+
+      title = lang === "en"
+        ? `${topic} | News Topics | BraveNNow`
+        : `${topic} | Теми Новин | BraveNNow`;
+      description = lang === "en"
+        ? `Latest news articles tagged with "${topic}". Follow the timeline of events, related topics, and entities.`
+        : `Останні новинні статті з тегом "${topic}". Відстежуйте хронологію подій, пов'язані теми та сутності.`;
+      canonicalUrl = `${BASE_URL}/topics/${topicSlug}`;
+
+      // Fetch recent news items for this topic
+      const { data: topicNews } = await supabase
+        .from("news_rss_items")
+        .select("id, slug, title, title_en, summary, summary_en, published_at, country:news_countries(code, name, name_en, flag), image_url, themes, themes_en")
+        .contains("themes", [topic])
+        .order("published_at", { ascending: false })
+        .limit(30);
+
+      html = generateTopicPageHTML(topic, topicNews || [], lang);
     } else if (path === "/ink-abyss") {
       // Ink Abyss gallery page
       title = "The Ink Abyss | Satirical Art Gallery";
@@ -2584,6 +2640,83 @@ function generateWikiCatalogHTML(entities: any[], lang: string) {
     
     <nav>
       <a href="${BASE_URL}/">← Home</a> |
+      <a href="${BASE_URL}/news">📰 News</a> |
+      <a href="${BASE_URL}/sitemap">🗺️ Sitemap</a>
+    </nav>
+  `;
+}
+
+function generateTopicsCatalogHTML(topics: { topic: string; count: number }[], lang: string) {
+  const titleText = lang === "en" ? "News Topics" : "Теми Новин";
+  const subtitleText = lang === "en"
+    ? "Explore all topics mentioned in news articles. Each topic has its own page with a timeline, entities, and statistics."
+    : "Перегляньте всі теми, згадані в новинних статтях. Кожна тема має свою сторінку з таймлайном, сутностями та статистикою.";
+
+  return `
+    <h1>${escapeHtml(titleText)}</h1>
+    <p>${escapeHtml(subtitleText)}</p>
+
+    <section>
+      <h2>${lang === "en" ? `All Topics (${topics.length})` : `Всі теми (${topics.length})`}</h2>
+      <ul>
+        ${topics.map(({ topic, count }) => `
+          <li>
+            <a href="${BASE_URL}/topics/${encodeURIComponent(topic)}">
+              #${escapeHtml(topic)}
+            </a>
+            <span> (${count} ${lang === "en" ? "articles" : "статей"})</span>
+          </li>
+        `).join("")}
+      </ul>
+    </section>
+
+    <nav>
+      <a href="${BASE_URL}/">← Home</a> |
+      <a href="${BASE_URL}/news">📰 News</a> |
+      <a href="${BASE_URL}/wiki">🌐 Entities</a> |
+      <a href="${BASE_URL}/sitemap">🗺️ Sitemap</a>
+    </nav>
+  `;
+}
+
+function generateTopicPageHTML(topic: string, newsItems: any[], lang: string) {
+  const titleField = lang === "en" ? "title_en" : "title";
+  const summaryField = lang === "en" ? "summary_en" : "summary";
+  const countryNameField = lang === "en" ? "name_en" : "name";
+
+  return `
+    <h1>#${escapeHtml(topic)}</h1>
+    <p>${lang === "en" ? "Latest news articles tagged with this topic." : "Останні новинні статті з цією темою."}</p>
+
+    <section>
+      <h2>${lang === "en" ? `Articles (${newsItems.length})` : `Статті (${newsItems.length})`}</h2>
+      <ul>
+        ${newsItems.map((item) => {
+          const t = item[titleField] || item.title || "";
+          const s = item[summaryField] || item.summary || "";
+          const country = item.country;
+          const flag = country?.flag || "";
+          const countryName = country?.[countryNameField] || country?.name || "";
+          const slug = item.slug || item.id;
+          const date = item.published_at ? new Date(item.published_at).toLocaleDateString(lang === "en" ? "en-GB" : "uk-UA") : "";
+          const relatedThemes = (item.themes || []).filter((t: string) => t !== topic);
+          return `
+            <li>
+              <a href="${BASE_URL}/news/${country?.code || ""}/${slug}">
+                ${flag} ${escapeHtml(t)}
+              </a>
+              ${date ? `<time> — ${escapeHtml(date)}</time>` : ""}
+              ${countryName ? `<span> [${escapeHtml(countryName)}]</span>` : ""}
+              ${s ? `<p>${escapeHtml(s.substring(0, 120))}${s.length > 120 ? "..." : ""}</p>` : ""}
+              ${relatedThemes.length > 0 ? `<small>${lang === "en" ? "Related:" : "Суміжні:"} ${relatedThemes.slice(0, 4).map((rt: string) => `<a href="${BASE_URL}/topics/${encodeURIComponent(rt)}">#${escapeHtml(rt)}</a>`).join(", ")}</small>` : ""}
+            </li>
+          `;
+        }).join("")}
+      </ul>
+    </section>
+
+    <nav>
+      <a href="${BASE_URL}/topics">← ${lang === "en" ? "All Topics" : "Всі теми"}</a> |
       <a href="${BASE_URL}/news">📰 News</a> |
       <a href="${BASE_URL}/sitemap">🗺️ Sitemap</a>
     </nav>

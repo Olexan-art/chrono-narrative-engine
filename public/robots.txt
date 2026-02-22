@@ -81,6 +81,7 @@ Disallow: /install
 # Resources - Sitemaps
 Sitemap: https://bravennow.com/sitemap.xml
 Sitemap: https://bravennow.com/api/wiki-sitemap
+Sitemap: https://bravennow.com/api/topics-sitemap
 
 # LLM-optimized documentation (dynamic)
 # See https://bravennow.com/llms.txt for AI-friendly site overview with latest content

@@ -13,6 +13,7 @@ const SITEMAP_CACHE_PATHS: Record<string, (searchParams: URLSearchParams) => str
     return country ? `/news-sitemap?country=${country}` : '/news-sitemap-index';
   },
   '/api/wiki-sitemap': () => '/api/wiki-sitemap',
+  '/api/topics-sitemap': () => '/api/topics-sitemap',
   '/api/llms-txt': () => '/api/llms-txt',
 };
 
@@ -42,6 +43,8 @@ const SSR_PATTERNS = [
   /^\/wiki$/,
   /^\/wiki\/[a-zA-Z0-9-]+$/i,
   /^\/ink-abyss$/,
+  /^\/topics$/,
+  /^\/topics\/.+$/,
 ];
 
 function isBot(userAgent: string): boolean {

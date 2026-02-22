@@ -8,6 +8,7 @@
     { "source": "/api/ssr-render", "destination": "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/ssr-render" },
     { "source": "/api/llms-txt", "destination": "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/llms-txt" },
     { "source": "/api/wiki-sitemap", "destination": "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/wiki-sitemap" },
+    { "source": "/api/topics-sitemap", "destination": "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/topics-sitemap" },
     { "source": "/(.*)", "destination": "/" }
   ]
 }

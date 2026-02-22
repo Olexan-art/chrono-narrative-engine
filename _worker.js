@@ -57,6 +57,8 @@ const SSR_PATTERNS = [
   /^\/wiki$/,
   /^\/wiki\/[a-z0-9-]+$/,
   /^\/ink-abyss$/,
+  /^\/topics$/,
+  /^\/topics\/.+$/,
 ];
 
 
@@ -119,6 +121,9 @@ async function handleApiRoute(request, pathname, env) {
     ttl = CACHE_TTL.sitemap;
   } else if (cleanPath === '/api/wiki-sitemap') {
     fn = 'wiki-sitemap';
+    ttl = CACHE_TTL.sitemap;
+  } else if (cleanPath === '/api/topics-sitemap') {
+    fn = 'topics-sitemap';
     ttl = CACHE_TTL.sitemap;
   } else if (cleanPath === '/api/ssr-render') {
     fn = 'ssr-render';
