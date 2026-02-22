@@ -452,12 +452,14 @@ export default function CountryNewsPage() {
                         return (
                           <div className="flex flex-wrap gap-1 mb-2">
                             {topics.slice(0, 4).map((topic, tIdx) => (
-                              <span
+                              <Link
                                 key={tIdx}
-                                className="inline-block text-[10px] px-1.5 py-0.5 rounded-sm bg-secondary text-secondary-foreground"
+                                to={`/topics/${encodeURIComponent(topic)}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-block text-[10px] px-1.5 py-0.5 rounded-sm bg-secondary text-secondary-foreground hover:bg-primary/20 hover:text-primary transition-colors"
                               >
                                 {topic}
-                              </span>
+                              </Link>
                             ))}
                           </div>
                         );

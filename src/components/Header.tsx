@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock, Menu, X, Globe, Palette, Calendar, Users, Bot, RefreshCw } from "lucide-react";
+import { Clock, Menu, X, Globe, Palette, Calendar, Users, Bot, RefreshCw, Hash } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -44,6 +44,12 @@ export function Header() {
               <span>Wiki</span>
             </Button>
           </Link>
+          <Link to="/topics">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <Hash className="w-4 h-4" />
+              <span>Topics</span>
+            </Button>
+          </Link>
           <LanguageSwitcher />
         </nav>
 
@@ -82,6 +88,12 @@ export function Header() {
               <Button variant="ghost" className="w-full justify-start gap-3">
                 <Users className="w-4 h-4" />
                 Wiki
+              </Button>
+            </Link>
+            <Link to="/topics" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start gap-3">
+                <Hash className="w-4 h-4" />
+                Topics
               </Button>
             </Link>
           </nav>

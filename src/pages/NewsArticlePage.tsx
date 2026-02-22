@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { getLogoUrl } from "@/lib/getLogoUrl";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -690,7 +691,7 @@ export default function NewsArticlePage() {
           url: article.url,
           logo: {
             '@type': 'ImageObject',
-            url: `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
+            url: getLogoUrl(domain, 128)
           }
         });
       } catch {
@@ -1287,7 +1288,7 @@ export default function NewsArticlePage() {
                   const domain = new URL(article.url).hostname;
                   return (
                     <img
-                      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`}
+                      src={getLogoUrl(domain, 128)}
                       alt=""
                       className="absolute -top-2 -right-2 w-[35%] h-auto opacity-[0.08] pointer-events-none select-none"
                       itemProp="logo"
@@ -1309,7 +1310,7 @@ export default function NewsArticlePage() {
                     return (
                       <div className="flex items-center gap-3 pb-2 border-b border-border">
                         <img
-                          src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+                          src={getLogoUrl(domain, 32)}
                           alt=""
                           className="w-6 h-6 rounded"
                           itemProp="logo"

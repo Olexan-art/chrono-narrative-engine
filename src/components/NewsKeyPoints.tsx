@@ -1,7 +1,9 @@
 import { Lightbulb, Tag, Search } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { topicPath } from "@/lib/topicSlug";
 
 interface NewsKeyPointsProps {
   keyPoints: string[];
@@ -79,13 +81,14 @@ function KeyTakeawaysCard({
               {getThemesLabel()}:
             </span>
             {themes.map((theme, index) => (
-              <Badge 
-                key={index} 
-                variant="secondary"
-                className={`text-xs font-medium ${themeBgClasses}`}
-              >
-                {theme}
-              </Badge>
+              <Link key={index} to={topicPath(theme)}>
+                <Badge 
+                  variant="secondary"
+                  className={`text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${themeBgClasses}`}
+                >
+                  {theme}
+                </Badge>
+              </Link>
             ))}
           </div>
         )}
@@ -189,13 +192,14 @@ export function NewsKeyPoints({
               {getThemesLabel()}:
             </span>
             {themes.map((theme, index) => (
-              <Badge 
-                key={index} 
-                variant="secondary"
-                className="text-xs font-medium"
-              >
-                {theme}
-              </Badge>
+              <Link key={index} to={topicPath(theme)}>
+                <Badge 
+                  variant="secondary"
+                  className="text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  {theme}
+                </Badge>
+              </Link>
             ))}
           </div>
         )}

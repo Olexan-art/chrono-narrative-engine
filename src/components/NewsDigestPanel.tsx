@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/api";
+import { getLogoUrl } from "@/lib/getLogoUrl";
 import { FeedNewsViewer } from "./FeedNewsViewer";
 import { BatchRetellPanel } from "./BatchRetellPanel";
 import { BulkRetellCronPanel } from "@/components/admin/BulkRetellCronPanel";
@@ -1058,7 +1059,7 @@ export function NewsDigestPanel({ password }: Props) {
                               ) : (
                                 <div className="w-8 h-8 rounded border border-border flex items-center justify-center flex-shrink-0 bg-muted/50">
                                   <img
-                                    src={`https://www.google.com/s2/favicons?domain=${new URL(feed.url).hostname}&sz=32`}
+                                    src={getLogoUrl(new URL(feed.url).hostname, 32)}
                                     alt=""
                                     className="w-5 h-5"
                                   />

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getLogoUrl } from "@/lib/getLogoUrl";
 import { FileText, ExternalLink, Edit3, Save, X, Loader2, Wand2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -89,7 +90,7 @@ export function OriginalSourceBlock({
   };
   
   const domain = getDomain(sourceUrl);
-  const logoUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : null;
+  const logoUrl = domain ? getLogoUrl(domain, 128) : null;
   
   // Truncate to 2000 characters (doubled)
   const truncatedContent = decodedContent.length > 2000 

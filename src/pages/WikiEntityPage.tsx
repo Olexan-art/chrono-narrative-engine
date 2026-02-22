@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { topicPath } from "@/lib/topicSlug";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import {
@@ -36,6 +37,7 @@ import { useAdminStore } from "@/stores/adminStore";
 import { callEdgeFunction, adminAction } from "@/lib/api";
 import { toast } from "sonner";
 import { useTrackView } from '@/hooks/useTrackView';
+import { getLogoUrl } from '@/lib/getLogoUrl';
 import { LLM_MODELS, LLMProvider } from "@/types/database";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -551,7 +553,7 @@ export default function WikiEntityPage() {
           default_image_url: feed.default_image_url,
           country: feed.country as any,
           count: feedCounts[feed.id] || 0,
-          favicon: `https://www.google.com/s2/favicons?domain=${new URL(feed.url).hostname}&sz=32`,
+          favicon: getLogoUrl(new URL(feed.url).hostname, 32),
         }))
         .sort((a, b) => b.count - a.count);
     },
@@ -2782,14 +2784,15 @@ export default function WikiEntityPage() {
                       {sortedTopics.slice(0, 8).map(([topic, count]) => {
                         const { color } = getTopicIcon(topic);
                         return (
-                          <Badge
-                            key={topic}
-                            variant="outline"
-                            className={`text-xs ${color}`}
-                          >
-                            {topic}
-                            <span className="ml-1 text-muted-foreground/70">({count})</span>
-                          </Badge>
+                          <Link key={topic} to={topicPath(topic)}>
+                            <Badge
+                              variant="outline"
+                              className={`text-xs cursor-pointer hover:opacity-80 transition-opacity ${color}`}
+                            >
+                              {topic}
+                              <span className="ml-1 text-muted-foreground/70">({count})</span>
+                            </Badge>
+                          </Link>
                         );
                       })}
                       {sortedTopics.length > 8 && (

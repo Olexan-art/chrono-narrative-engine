@@ -39,6 +39,8 @@ const InstallPage = lazy(() => import("./pages/InstallPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const WikiCatalogPage = lazy(() => import("./pages/WikiCatalogPage"));
 const WikiEntityPage = lazy(() => import("./pages/WikiEntityPage"));
+const NewsTopicsCatalogPage = lazy(() => import("./pages/NewsTopicsCatalogPage"));
+const NewsTopicPage = lazy(() => import("./pages/NewsTopicPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 import { AdminGuard } from "@/components/AdminGuard";
@@ -87,6 +89,8 @@ const App = () => (
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/wiki" element={<WikiCatalogPage />} />
                 <Route path="/wiki/:entityId" element={<WikiEntityPage />} />
+                <Route path="/topics" element={<NewsTopicsCatalogPage />} />
+                <Route path="/topics/:topicSlug" element={<NewsTopicPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
