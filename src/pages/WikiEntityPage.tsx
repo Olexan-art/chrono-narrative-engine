@@ -1251,26 +1251,27 @@ export default function WikiEntityPage() {
   });
 
   // Merge saved narratives into state on load
-  useMemo(() => {
+  useEffect(() => {
     if (savedNarratives.length > 0) {
-      const merged: Record<string, any> = { ...narrativeAnalyses };
-      savedNarratives.forEach(n => {
-        if (!merged[n.year_month]) {
-          merged[n.year_month] = {
-            success: true,
-            yearMonth: n.year_month,
-            newsCount: n.news_count,
-            analysis: n.analysis,
-            relatedEntities: n.related_entities,
-            is_regenerated: n.is_regenerated,
-            saved_at: n.updated_at,
-          };
-        }
+      setNarrativeAnalyses(prev => {
+        const merged: Record<string, any> = { ...prev };
+        let changed = false;
+        savedNarratives.forEach(n => {
+          if (!merged[n.year_month]) {
+            merged[n.year_month] = {
+              success: true,
+              yearMonth: n.year_month,
+              newsCount: n.news_count,
+              analysis: n.analysis,
+              relatedEntities: n.related_entities,
+              is_regenerated: n.is_regenerated,
+              saved_at: n.updated_at,
+            };
+            changed = true;
+          }
+        });
+        return changed ? merged : prev;
       });
-      // Only update if different
-      if (Object.keys(merged).length !== Object.keys(narrativeAnalyses).length) {
-        setNarrativeAnalyses(merged);
-      }
     }
   }, [savedNarratives]);
 
@@ -1898,7 +1899,7 @@ export default function WikiEntityPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 px-2 text-[10px] gap-1"
+                                      className="h-7 px-2 text-[10px] gap-1 font-mono uppercase tracking-wide border border-amber-500/40 bg-amber-950/20 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400 hover:text-amber-300 hover:shadow-[0_0_8px_rgba(251,191,36,0.4)] transition-all duration-200 disabled:opacity-40"
                                       onClick={() => analyzeNarratives(month, true)}
                                       disabled={analyzingMonth === month}
                                       title={language === 'uk' ? 'Перегенерувати' : 'Regenerate'}
@@ -1912,7 +1913,7 @@ export default function WikiEntityPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 px-2 text-[10px] gap-1 text-destructive hover:text-destructive"
+                                      className="h-7 px-2 text-[10px] gap-1 font-mono border border-red-500/40 bg-red-950/20 text-red-400 hover:bg-red-500/20 hover:border-red-400 hover:text-red-300 hover:shadow-[0_0_8px_rgba(239,68,68,0.4)] transition-all duration-200"
                                       onClick={() => deleteNarrativeAnalysis(month)}
                                       title={language === 'uk' ? 'Видалити аналіз' : 'Delete analysis'}
                                     >
@@ -2965,7 +2966,7 @@ export default function WikiEntityPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-5 px-1.5 text-[10px] gap-1 text-primary hover:text-primary"
+                                    className="h-5 px-1.5 text-[10px] gap-1 font-mono uppercase tracking-wide border border-cyan-500/40 bg-cyan-950/20 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400 hover:text-cyan-300 hover:shadow-[0_0_8px_rgba(0,255,255,0.35)] transition-all duration-200 disabled:opacity-40"
                                     onClick={() => analyzeNarratives(month)}
                                     disabled={analyzingMonth === month}
                                   >
@@ -2980,7 +2981,7 @@ export default function WikiEntityPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-5 px-1.5 text-[10px] text-destructive hover:text-destructive"
+                                      className="h-5 px-1.5 text-[10px] font-mono border border-red-500/40 bg-red-950/20 text-red-400 hover:bg-red-500/20 hover:border-red-400 hover:text-red-300 hover:shadow-[0_0_8px_rgba(239,68,68,0.4)] transition-all duration-200"
                                       onClick={() => deleteNarrativeAnalysis(month)}
                                       title={language === 'uk' ? 'Видалити аналіз' : 'Delete analysis'}
                                     >
