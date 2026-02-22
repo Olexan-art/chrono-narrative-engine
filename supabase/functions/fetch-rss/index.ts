@@ -488,7 +488,7 @@ serve(async (req) => {
               slug: slug,
               image_url: item.enclosure?.url || null,
               category: feed.category,
-              published_at: pubDate?.toISOString() || null,
+              published_at: pubDate?.toISOString() || new Date(Date.now() - 5 * 60 * 1000).toISOString(),
               fetched_at: new Date().toISOString()
             })
             .select('id')
@@ -642,7 +642,7 @@ serve(async (req) => {
               url: item.link,
               image_url: item.enclosure?.url || null,
               category: feed.category,
-              published_at: pubDate?.toISOString() || null,
+              published_at: pubDate?.toISOString() || new Date(Date.now() - 5 * 60 * 1000).toISOString(),
               fetched_at: new Date().toISOString(),
               slug: slug
             })
@@ -888,7 +888,7 @@ serve(async (req) => {
                 slug: slug,
                 image_url: item.enclosure?.url || null,
                 category: feed.category,
-                published_at: pubDate?.toISOString() || null,
+                published_at: pubDate?.toISOString() || new Date(Date.now() - 5 * 60 * 1000).toISOString(),
                 fetched_at: new Date().toISOString()
               })
               .select('id')
@@ -1235,7 +1235,7 @@ serve(async (req) => {
         const countryData = item.country as unknown as { code: string; name: string; flag: string } | null;
         const itemCountryCode = countryData?.code?.toLowerCase() || 'us';
         const countryName = countryData?.name || 'Unknown';
-        const countryFlag = countryData?.flag || '🏳️';
+        const countryFlag = countryData?.flag || 'ðŸ³ï¸';
         const shortTitle = item.title?.slice(0, 60) + (item.title?.length > 60 ? '...' : '');
 
         // Step 1: Retell
@@ -1253,7 +1253,7 @@ serve(async (req) => {
 
             if (response.ok) {
               totalRetelled++;
-              logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'retell', status: 'success', message: `✓ ${llmDisplayName}`, timestamp: new Date().toISOString() });
+              logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'retell', status: 'success', message: `âœ“ ${llmDisplayName}`, timestamp: new Date().toISOString() });
             } else {
               logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'retell', status: 'error', message: `HTTP ${response.status}`, timestamp: new Date().toISOString() });
             }
@@ -1308,7 +1308,7 @@ serve(async (req) => {
 
                   totalDialogues++;
                   if (result.tweets) totalTweets++;
-                  logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'dialogue', status: 'success', message: `✓ ${result.tweets ? '+твіти' : ''}`, timestamp: new Date().toISOString() });
+                  logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'dialogue', status: 'success', message: `âœ“ ${result.tweets ? '+Ñ‚Ð²Ñ–Ñ‚Ð¸' : ''}`, timestamp: new Date().toISOString() });
                 }
               } else {
                 logs.push({ id: newsId, title: shortTitle, country: countryName, flag: countryFlag, step: 'dialogue', status: 'error', message: `HTTP ${response.status}`, timestamp: new Date().toISOString() });
@@ -1470,7 +1470,7 @@ serve(async (req) => {
                 slug: slug,
                 image_url: item.enclosure?.url || null,
                 category: feed.category,
-                published_at: pubDate?.toISOString() || null,
+                published_at: pubDate?.toISOString() || new Date(Date.now() - 5 * 60 * 1000).toISOString(),
                 fetched_at: new Date().toISOString()
               })
               .select('id')
@@ -1635,7 +1635,7 @@ serve(async (req) => {
                 slug: slug,
                 image_url: item.enclosure?.url || null,
                 category: feed.category,
-                published_at: pubDate?.toISOString() || null,
+                published_at: pubDate?.toISOString() || new Date(Date.now() - 5 * 60 * 1000).toISOString(),
                 fetched_at: new Date().toISOString()
               })
               .select('id')

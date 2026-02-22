@@ -200,6 +200,16 @@ serve(async (req: Request) => {
         return new Response(JSON.stringify({ success: true, inserted, updated }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
+      case 'cleanNullDates': {
+        const { data: deleted, error: delErr } = await supabase
+          .from('news_rss_items')
+          .delete()
+          .is('published_at', null)
+          .select('id');
+        if (delErr) throw delErr;
+        return new Response(JSON.stringify({ success: true, deleted: deleted?.length ?? 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
       case 'testProvider': {
         const { provider, apiKey, model } = data;
         if (!provider || !apiKey) {
