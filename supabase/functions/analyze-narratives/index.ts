@@ -212,11 +212,19 @@ serve(async (req) => {
       entityName,
     };
 
-    // Save to database (upsert)
+    // Save to database (delete + insert for reliability)
     const isRegenerated = regenerate;
-    const { error: upsertError } = await supabase
+    // Remove existing record first (ignore errors)
+    await supabase
       .from("narrative_analyses")
-      .upsert({
+      .delete()
+      .eq("entity_id", entityId)
+      .eq("year_month", yearMonth)
+      .eq("language", language);
+
+    const { error: insertError } = await supabase
+      .from("narrative_analyses")
+      .insert({
         entity_id: entityId,
         year_month: yearMonth,
         language,
@@ -224,11 +232,10 @@ serve(async (req) => {
         analysis: fullAnalysis,
         related_entities: topRelated,
         is_regenerated: isRegenerated,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "entity_id,year_month,language" });
+      });
 
-    if (upsertError) {
-      console.error("DB save error:", upsertError);
+    if (insertError) {
+      console.error("DB save error:", insertError.message, insertError.details, insertError.code);
     }
 
     return new Response(
