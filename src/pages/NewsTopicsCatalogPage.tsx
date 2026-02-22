@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, Tag, Hash, TrendingUp, Loader2, X,
   Newspaper, Zap, Globe, Shield, Heart, Scale,
-  Briefcase, Flame, BookOpen, Swords, Megaphone, BarChart3
+  Briefcase, Flame, BookOpen, Swords, Megaphone, BarChart3,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -52,6 +53,8 @@ interface TopicStat {
 export default function NewsTopicsCatalogPage() {
   const { language } = useLanguage();
   const [search, setSearch] = useState("");
+  const [allTopicsPage, setAllTopicsPage] = useState(0);
+  const ALL_TOPICS_PAGE_SIZE = 100;
 
   // Mosaic images: last 30 days, up to 30 per topic, refreshed once per week
   const { data: mosaicImagesData } = useQuery({
@@ -159,6 +162,16 @@ export default function NewsTopicsCatalogPage() {
   const topNextTopics = allTimeFiltered.slice(6, 20);
   const restTopics = filtered.slice(20);
 
+  // Pagination for All topics
+  const totalAllPages = Math.ceil(restTopics.length / ALL_TOPICS_PAGE_SIZE);
+  const pagedRestTopics = restTopics.slice(
+    allTopicsPage * ALL_TOPICS_PAGE_SIZE,
+    (allTopicsPage + 1) * ALL_TOPICS_PAGE_SIZE
+  );
+
+  // Reset page when search changes
+  useMemo(() => { setAllTopicsPage(0); }, [search]);
+
   const seoTitle =
     language === "en"
       ? "News Topics & Categories | BraveNNow"
@@ -261,44 +274,54 @@ export default function NewsTopicsCatalogPage() {
                     const mosaicImgs = mosaicImagesData?.get(topic) || [];
                     return (
                       <Link key={topic} to={topicPath(topic)}>
-                        <Card className="group hover:border-primary/50 transition-all hover:scale-[1.02] cursor-pointer h-full overflow-hidden relative">
-                          {/* Mosaic background: up to 30 images from last 30 days */}
-                          {mosaicImgs.length >= 2 && (
-                            <>
-                              <div
-                                className="absolute inset-0 grid gap-0"
-                                style={{
-                                  gridTemplateColumns: `repeat(${Math.min(mosaicImgs.length, 6)}, 1fr)`,
-                                  gridTemplateRows: "repeat(2, 1fr)",
-                                }}
-                              >
-                                {mosaicImgs.slice(0, 12).map((url, i) => (
+                        <Card className="group hover:border-primary/50 transition-all hover:scale-[1.02] cursor-pointer overflow-hidden relative" style={{ minHeight: '180px' }}>
+                          {/* Octagon mosaic: up to 30 images in a grid */}
+                          {mosaicImgs.length >= 4 && (
+                            <div
+                              className="absolute inset-0 bg-black grid"
+                              style={{
+                                gridTemplateColumns: `repeat(6, 1fr)`,
+                                gridTemplateRows: `repeat(5, 1fr)`,
+                                gap: '3px',
+                                padding: '3px',
+                              }}
+                            >
+                              {mosaicImgs.slice(0, 30).map((url, i) => (
+                                <div
+                                  key={i}
+                                  className="overflow-hidden"
+                                  style={{ clipPath: 'polygon(29% 0%,71% 0%,100% 29%,100% 71%,71% 100%,29% 100%,0% 71%,0% 29%)' }}
+                                >
                                   <img
-                                    key={i}
                                     src={url}
                                     alt=""
                                     className="w-full h-full object-cover"
                                     loading="lazy"
-                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                    onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.opacity = '0'; }}
                                   />
-                                ))}
-                              </div>
-                              <div className="absolute inset-0 bg-background/82 backdrop-blur-[1px]" />
-                            </>
+                                </div>
+                              ))}
+                            </div>
                           )}
-                          <CardContent className="relative z-10 p-5 flex flex-col gap-3">
-                            <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${color}`}>
-                              {icon}
+                          {/* Bottom gradient — text area only */}
+                          {mosaicImgs.length >= 4 && (
+                            <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
+                          )}
+                          <CardContent className="relative z-10 p-4 flex flex-col justify-end" style={{ minHeight: '180px' }}>
+                            <div className={`w-9 h-9 rounded-lg border flex items-center justify-center mb-2 ${mosaicImgs.length >= 4 ? 'bg-black/60 border-white/20' : color}`}>
+                              <span className={mosaicImgs.length >= 4 ? 'text-white/90' : ''}>{icon}</span>
                             </div>
-                            <div>
-                              <h3 className="font-semibold leading-tight group-hover:text-primary transition-colors">
-                                {topic}
-                              </h3>
-                              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                                <Newspaper className="w-3 h-3" />
-                                {count} {language === "en" ? "articles" : "статей"}
-                              </p>
-                            </div>
+                            <h3 className={`font-bold leading-tight group-hover:text-primary transition-colors text-sm ${
+                              mosaicImgs.length >= 4 ? 'text-white drop-shadow-lg' : ''
+                            }`}>
+                              {topic}
+                            </h3>
+                            <p className={`text-xs mt-1 flex items-center gap-1 ${
+                              mosaicImgs.length >= 4 ? 'text-white/70' : 'text-muted-foreground'
+                            }`}>
+                              <Newspaper className="w-3 h-3" />
+                              {count} {language === "en" ? "articles" : "статей"}
+                            </p>
                           </CardContent>
                         </Card>
                       </Link>
@@ -346,16 +369,18 @@ export default function NewsTopicsCatalogPage() {
               </section>
             )}
 
-            {/* All remaining topics – compact badges grid */}
+            {/* All remaining topics – compact badges grid with pagination */}
             <section>
               {!search && restTopics.length > 0 && (
                 <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <Tag className="w-4 h-4 text-muted-foreground" />
-                  {language === "en" ? `All topics (${filtered.length})` : `Всі теми (${filtered.length})`}
+                  {language === "en"
+                    ? `All topics (${filtered.length})`
+                    : `Всі теми (${filtered.length})`}
                 </h2>
               )}
               <div className="flex flex-wrap gap-2">
-                {(search ? filtered : restTopics).map(({ topic, count }) => (
+                {(search ? filtered : pagedRestTopics).map(({ topic, count }) => (
                   <Link key={topic} to={topicPath(topic)}>
                     <Badge
                       variant="secondary"
@@ -368,6 +393,34 @@ export default function NewsTopicsCatalogPage() {
                   </Link>
                 ))}
               </div>
+              {/* Pagination */}
+              {!search && totalAllPages > 1 && (
+                <div className="flex items-center justify-center gap-3 mt-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAllTopicsPage((p) => Math.max(0, p - 1))}
+                    disabled={allTopicsPage === 0}
+                    className="gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    {language === "en" ? "Prev" : "Назад"}
+                  </Button>
+                  <span className="text-sm text-muted-foreground tabular-nums">
+                    {allTopicsPage + 1} / {totalAllPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAllTopicsPage((p) => Math.min(totalAllPages - 1, p + 1))}
+                    disabled={allTopicsPage === totalAllPages - 1}
+                    className="gap-1"
+                  >
+                    {language === "en" ? "Next" : "Далі"}
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
             </section>
           </>
         )}
