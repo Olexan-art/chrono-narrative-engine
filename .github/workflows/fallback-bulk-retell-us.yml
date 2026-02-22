@@ -19,7 +19,9 @@ jobs:
 
       - name: Query cron_job_configs (skip if disabled)
         id: check
+        continue-on-error: true
         run: |
+          set +e
           RESP=$(curl -s --max-time 15 \
             -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
@@ -37,6 +39,7 @@ jobs:
         id: invoke
         if: steps.check.outputs.enabled == 'true'
         run: |
+          set +e
           echo "Calling bulk-retell-news for US (fallback cron)..."
           BODY='{"country_code":"us","time_range":"last_3h","job_name":"bulk_retell_us","trigger":"cron"}'
           # Capture curl output + status; allow curl errors without aborting the script
