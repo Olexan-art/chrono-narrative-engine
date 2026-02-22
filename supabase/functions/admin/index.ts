@@ -156,6 +156,50 @@ serve(async (req: Request) => {
         );
       }
 
+      case 'deleteRssFeed': {
+        const { feedId } = data as { feedId: string };
+        if (!feedId) {
+          return new Response(JSON.stringify({ error: 'feedId required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        // Get all news item ids for this feed
+        const { data: items } = await supabase.from('news_rss_items').select('id').eq('feed_id', feedId);
+        const itemIds = (items || []).map((i: any) => i.id);
+        if (itemIds.length > 0) {
+          // Delete wiki entity links
+          await supabase.from('news_wiki_entities').delete().in('news_item_id', itemIds);
+          // Delete outrage ink links
+          await supabase.from('outrage_ink_entities').delete().in('outrage_ink_id',
+            (await supabase.from('outrage_ink').select('id').in('news_item_id', itemIds)).data?.map((r: any) => r.id) || []
+          );
+          await supabase.from('outrage_ink').delete().in('news_item_id', itemIds);
+          // Delete ollama staging
+          await supabase.from('ollama_retell_staging').delete().in('news_item_id', itemIds);
+        }
+        // Delete the feed (cascades to news_rss_items)
+        const { error: delError } = await supabase.from('news_rss_feeds').delete().eq('id', feedId);
+        if (delError) throw delError;
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      case 'upsertRssFeeds': {
+        const { feeds } = data as { feeds: Array<{ name: string; url: string; category: string; country_id: string }> };
+        if (!feeds?.length) {
+          return new Response(JSON.stringify({ error: 'feeds array required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        let inserted = 0, updated = 0;
+        for (const feed of feeds) {
+          const { data: existing } = await supabase.from('news_rss_feeds').select('id').eq('url', feed.url).maybeSingle();
+          if (existing) {
+            await supabase.from('news_rss_feeds').update({ name: feed.name, category: feed.category }).eq('id', existing.id);
+            updated++;
+          } else {
+            await supabase.from('news_rss_feeds').insert({ name: feed.name, url: feed.url, category: feed.category, country_id: feed.country_id });
+            inserted++;
+          }
+        }
+        return new Response(JSON.stringify({ success: true, inserted, updated }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
       case 'testProvider': {
         const { provider, apiKey, model } = data;
         if (!provider || !apiKey) {

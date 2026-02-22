@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { callEdgeFunction } from "@/lib/api";
+import { callEdgeFunction, adminAction } from "@/lib/api";
 import { getLogoUrl } from "@/lib/getLogoUrl";
 import { FeedNewsViewer } from "./FeedNewsViewer";
 import { BatchRetellPanel } from "./BatchRetellPanel";
@@ -281,17 +281,20 @@ export function NewsDigestPanel({ password }: Props) {
   // Delete feed mutation
   const deleteFeedMutation = useMutation({
     mutationFn: async (feedId: string) => {
-      const { error } = await supabase
-        .from('news_rss_feeds')
-        .delete()
-        .eq('id', feedId);
-
-      if (error) throw error;
+      const result = await adminAction<{ success: boolean; error?: string }>(
+        'deleteRssFeed',
+        password,
+        { feedId }
+      );
+      if (!result.success) throw new Error(result.error || 'Delete failed');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['news-rss-feeds'] });
       queryClient.invalidateQueries({ queryKey: ['news-rss-items-count'] });
       toast({ title: 'RSS канал видалено' });
+    },
+    onError: (error) => {
+      toast({ title: 'Помилка видалення', description: error instanceof Error ? error.message : 'Невідома помилка', variant: 'destructive' });
     }
   });
 
