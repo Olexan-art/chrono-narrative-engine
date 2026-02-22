@@ -1,5 +1,17 @@
 [build]
- publish = "dist"
+  publish = "dist"
   command = "npm run build"
 
+# SPA routing — Netlify serves actual files first; only falls back to index.html
+# for routes that don't match a real file. Asset requests for missing chunks
+# must NOT silently return HTML (which causes "wrong MIME type" errors).
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+  force = false
 
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

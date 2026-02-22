@@ -17,9 +17,12 @@ interface OptimizedImageProps {
 
 // Generate optimized image URL
 export function getOptimizedUrl(src: string, width?: number): string {
+  // Always upgrade http:// to https:// to avoid Mixed Content errors
+  const safeSrc = src.replace(/^http:\/\//, 'https://');
+
   // If it's a Supabase storage URL, use render/image endpoint for transformations
-  if (src.includes('supabase.co/storage/v1/object/public/')) {
-    const transformed = src.replace(
+  if (safeSrc.includes('supabase.co/storage/v1/object/public/')) {
+    const transformed = safeSrc.replace(
       '/storage/v1/object/public/',
       '/storage/v1/render/image/public/'
     );
@@ -33,24 +36,24 @@ export function getOptimizedUrl(src: string, width?: number): string {
   }
 
   // For Wikipedia images, request smaller thumbnails via thumb URL
-  if (src.includes('upload.wikimedia.org/wikipedia/commons/') && width) {
+  if (safeSrc.includes('upload.wikimedia.org/wikipedia/commons/') && width) {
     // Already a thumb URL - replace size
-    const thumbMatch = src.match(/\/thumb\/(.+?)\/(\d+)px-/);
+    const thumbMatch = safeSrc.match(/\/thumb\/(.+?)\/(\d+)px-/);
     if (thumbMatch) {
-      return src.replace(/\/(\d+)px-/, `/${width}px-`);
+      return safeSrc.replace(/\/(\d+)px-/, `/${width}px-`);
     }
     // Full-size URL - convert to thumb
-    const fullMatch = src.match(/\/commons\/(.+)/);
+    const fullMatch = safeSrc.match(/\/commons\/(.+)/);
     if (fullMatch) {
       const filename = fullMatch[1].split('/').pop();
-      return src.replace(
+      return safeSrc.replace(
         `/commons/${fullMatch[1]}`,
         `/commons/thumb/${fullMatch[1]}/${width}px-${filename}`
       );
     }
   }
 
-  return src;
+  return safeSrc;
 }
 
 // Calculate responsive srcset
