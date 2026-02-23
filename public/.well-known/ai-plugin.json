@@ -9,10 +9,10 @@
   },
   "api": {
     "type": "openapi",
-    "url": "https://chrono-narrative-engine.lovable.app/openapi.json",
+    "url": "https://bravennow.com/openapi.json",
     "is_user_authenticated": false
   },
-  "logo_url": "https://chrono-narrative-engine.lovable.app/favicon.png",
-  "contact_email": "contact@lovable.dev",
-  "legal_info_url": "https://chrono-narrative-engine.lovable.app/"
+  "logo_url": "https://bravennow.com/favicon.png",
+  "contact_email": "contact@bravennow.com",
+  "legal_info_url": "https://bravennow.com/"
 }
