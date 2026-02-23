@@ -39,6 +39,7 @@ import { NewsMergePanel } from "@/components/admin/NewsMergePanel";
 import { RSSFeedPanel } from "@/components/admin/RSSFeedPanel";
 import { TopicsStatsPanel } from "@/components/admin/TopicsStatsPanel";
 import { ContactSubmissionsPanel } from "@/components/admin/ContactSubmissionsPanel";
+import { CacheSettingsPanel } from "@/components/admin/CacheSettingsPanel";
 import LLMManagementPage from "@/pages/admin/LLMManagementPage";
 import NewsProcessingPage from "@/pages/admin/NewsProcessingPage";
 import { useToast } from "@/hooks/use-toast";
@@ -74,6 +75,51 @@ function StatsCard({ stats }: { stats: AdminStats }) {
         </Card>
       ))}
     </div>
+  );
+}
+
+const PURGE_SECRET = 'bnn-cache-purge-key-2026';
+
+function CachePurgeButton() {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  async function purgeAll() {
+    setLoading(true);
+    try {
+      const res  = await fetch(
+        `/api/cache-purge?secret=${PURGE_SECRET}&path=all`,
+        { method: 'POST' }
+      );
+      const data = await res.json() as { ok: boolean; purged?: { path: string; deleted: boolean }[] };
+      if (data.ok) {
+        const count = data.purged?.filter((r: { deleted: boolean }) => r.deleted).length ?? 0;
+        toast({ title: `✅ CF кеш очищено (${count} сторінок)` });
+      } else {
+        toast({ title: 'Помилка', description: 'Не вдалося очистити кеш', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Помилка', description: 'Запит до CF не вдався', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={purgeAll}
+      disabled={loading}
+      className="gap-2 border-blue-500/30 hover:bg-blue-500/10 text-blue-400"
+      title="Скинути Cloudflare ISR кеш для всіх сторінок"
+    >
+      {loading
+        ? <Loader2 className="w-4 h-4 animate-spin" />
+        : <Zap className="w-4 h-4" />
+      }
+      Скинути кеш
+    </Button>
   );
 }
 
@@ -718,10 +764,13 @@ export default function AdminPage() {
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold chapter-title text-glow">ПАНЕЛЬ КЕРУВАННЯ</h1>
-          <Button variant="outline" size="sm" onClick={logout} className="gap-2">
-            <LogOut className="w-4 h-4" />
-            Вийти
-          </Button>
+          <div className="flex items-center gap-2">
+            <CachePurgeButton />
+            <Button variant="outline" size="sm" onClick={logout} className="gap-2">
+              <LogOut className="w-4 h-4" />
+              Вийти
+            </Button>
+          </div>
         </div>
 
         {stats && <StatsCard stats={stats} />}
@@ -848,6 +897,10 @@ export default function AdminPage() {
             <TabsTrigger value="bot-errors" className="gap-2">
               <AlertTriangle className="w-4 h-4 text-destructive" />
               Помилки
+            </TabsTrigger>
+            <TabsTrigger value="cache" className="gap-2">
+              <Zap className="w-4 h-4 text-blue-400" />
+              ISR Cache
             </TabsTrigger>
 
             {/* Налаштування */}
@@ -984,6 +1037,10 @@ export default function AdminPage() {
 
           <TabsContent value="bot-errors" className="mt-6">
             <BotErrorsPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="cache" className="mt-6">
+            <CacheSettingsPanel />
           </TabsContent>
 
           <TabsContent value="wiki-entities" className="mt-6">
