@@ -30,6 +30,7 @@ import { SEOSettingsPanel } from "@/components/SEOSettingsPanel";
 
 import { BotErrorsPanel } from "@/components/BotErrorsPanel";
 import { WikiEntitiesPanel } from "@/components/admin/WikiEntitiesPanel";
+import { BatchEntitySearchPanel } from "@/components/admin/BatchEntitySearchPanel";
 import { NewsSearchPanel } from "@/components/admin/NewsSearchPanel";
 import { NewsCalendarPanel } from "@/components/admin/NewsCalendarPanel";
 import { ImagesManagementPanel } from "@/components/admin/ImagesManagementPanel";
@@ -1044,7 +1045,10 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="wiki-entities" className="mt-6">
-            <WikiEntitiesPanel />
+            <div className="space-y-6">
+              <WikiEntitiesPanel />
+              <BatchEntitySearchPanel />
+            </div>
           </TabsContent>
 
           <TabsContent value="news-search" className="mt-6">
