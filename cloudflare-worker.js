@@ -98,7 +98,24 @@ async function handleRequest(request, event) {
     return fetch(request);
   }
 
-  // ── 6. ISR: Cache-first → SSR on miss → cache result ────────────────
+  // ── 6. ISR: Cache-first → SSR on miss → cache result (BOTS ONLY) ────
+  //
+  //  Regular users always get the SPA shell from Netlify — React hydrates
+  //  instantly and they never see a blank page.
+  //  Bots/crawlers get a full SSR HTML cached on CF edge (ISR pattern).
+  //  SSR HTML contains a JS-redirect for real users, so serving it to
+  //  regular browsers causes a redirect loop — hence the bot-only guard.
+  //
+  if (!isBotRequest) {
+    // Pass regular users through to Netlify SPA, no caching
+    const spaResp = await fetch(request);
+    const r = new Response(spaResp.body, spaResp);
+    r.headers.set('X-Cache',          'BYPASS-SPA');
+    r.headers.set('X-Worker-Version', WORKER_VERSION);
+    r.headers.set('Cache-Control',    'no-cache, no-store, must-revalidate');
+    return r;
+  }
+
   const cache    = caches.default;
   const cacheKey = new Request(htmlCacheKey(url).toString(), { method: 'GET' });
 
@@ -137,7 +154,7 @@ async function handleRequest(request, event) {
           'X-Cache-TTL':      String(ttl),
           'X-TTL-Seconds':    String(ttl),
           'X-Worker-Version': WORKER_VERSION,
-          'X-Bot-Detected':   isBotRequest ? 'true' : 'false',
+          'X-Bot-Detected':   'true',
           'X-SSR-Source':     'cloudflare-isr',
         },
       });
