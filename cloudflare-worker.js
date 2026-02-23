@@ -116,19 +116,13 @@ async function handleRequest(request, event) {
     return r;
   }
 
-  const cache    = caches.default;
-  const cacheKey = new Request(htmlCacheKey(url).toString(), { method: 'GET' });
-
-  // 6a. Check Cloudflare edge cache
-  const cached = await cache.match(cacheKey);
-  if (cached) {
-    const hit = new Response(cached.body, cached);
-    hit.headers.set('X-Cache',          'HIT');
-    hit.headers.set('X-Worker-Version', WORKER_VERSION);
-    return hit;
-  }
-
-  // 6b. Cache MISS → generate via SSR
+  // ── 6. SSR for bots — always pass through to Supabase SSR (cache=true).
+  //   Supabase reads from cached_pages table (fast, no live re-render).
+  //   We intentionally DO NOT use caches.default (= Cloudflare CDN cache)
+  //   because CF CDN cached responses bypass the Worker entirely on HIT,
+  //   making it impossible to purge stale content per-node. Supabase
+  //   cached_pages is our single caching layer — clean and reliable.
+  // ──────────────────────────────────────────────────────────────────────
   const ttl    = getTTL(pathname);
   const ssrUrl = `${SUPABASE_URL}/functions/v1/ssr-render?path=${encodeURIComponent(pathname)}&lang=en&cache=true`;
 
@@ -145,30 +139,44 @@ async function handleRequest(request, event) {
     if (ssrResponse.ok) {
       let html = await ssrResponse.text();
 
-      // Strip the JS-redirect <script> block that SSR injects for real browsers.
-      // The script checks navigator.userAgent but Google Rich Results Test and other
-      // headless tools use a regular Chrome UA — not matching the bot pattern inside
-      // the script — so the redirect fires, breaking structured-data tests.
-      // Safe to remove: bots/crawlers don't need client-side navigation.
-      html = html.replace(/<script[^>]*>[\s\S]*?window\.location\.replace[\s\S]*?<\/script>/gi, '');
+      // Guard: reject tiny/incomplete SSR responses (< 10KB = no real content
+      // or JSON-LD). Fall through to SPA shell instead of serving broken HTML.
+      if (html.length < 10000) {
+        const fb = await fetch(request);
+        const r  = new Response(fb.body, fb);
+        r.headers.set('X-Cache',          'SSR-TOO-SMALL');
+        r.headers.set('X-SSR-Size',        String(html.length));
+        r.headers.set('X-Worker-Version',  WORKER_VERSION);
+        r.headers.set('Cache-Control',     'no-cache, no-store, must-revalidate');
+        return r;
+      }
 
-      const response = new Response(html, {
+      // Strip the JS-redirect <script> that SSR injects for real browsers.
+      // Google Rich Results Test uses a Chrome UA — does NOT match the bot
+      // pattern inside the script — so the redirect fires → "Something went wrong".
+      //
+      // IMPORTANT: Use negative-lookahead (?!<\/script>) to prevent matching
+      // across multiple <script> blocks. Without it, the regex greedily ate
+      // everything from the first <script type="application/ld+json"> all the
+      // way to window.location.replace, stripping all JSON-LD structured data
+      // and reducing 62KB to 2.4KB.
+      html = html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+
+      // Cache-Control: no-store — tells CF CDN not to cache this response.
+      // If CF CDN caches it, future requests bypass the Worker entirely,
+      // and stale/broken HTML gets served with no way to invalidate it.
+      return new Response(html, {
         status: 200,
         headers: {
           'Content-Type':     'text/html; charset=utf-8',
-          'Cache-Control':    `public, max-age=${ttl}, s-maxage=${ttl}`,
-          'X-Cache':          'MISS',
+          'Cache-Control':    'no-store',
+          'X-Cache':          'SSR',
           'X-Cache-TTL':      String(ttl),
-          'X-TTL-Seconds':    String(ttl),
           'X-Worker-Version': WORKER_VERSION,
           'X-Bot-Detected':   'true',
-          'X-SSR-Source':     'cloudflare-isr',
+          'X-SSR-Source':     'cloudflare-passthrough',
         },
       });
-
-      // Store in CF edge cache (non-blocking)
-      event.waitUntil(cache.put(cacheKey, response.clone()));
-      return response;
     }
   } catch (e) {
     // SSR unavailable — fall through to Netlify origin
@@ -177,7 +185,7 @@ async function handleRequest(request, event) {
   // 6c. SSR failed → fallback to Netlify SPA shell
   const fallback = await fetch(request);
   const fb = new Response(fallback.body, fallback);
-  fb.headers.set('X-Cache',          'MISS-FALLBACK');
+  fb.headers.set('X-Cache',          'SSR-FALLBACK');
   fb.headers.set('X-Worker-Version', WORKER_VERSION);
   fb.headers.set('Cache-Control',    'no-cache, no-store, must-revalidate');
   return fb;
