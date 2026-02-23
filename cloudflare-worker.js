@@ -143,7 +143,14 @@ async function handleRequest(request, event) {
     });
 
     if (ssrResponse.ok) {
-      const html = await ssrResponse.text();
+      let html = await ssrResponse.text();
+
+      // Strip the JS-redirect <script> block that SSR injects for real browsers.
+      // The script checks navigator.userAgent but Google Rich Results Test and other
+      // headless tools use a regular Chrome UA — not matching the bot pattern inside
+      // the script — so the redirect fires, breaking structured-data tests.
+      // Safe to remove: bots/crawlers don't need client-side navigation.
+      html = html.replace(/<script[^>]*>[\s\S]*?window\.location\.replace[\s\S]*?<\/script>/gi, '');
 
       const response = new Response(html, {
         status: 200,
