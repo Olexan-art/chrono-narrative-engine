@@ -6,6 +6,11 @@ const corsHeaders = {
 };
 
 const SITEMAP_URL = "https://bravennow.com/sitemap.xml";
+const TOPICS_SITEMAP_URL = "https://bravennow.com/api/topics-sitemap";
+const INDEXNOW_KEY = "d82c5f1a3e7b9042c6d8f1e3a5b70924";
+const INDEXNOW_HOST = "bravennow.com";
+const INDEXNOW_KEY_LOCATION = `https://bravennow.com/${INDEXNOW_KEY}.txt`;
+const INDEXNOW_ENDPOINT = "https://api.indexnow.org/IndexNow";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -21,13 +26,15 @@ Deno.serve(async (req) => {
     let googleSuccess = false;
     let bingSuccess = false;
 
-    // Ping Google
+
+    // Ping Google (main sitemap)
     try {
       const googleUrl = `https://www.google.com/ping?sitemap=${encodeURIComponent(SITEMAP_URL)}`;
       const googleRes = await fetch(googleUrl, { method: "GET" });
       googleSuccess = googleRes.ok;
       results.push({
         service: "Google",
+        sitemap: SITEMAP_URL,
         success: googleSuccess,
         status: googleRes.status,
       });
@@ -36,19 +43,43 @@ Deno.serve(async (req) => {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       results.push({
         service: "Google",
+        sitemap: SITEMAP_URL,
         success: false,
         error: errorMessage,
       });
       console.error("Google ping error:", err);
     }
 
-    // Ping Bing
+    // Ping Google (topics sitemap)
+    try {
+      const googleTopicsUrl = `https://www.google.com/ping?sitemap=${encodeURIComponent(TOPICS_SITEMAP_URL)}`;
+      const googleTopicsRes = await fetch(googleTopicsUrl, { method: "GET" });
+      results.push({
+        service: "Google",
+        sitemap: TOPICS_SITEMAP_URL,
+        success: googleTopicsRes.ok,
+        status: googleTopicsRes.status,
+      });
+      console.log(`Google topics-sitemap ping: ${googleTopicsRes.status}`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      results.push({
+        service: "Google",
+        sitemap: TOPICS_SITEMAP_URL,
+        success: false,
+        error: errorMessage,
+      });
+      console.error("Google topics-sitemap ping error:", err);
+    }
+
+    // Ping Bing (main sitemap)
     try {
       const bingUrl = `https://www.bing.com/ping?sitemap=${encodeURIComponent(SITEMAP_URL)}`;
       const bingRes = await fetch(bingUrl, { method: "GET" });
       bingSuccess = bingRes.ok;
       results.push({
         service: "Bing",
+        sitemap: SITEMAP_URL,
         success: bingSuccess,
         status: bingRes.status,
       });
@@ -57,10 +88,90 @@ Deno.serve(async (req) => {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       results.push({
         service: "Bing",
+        sitemap: SITEMAP_URL,
         success: false,
         error: errorMessage,
       });
       console.error("Bing ping error:", err);
+    }
+
+    // Ping Bing (topics sitemap)
+    try {
+      const bingTopicsUrl = `https://www.bing.com/ping?sitemap=${encodeURIComponent(TOPICS_SITEMAP_URL)}`;
+      const bingTopicsRes = await fetch(bingTopicsUrl, { method: "GET" });
+      results.push({
+        service: "Bing",
+        sitemap: TOPICS_SITEMAP_URL,
+        success: bingTopicsRes.ok,
+        status: bingTopicsRes.status,
+      });
+      console.log(`Bing topics-sitemap ping: ${bingTopicsRes.status}`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      results.push({
+        service: "Bing",
+        sitemap: TOPICS_SITEMAP_URL,
+        success: false,
+        error: errorMessage,
+      });
+      console.error("Bing topics-sitemap ping error:", err);
+    }
+
+    // --- IndexNow: відправити нещодавно оновлені URL ---
+    try {
+      // Отримуємо URL з останніх 48 годин (новини + вікі)
+      const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
+      const [{ data: recentNews }, { data: recentWiki }] = await Promise.all([
+        supabase
+          .from("news")
+          .select("slug, updated_at")
+          .gte("updated_at", since)
+          .order("updated_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("wiki_characters")
+          .select("slug, updated_at")
+          .gte("updated_at", since)
+          .order("updated_at", { ascending: false })
+          .limit(50),
+      ]);
+
+      const urlList: string[] = [
+        ...(recentNews || []).map((n: { slug: string }) => `https://bravennow.com/news/${n.slug}`),
+        ...(recentWiki || []).map((w: { slug: string }) => `https://bravennow.com/wiki/${w.slug}`),
+      ];
+
+      // Завжди включаємо головну сторінку та sitemap
+      urlList.unshift("https://bravennow.com/");
+
+      let indexNowSuccess = false;
+      if (urlList.length > 0) {
+        const indexNowRes = await fetch(INDEXNOW_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+          body: JSON.stringify({
+            host: INDEXNOW_HOST,
+            key: INDEXNOW_KEY,
+            keyLocation: INDEXNOW_KEY_LOCATION,
+            urlList,
+          }),
+        });
+        indexNowSuccess = indexNowRes.ok || indexNowRes.status === 202;
+        results.push({
+          service: "IndexNow",
+          success: indexNowSuccess,
+          status: indexNowRes.status,
+        });
+        console.log(`IndexNow: ${indexNowRes.status}, urls: ${urlList.length}`);
+      } else {
+        results.push({ service: "IndexNow", success: true, status: 0 });
+        console.log("IndexNow: no new URLs in last 48h");
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      results.push({ service: "IndexNow", success: false, error: errorMessage });
+      console.error("IndexNow error:", err);
     }
 
     // Save ping results to sitemap_metadata (for main sitemap)
