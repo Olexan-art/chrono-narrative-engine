@@ -201,8 +201,7 @@ async function handleRequest(request, event) {
         if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
           event.waitUntil(asyncWarmPath(pathname));
           let cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
-          // make version visible in body for debugging
-          cleaned = `<!-- worker ${WORKER_VERSION} fast-path -->\n${cleaned}`;
+          // (release) do not inject debug markers into cached HTML
           return new Response(cleaned, {
             status: 200,
             headers: {
@@ -335,9 +334,8 @@ async function handleRequest(request, event) {
               const rows = await cpResp.json();
               if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
                 event.waitUntil(asyncWarmPath(pathname));
-                // same clean-up for stale fallback
+                // same clean-up for stale fallback (no debug marker)
                 let cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
-                cleaned = `<!-- worker ${WORKER_VERSION} stale-fallback -->\n${cleaned}`;
                 return new Response(cleaned, {
                   status: 200,
                   headers: {
@@ -390,8 +388,6 @@ async function handleRequest(request, event) {
           return r;
         }
         html = html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
-        // inject version comment
-        html = `<!-- worker ${WORKER_VERSION} ssr -->\n${html}`;
         return new Response(html, {
           status: 200,
           headers: {
