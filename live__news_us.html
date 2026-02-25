@@ -1,0 +1,1220 @@
+﻿<!DOCTYPE html>
+<html lang="en" class="dark"> <!-- Force dark mode class -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
+  <title>🇺🇸 USA News | Synchronization Point</title>
+  <meta name="description" content="Latest news from USA. AI-curated news digest with retelling and character dialogues.">
+  
+  <!-- Canonical & Language -->
+  <link rel="canonical" href="https://bravennow.com/news/us">
+  <link rel="alternate" hreflang="uk" href="https://bravennow.com/news/us">
+  <link rel="alternate" hreflang="en" href="https://bravennow.com/news/us">
+  <link rel="alternate" hreflang="pl" href="https://bravennow.com/news/us">
+  <link rel="alternate" hreflang="x-default" href="https://bravennow.com/news/us">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="🇺🇸 USA News | Synchronization Point">
+  <meta property="og:description" content="Latest news from USA. AI-curated news digest with retelling and character dialogues.">
+  <meta property="og:image" content="https://bravennow.com/favicon.svg">
+  <meta property="og:url" content="https://bravennow.com/news/us">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="🇺🇸 USA News | Synchronization Point">
+  <meta name="twitter:description" content="Latest news from USA. AI-curated news digest with retelling and character dialogues.">
+  <meta name="twitter:image" content="https://bravennow.com/favicon.svg">
+  
+  <!-- AI/LLM Tags -->
+  <meta name="ai:summary" content="Latest news from USA. AI-curated news digest with retelling and character dialogues.">
+  <meta name="ai:content_type" content="website">
+  <meta name="ai:language" content="en">
+  
+  <!-- Dublin Core -->
+  <meta name="DC.title" content="🇺🇸 USA News | Synchronization Point">
+  <meta name="DC.description" content="Latest news from USA. AI-curated news digest with retelling and character dialogues.">
+  <meta name="DC.language" content="en-US">
+  
+  <!-- Robots -->
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large">
+  
+  <!-- JSON-LD -->
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"🇺🇸 USA News | Synchronization Point","headline":"🇺🇸 USA News | Synchronization Point","description":"Latest news from USA. AI-curated news digest with retelling and character dialogues.","image":"https://bravennow.com/favicon.svg","url":"https://bravennow.com/news/us","inLanguage":"en-US","publisher":{"@type":"Organization","name":"BravenNow","logo":{"@type":"ImageObject","url":"https://bravennow.com/favicon.svg"}},"author":{"@type":"Organization","name":"BravenNow AI"}}</script>
+  
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class', // Enable class-based dark mode
+      theme: {
+        extend: {
+          colors: {
+            border: "hsl(var(--border))",
+            input: "hsl(var(--input))",
+            ring: "hsl(var(--ring))",
+            background: "hsl(var(--background))",
+            foreground: "hsl(var(--foreground))",
+            primary: {
+              DEFAULT: "hsl(var(--primary))",
+              foreground: "hsl(var(--primary-foreground))",
+            },
+            secondary: {
+              DEFAULT: "hsl(var(--secondary))",
+              foreground: "hsl(var(--secondary-foreground))",
+            },
+            destructive: {
+              DEFAULT: "hsl(var(--destructive))",
+              foreground: "hsl(var(--destructive-foreground))",
+            },
+            muted: {
+              DEFAULT: "hsl(var(--muted))",
+              foreground: "hsl(var(--muted-foreground))",
+            },
+            accent: {
+              DEFAULT: "hsl(var(--accent))",
+              foreground: "hsl(var(--accent-foreground))",
+            },
+            popover: {
+              DEFAULT: "hsl(var(--popover))",
+              foreground: "hsl(var(--popover-foreground))",
+            },
+            card: {
+              DEFAULT: "hsl(var(--card))",
+              foreground: "hsl(var(--card-foreground))",
+            },
+          },
+          borderRadius: {
+            lg: "var(--radius)",
+            md: "calc(var(--radius) - 2px)",
+            sm: "calc(var(--radius) - 4px)",
+          },
+          fontFamily: {
+            sans: ["Space Grotesk", "ui-sans-serif", "system-ui", "sans-serif"],
+            serif: ["Lora", "ui-serif", "Georgia", "serif"],
+            mono: ["Space Mono", "ui-monospace", "monospace"],
+          },
+        }
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer base {
+      :root {
+        --background: 220 15% 8%;
+        --foreground: 210 20% 96%;
+        
+        --card: 220 18% 14%;
+        --card-foreground: 210 20% 92%;
+        
+        --popover: 220 18% 10%;
+        --popover-foreground: 210 20% 92%;
+        
+        --primary: 195 100% 50%;
+        --primary-foreground: 220 15% 8%;
+        
+        --secondary: 280 80% 60%;
+        --secondary-foreground: 210 20% 95%;
+        
+        --muted: 220 15% 18%;
+        --muted-foreground: 210 15% 60%;
+        
+        --accent: 35 100% 55%;
+        --accent-foreground: 220 15% 8%;
+        
+        --destructive: 0 75% 55%;
+        --destructive-foreground: 210 20% 95%;
+        
+        --border: 220 20% 22%;
+        --input: 220 20% 18%;
+        --ring: 195 100% 50%;
+        
+        --radius: 1rem;
+      }
+      
+      body {
+        @apply bg-background text-foreground font-sans;
+        min-height: 100vh;
+      }
+      
+      h1, h2, h3, h4, h5, h6 {
+        @apply font-sans tracking-tight font-bold scroll-m-20;
+      }
+      
+      h1 { @apply text-4xl lg:text-5xl mb-6; }
+      h2 { @apply text-3xl pb-2 first:mt-0 mt-10 mb-4 border-b border-border; }
+      h3 { @apply text-2xl mt-8 mb-4; }
+      
+      p { @apply leading-7 [&:not(:first-child)]:mt-6; }
+      
+      a { @apply font-medium underline underline-offset-4 decoration-primary/50 hover:decoration-primary; }
+      
+      img { @apply rounded-lg border border-border bg-muted; }
+      
+      ul { @apply my-6 ml-6 list-disc [&>li]:mt-2; }
+      
+      .story-content { @apply font-serif text-lg leading-relaxed text-foreground/90; }
+      
+      /* Legacy Classes Support */
+      .meta { @apply text-muted-foreground text-sm font-medium mb-4 flex flex-wrap gap-2 items-center; }
+      .keywords { @apply flex flex-wrap gap-2 mt-4 mb-6; }
+      .keyword { @apply px-2 py-1 bg-secondary/10 text-secondary text-xs rounded-full border border-secondary/20; }
+      .category { @apply text-accent text-xs uppercase tracking-wider font-bold ml-2; }
+      blockquote { @apply border-l-4 border-primary/50 pl-4 py-2 my-4 bg-muted/30 italic rounded-r-lg; }
+    }
+  </style>
+
+  <!-- Noscript: content stays visible -->
+  <noscript>
+    <style>.js-redirect-notice { display: none; }</style>
+  </noscript>
+</head>
+<body class="min-h-screen bg-background text-foreground antialiased font-sans">
+  
+    <header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+      <div class="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
+        <a href="https://bravennow.com/" class="flex items-center gap-2 md:gap-3 group text-foreground no-underline">
+          <div class="w-8 h-8 md:w-10 md:h-10 rounded overflow-hidden border border-primary/30 group-hover:border-primary transition-all">
+            <img src="https://bravennow.com/favicon.png" alt="SP" class="w-full h-full object-cover" width="40" height="40" />
+          </div>
+          <div>
+            <div class="font-sans font-bold text-base md:text-lg tracking-tight text-foreground m-0" role="heading" aria-level="1">
+              BravenNow
+            </div>
+            <p class="text-[10px] md:text-xs text-muted-foreground font-mono hidden sm:block m-0">
+              Brave New World
+            </p>
+          </div>
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="hidden md:flex items-center gap-2">
+          <a href="https://bravennow.com/" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            <span>Read</span>
+          </a>
+          <a href="https://bravennow.com/news-digest" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <span>News Digest</span>
+          </a>
+          <a href="https://bravennow.com/ink-abyss" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+            <span>Ink Abyss</span>
+          </a>
+          <a href="https://bravennow.com/media-calendar" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            <span>Calendar</span>
+          </a>
+          <a href="https://bravennow.com/wiki" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Wiki</span>
+          </a>
+        </nav>
+
+        <!-- Mobile Navigation Trigger -->
+        <div class="md:hidden flex items-center">
+          <label for="mobile-menu-toggle" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9 p-0 cursor-pointer text-foreground">
+             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+          </label>
+        </div>
+      </div>
+      
+      <!-- Mobile Menu -->
+      <input type="checkbox" id="mobile-menu-toggle" class="hidden peer" />
+      <div class="hidden peer-checked:block md:hidden border-t border-border bg-card/95 backdrop-blur-sm">
+        <nav class="container mx-auto px-4 py-3 flex flex-col gap-1">
+          <a href="https://bravennow.com/" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            Read
+          </a>
+          <a href="https://bravennow.com/news-digest" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
+             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            News Digest
+          </a>
+          <a href="https://bravennow.com/ink-abyss" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
+             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+            Ink Abyss
+          </a>
+          <a href="https://bravennow.com/media-calendar" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
+             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            Calendar
+          </a>
+           <a href="https://bravennow.com/wiki" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
+             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Wiki
+          </a>
+        </nav>
+      </div>
+    </header>
+  
+  
+  <main class="container mx-auto px-4 py-8">
+    
+    <h1>🇺🇸 USA News</h1>
+    <p>99 articles</p>
+    
+    <ul itemscope itemtype="https://schema.org/ItemList">
+      
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="1">
+            <a href="https://bravennow.com/news/US/stocks-making-the-biggest-moves-premarket-first-solar-godaddy-loweaposs-workday-cava-and-more" itemprop="url">
+              <span itemprop="name">Stocks making the biggest moves premarket: First Solar, GoDaddy, Lowe&amp;apos;s, Workday, Cava and more</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="2">
+            <a href="https://bravennow.com/news/US/the-age-of-animal-experiments-is-waning-where-will-science-go-next" itemprop="url">
+              <span itemprop="name">The age of animal experiments is waning. Where will science go next?</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[science]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="3">
+            <a href="https://bravennow.com/news/US/mge-energy-beats-revenue-estimates-despite-earnings-miss" itemprop="url">
+              <span itemprop="name">MGE Energy beats revenue estimates despite earnings miss</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="4">
+            <a href="https://bravennow.com/news/US/oxford-biomedica-rejects-eqt-takeover-approach" itemprop="url">
+              <span itemprop="name">Oxford Biomedica rejects EQT takeover approach</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="5">
+            <a href="https://bravennow.com/news/US/alkermes-stock-up-over-3-after-beating-revenue-estimates-guides-above-consensus" itemprop="url">
+              <span itemprop="name">Alkermes stock up over 3% after beating revenue estimates, guides above consensus</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="6">
+            <a href="https://bravennow.com/news/US/mgp-ingredients-declares-012-quarterly-dividend" itemprop="url">
+              <span itemprop="name">MGP Ingredients declares $0.12 quarterly dividend</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="7">
+            <a href="https://bravennow.com/news/US/caribbean-basin-security-initiative" itemprop="url">
+              <span itemprop="name">Caribbean Basin Security Initiative</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="8">
+            <a href="https://bravennow.com/news/US/bingx-tradfi-fully-integrated-into-the-bingx-ecosystem-forming-a-key-pillar-for-2026" itemprop="url">
+              <span itemprop="name">BingX TradFi Fully Integrated into the BingX Ecosystem, Forming a Key Pillar for 2026</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="9">
+            <a href="https://bravennow.com/news/US/us-caribbean-cooperation-to-disrupt-illicit-firearms-trafficking" itemprop="url">
+              <span itemprop="name">U.S.-Caribbean Cooperation to Disrupt Illicit Firearms Trafficking</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="10">
+            <a href="https://bravennow.com/news/US/form-8k-angel-oak-mortgage-inc-for-25-february" itemprop="url">
+              <span itemprop="name">Form 8K Angel Oak Mortgage Inc For: 25 February</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="11">
+            <a href="https://bravennow.com/news/US/mandelsons-lawyers-say-his-arrest-followed-baseless-suggestion-he-planned-to-leave-uk" itemprop="url">
+              <span itemprop="name">Mandelson’s lawyers say his arrest followed ’baseless suggestion’ he planned to leave UK</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="12">
+            <a href="https://bravennow.com/news/US/european-stocks-rise-hsbc-surges-after-lifting-key-target" itemprop="url">
+              <span itemprop="name">European stocks rise; HSBC surges after lifting key target</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="13">
+            <a href="https://bravennow.com/news/US/from-prison-cell-to-federal-reform-a-fix-for-the-first-step-act" itemprop="url">
+              <span itemprop="name">From prison cell to federal reform: A fix for the First Step Act</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[politics]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="14">
+            <a href="https://bravennow.com/news/US/angel-oak-mortgage-earnings-missed-by-001-revenue-fell-short-of-estimates" itemprop="url">
+              <span itemprop="name">Angel Oak Mortgage earnings missed by $0.01, revenue fell short of estimates</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="15">
+            <a href="https://bravennow.com/news/US/hc-wainwright-cuts-summit-therapeutics-stock-price-target-on-china-trial-timing-uncertainty" itemprop="url">
+              <span itemprop="name">H.C. Wainwright cuts Summit Therapeutics stock price target on China trial timing uncertainty</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="16">
+            <a href="https://bravennow.com/news/US/how-war-stopped-working" itemprop="url">
+              <span itemprop="name">How war stopped working</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="17">
+            <a href="https://bravennow.com/news/US/third-runway-will-cost-15-per-passenger-heathrow-boss-claims" itemprop="url">
+              <span itemprop="name">Third runway will cost £15 per passenger, Heathrow boss claims</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="18">
+            <a href="https://bravennow.com/news/US/takeaways-from-trumpaposs-state-of-the-union-and-house-rejects-aviation-safety-bill" itemprop="url">
+              <span itemprop="name">Takeaways from Trump&amp;apos;s State of the Union. And, House rejects aviation safety bill</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="19">
+            <a href="https://bravennow.com/news/US/itaposs-time-to-buy-oracle-shares-after-the-sell-off-says-oppenheimer" itemprop="url">
+              <span itemprop="name">It&amp;apos;s time to buy Oracle shares after the sell-off, says Oppenheimer</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="20">
+            <a href="https://bravennow.com/news/US/park-min-young-wi-ha-jun-kim-jung-hyun-on-studio-dragons-prime-video-series-sirens-kiss-tension-neve" itemprop="url">
+              <span itemprop="name">Park Min-young, Wi Ha-jun, Kim Jung-hyun on Studio Dragon’s Prime Video Series ‘Siren’s Kiss’: ‘Tension Never Lets Up’</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[culture]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="21">
+            <a href="https://bravennow.com/news/US/global-entertainment-awards-names-regional-winners-accolades-for-creative-work-on-bluey-tron-ares-sq" itemprop="url">
+              <span itemprop="name">Global Entertainment Awards Names Regional Winners: Accolades For Creative Work On ‘Bluey’, ‘Tron: Ares’ &amp; ‘Squid Game’</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[culture]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="22">
+            <a href="https://bravennow.com/news/US/ranking-the-top-offseason-trade-candidates-who-are-the-best-players-available" itemprop="url">
+              <span itemprop="name">Ranking the top offseason trade candidates: Who are the best players available?</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[sports]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="23">
+            <a href="https://bravennow.com/news/US/32-nfl-teams-32-quarterback-predictions-we-named-a-week-1-starter-for-every-offense" itemprop="url">
+              <span itemprop="name">32 NFL teams, 32 quarterback predictions: We named a Week 1 starter for every offense</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[sports]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="24">
+            <a href="https://bravennow.com/news/US/are-kevin-oconnell-rob-brzezinski-interested-in-the-vikings-open-gm-role" itemprop="url">
+              <span itemprop="name">Are Kevin O&#039;Connell, Rob Brzezinski interested in the Vikings&#039; open GM role?</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[sports]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="25">
+            <a href="https://bravennow.com/news/US/are-kevin-oconnell-rob-brezinksi-interested-in-the-vikings-open-gm-role" itemprop="url">
+              <span itemprop="name">Are Kevin O&#039;Connell, Rob Brezinksi interested in the Vikings&#039; open GM role?</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[sports]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="26">
+            <a href="https://bravennow.com/news/US/2026-draft-prospects-get-important-advice-from-nfl-rookies" itemprop="url">
+              <span itemprop="name">2026 draft prospects get important advice from NFL rookies</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[sports]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="27">
+            <a href="https://bravennow.com/news/US/commons-speaker-told-police-mandelson-was-a-flight-risk" itemprop="url">
+              <span itemprop="name">Commons Speaker told police Mandelson was a flight risk</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="28">
+            <a href="https://bravennow.com/news/US/astec-earnings-beat-by-026-revenue-topped-estimates" itemprop="url">
+              <span itemprop="name">Astec earnings beat by $0.26, revenue topped estimates</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="29">
+            <a href="https://bravennow.com/news/US/nasdaq-raises-medium-term-solutions-revenue-growth-outlook" itemprop="url">
+              <span itemprop="name">Nasdaq raises medium-term solutions revenue growth outlook</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="30">
+            <a href="https://bravennow.com/news/US/fda-accepts-opus-genetics-presbyopia-treatment-application" itemprop="url">
+              <span itemprop="name">FDA accepts Opus Genetics’ presbyopia treatment application</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="31">
+            <a href="https://bravennow.com/news/US/thomson-reuters-plans-600m-share-buyback-605m-capital-return" itemprop="url">
+              <span itemprop="name">Thomson Reuters plans $600M share buyback, $605M capital return</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="32">
+            <a href="https://bravennow.com/news/US/steven-madden-earnings-beat-by-001-revenue-topped-estimates" itemprop="url">
+              <span itemprop="name">Steven Madden earnings beat by $0.01, revenue topped estimates</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="33">
+            <a href="https://bravennow.com/news/US/celldex-completes-phase-3-enrollment-for-csu-treatment-ahead-of-schedule" itemprop="url">
+              <span itemprop="name">Celldex completes Phase 3 enrollment for CSU treatment ahead of schedule</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="34">
+            <a href="https://bravennow.com/news/US/cyngn-appoints-former-lyft-executive-to-board-of-directors" itemprop="url">
+              <span itemprop="name">Cyngn appoints former Lyft executive to board of directors</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="35">
+            <a href="https://bravennow.com/news/US/iqvia-to-acquire-drug-discovery-assets-from-charles-river-labs" itemprop="url">
+              <span itemprop="name">IQVIA to acquire drug discovery assets from Charles River Labs</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="36">
+            <a href="https://bravennow.com/news/US/beiersdorf-downgraded-to-hold-at-deutsche-bank-as-rally-prices-in-upside" itemprop="url">
+              <span itemprop="name">Beiersdorf downgraded to &quot;hold&quot; at Deutsche Bank as rally prices in upside</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="37">
+            <a href="https://bravennow.com/news/US/form-424b5-abbott-laboratories-for-25-february" itemprop="url">
+              <span itemprop="name">Form 424B5 Abbott Laboratories For: 25 February</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="38">
+            <a href="https://bravennow.com/news/US/trump-jabs-taunts-democrats-in-marathon-speech" itemprop="url">
+              <span itemprop="name">Trump jabs, taunts Democrats in marathon speech</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[politics]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="39">
+            <a href="https://bravennow.com/news/US/banijay-saddles-up-for-next-era-of-dutch-formats-with-the-bicycle-race-last-one-standing" itemprop="url">
+              <span itemprop="name">Banijay Saddles Up For Next Era Of Dutch Formats With ‘The Bicycle Race’ &amp; ‘Last One Standing’</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[culture]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="40">
+            <a href="https://bravennow.com/news/US/ticketmaster-antitrust-risks-are-easing-making-its-parent-companyaposs-stock-a-buy-says-wells-fargo" itemprop="url">
+              <span itemprop="name">Ticketmaster antitrust risks are easing, making its parent company&amp;apos;s stock a buy, says Wells Fargo</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="41">
+            <a href="https://bravennow.com/news/US/fact-checking-the-state-of-the-union-and-the-trumps-surgeon-general-pick-faces-a-senate-grilling-mor" itemprop="url">
+              <span itemprop="name">Fact-checking the State of the Union and the Trump&#039;s surgeon general pick faces a Senate grilling: Morning Rundown</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="42">
+            <a href="https://bravennow.com/news/US/berlinale-says-pro-palestinian-speeches-at-closing-ceremony-were-within-bounds-of-free-speech-laws-i" itemprop="url">
+              <span itemprop="name">Berlinale Says Pro-Palestinian Speeches At Closing Ceremony Were “Within Bounds Of Free Speech Laws In Germany”</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[culture]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="43">
+            <a href="https://bravennow.com/news/US/new-legislation-in-house-would-ban-taxpayer-money-from-going-to-jan-6-rioters" itemprop="url">
+              <span itemprop="name">New legislation in House would ban taxpayer money from going to Jan. 6 rioters</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="44">
+            <a href="https://bravennow.com/news/US/mortgage-rates-hit-lowest-level-in-nearly-4-years-but-homebuyers-are-still-stuck-on-the-sidelines" itemprop="url">
+              <span itemprop="name">Mortgage rates hit lowest level in nearly 4 years, but homebuyers are still stuck on the sidelines</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="45">
+            <a href="https://bravennow.com/news/US/restaurant-reservation-wars-heat-up-as-doordash-enters-the-arena-with-resy-opentable" itemprop="url">
+              <span itemprop="name">Restaurant reservation wars heat up as DoorDash enters the arena with Resy, OpenTable</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="46">
+            <a href="https://bravennow.com/news/US/tiktok-discover-list-2026-irene-suwandi-leana-deeb-olly-bowman-and-more-exclusive" itemprop="url">
+              <span itemprop="name">TikTok Discover List 2026: Irene Suwandi, Leana Deeb, Olly Bowman and More (EXCLUSIVE)</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[culture]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="47">
+            <a href="https://bravennow.com/news/US/talk-to-your-own-personal-isaac-newton-with-ailiass-hologram-avatars" itemprop="url">
+              <span itemprop="name">Talk to Your Own Personal Isaac Newton With Ailias’s Hologram Avatars</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[technology]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="48">
+            <a href="https://bravennow.com/news/US/us-uk-tech-deal-cautiously-restarts-with-focus-on-nuclear-projects" itemprop="url">
+              <span itemprop="name">US-UK tech deal cautiously restarts with focus on nuclear projects</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="49">
+            <a href="https://bravennow.com/news/US/zimbabwe-imposes-ban-on-exports-of-all-raw-minerals-and-lithium-concentrate" itemprop="url">
+              <span itemprop="name">Zimbabwe imposes ban on exports of all raw minerals and lithium concentrate</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[world]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="50">
+            <a href="https://bravennow.com/news/US/deadly-fighting-in-alawite-heartland-city-in-syria" itemprop="url">
+              <span itemprop="name">Deadly fighting in Alawite heartland city in Syria</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[world]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="51">
+            <a href="https://bravennow.com/news/US/documentary-feature-on-the-blind-boys-of-alabama-wraps-production" itemprop="url">
+              <span itemprop="name">Documentary Feature On The Blind Boys Of Alabama Wraps Production</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[culture]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="52">
+            <a href="https://bravennow.com/news/US/how-xis-military-purges-could-hamper-chinas-ability-to-fight" itemprop="url">
+              <span itemprop="name">How Xi&#039;s military purges could hamper China&#039;s ability to fight</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="53">
+            <a href="https://bravennow.com/news/US/daily-briefing-covids-origins-what-we-do-and-dont-know" itemprop="url">
+              <span itemprop="name">Daily briefing: COVID’s origins — what we do and don’t know</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[science]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="54">
+            <a href="https://bravennow.com/news/US/five-ways-to-spot-when-a-paper-is-a-fraud" itemprop="url">
+              <span itemprop="name">Five ways to spot when a paper is a fraud</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[science]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="55">
+            <a href="https://bravennow.com/news/US/form-8k-bloomin-brands-inc-for-25-february" itemprop="url">
+              <span itemprop="name">Form 8K Bloomin Brands Inc For: 25 February</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="56">
+            <a href="https://bravennow.com/news/US/form-8k-alexander-baldwin-inc-for-25-february" itemprop="url">
+              <span itemprop="name">Form 8K Alexander &amp; Baldwin Inc For: 25 February</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="57">
+            <a href="https://bravennow.com/news/US/form-8k-aspen-aerogels-inc-for-25-february" itemprop="url">
+              <span itemprop="name">Form 8K Aspen Aerogels Inc For: 25 February</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="58">
+            <a href="https://bravennow.com/news/US/form-8k-broadstone-net-lease-inc-for-25-february" itemprop="url">
+              <span itemprop="name">Form 8K Broadstone Net Lease Inc For: 25 February</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="59">
+            <a href="https://bravennow.com/news/US/form-8k-amc-entertainment-holdings-inc-for-25-february" itemprop="url">
+              <span itemprop="name">Form 8K AMC Entertainment Holdings Inc For: 25 February</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="60">
+            <a href="https://bravennow.com/news/US/form-8k-united-therapeutics-corporation-for-25-february" itemprop="url">
+              <span itemprop="name">Form 8K United Therapeutics Corporation For: 25 February</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="61">
+            <a href="https://bravennow.com/news/US/form-8k-owens-corning-for-25-february" itemprop="url">
+              <span itemprop="name">Form 8K Owens Corning For: 25 February</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="62">
+            <a href="https://bravennow.com/news/US/bloomin-brands-beats-q4-profit-view-shares-rise-2" itemprop="url">
+              <span itemprop="name">Bloomin’ Brands beats Q4 profit view, shares rise 2%</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="63">
+            <a href="https://bravennow.com/news/US/ubs-lists-european-winners-and-losers-of-latest-us-tariffs-ruling" itemprop="url">
+              <span itemprop="name">UBS lists European winners and losers of latest US tariffs ruling</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="64">
+            <a href="https://bravennow.com/news/US/united-therapeutics-stock-falls-nearly-5-on-revenue-miss-despite-earnings-beat" itemprop="url">
+              <span itemprop="name">United Therapeutics stock falls nearly 5% on revenue miss despite earnings beat</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="65">
+            <a href="https://bravennow.com/news/US/american-who-spent-11-years-in-prison-for-bali-suitcase-murder-is-freed" itemprop="url">
+              <span itemprop="name">American who spent 11 years in prison for Bali &quot;suitcase murder&quot; is freed</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="66">
+            <a href="https://bravennow.com/news/US/best-wireless-headphones-2026-i-compare-bose-apple-sony-and-more" itemprop="url">
+              <span itemprop="name">Best Wireless Headphones (2026): I Compare Bose, Apple, Sony and More</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[technology]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="67">
+            <a href="https://bravennow.com/news/US/kubuntu-focus-zr-gen-1-review-a-powerhouse-linux-laptop" itemprop="url">
+              <span itemprop="name">Kubuntu Focus Zr Gen 1 Review: A Powerhouse Linux Laptop</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[technology]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="68">
+            <a href="https://bravennow.com/news/US/watch-trump-awards-a-us-coast-guard-with-a-medal-for-rescuing-texas-flood-victims" itemprop="url">
+              <span itemprop="name">WATCH: Trump awards a U.S. Coast Guard with a medal for rescuing Texas flood victims</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[politics]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="69">
+            <a href="https://bravennow.com/news/US/cqs-new-city-high-yield-fund-reports-485-nav-return-for-h1" itemprop="url">
+              <span itemprop="name">CQS New City High Yield Fund reports 4.85% NAV return for H1</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="70">
+            <a href="https://bravennow.com/news/US/wolfe-research-cuts-expeditors-stock-price-target-on-ocean-rate-pressure" itemprop="url">
+              <span itemprop="name">Wolfe Research cuts Expeditors stock price target on ocean rate pressure</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="71">
+            <a href="https://bravennow.com/news/US/wolfe-research-downgrades-oneok-stock-rating-on-growth-concerns" itemprop="url">
+              <span itemprop="name">Wolfe Research downgrades Oneok stock rating on growth concerns</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="72">
+            <a href="https://bravennow.com/news/US/needham-cuts-clarivate-stock-price-target-on-valuation-pullback" itemprop="url">
+              <span itemprop="name">Needham cuts Clarivate stock price target on valuation pullback</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="73">
+            <a href="https://bravennow.com/news/US/wolfe-research-cuts-workday-stock-price-target-on-slowing-growth" itemprop="url">
+              <span itemprop="name">Wolfe Research cuts Workday stock price target on slowing growth</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="74">
+            <a href="https://bravennow.com/news/US/jefferies-raises-globus-medical-stock-price-target-on-strong-quarter" itemprop="url">
+              <span itemprop="name">Jefferies raises Globus Medical stock price target on strong quarter</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="75">
+            <a href="https://bravennow.com/news/US/tri-pointe-homes-beats-estimates-stock-edges-up" itemprop="url">
+              <span itemprop="name">Tri Pointe Homes beats estimates, stock edges up</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="76">
+            <a href="https://bravennow.com/news/US/loweaposs-earnings-beat-as-sales-jump-more-than-10-despite-sluggish-housing-market" itemprop="url">
+              <span itemprop="name">Lowe&amp;apos;s earnings beat as sales jump more than 10% despite sluggish housing market</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="77">
+            <a href="https://bravennow.com/news/US/bmw-in-talks-with-eu-on-tariff-exemption-for-made-in-china-minis-handelsblatt-reports" itemprop="url">
+              <span itemprop="name">BMW in talks with EU on tariff exemption for ’Made in China’ Minis, Handelsblatt reports</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="78">
+            <a href="https://bravennow.com/news/US/france-tasks-versailles-director-with-overhauling-louvre-after-heist" itemprop="url">
+              <span itemprop="name">France tasks Versailles director with overhauling Louvre after heist</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="79">
+            <a href="https://bravennow.com/news/US/no-stomach-for-a-relegation-fight-fiery-ohara-analyses-spurs-plight" itemprop="url">
+              <span itemprop="name">&#039;No stomach for a relegation fight&#039; - fiery O&#039;Hara analyses Spurs&#039; plight</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[sports]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="80">
+            <a href="https://bravennow.com/news/US/woman-suing-meta-youtube-over-social-media-addiction-takes-the-stand-at-trial" itemprop="url">
+              <span itemprop="name">Woman suing Meta, YouTube over social media addiction takes the stand at trial</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="81">
+            <a href="https://bravennow.com/news/US/revenge-of-the-nerds-lizzie-mcguire-actor-robert-carradine-dead-at-71" itemprop="url">
+              <span itemprop="name">&#039;Revenge of the Nerds,&#039; &#039;Lizzie McGuire&#039; actor Robert Carradine dead at 71</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[politics]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="82">
+            <a href="https://bravennow.com/news/US/rock-roll-hall-of-fames-17-nominees-for-2026-include-shakira-lauryn-hill-pink-jeff-buckley-phil-coll" itemprop="url">
+              <span itemprop="name">Rock &amp; Roll Hall of Fame’s 17 Nominees for 2026 Include Shakira, Lauryn Hill, Pink, Jeff Buckley, Phil Collins, Billy Idol and Wu Tang Clan</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[culture]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="83">
+            <a href="https://bravennow.com/news/US/anti-palestinian-repression-legal-experts-document-hundreds-of-uk-cases" itemprop="url">
+              <span itemprop="name">‘Anti-Palestinian repression’: Legal experts document hundreds of UK cases</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[world]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="84">
+            <a href="https://bravennow.com/news/US/republicans-unveil-bill-to-block-illegal-immigrants-from-becoming-armed-police" itemprop="url">
+              <span itemprop="name">Republicans unveil bill to block illegal immigrants from becoming armed police</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[politics]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="85">
+            <a href="https://bravennow.com/news/US/will-ethiopia-be-part-of-israels-hexagon-alliance-rivalling-its-enemies" itemprop="url">
+              <span itemprop="name">Will Ethiopia be part of Israel’s ‘hexagon’ alliance rivalling its enemies?</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[world]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="86">
+            <a href="https://bravennow.com/news/US/smoke-alarms-sold-on-amazon-recalled-over-potential-fire-hazard" itemprop="url">
+              <span itemprop="name">Smoke alarms sold on Amazon recalled over potential fire hazard</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[politics]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="87">
+            <a href="https://bravennow.com/news/US/lowes-fourth-quarter-earnings-comparable-sales-top-expectations" itemprop="url">
+              <span itemprop="name">Lowe’s fourth-quarter earnings, comparable sales top expectations</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="88">
+            <a href="https://bravennow.com/news/US/ideaya-enrolls-first-patient-in-phase-1-trial-of-ide034-cancer-drug" itemprop="url">
+              <span itemprop="name">Ideaya enrolls first patient in phase 1 trial of IDE034 cancer drug</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="89">
+            <a href="https://bravennow.com/news/US/oppenheimer-hires-vien-le-as-managing-director-in-public-finance" itemprop="url">
+              <span itemprop="name">Oppenheimer hires Vien Le as managing director in public finance</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="90">
+            <a href="https://bravennow.com/news/US/sensei-biotherapeutics-grants-stock-options-to-17-new-employees" itemprop="url">
+              <span itemprop="name">Sensei Biotherapeutics grants stock options to 17 new employees</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="91">
+            <a href="https://bravennow.com/news/US/phil-collins-mariah-carey-sade-and-oasis-nominated-for-rock-hall-of-fame" itemprop="url">
+              <span itemprop="name">Phil Collins, Mariah Carey, Sade, and Oasis Nominated for Rock Hall of Fame</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[culture]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="92">
+            <a href="https://bravennow.com/news/US/form-s-3-offerpad-solutions-inc-for-25-february" itemprop="url">
+              <span itemprop="name">Form S-3 Offerpad Solutions Inc For: 25 February</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="93">
+            <a href="https://bravennow.com/news/US/form-13f-midfirst-bank-for-25-february" itemprop="url">
+              <span itemprop="name">Form 13F MidFirst Bank For: 25 February</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="94">
+            <a href="https://bravennow.com/news/US/investingpros-fair-value-spotted-sbet-overvalued-before-54-drop" itemprop="url">
+              <span itemprop="name">InvestingPro’s Fair Value spotted SBET overvalued before 54% drop</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="95">
+            <a href="https://bravennow.com/news/US/telsey-raises-home-depot-stock-price-target-to-435-on-earnings-beat" itemprop="url">
+              <span itemprop="name">Telsey raises Home Depot stock price target to $435 on earnings beat</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="96">
+            <a href="https://bravennow.com/news/US/sportswear-brand-on-launches-south-korea-robot-factory-to-tackle-supply-chain-risk" itemprop="url">
+              <span itemprop="name">Sportswear brand On launches South Korea robot factory to tackle supply chain risk</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="97">
+            <a href="https://bravennow.com/news/US/telsey-raises-cava-stock-price-target-to-88-on-unit-growth-outlook" itemprop="url">
+              <span itemprop="name">Telsey raises Cava stock price target to $88 on unit growth outlook</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[economy]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="98">
+            <a href="https://bravennow.com/news/US/if-social-platforms-are-harmful-dont-just-ban-kids-regulate-the-harms" itemprop="url">
+              <span itemprop="name">If social platforms are harmful, don&#039;t just ban kids. Regulate the harms</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <meta itemprop="position" content="99">
+            <a href="https://bravennow.com/news/US/2026-cnbc-changemakers-women-leaders-who-defied-the-odds-to-reach-the-highest-levels-of-success" itemprop="url">
+              <span itemprop="name">2026 CNBC Changemakers: Women leaders who defied the odds to reach the highest levels of success</span>
+            </a>
+            <span class="meta"> - 2/25/2026</span>
+             <span class="category">[general]</span>
+          </li>
+        
+    </ul>
+    
+    
+      <section>
+        <h3>News from Other Countries</h3>
+        
+            <h4><a href="https://bravennow.com/news/GB">🇬🇧 United Kingdom</a></h4>
+            <ul>
+              
+                <li><a href="https://bravennow.com/news/GB/the-golden-age-of-america-trump-delivers-the-state-of-the-union-address-podcast">The ‘golden age of America’? Trump delivers the State of the Union address – podcast</a></li>
+              
+                <li><a href="https://bravennow.com/news/GB/us-man-deported-from-bali-after-11-years-in-prison-for-suitcase-murder-of-then-girlfriends-mother">US man deported from Bali after 11 years in prison for ‘suitcase murder’ of then-girlfriend’s mother</a></li>
+              
+                <li><a href="https://bravennow.com/news/GB/man-who-murdered-girl-9-as-she-played-hula-hoop-in-lincolnshire-street-jailed-for-life">Man who murdered girl, 9, as she played hula hoop in Lincolnshire street jailed for life</a></li>
+              
+            </ul>
+          
+            <h4><a href="https://bravennow.com/news/UA">🇺🇦 Ukraine</a></h4>
+            <ul>
+              
+                <li><a href="https://bravennow.com/news/UA/-vip-">Рада викликала главу МВС Клименка через “VIP-ухилянта” Петрова – нардеп</a></li>
+              
+                <li><a href="https://bravennow.com/news/UA/-samsung-galaxy-unpacked">Новинки Samsung і вигідні подарунки: де та коли дивитися трансляцію Galaxy Unpacked</a></li>
+              
+                <li><a href="https://bravennow.com/news/UA/-tesla">У Києві молодь на замовлення підпалювала електрокари Tesla</a></li>
+              
+            </ul>
+          
+      </section>
+    
+    
+    <nav>
+      <a href="https://bravennow.com/news">← All Countries</a> |
+      <a href="https://bravennow.com/news/us">🇺🇸 USA</a> |
+      <a href="https://bravennow.com/news/ua">🇺🇦 Ukraine</a> |
+      <a href="https://bravennow.com/news/pl">🇵🇱 Poland</a> |
+      <a href="https://bravennow.com/news/in">🇮🇳 India</a>
+    </nav>
+  
+  </main>
+  
+  
+    <footer class="border-t border-border/40 bg-[#030711]/95 backdrop-blur-md transition-colors duration-300">
+      <div class="container mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between">
+        <a href="https://bravennow.com/" class="flex items-center gap-2">
+          <img src="https://bravennow.com/favicon.svg" alt="logo" class="h-6 w-6" />
+        </a>
+        <nav class="flex flex-wrap items-center gap-2 justify-center">
+          <a href="https://bravennow.com/" class="inline-flex items-center gap-1 text-sm hover:underline">nav.read</a>
+          <a href="https://bravennow.com/news-digest" class="inline-flex items-center gap-1 text-sm hover:underline">nav.newsdigest</a>
+          <a href="https://bravennow.com/ink-abyss" class="inline-flex items-center gap-1 text-sm hover:underline">Ink Abyss</a>
+          <a href="https://bravennow.com/media-calendar" class="inline-flex items-center gap-1 text-sm hover:underline">nav.calendar</a>
+          <a href="https://bravennow.com/wiki" class="inline-flex items-center gap-1 text-sm hover:underline">Wiki</a>
+        </nav>
+        <div class="mt-2 md:mt-0"></div>
+      </div>
+      <div class="container mx-auto px-4 text-center text-sm text-muted-foreground font-mono py-2">
+        BravenNow - AI Generated History © 2026
+      </div>
+    </footer>
+  
+  
+  
+</body>
+</html>
