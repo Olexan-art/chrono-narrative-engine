@@ -65,9 +65,9 @@ function shouldSSR(pathname: string): boolean {
 }
 
 // Fetch cached content from cached_pages table via Supabase REST API
-async function fetchFromCachedPages(cachePath: string): Promise<string | null> {
+async function fetchFromCachedPages(cachePath: string): Promise<{ html: string | null; htmlSize: number | null; expires_at?: string | null } | null> {
   try {
-    const restUrl = `${SUPABASE_URL}/rest/v1/cached_pages?path=eq.${encodeURIComponent(cachePath)}&select=html,expires_at&limit=1`;
+    const restUrl = `${SUPABASE_URL}/rest/v1/cached_pages?path=eq.${encodeURIComponent(cachePath)}&select=html,html_size_bytes,expires_at&limit=1`;
     
     const response = await fetch(restUrl, {
       headers: {
@@ -89,13 +89,12 @@ async function fetchFromCachedPages(cachePath: string): Promise<string | null> {
     // Log cached row details for debugging (length + snippet)
     try {
       const htmlSample = (row.html || '').slice(0, 200).replace(/\s+/g, ' ');
-      console.log(`[bot-ssr] cached_pages row for ${cachePath}: html_length=${(row.html||'').length}, expires_at=${row.expires_at}, sample="${htmlSample.replace(/"/g, '\\"')}"`);
+      console.log(`[bot-ssr] cached_pages row for ${cachePath}: html_length=${(row.html||'').length}, html_size_bytes=${row.html_size_bytes}, expires_at=${row.expires_at}, sample="${htmlSample.replace(/"/g, '\\"')}"`);
     } catch (e) {
       console.log('[bot-ssr] cached_pages row logging failed', String(e));
     }
 
-    // Return even if expired - stale is better than nothing
-    return row.html || null;
+    return { html: row.html || null, htmlSize: row.html_size_bytes || null, expires_at: row.expires_at || null };
   } catch (error) {
     console.error('fetchFromCachedPages error:', error);
     return null;
@@ -234,10 +233,43 @@ export default async function handler(request: Request, context: Context) {
       try {
         const cachedHtmlForUser = await fetchFromCachedPages(pathname);
         if (cachedHtmlForUser) {
-          console.log(`[bot-ssr] Serving cached page to regular user for ${pathname}`);
-            // Add diagnostic header with cached HTML length to help debugging
-            const cachedLength = (cachedHtmlForUser || '').length;
-            return new Response(cachedHtmlForUser, {
+            const cachedHtml = cachedHtmlForUser.html || '';
+            const cachedLength = cachedHtml.length;
+            console.log(`[bot-ssr] Serving cached page to regular user for ${pathname} (cached_length=${cachedLength}, db_html_size=${cachedHtmlForUser.htmlSize})`);
+
+            // If DB reports a larger html_size_bytes than the returned html length, attempt live SSR to avoid serving truncated cache
+            if (cachedHtmlForUser.htmlSize && cachedLength < cachedHtmlForUser.htmlSize) {
+              console.warn(`[bot-ssr] Detected truncated cached HTML for ${pathname} (got ${cachedLength}B, expected ${cachedHtmlForUser.htmlSize}B). Falling back to live SSR.`);
+              try {
+                const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en&cache=true`;
+                const ssrResponse = await fetch(ssrUrl, {
+                  headers: {
+                    'User-Agent': userAgent,
+                    'Accept': 'text/html',
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                  },
+                });
+                if (ssrResponse.ok) {
+                  const html = await ssrResponse.text();
+                  return new Response(html, {
+                    status: 200,
+                    headers: {
+                      'Content-Type': 'text/html; charset=utf-8',
+                      'Cache-Control': 'public, max-age=3600',
+                      'X-SSR-Source': 'supabase-edge-function-fallback',
+                      'X-Worker-Version': 'v2026.02.23-isr-v1',
+                    },
+                  });
+                } else {
+                  console.error(`[bot-ssr] SSR fallback failed with status ${ssrResponse.status} for ${pathname}`);
+                }
+              } catch (e) {
+                console.error('[bot-ssr] SSR fallback fetch failed', e);
+              }
+            }
+
+            return new Response(cachedHtml, {
               status: 200,
               headers: {
                 'Content-Type': 'text/html; charset=utf-8',
@@ -247,7 +279,7 @@ export default async function handler(request: Request, context: Context) {
                 'X-Cached-Length': String(cachedLength),
               },
             });
-        }
+          }
       } catch (e) {
         console.error(`[bot-ssr] cached_pages fast-path error for user ${pathname}:`, e);
       }
