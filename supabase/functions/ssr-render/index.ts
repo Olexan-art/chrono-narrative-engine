@@ -129,10 +129,30 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // ── Purge endpoint: ?purge=true&purge_secret=XXX&path=/wiki/ukraine ──────
+    const purgeMode   = url.searchParams.get("purge") === "true" || body?.purge === true;
+    const purgeSecret = url.searchParams.get("purge_secret") || body?.purge_secret || "";
+    const PURGE_SECRET_VALUE = "bnn-cache-purge-key-2026";
+    if (purgeMode) {
+      if (purgeSecret !== PURGE_SECRET_VALUE) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      // path=all → delete all cached_pages
+      if (path === "all") {
+        const { error } = await supabase.from("cached_pages").delete().neq("path", "__never__");
+        return new Response(JSON.stringify({ ok: !error, purged: "all", error: error?.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { error } = await supabase.from("cached_pages").delete().eq("path", path);
+      console.log(`[ssr-render] Cache purged: ${path} error=${error?.message}`);
+      return new Response(JSON.stringify({ ok: !error, purged: path, error: error?.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Detect bot
     const botInfo = detectBot(userAgent);
 
     // Try to serve from cache first (if enabled)
+    // staleHtml — backup for stale-while-revalidate: if live-render fails/empty we return this
+    let staleHtml: string | null = null;
     if (useCache) {
       const { data: cached } = await supabase
         .from("cached_pages")
@@ -140,22 +160,25 @@ Deno.serve(async (req) => {
         .eq("path", path)
         .maybeSingle();
 
-      if (cached && new Date(cached.expires_at) > new Date()) {
-        console.log(`Serving cached page for ${path} [CACHE HIT]`);
-
-        // Log bot visit with CACHE HIT
-        if (botInfo) {
-          logBotVisit(supabase, botInfo, path, userAgent, referer, startTime, 'HIT');
+      if (cached?.html) {
+        const isFresh = new Date(cached.expires_at) > new Date();
+        if (isFresh) {
+          console.log(`Serving cached page for ${path} [CACHE HIT]`);
+          if (botInfo) {
+            logBotVisit(supabase, botInfo, path, userAgent, referer, startTime, 'HIT');
+          }
+          return new Response(cached.html, {
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "text/html; charset=utf-8",
+              "Cache-Control": "public, max-age=3600, s-maxage=86400",
+              "X-Cache": "HIT",
+            },
+          });
         }
-
-        return new Response(cached.html, {
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "text/html; charset=utf-8",
-            "Cache-Control": "public, max-age=3600, s-maxage=86400",
-            "X-Cache": "HIT",
-          },
-        });
+        // Expired but we have stale content — keep as fallback
+        staleHtml = cached.html;
+        console.log(`Cache expired for ${path} [STALE], will live-render. Stale available as fallback.`);
       }
     }
 
@@ -285,8 +308,8 @@ Deno.serve(async (req) => {
     } else if (path === "/topics") {
       // Topics catalog page
       title = lang === "en"
-        ? "News Topics & Categories | BraveNNow"
-        : "Теми та Категорії Новин | BraveNNow";
+        ? "News Topics & Categories | BravenNow"
+        : "Теми та Категорії Новин | BravenNow";
       description = lang === "en"
         ? "Browse all news topics and categories. Find articles grouped by subject, track key entities and follow chronological timelines."
         : "Перегляньте всі теми та категорії новин. Знайдіть статті згруповані за предметом, відстежуйте ключові сутності та слідкуйте за хронологічними таймлайнами.";
@@ -347,8 +370,8 @@ Deno.serve(async (req) => {
         : `Останні новинні статті з тегом "${topic}". Відстежуйте хронологію подій, пов'язані теми та сутності.`;
 
       title = lang === "en"
-        ? `${topic} | News Topics | BraveNNow`
-        : `${topic} | Теми Новин | BraveNNow`;
+        ? `${topic} | News Topics | BravenNow`
+        : `${topic} | Теми Новин | BravenNow`;
       description = metaDesc || genericDesc;
       canonicalUrl = `${BASE_URL}/topics/${topicSlug}`;
 
@@ -664,6 +687,20 @@ Deno.serve(async (req) => {
         description = entity.description_en || entity.description || entity.extract_en?.substring(0, 200) || entity.extract?.substring(0, 200) || `Information about ${entityName}`;
         image = entity.image_url || image;
         canonicalUrl = `${BASE_URL}/wiki/${entity.slug || entity.id}`;
+
+        // #1 UUID redirect: if request used raw UUID but entity has a nice slug, 301 → slug URL
+        if (isUuid && entity.slug && entity.slug !== entitySlug) {
+          console.log(`[ssr-render] UUID redirect: /wiki/${entitySlug} → /wiki/${entity.slug}`);
+          return new Response(null, {
+            status: 301,
+            headers: {
+              ...corsHeaders,
+              "Location": `${BASE_URL}/wiki/${entity.slug}`,
+              "Cache-Control": "public, max-age=86400",
+              "X-Redirect-From": `/wiki/${entitySlug}`,
+            },
+          });
+        }
 
         // Fetch related news, wiki entity links, narrative analysis, caricatures, and categories in parallel
         const [{ data: newsLinks }, { data: wikiLinksOut }, { data: wikiLinksIn }, { data: narrativeData }, { data: caricaturesData }, { data: categoriesData }] = await Promise.all([
@@ -1047,7 +1084,7 @@ Deno.serve(async (req) => {
     }
 
     // Generate full HTML document
-    const fullHtml = generateFullDocument({
+    let fullHtml = generateFullDocument({
       title,
       description,
       image,
@@ -1058,27 +1095,87 @@ Deno.serve(async (req) => {
       faqItems,
     });
 
-    // Save to cache for paths that benefit from caching (homepage: 30 min, others: 1 hour)
-    const cacheTtlMinutes = (path === "/" || path === "") ? 30 : 60;
+    // TTL per path type — matches TTL_RULES in cloudflare-worker.js
+    const cacheTtlMinutes = (() => {
+      if (path === "/" || path === "")                                 return 120;  // 2h
+      if (/^\/news\/[a-zA-Z]{2}\/[a-z0-9-]+$/i.test(path))           return 120;  // news article 2h
+      if (/^\/news(\/)/.test(path) || path === "/news")               return 60;   // news country 1h
+      if (/^\/wiki(\/|$)/.test(path))                                  return 1440; // wiki 24h
+      if (/^\/topics(\/|$)/.test(path))                                return 360;  // topics 6h
+      if (/^\/chapter(s)?(\/|$)/.test(path))                          return 720;  // chapters 12h
+      if (/^\/volume(s)?(\/|$)/.test(path))                           return 720;  // volumes 12h
+      if (/^\/calendar(\/|$)/.test(path))                             return 360;  // calendar 6h
+      if (/^\/date\//.test(path))                                      return 120;  // date 2h
+      if (/^\/read\//.test(path))                                      return 120;  // read 2h
+      if (/^\/sitemap(\/|$)/.test(path))                               return 720;  // sitemap 12h
+      return 120; // default 2h
+    })();
     const expiresAt = new Date(Date.now() + cacheTtlMinutes * 60 * 1000).toISOString();
 
+    // If live-render produced empty/minimal content, return stale cache or SPA shell as fallback
+    const htmlSizeBytes = new TextEncoder().encode(fullHtml).length;
+    if (htmlSizeBytes < 8000) {
+      if (staleHtml) {
+        console.warn(`Live-render produced tiny HTML (${htmlSizeBytes}B) for ${path}, returning stale cache.`);
+        return new Response(staleHtml, {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=300, s-maxage=300",
+            "X-Cache": "STALE-FALLBACK",
+          },
+        });
+      }
+      // SPA shell fallback: load dist/index.html and return
+      const fs = require('fs');
+      const spaShellPath = process.cwd() + '/dist/index.html';
+      let spaShellHtml = '';
+      try {
+        spaShellHtml = fs.readFileSync(spaShellPath, 'utf8');
+        console.warn(`SSR fallback: returning SPA shell for ${path}`);
+        return new Response(spaShellHtml, {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=60, s-maxage=60",
+            "X-Cache": "SPA-FALLBACK",
+          },
+        });
+      } catch (err) {
+        console.error('SSR fallback: failed to load SPA shell index.html', err);
+        // fallback to minimal error page
+        return new Response(
+          `<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Error loading SPA shell</h1></body></html>`,
+          { headers: { ...corsHeaders, "Content-Type": "text/html" }, status: 500 }
+        );
+      }
+    }
+
+    let upsertError: string | null = null;
     try {
-      await supabase
+      const { error: cacheErr } = await supabase
         .from("cached_pages")
         .upsert({
           path,
+          url: BASE_URL + path,
           html: fullHtml,
           title,
           description,
           canonical_url: canonicalUrl,
           expires_at: expiresAt,
           generation_time_ms: Date.now() - startTime,
-          html_size_bytes: new TextEncoder().encode(fullHtml).length,
+          html_size_bytes: htmlSizeBytes,
           updated_at: new Date().toISOString(),
-        }, { onConflict: "path" });
-      console.log(`Cached ${path} (TTL: ${cacheTtlMinutes}min)`);
+        }, { onConflict: "url" });
+      if (cacheErr) {
+        upsertError = cacheErr.message;
+        console.error("Cache save failed:", JSON.stringify(cacheErr));
+      } else {
+        console.log(`Cached ${path} (TTL: ${cacheTtlMinutes}min, size: ${(htmlSizeBytes/1024).toFixed(1)}KB)`);
+      }
     } catch (cacheErr) {
-      console.error("Cache save failed:", cacheErr);
+      upsertError = String(cacheErr);
+      console.error("Cache save exception:", cacheErr);
     }
 
     return new Response(fullHtml, {
@@ -1087,6 +1184,7 @@ Deno.serve(async (req) => {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": `public, max-age=${cacheTtlMinutes * 60}, s-maxage=86400`,
         "X-Cache": "MISS",
+        ...(upsertError ? { "X-Cache-Error": upsertError.substring(0, 200) } : {}),
       },
     });
   } catch (error) {
@@ -1127,9 +1225,9 @@ function generateHeaderHTML(lang: string, baseUrl: string) {
             <img src="${baseUrl}/favicon.png" alt="SP" class="w-full h-full object-cover" width="40" height="40" />
           </div>
           <div>
-            <h1 class="font-sans font-bold text-base md:text-lg tracking-tight text-foreground m-0">
+            <div class="font-sans font-bold text-base md:text-lg tracking-tight text-foreground m-0" role="heading" aria-level="1">
               ${t("hero.title")}
-            </h1>
+            </div>
             <p class="text-[10px] md:text-xs text-muted-foreground font-mono hidden sm:block m-0">
               ${t("header.subtitle")}
             </p>
@@ -1285,7 +1383,7 @@ function generateFullDocument(opts: {
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="apple-touch-icon" href="/favicon.png" />
-  <title>${escapeHtml(title)}</title>
+  <title>${titleEscape(title)}</title>
   <meta name="description" content="${escapeHtml(description)}">
   
   <!-- Canonical & Language -->
@@ -1520,7 +1618,7 @@ function generateStoryHTML(part: any, lang: string, canonicalUrl: string) {
         ${part.is_flash_news ? " | <strong>⚡ Flash News</strong>" : ""}
       </div>
       
-      <h2 itemprop="headline">${escapeHtml(title)}</h2>
+      <h1 itemprop="headline">${escapeHtml(title)}</h1>
       
       <div class="story-content" itemprop="articleBody">
         ${escapeHtml(content)}
@@ -1548,7 +1646,7 @@ function generateChapterHTML(chapter: any, lang: string, canonicalUrl: string) {
         Week ${chapter.week_of_month} | ${chapter.volume?.title || ""}
       </div>
       
-      <h2 itemprop="headline">${escapeHtml(title)}</h2>
+      <h1 itemprop="headline">${escapeHtml(title)}</h1>
       
       ${description ? `<p itemprop="description">${escapeHtml(description)}</p>` : ""}
       
@@ -1614,7 +1712,7 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
         ${newsItem.category ? ` | <span itemprop="articleSection">${escapeHtml(newsItem.category)}</span>` : ""}
       </div>
       
-      <h2 itemprop="headline">${escapeHtml(title)}</h2>
+      <h1 itemprop="headline">${escapeHtml(title)}</h1>
       
       ${parsedKeywords.length > 0 ? `
         <p class="keywords" itemprop="keywords">
@@ -1909,7 +2007,15 @@ function generateHomeHTML(
   const topicItemHTML = (item: { topic: string; count: number }, rank: number) =>
     `<li><a href="${BASE_URL}/topics/${encodeURIComponent(item.topic)}" title="${escapeHtml(item.topic)} — ${item.count} articles">#${rank} ${escapeHtml(item.topic)} (${item.count})</a></li>`;
 
+  const homeTitle = lang === "uk" ? "BravenNow | Новини та Наратив" : "BravenNow | Smart News, Real News";
+  const homeSubtitle = lang === "uk"
+    ? "Книга, що пише себе сама — через реальні новини"
+    : "A book that writes itself through smart news based on real events";
+
   return `
+    <h1 class="site-title">${escapeHtml(homeTitle)}</h1>
+    <p>${escapeHtml(homeSubtitle)}</p>
+
     ${topTopics3.length > 0 ? `
     <section aria-label="${escapeHtml(topTopicsLabel)}">
       <h2>${escapeHtml(topTopicsLabel)}</h2>
@@ -2130,7 +2236,7 @@ function generateNewsCountryHTML(newsItems: any[], country: any, lang: string, c
   }
 
   return `
-    <h2>${flag} ${escapeHtml(countryName)} News</h2>
+    <h1>${flag} ${escapeHtml(countryName)} News</h1>
     <p>${newsItems.length} articles</p>
     
     <ul itemscope itemtype="https://schema.org/ItemList">
@@ -2185,7 +2291,7 @@ function generateNewsHubHTML(countries: any[], lang: string) {
   const nameField = lang === "en" ? "name_en" : lang === "pl" ? "name_pl" : "name";
 
   return `
-    <h2>News by Country</h2>
+    <h1>News by Country</h1>
     <p>Select a country to browse the latest news articles.</p>
 
     <ul>
@@ -2744,36 +2850,113 @@ function generateWikiCatalogHTML(entities: any[], lang: string) {
   `;
 }
 
+function getTopicEmoji(topic: string): string {
+  const lower = topic.toLowerCase();
+  if (["war","війн","conflict","military","армі","зброя","weapon","сolds"].some(k => lower.includes(k))) return "⚔️";
+  if (["politic","полі","election","вибор","government","уряд","парламент"].some(k => lower.includes(k))) return "⚖️";
+  if (["economy","економ","finance","фінанс","market","ринок","business","бізнес","trade"].some(k => lower.includes(k))) return "💼";
+  if (["tech","технол","digital","цифров"," ai","штучн","internet","інтернет","software"].some(k => lower.includes(k))) return "⚡";
+  if (["health","здоров","medical","медицин","covid","pandemic","пандем","hospital"].some(k => lower.includes(k))) return "💙";
+  if (["sport","спорт","football","футбол","olympic","олімп","tennis"].some(k => lower.includes(k))) return "🔥";
+  if (["science","наук","research","дослідж","space","космос","climate","клімат"].some(k => lower.includes(k))) return "📖";
+  if (["security","безпек","defense","оборон","nato","нато","розвідк"].some(k => lower.includes(k))) return "🛡️";
+  if (["media","медіа","press","преса","journal","соцмереж"].some(k => lower.includes(k))) return "📢";
+  if (["world","світ","global","глобал","international","міжнарод"].some(k => lower.includes(k))) return "🌐";
+  return "#";
+}
+
 function generateTopicsCatalogHTML(topics: { topic: string; count: number }[], lang: string) {
-  const titleText = lang === "en" ? "News Topics" : "Теми Новин";
+  const titleText   = lang === "en" ? "News Topics" : "Теми Новин";
   const subtitleText = lang === "en"
     ? "Explore all topics mentioned in news articles. Each topic has its own page with a timeline, entities, and statistics."
     : "Перегляньте всі теми, згадані в новинних статтях. Кожна тема має свою сторінку з таймлайном, сутностями та статистикою.";
 
+  const maxCount    = topics[0]?.count || 1;
+  const trending    = topics.slice(0, 12);       // Trending Topics (top 12)
+  const topNext     = topics.slice(12, 30);      // Top Topics (13-30)
+  const rest        = topics.slice(30);          // All remaining
+
+  const trendingHTML = trending.map(({ topic, count }, i) => `
+    <article style="border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:11px;color:rgba(255,255,255,0.3);font-family:monospace;min-width:24px;">[${String(i + 1).padStart(2, "0")}]</span>
+      <span style="font-size:18px;">${getTopicEmoji(topic)}</span>
+      <a href="${BASE_URL}/topics/${encodeURIComponent(topic)}" style="flex:1;font-weight:600;text-decoration:none;">
+        ${escapeHtml(topic)}
+      </a>
+      <span style="font-size:12px;color:rgba(255,255,255,0.4);font-family:monospace;">${count}</span>
+    </article>
+  `).join("");
+
+  const topNextHTML = topNext.map(({ topic, count }, i) => {
+    const barWidth = Math.max(12, Math.round((count / maxCount) * 64));
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05);">
+        <span style="font-size:11px;color:rgba(255,255,255,0.25);font-family:monospace;min-width:28px;">[${String(i + 13).padStart(2, "0")}]</span>
+        <span>${getTopicEmoji(topic)}</span>
+        <a href="${BASE_URL}/topics/${encodeURIComponent(topic)}" style="flex:1;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;text-decoration:none;">
+          ${escapeHtml(topic)}
+        </a>
+        <span style="display:inline-block;height:2px;background:rgba(255,255,255,0.2);width:${barWidth}px;"></span>
+        <span style="font-size:11px;color:rgba(255,255,255,0.4);font-family:monospace;min-width:36px;text-align:right;">${count}</span>
+      </div>
+    `;
+  }).join("");
+
+  const restHTML = rest.map(({ topic, count }) => `
+    <a href="${BASE_URL}/topics/${encodeURIComponent(topic)}"
+       style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid rgba(255,255,255,0.12);font-size:11px;font-family:monospace;text-transform:uppercase;letter-spacing:0.05em;text-decoration:none;margin:2px;">
+      # ${escapeHtml(topic)} <span style="color:rgba(255,255,255,0.35);">(${count})</span>
+    </a>
+  `).join("");
+
   return `
-    <h1>${escapeHtml(titleText)}</h1>
-    <p>${escapeHtml(subtitleText)}</p>
+    <div style="max-width:900px;margin:0 auto;padding:24px 16px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <span style="font-size:28px;">#</span>
+        <h1 style="margin:0;font-size:2rem;">${escapeHtml(titleText)}</h1>
+      </div>
+      <p style="color:rgba(255,255,255,0.55);margin-bottom:24px;">${escapeHtml(subtitleText)}</p>
 
-    <section>
-      <h2>${lang === "en" ? `All Topics (${topics.length})` : `Всі теми (${topics.length})`}</h2>
-      <ul>
-        ${topics.map(({ topic, count }) => `
-          <li>
-            <a href="${BASE_URL}/topics/${encodeURIComponent(topic)}">
-              #${escapeHtml(topic)}
-            </a>
-            <span> (${count} ${lang === "en" ? "articles" : "статей"})</span>
-          </li>
-        `).join("")}
-      </ul>
-    </section>
+      <!-- Stats bar -->
+      <div style="display:flex;flex-wrap:wrap;gap:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:8px;margin-bottom:24px;">
+        <span># ${lang === "en" ? "Total topics:" : "Всього тем:"} <strong>${topics.length}</strong></span>
+        ${topics[0] ? `<span>↑ ${lang === "en" ? "Most popular:" : "Найпопулярніша:"} <strong>${escapeHtml(topics[0].topic)}</strong> (${topics[0].count})</span>` : ""}
+      </div>
 
-    <nav>
-      <a href="${BASE_URL}/">← Home</a> |
-      <a href="${BASE_URL}/news">📰 News</a> |
-      <a href="${BASE_URL}/wiki">🌐 Entities</a> |
-      <a href="${BASE_URL}/sitemap">🗺️ Sitemap</a>
-    </nav>
+      <!-- Trending Topics (top 12) -->
+      ${trending.length > 0 ? `
+      <section style="margin-bottom:32px;">
+        <h2 style="font-size:1rem;margin-bottom:12px;">↑ ${lang === "en" ? "Trending Topics" : "Популярні теми"}</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">
+          ${trendingHTML}
+        </div>
+      </section>` : ""}
+
+      <!-- Top Topics (13-30) -->
+      ${topNext.length > 0 ? `
+      <section style="margin-bottom:32px;">
+        <h2 style="font-size:1rem;margin-bottom:12px;">▦ ${lang === "en" ? "Top Topics" : "Топ Теми"}</h2>
+        <div style="border:1px solid rgba(255,255,255,0.08);border-radius:4px;">
+          ${topNextHTML}
+        </div>
+      </section>` : ""}
+
+      <!-- All remaining topics -->
+      ${rest.length > 0 ? `
+      <section>
+        <h2 style="font-size:1rem;margin-bottom:12px;">⊞ ${lang === "en" ? `All topics (${topics.length})` : `Всі теми (${topics.length})`}</h2>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          ${restHTML}
+        </div>
+      </section>` : ""}
+
+      <nav style="margin-top:32px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);">
+        <a href="${BASE_URL}/">← Home</a> |
+        <a href="${BASE_URL}/news">📰 News</a> |
+        <a href="${BASE_URL}/wiki">🌐 Entities</a> |
+        <a href="${BASE_URL}/sitemap">🗺️ Sitemap</a>
+      </nav>
+    </div>
   `;
 }
 
@@ -2862,4 +3045,11 @@ function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+// #3 For <title> element: don't escape & (it's already plain text, browser decodes &amp; but
+// tools/audit show it literally). Only escape < and > which would break the tag.
+function titleEscape(text: string): string {
+  if (!text) return "";
+  return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

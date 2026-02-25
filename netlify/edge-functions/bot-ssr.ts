@@ -3,7 +3,7 @@ import type { Context } from "https://edge.netlify.com";
 const SUPABASE_URL = 'https://tuledxqigzufkecztnlo.supabase.co';
 const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 const SSR_ENDPOINT = `${SUPABASE_FUNCTIONS_URL}/ssr-render`;
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJnZHd4bm9pbGR2dmVwc29heHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTM2MzQsImV4cCI6MjA4NDc2OTYzNH0.FaLsz1zWVZMLCWizBnKG1ARFFO3N_I1Vmri9xMVVXFk';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NDUyODgsImV4cCI6MjA4NjQyMTI4OH0.XKqWqIwfy5BoKzQNNUhs5uYC_QI0GLLKXw1pBDgkCi0';
 
 // Mapping: URL path -> cached_pages path in DB
 const SITEMAP_CACHE_PATHS: Record<string, (searchParams: URLSearchParams) => string> = {
@@ -18,11 +18,19 @@ const SITEMAP_CACHE_PATHS: Record<string, (searchParams: URLSearchParams) => str
 };
 
 const BOT_PATTERNS = [
-  'googlebot', 'bingbot', 'yandex', 'duckduckbot', 'baiduspider',
-  'gptbot', 'chatgpt-user', 'anthropic-ai', 'claudebot', 'perplexitybot',
+  // Search engines
+  'googlebot', 'google-extended', 'googleother', 'google-inspectiontool',
+  'bingbot', 'msnbot', 'yandex', 'duckduckbot', 'baiduspider',
+  // AI crawlers
+  'gptbot', 'chatgpt-user', 'anthropic-ai', 'claudebot', 'claude-web',
+  'perplexitybot', 'gemini', 'google-gemini', 'cohere-ai', 'bytespider',
+  'amazonbot', 'meta-externalagent', 'youbot', 'diffbot', 'ccbot',
+  // Social
   'twitterbot', 'facebookexternalhit', 'linkedinbot', 'slackbot',
   'telegrambot', 'whatsapp', 'discordbot', 'applebot',
-  'semrush', 'ahrefs', 'mj12bot', 'screaming frog',
+  // SEO tools
+  'semrush', 'ahrefs', 'mj12bot', 'screaming frog', 'ahrefsbot', 'semrushbot',
+  // Generic
   'crawler', 'spider', 'bot/'
 ];
 
@@ -146,7 +154,7 @@ export default async function handler(request: Request, context: Context) {
     if (isBotRequest) {
       console.log(`[bot-ssr] Bot detected: ${userAgent}`);
       try {
-        const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en`;
+        const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en&cache=true`;
         console.log(`[bot-ssr] Calling SSR endpoint: ${ssrUrl}`);
 
         const ssrResponse = await fetch(ssrUrl, {
@@ -159,7 +167,23 @@ export default async function handler(request: Request, context: Context) {
         });
 
         console.log(`[bot-ssr] SSR response status: ${ssrResponse.status} for ${pathname}`);
-        
+
+        // Forward 301/308 redirects (e.g. wiki UUID → slug)
+        if (ssrResponse.status === 301 || ssrResponse.status === 308) {
+          const location = ssrResponse.headers.get('Location');
+          if (location) {
+            console.log(`[bot-ssr] Forwarding ${ssrResponse.status} redirect → ${location}`);
+            return new Response(null, {
+              status: ssrResponse.status,
+              headers: {
+                'Location': location,
+                'Cache-Control': 'public, max-age=86400',
+                'X-SSR-Bot': 'true',
+              },
+            });
+          }
+        }
+
         if (ssrResponse.ok) {
           const html = await ssrResponse.text();
           console.log(`[bot-ssr] SSR HTML length: ${html.length} chars`);
@@ -179,6 +203,23 @@ export default async function handler(request: Request, context: Context) {
       } catch (error) {
         console.error('SSR fetch failed for bot:', error);
       }
+
+      // Fallback: try cached_pages table directly
+      console.log(`[bot-ssr] Trying cached_pages fallback for ${pathname}`);
+      const cachedHtml = await fetchFromCachedPages(pathname);
+      if (cachedHtml) {
+        console.log(`[bot-ssr] Serving stale cache for ${pathname}`);
+        return new Response(cachedHtml, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'public, max-age=300',
+            'X-SSR-Bot': 'true',
+            'X-SSR-Source': 'cached-pages-fallback',
+          },
+        });
+      }
+      console.warn(`[bot-ssr] No cache available for ${pathname}, serving SPA shell`);
     }
     // Regular users: skip SSR cache entirely - let them load the SPA directly
     // This ensures they always get fresh content with correct URLs

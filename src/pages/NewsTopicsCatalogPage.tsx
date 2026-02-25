@@ -10,6 +10,7 @@ import {
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
+import { TopicTile } from "@/components/home/HomeTopicsBanner";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,37 +56,6 @@ export default function NewsTopicsCatalogPage() {
   const [search, setSearch] = useState("");
   const [allTopicsPage, setAllTopicsPage] = useState(0);
   const ALL_TOPICS_PAGE_SIZE = 100;
-
-  // Mosaic images: last 30 days, up to 30 per topic, refreshed once per week
-  const { data: mosaicImagesData } = useQuery({
-    queryKey: ["topics-mosaic-images"],
-    queryFn: async () => {
-      const since = new Date();
-      since.setDate(since.getDate() - 30);
-      const { data } = await supabase
-        .from("news_rss_items")
-        .select("themes, image_url")
-        .not("image_url", "is", null)
-        .not("themes", "is", null)
-        .gte("published_at", since.toISOString())
-        .order("published_at", { ascending: false })
-        .limit(3000);
-      // Build theme → image[] map (up to 30 per topic)
-      const map = new Map<string, string[]>();
-      for (const item of data || []) {
-        if (!item.image_url || !Array.isArray(item.themes)) continue;
-        for (const t of item.themes) {
-          if (!t) continue;
-          const list = map.get(t) || [];
-          if (list.length < 30) list.push(item.image_url);
-          map.set(t, list);
-        }
-      }
-      return map;
-    },
-    staleTime: 1000 * 60 * 60 * 24 * 7, // 7 days
-    gcTime: 1000 * 60 * 60 * 24 * 7,
-  });
 
   // All-time topics for Top Topics section (no recent limit)
   const { data: allTimeTopicsData } = useQuery({
@@ -265,68 +235,17 @@ export default function NewsTopicsCatalogPage() {
           </div>
         ) : (
           <>
-            {/* Top topics – large cards */}
+            {/* Top topics – standard TopicTile cards */}
             {topTopics.length > 0 && !search && (
               <section className="mb-8">
                 <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-primary" />
                   {language === "en" ? "Trending Topics" : "Популярні теми"}
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {topTopics.map(({ topic, count }) => {
-                    const { icon, color } = getTopicIconData(topic);
-                    const mosaicImgs = mosaicImagesData?.get(topic) || [];
-                    const neonColor = color.includes('red') ? '#ff3855' : color.includes('blue') ? '#00b4ff' : color.includes('green') ? '#00ff9d' : color.includes('yellow') ? '#ffe600' : color.includes('pink') ? '#ff4dab' : color.includes('orange') ? '#ff6a00' : color.includes('purple') ? '#b14dff' : color.includes('cyan') ? '#00e5ff' : color.includes('indigo') ? '#6060ff' : color.includes('teal') ? '#00d4c8' : '#00e5ff';
-                    return (
-                      <Link key={topic} to={topicPath(topic)}>
-                        <div
-                          className="group relative overflow-hidden cursor-pointer bg-black border border-white/10 hover:border-white/30 transition-all duration-200"
-                          style={{ minHeight: '180px', boxShadow: 'inset 1px 1px 0 rgba(255,255,255,0.04)' }}
-                        >
-                          {/* Mosaic background */}
-                          {mosaicImgs.length >= 4 && (
-                            <div
-                              className="absolute inset-0 grid"
-                              style={{
-                                gridTemplateColumns: `repeat(6, 1fr)`,
-                                gridTemplateRows: `repeat(5, 1fr)`,
-                                gap: '2px',
-                              }}
-                            >
-                              {mosaicImgs.slice(0, 30).map((url, i) => (
-                                <img
-                                  key={i}
-                                  src={url}
-                                  alt=""
-                                  className="w-full h-full object-cover opacity-40 group-hover:opacity-55 transition-opacity"
-                                  loading="lazy"
-                                  onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0'; }}
-                                />
-                              ))}
-                            </div>
-                          )}
-                          {/* Dark overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30" />
-                          {/* Left neon bar */}
-                          <div className="absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-200" style={{ background: neonColor, opacity: 0.7, boxShadow: `0 0 8px ${neonColor}` }} />
-                          {/* Rank */}
-                          <div className="absolute top-2.5 right-2.5 z-10 font-mono text-[10px] tracking-widest" style={{ color: neonColor, opacity: 0.6 }}>#{String(topTopics.indexOf(topTopics.find(t => t.topic === topic)!) + 1).padStart(2,'0')}</div>
-                          {/* Content */}
-                          <div className="relative z-10 p-4 flex flex-col justify-end" style={{ minHeight: '180px' }}>
-                            <div className="mt-auto">
-                              <p className="font-mono text-[9px] uppercase tracking-[0.25em] mb-1" style={{ color: neonColor, opacity: 0.7 }}>// TOPIC</p>
-                              <h3 className="font-mono font-bold uppercase tracking-tight text-sm text-white group-hover:text-white transition-colors leading-tight" style={{ textShadow: `0 0 12px ${neonColor}40` }}>
-                                {topic}
-                              </h3>
-                              <p className="font-mono text-[11px] mt-1.5" style={{ color: neonColor, opacity: 0.6 }}>
-                                {count.toString().padStart(4, '0')}&nbsp;ART
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {topTopics.map(({ topic, count }, index) => (
+                    <TopicTile key={topic} topic={topic} count={count} rank={index + 1} />
+                  ))}
                 </div>
               </section>
             )}

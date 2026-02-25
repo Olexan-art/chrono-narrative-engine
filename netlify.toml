@@ -11,6 +11,59 @@
   status = 200
   force = false
 
+# SEO files — redirect to Supabase (scanners follow 301, must NOT get index.html)
+# Note: Netlify proxy (200) cannot inject auth headers, so 301 redirect is used.
+# Cloudflare (_worker.js) handles /sitemap.xml with a direct 200 proxy.
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "https://bravennow.com/api/sitemap"
+  status = 301
+  force = true
+
+# Proxy /api/* to Supabase Edge Functions (for sitemap, rss, llms-txt, etc.)
+[[redirects]]
+  from = "/api/sitemap"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/news-sitemap"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/news-sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/wiki-sitemap"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/wiki-sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/topics-sitemap"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/topics-sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/rss-feed"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/rss-feed"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/llms-txt"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/llms-txt"
+  status = 200
+  force = true
+
+# IndexNow — надсилання URL до пошукових систем
+[[redirects]]
+  from = "/api/index-now"
+  to = "https://tuledxqigzufkecztnlo.supabase.co/functions/v1/index-now"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

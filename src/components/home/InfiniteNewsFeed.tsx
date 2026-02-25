@@ -1,9 +1,9 @@
-import { memo, useCallback, useEffect, useRef } from "react";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { memo, useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
 import { Link } from "react-router-dom";
-import { Loader2, Newspaper, ArrowRight } from "lucide-react";
+import { Newspaper, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +13,7 @@ import { OptimizedImage } from "@/components/OptimizedImage";
 import { NewsVoteCompact } from "@/components/NewsVoteBlock";
 import { NewsLogoMosaic } from "@/components/NewsLogoMosaic";
 
-const DEFAULT_PAGE_SIZE = 40;
+const PAGE_SIZE = 28;
 
 interface NewsItem {
   id: string;
@@ -28,150 +28,52 @@ interface NewsItem {
   category: string | null;
   likes: number;
   dislikes: number;
-  news_rss_feeds?: {
-    name: string;
-  };
-  country: {
-    id: string;
-    code: string;
-    name: string;
-    name_en: string | null;
-    flag: string;
-  };
+  news_rss_feeds?: { name: string };
+  country: { id: string; code: string; name: string; name_en: string | null; flag: string };
 }
 
 export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
   const { t, language } = useLanguage();
-  const dateLocale = language === 'en' ? enUS : language === 'pl' ? pl : uk;
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  
-  // Fetch page size from settings
-  const { data: pageSize = DEFAULT_PAGE_SIZE } = useQuery({
-    queryKey: ['news-feed-page-size'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('settings')
-        .select('news_feed_page_size')
-        .maybeSingle();
-      return data?.news_feed_page_size || DEFAULT_PAGE_SIZE;
-    },
-    staleTime: 1000 * 60 * 10, // 10 minutes
-  });
-
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    isError,
-  } = useInfiniteQuery({
-    queryKey: ['infinite-news-feed', language, pageSize],
-    queryFn: async ({ pageParam = 0 }) => {
-      // Fetch more items to allow weighted distribution
-      // Target distribution: 50% USA, 20% PL, 20% UA, 10% IN
-      const fetchSize = Math.min(pageSize * 3, 120); // Fetch more to select from, capped to avoid 500s
-      const from = pageParam * fetchSize;
-      const to = from + fetchSize - 1;
-
-      const { data: items, count } = await supabase
-        .from('news_rss_items')
-        .select(`
-          id, 
-          title, 
-          title_en,
-          description,
-          description_en,
-          image_url,
-          url,
-          published_at, 
-          slug,
-          category,
-          likes,
-          dislikes,
-          news_rss_feeds(name),
-          country:news_countries(id, code, name, name_en, flag)
-        `, { count: 'exact' })
-        .not('slug', 'is', null)
-        .order('published_at', { ascending: false })
-        .range(from, to);
-
-      // Group by country (USA, PL, UA only)
-      const byCountry: Record<string, NewsItem[]> = { US: [], PL: [], UA: [], OTHER: [] };
-      for (const item of (items || []) as NewsItem[]) {
-        const code = item.country?.code?.toUpperCase() || 'OTHER';
-        if (['US', 'PL', 'UA'].includes(code)) {
-          byCountry[code].push(item);
-        } else {
-          byCountry.OTHER.push(item);
-        }
-      }
-
-      // Calculate target counts: 50% USA, 25% PL, 25% UA
-      const targetUs = Math.ceil(pageSize * 0.5);
-      const targetPl = Math.ceil(pageSize * 0.25);
-      const targetUa = Math.ceil(pageSize * 0.25);
-
-      // Take proportional amounts from each country
-      const selected: NewsItem[] = [
-        ...byCountry.US.slice(0, targetUs),
-        ...byCountry.PL.slice(0, targetPl),
-        ...byCountry.UA.slice(0, targetUa),
-      ];
-
-      // Fill remaining slots if some countries don't have enough
-      const remaining = pageSize - selected.length;
-      if (remaining > 0) {
-        const allRemaining = [
-          ...byCountry.US.slice(targetUs),
-          ...byCountry.PL.slice(targetPl),
-          ...byCountry.UA.slice(targetUa),
-        ].slice(0, remaining);
-        selected.push(...allRemaining);
-      }
-
-      // Sort by published_at to maintain chronological order
-      selected.sort((a, b) => {
-        const dateA = new Date(a.published_at || 0).getTime();
-        const dateB = new Date(b.published_at || 0).getTime();
-        return dateB - dateA;
-      });
-
-      return {
-        items: selected.slice(0, pageSize),
-        totalCount: count || 0,
-        nextPage: (items?.length || 0) === fetchSize ? pageParam + 1 : undefined,
-      };
-    },
-    getNextPageParam: (lastPage) => lastPage.nextPage,
-    initialPageParam: 0,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-  });
-
-  // Intersection Observer for infinite scroll
-  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
-    const [target] = entries;
-    if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+  const dateLocale = language === "en" ? enUS : language === "pl" ? pl : uk;
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    const element = loadMoreRef.current;
-    if (!element) return;
+    if (page === 1) return;
+    const el = document.getElementById("latest-news-section");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [page]);
 
-    const observer = new IntersectionObserver(handleObserver, {
-      root: null,
-      rootMargin: '200px',
-      threshold: 0,
-    });
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["paginated-news-feed", language, page],
+    queryFn: async () => {
+      const from = (page - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data: items, count } = await supabase
+        .from("news_rss_items")
+        .select(`id, title, title_en, description, description_en, image_url, url, published_at, slug, category, likes, dislikes, news_rss_feeds(name), country:news_countries(id, code, name, name_en, flag)`, { count: "exact" })
+        .not("slug", "is", null)
+        .order("published_at", { ascending: false })
+        .range(from, to);
+      return { items: (items || []) as NewsItem[], totalCount: count || 0 };
+    },
+    staleTime: 1000 * 60 * 2,
+  });
 
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [handleObserver]);
+  const news = data?.items || [];
+  const totalCount = data?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  const allNews = data?.pages.flatMap(page => page.items) || [];
-  const totalCount = data?.pages[0]?.totalCount || 0;
+  const getPageNumbers = (): (number | "...")[] => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages: (number | "...")[] = [1];
+    if (page > 3) pages.push("...");
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPages - 1, page + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (page < totalPages - 2) pages.push("...");
+    pages.push(totalPages);
+    return pages;
+  };
 
   if (isLoading) {
     return (
@@ -179,109 +81,70 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-2 mb-6">
             <Newspaper className="w-5 h-5 text-primary" />
-            <h2 className="text-lg md:text-xl font-bold">{t('rss_news.latest')}</h2>
+            <h2 className="text-lg md:text-xl font-bold">{t("rss_news.latest")}</h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-48" />
-            ))}
+            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-48" />)}
           </div>
         </div>
       </section>
     );
   }
 
-  if (isError || allNews.length === 0) return null;
+  if (isError || news.length === 0) return null;
 
   return (
-    <section className="py-8 md:py-12 border-t border-border">
+    <section id="latest-news-section" className="py-8 md:py-12 border-t border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
             <Newspaper className="w-5 h-5 text-primary" />
-            {t('rss_news.latest')}
+            {t("rss_news.latest")}
           </h2>
-          <Badge variant="outline" className="font-mono text-xs">
-            {totalCount.toLocaleString()} {language === 'en' ? 'news' : 'новин'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="font-mono text-xs">
+              {totalCount.toLocaleString()} {language === "en" ? "news" : "?????"}
+            </Badge>
+            {totalPages > 1 && (
+              <span className="text-xs text-muted-foreground font-mono">
+                {language === "en" ? `p. ${page}/${totalPages}` : `????. ${page}/${totalPages}`}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {allNews.map((item, index) => {
+          {news.map((item) => {
             const country = item.country;
             if (!country) return null;
-
-            const localizedTitle = language === 'en' 
-              ? (item.title_en || item.title)
-              : item.title;
-
-            const localizedDesc = language === 'en'
-              ? (item.description_en || item.description)
-              : item.description;
-
+            const localizedTitle = language === "en" ? (item.title_en || item.title) : item.title;
+            const localizedDesc = language === "en" ? (item.description_en || item.description) : item.description;
             return (
-              <Link
-                key={item.id}
-                to={`/news/${country.code.toLowerCase()}/${item.slug}`}
-                className="group block animate-fade-in"
-                style={{ animationDelay: `${(index % 20) * 25}ms` }}
-              >
+              <Link key={item.id} to={`/news/${country.code.toLowerCase()}/${item.slug}`} className="group block">
                 <article className="cosmic-card h-full border border-border/50 hover:border-primary/50 transition-all duration-200 overflow-hidden hover:shadow-lg hover:-translate-y-1">
                   <div className="relative h-32 overflow-hidden">
                     {item.image_url ? (
-                      <OptimizedImage 
-                        src={item.image_url} 
-                        alt="" 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        onError={() => {}}
-                        fallbackSrc=""
-                      />
-                    ) : null}
-                    {(!item.image_url) && (
-                      <NewsLogoMosaic 
-                        feedName={item.news_rss_feeds?.name}
-                        sourceUrl={item.url}
-                        className="w-full h-full"
-                        logoSize="md"
-                      />
+                      <OptimizedImage src={item.image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={() => {}} fallbackSrc="" />
+                    ) : (
+                      <NewsLogoMosaic feedName={item.news_rss_feeds?.name} sourceUrl={item.url} className="w-full h-full" logoSize="md" />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
                     <div className="absolute top-2 left-2 flex items-center gap-1">
                       <span className="text-base">{country.flag}</span>
                       <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-background/80 backdrop-blur-sm">
-                        {item.category || 'news'}
+                        {item.category || "news"}
                       </Badge>
                     </div>
                   </div>
-                  
                   <div className="p-3">
-                    
-                    <h4 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors mb-2">
-                      {localizedTitle}
-                    </h4>
-                    
-                    {localizedDesc && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                        {localizedDesc}
-                      </p>
-                    )}
-                    
+                    <h4 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors mb-2">{localizedTitle}</h4>
+                    {localizedDesc && <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{localizedDesc}</p>}
                     <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                      {item.published_at && (
-                        <span>
-                          {format(new Date(item.published_at), 'd MMM, HH:mm', { locale: dateLocale })}
-                        </span>
-                      )}
+                      {item.published_at && <span>{format(new Date(item.published_at), "d MMM, HH:mm", { locale: dateLocale })}</span>}
                       <ArrowRight className="w-3 h-3 group-hover:translate-x-1 group-hover:text-primary transition-all" />
                     </div>
-                    
-                    {/* Voting buttons */}
                     <div className="mt-2 pt-2 border-t border-border/30" onClick={(e) => e.preventDefault()}>
-                      <NewsVoteCompact 
-                        newsId={item.id} 
-                        likes={item.likes || 0} 
-                        dislikes={item.dislikes || 0} 
-                      />
+                      <NewsVoteCompact newsId={item.id} likes={item.likes || 0} dislikes={item.dislikes || 0} />
                     </div>
                   </div>
                 </article>
@@ -290,28 +153,25 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
           })}
         </div>
 
-        {/* Load More Trigger */}
-        <div ref={loadMoreRef} className="flex justify-center py-8">
-          {isFetchingNextPage ? (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="text-sm font-mono">{language === 'en' ? 'Loading more...' : 'Завантаження...'}</span>
-            </div>
-          ) : hasNextPage ? (
-            <Button
-              variant="ghost"
-              onClick={() => fetchNextPage()}
-              className="gap-2 font-mono uppercase tracking-wide border border-cyan-700/40 bg-cyan-950/20 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400 hover:text-cyan-300 hover:shadow-[0_0_12px_rgba(0,255,255,0.3)] transition-all duration-200"
-            >
-              <Newspaper className="w-4 h-4" />
-              {language === 'en' ? 'Load More News' : 'Завантажити ще'}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-1 mt-10 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="h-8 w-8 p-0">
+              <ChevronLeft className="w-4 h-4" />
             </Button>
-          ) : allNews.length > 0 ? (
-            <p className="text-sm text-muted-foreground font-mono">
-              {language === 'en' ? '— End of news feed —' : '— Кінець стрічки новин —'}
-            </p>
-          ) : null}
-        </div>
+            {getPageNumbers().map((num, i) =>
+              num === "..." ? (
+                <span key={`e${i}`} className="px-1 text-muted-foreground text-sm">�</span>
+              ) : (
+                <Button key={num} variant={page === num ? "default" : "outline"} size="sm" onClick={() => setPage(num as number)} className="h-8 w-8 p-0 text-xs font-mono">
+                  {num}
+                </Button>
+              )
+            )}
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8 w-8 p-0">
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

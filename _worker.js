@@ -24,11 +24,19 @@ const CACHE_TTL = {
 
 // Bot detection for analytics headers
 const BOT_PATTERNS = [
-  'googlebot', 'bingbot', 'yandex', 'duckduckbot', 'baiduspider',
-  'gptbot', 'chatgpt-user', 'anthropic-ai', 'claudebot', 'perplexitybot',
+  // Search engines
+  'googlebot', 'google-extended', 'googleother', 'google-inspectiontool',
+  'bingbot', 'msnbot', 'yandex', 'duckduckbot', 'baiduspider',
+  // AI crawlers
+  'gptbot', 'chatgpt-user', 'anthropic-ai', 'claudebot', 'claude-web',
+  'perplexitybot', 'gemini', 'google-gemini', 'cohere-ai', 'bytespider',
+  'amazonbot', 'meta-externalagent', 'youbot', 'diffbot', 'ccbot',
+  // Social
   'twitterbot', 'facebookexternalhit', 'linkedinbot', 'slackbot',
   'telegrambot', 'whatsapp', 'discordbot', 'applebot',
-  'semrush', 'ahrefs', 'mj12bot', 'screaming frog',
+  // SEO tools
+  'semrush', 'ahrefs', 'mj12bot', 'screaming frog', 'ahrefsbot', 'semrushbot',
+  // Generic
   'crawler', 'spider', 'bot/'
 ];
 
@@ -86,7 +94,7 @@ function shouldSSR(pathname) {
  */
 async function fetchFromSSRRender(pathname, userAgent) {
   try {
-    const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en`;
+    const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en&cache=true`;
     const response = await fetch(ssrUrl, {
       headers: {
         'User-Agent': userAgent || 'Cloudflare-Worker',
@@ -290,8 +298,32 @@ export default {
       return Response.redirect(httpsUrl, 301);
     }
 
-    // 2. Redirect /sitemap.xml → /api/sitemap
+    // 2. Proxy /sitemap.xml → sitemap Edge Function (200, not redirect)
     if (pathname === '/sitemap.xml') {
+      try {
+        const sitemapUrl = `${SUPABASE_FUNCTIONS_URL}/sitemap`;
+        const sitemapResponse = await fetch(sitemapUrl, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Accept': 'application/xml, text/xml, */*',
+          },
+        });
+        if (sitemapResponse.ok) {
+          const xml = await sitemapResponse.text();
+          return new Response(xml, {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/xml; charset=utf-8',
+              'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+              'X-Worker-Version': WORKER_VERSION,
+            },
+          });
+        }
+      } catch (e) {
+        console.error('[worker] sitemap proxy failed:', e);
+      }
+      // Fallback to redirect if proxy fails
       return Response.redirect(`${url.origin}/api/sitemap`, 301);
     }
     

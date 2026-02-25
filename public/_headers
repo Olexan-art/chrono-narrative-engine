@@ -1,5 +1,10 @@
 # Cloudflare Pages Headers
 
+# IndexNow key file — text/plain, без кешу для швидкої перевірки
+/d82c5f1a3e7b9042c6d8f1e3a5b70924.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=86400
+
 # HTML files — always revalidate (no browser cache)
 /
   Cache-Control: no-cache, no-store, must-revalidate

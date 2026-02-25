@@ -348,8 +348,9 @@ async function generateAndCachePage(
   const startTime = Date.now();
 
   try {
-    // Call ssr-render to generate HTML
-    const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(path)}&lang=en`;
+    // Call ssr-render WITH cache=true so ssr-render handles the upsert to cached_pages.
+    // This avoids schema mismatches with direct inserts and ensures TTL rules match ssr-render's logic.
+    const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(path)}&lang=en&cache=true`;
 
     const response = await fetch(ssrUrl, {
       headers: {
@@ -358,41 +359,16 @@ async function generateAndCachePage(
       },
     });
 
+    const timeMs = Date.now() - startTime;
+
     if (!response.ok) {
       return { success: false, error: `SSR returned ${response.status}` };
     }
 
     const html = await response.text();
-    const timeMs = Date.now() - startTime;
 
-    // Extract title and description from HTML
-    const titleMatch = html.match(/<title>([^<]+)<\/title>/);
-    const descMatch = html.match(/<meta name="description" content="([^"]+)"/);
-    const canonicalMatch = html.match(/<link rel="canonical" href="([^"]+)"/);
-
-    const title = titleMatch ? titleMatch[1] : null;
-    const description = descMatch ? descMatch[1] : null;
-    const canonical = canonicalMatch ? canonicalMatch[1] : `${BASE_URL}${path}`;
-
-    // Upsert to cached_pages
-    const { error } = await supabase
-      .from('cached_pages')
-      .upsert({
-        path,
-        html,
-        title,
-        description,
-        canonical_url: canonical,
-        generation_time_ms: timeMs,
-        html_size_bytes: new TextEncoder().encode(html).length,
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'path',
-      });
-
-    if (error) {
-      return { success: false, error: error.message };
+    if (html.length < 5000) {
+      return { success: false, error: `SSR HTML too small (${html.length}B) — page may not exist` };
     }
 
     return { success: true, timeMs };
@@ -444,16 +420,30 @@ Deno.serve(async (req) => {
   }
 
   const url = new URL(req.url);
-  const action = url.searchParams.get('action') || 'refresh-all';
-  const specificPath = url.searchParams.get('path');
-  const password = url.searchParams.get('password') || req.headers.get('x-admin-password');
-  const batchSize = parseInt(url.searchParams.get('batchSize') || '50');
-  const offset = parseInt(url.searchParams.get('offset') || '0');
-  const async = url.searchParams.get('async') === 'true';
 
-  // Verify admin password
+  // Parse body for POST requests (pg_cron uses POST with JSON body)
+  let bodyJson: Record<string, any> = {};
+  if (req.method === 'POST') {
+    try { bodyJson = await req.json(); } catch { /* no body */ }
+  }
+
+  const action       = url.searchParams.get('action')    || bodyJson.action    || 'refresh-all';
+  const specificPath = url.searchParams.get('path')      || bodyJson.path      || null;
+  const batchSize    = parseInt(url.searchParams.get('batchSize') || String(bodyJson.batchSize || 50));
+  const offset       = parseInt(url.searchParams.get('offset')    || String(bodyJson.offset   || 0));
+  const asyncMode    = url.searchParams.get('async') === 'true'   || bodyJson.async === true;
+
   const adminPassword = Deno.env.get('ADMIN_PASSWORD');
-  if (password !== adminPassword) {
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  // Accept: URL param password, x-admin-password header, or service role Bearer token
+  const password = url.searchParams.get('password')
+    || req.headers.get('x-admin-password')
+    || bodyJson.password;
+  const bearerToken = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  const isServiceRole = serviceRoleKey && bearerToken === serviceRoleKey;
+
+  if (password !== adminPassword && !isServiceRole) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

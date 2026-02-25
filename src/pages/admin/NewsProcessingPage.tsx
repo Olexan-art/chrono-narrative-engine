@@ -972,173 +972,56 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {/* existing retellingConfig fields... */}
-                    ...existing code...
-                </CardContent>
-            </Card>
-
-            {/* New Z.AI retelling card */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="font-medium flex items-center gap-2">
-                                <RefreshCw className="w-4 h-4 text-primary" />
-                                Retell news (Z.AI)
-                            </h3>
-                            <CardDescription>Process news via Z.AI API</CardDescription>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {retellingZaiConfig?.enabled ? (
-                                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                                    Running
-                                </Badge>
-                            ) : (
-                                <Badge variant="outline" className="bg-gray-500/10 text-gray-500 border-gray-500/20">
-                                    <Pause className="w-3 h-3 mr-1" />
-                                    Paused
-                                </Badge>
-                            )}
-                            <Button
-                                size="sm"
-                                variant={retellingZaiConfig?.enabled ? 'destructive' : 'default'}
-                                onClick={() =>
-                                    toggleMutation.mutate({
-                                        jobName: 'news_retelling_zai',
-                                        action: retellingZaiConfig?.enabled ? 'pause' : 'resume',
-                                    })
+                    <div>
+                        <Label>Model</Label>
+                        <Select
+                            value={retellingConfig?.processing_options?.llm_model || 'default'}
+                            onValueChange={(value) => {
+                                const model = value === 'default' ? undefined : value;
+                                let provider = undefined;
+                                if (model) {
+                                    if (model.startsWith('gpt')) provider = 'openai';
+                                    else if (model.startsWith('gemini')) provider = 'gemini';
+                                    else if (model.startsWith('claude')) provider = 'anthropic';
+                                    else if (model.startsWith('mistral')) provider = 'mistral';
+                                    else if (model.startsWith('GLM')) provider = 'zai';
+                                    else provider = 'zai'; // Fallback
                                 }
-                                disabled={toggleMutation.isPending}
-                            >
-                                {retellingZaiConfig?.enabled ? (
-                                    <>
-                                        <Pause className="w-4 h-4 mr-1" />
-                                        Pause
-                                    </>
-                                ) : (
-                                    <>
-                                        <Play className="w-4 h-4 mr-1" />
-                                        Resume
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* replicate same form controls as above but using retellingZaiConfig and jobName 'news_retelling_zai' */}
-                    ...existing code...
-                </CardContent>
-            </Card>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <Label>Frequency</Label>
-                            <Select
-                                value={retellingConfig?.frequency_minutes?.toString() || '180'}
-                                onValueChange={(value) =>
-                                    updateConfigMutation.mutate({
-                                        jobName: 'news_retelling',
-                                        config: { frequency_minutes: parseInt(value) },
-                                    })
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="5">Every 5 minutes</SelectItem>
-                                    <SelectItem value="15">Every 15 minutes</SelectItem>
-                                    <SelectItem value="60">Every hour</SelectItem>
-                                    <SelectItem value="180">Every 3 hours</SelectItem>
-                                    <SelectItem value="360">Every 6 hours</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div>
-                            <Label>Last Run</Label>
-                            <div className="text-sm text-muted-foreground mt-2">
-                                {retellingConfig?.last_run_at
-                                    ? new Date(retellingConfig.last_run_at).toLocaleString()
-                                    : 'Never'}
-                            </div>
-                        </div>
-
-                        <div>
-                            <Label>Status</Label>
-                            <div className="mt-2">
-                                {retellingConfig?.last_run_status === 'success' ? (
-                                    <Badge variant="outline" className="bg-green-500/10 text-green-500">
-                                        Success
-                                    </Badge>
-                                ) : retellingConfig?.last_run_status === 'failed' ? (
-                                    <Badge variant="outline" className="bg-red-500/10 text-red-500">
-                                        Failed
-                                    </Badge>
-                                ) : (
-                                    <Badge variant="outline">Unknown</Badge>
-                                )}
-                            </div>
-                        </div>
-
-                        <div>
-                            <Label>Model</Label>
-                            <Select
-                                value={retellingConfig?.processing_options?.llm_model || 'default'}
-                                onValueChange={(value) => {
-                                    const model = value === 'default' ? undefined : value;
-                                    let provider = undefined;
-
-                                    if (model) {
-                                        if (model.startsWith('gpt')) provider = 'openai';
-                                        else if (model.startsWith('gemini')) provider = 'gemini';
-                                        else if (model.startsWith('claude')) provider = 'anthropic';
-                                        else if (model.startsWith('mistral')) provider = 'mistral';
-                                        else if (model.startsWith('GLM')) provider = 'zai';
-                                        else provider = 'zai'; // Fallback
-                                    }
-
-                                    updateConfigMutation.mutate({
-                                        jobName: 'news_retelling',
-                                        config: {
-                                            processing_options: {
-                                                ...retellingConfig?.processing_options,
-                                                llm_model: model,
-                                                llm_provider: provider
-                                            }
+                                updateConfigMutation.mutate({
+                                    jobName: 'news_retelling',
+                                    config: {
+                                        processing_options: {
+                                            ...retellingConfig?.processing_options,
+                                            llm_model: model,
+                                            llm_provider: provider
                                         }
-                                    });
-                                }}
-                            >
-                                <SelectTrigger className="mt-2">
-                                    <SelectValue placeholder="Use Global Default" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="default">
-                                        <span className="text-muted-foreground italic">Use Global Default</span>
+                                    }
+                                });
+                            }}
+                        >
+                            <SelectTrigger className="mt-2">
+                                <SelectValue placeholder="Use Global Default" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="default">
+                                    <span className="text-muted-foreground italic">Use Global Default</span>
+                                </SelectItem>
+                                {/* Explicitly list and flatten models to ensure visibility */}
+                                {[
+                                    ...(LLM_MODELS.openai?.text || []),
+                                    ...(LLM_MODELS.gemini?.text || []),
+                                    ...(LLM_MODELS.geminiV22?.text || []),
+                                    ...(LLM_MODELS.anthropic?.text || []),
+                                    ...(LLM_MODELS.zai?.text || []),
+                                    ...(LLM_MODELS.mistral?.text || []),
+                                    ...(LLM_MODELS.lovable?.text || []),
+                                ].map((m: any) => (
+                                    <SelectItem key={m.value} value={m.value}>
+                                        {m.label}
                                     </SelectItem>
-                                    {/* Explicitly list and flatten models to ensure visibility */}
-                                    {[
-                                        ...(LLM_MODELS.openai?.text || []),
-                                        ...(LLM_MODELS.gemini?.text || []),
-                                        ...(LLM_MODELS.geminiV22?.text || []),
-                                        ...(LLM_MODELS.anthropic?.text || []),
-                                        ...(LLM_MODELS.zai?.text || []),
-                                        ...(LLM_MODELS.mistral?.text || []),
-                                        ...(LLM_MODELS.lovable?.text || []),
-                                    ].map((m: any) => (
-                                        <SelectItem key={m.value} value={m.value}>
-                                            {m.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div>
@@ -1195,19 +1078,206 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                         </div>
                     </div>
 
+                    {retellingConfig?.last_run_details && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
+                            <div>
+                                <div className="text-sm text-muted-foreground">Processed</div>
+                                <div className="text-2xl font-bold">
+                                    {retellingConfig.last_run_details.processed || 0}
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-sm text-muted-foreground">Success</div>
+                                <div className="text-2xl font-bold text-green-500">
+                                    {retellingConfig.last_run_details.success || 0}
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-sm text-muted-foreground">Skipped</div>
+                                <div className="text-2xl font-bold text-yellow-500">
+                                    {retellingConfig.last_run_details.skipped || 0}
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-sm text-muted-foreground">Errors</div>
+                                <div className="text-2xl font-bold text-red-500">
+                                    {retellingConfig.last_run_details.errors || 0}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* New Z.AI retelling card */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="font-medium flex items-center gap-2">
+                                <RefreshCw className="w-4 h-4 text-primary" />
+                                Retell news (Z.AI)
+                            </h3>
+                            <CardDescription>Process news via Z.AI API</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {retellingZaiConfig?.enabled ? (
+                                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                    Running
+                                </Badge>
+                            ) : (
+                                <Badge variant="outline" className="bg-gray-500/10 text-gray-500 border-gray-500/20">
+                                    <Pause className="w-3 h-3 mr-1" />
+                                    Paused
+                                </Badge>
+                            )}
+                            <Button
+                                size="sm"
+                                variant={retellingZaiConfig?.enabled ? 'destructive' : 'default'}
+                                onClick={() =>
+                                    toggleMutation.mutate({
+                                        jobName: 'news_retelling_zai',
+                                        action: retellingZaiConfig?.enabled ? 'pause' : 'resume',
+                                    })
+                                }
+                                disabled={toggleMutation.isPending}
+                            >
+                                {retellingZaiConfig?.enabled ? (
+                                    <>
+                                        <Pause className="w-4 h-4 mr-1" />
+                                        Pause
+                                    </>
+                                ) : (
+                                    <>
+                                        <Play className="w-4 h-4 mr-1" />
+                                        Resume
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <Label>Model</Label>
+                        <Select
+                            value={retellingZaiConfig?.processing_options?.llm_model || 'default'}
+                            onValueChange={(value) => {
+                                const model = value === 'default' ? undefined : value;
+                                let provider = undefined;
+                                if (model) {
+                                    if (model.startsWith('gpt')) provider = 'openai';
+                                    else if (model.startsWith('gemini')) provider = 'gemini';
+                                    else if (model.startsWith('claude')) provider = 'anthropic';
+                                    else if (model.startsWith('mistral')) provider = 'mistral';
+                                    else if (model.startsWith('GLM')) provider = 'zai';
+                                    else provider = 'zai'; // Fallback
+                                }
+                                updateConfigMutation.mutate({
+                                    jobName: 'news_retelling_zai',
+                                    config: {
+                                        processing_options: {
+                                            ...retellingZaiConfig?.processing_options,
+                                            llm_model: model,
+                                            llm_provider: provider
+                                        }
+                                    }
+                                });
+                            }}
+                        >
+                            <SelectTrigger className="mt-2">
+                                <SelectValue placeholder="Use Global Default" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="default">
+                                    <span className="text-muted-foreground italic">Use Global Default</span>
+                                </SelectItem>
+                                {/* Explicitly list and flatten models to ensure visibility */}
+                                {[
+                                    ...(LLM_MODELS.openai?.text || []),
+                                    ...(LLM_MODELS.gemini?.text || []),
+                                    ...(LLM_MODELS.geminiV22?.text || []),
+                                    ...(LLM_MODELS.anthropic?.text || []),
+                                    ...(LLM_MODELS.zai?.text || []),
+                                    ...(LLM_MODELS.mistral?.text || []),
+                                    ...(LLM_MODELS.lovable?.text || []),
+                                ].map((m: any) => (
+                                    <SelectItem key={m.value} value={m.value}>
+                                        {m.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div>
+                        <Label>Processing Options</Label>
+                        <div className="flex flex-wrap gap-4 mt-2">
+                            {processingOptions.map((option) => (
+                                <div key={option.key} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`option-${option.key}`}
+                                        checked={retellingZaiConfig?.processing_options?.[option.key] || false}
+                                        onCheckedChange={(checked) => {
+                                            updateConfigMutation.mutate({
+                                                jobName: 'news_retelling_zai',
+                                                config: {
+                                                    processing_options: {
+                                                        ...retellingZaiConfig?.processing_options,
+                                                        [option.key]: checked,
+                                                    },
+                                                },
+                                            });
+                                        }}
+                                    />
+                                    <Label htmlFor={`option-${option.key}`} className="cursor-pointer">
+                                        {option.label}
+                                    </Label>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <Label>Countries</Label>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                            {allCountries.map((country) => (
+                                <div key={country.code} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`retell-${country.code}`}
+                                        checked={retellingZaiConfig?.countries?.includes(country.code)}
+                                        onCheckedChange={(checked) => {
+                                            const newCountries = checked
+                                                ? [...(retellingZaiConfig?.countries || []), country.code]
+                                                : (retellingZaiConfig?.countries || []).filter((c) => c !== country.code);
+                                            updateConfigMutation.mutate({
+                                                jobName: 'news_retelling_zai',
+                                                config: { countries: newCountries },
+                                            });
+                                        }}
+                                    />
+                                    <Label htmlFor={`retell-${country.code}`} className="cursor-pointer">
+                                        {country.label}
+                                    </Label>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                     {
-                        retellingConfig?.last_run_details && (
+                        retellingZaiConfig?.last_run_details && (
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
                                 <div>
                                     <div className="text-sm text-muted-foreground">Processed</div>
                                     <div className="text-2xl font-bold">
-                                        {retellingConfig.last_run_details.processed || 0}
+                                        {retellingZaiConfig.last_run_details.processed || 0}
                                     </div>
                                 </div>
                                 <div>
                                     <div className="text-sm text-muted-foreground">Success</div>
                                     <div className="text-2xl font-bold text-green-500">
-                                        {retellingConfig.last_run_details.success || 0}
+                                        {retellingZaiConfig.last_run_details.success || 0}
                                     </div>
                                 </div>
                                 <div>

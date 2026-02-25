@@ -1,31 +1,11 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Hash, TrendingUp, Swords, Scale, Briefcase, Zap, Heart, Flame, BookOpen, Shield, Megaphone, Globe, Tag } from "lucide-react";
+import { Hash, TrendingUp, Tag } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { topicPath } from "@/lib/topicSlug";
-
-const TOPIC_ICONS: Array<{ keywords: string[]; icon: React.ReactNode; neon: string }> = [
-  { keywords: ["war", "війн", "conflict", "military", "армі", "зброя", "weapon"], icon: <Swords className="w-4 h-4" />, neon: "#ff3855" },
-  { keywords: ["politic", "полі", "election", "вибор", "government", "уряд"],     icon: <Scale className="w-4 h-4" />,  neon: "#00b4ff" },
-  { keywords: ["economy", "економ", "finance", "фінанс", "market", "ринок", "business", "бізнес"], icon: <Briefcase className="w-4 h-4" />, neon: "#00ff9d" },
-  { keywords: ["tech", "технол", "digital", "цифров", "ai", "штучн", "internet"], icon: <Zap className="w-4 h-4" />,       neon: "#ffe600" },
-  { keywords: ["health", "здоров", "medical", "медицин", "covid", "pandemic"],     icon: <Heart className="w-4 h-4" />,    neon: "#ff4dab" },
-  { keywords: ["sport", "спорт", "football", "футбол", "olympic"],                icon: <Flame className="w-4 h-4" />,    neon: "#ff6a00" },
-  { keywords: ["science", "наук", "research", "дослідж", "space", "космос"],       icon: <BookOpen className="w-4 h-4" />, neon: "#b14dff" },
-  { keywords: ["security", "безпек", "defense", "оборон", "nato"],                icon: <Shield className="w-4 h-4" />,   neon: "#00e5ff" },
-  { keywords: ["media", "медіа", "press", "преса", "news", "новини"],             icon: <Megaphone className="w-4 h-4" />,neon: "#6060ff" },
-  { keywords: ["world", "світ", "global", "глобал", "international", "міжнарод"], icon: <Globe className="w-4 h-4" />,    neon: "#00d4c8" },
-];
-
-function getTopicMeta(topic: string): { icon: React.ReactNode; neon: string } {
-  const lower = topic.toLowerCase();
-  for (const def of TOPIC_ICONS) {
-    if (def.keywords.some((kw) => lower.includes(kw))) return { icon: def.icon, neon: def.neon };
-  }
-  return { icon: <Tag className="w-4 h-4" />, neon: "#00e5ff" };
-}
 
 function processThemes(items: { themes: string[] | null }[]): { topic: string; count: number }[] {
   const counts = new Map<string, number>();
@@ -46,46 +26,16 @@ interface TopicTileProps {
   rank?: number;
 }
 
-function TopicTile({ topic, count, rank }: TopicTileProps) {
-  const { neon, icon } = getTopicMeta(topic);
+export function TopicTile({ topic, count, rank }: TopicTileProps) {
   return (
     <Link to={topicPath(topic)} className="block group">
-      <div
-        className="relative overflow-hidden bg-black border border-white/10 group-hover:border-white/25 transition-all duration-200 h-24"
-        style={{ boxShadow: `inset 0 0 20px rgba(0,0,0,0.8)` }}
-      >
-        {/* Left neon bar */}
-        <div
-          className="absolute left-0 top-0 bottom-0 w-[3px]"
-          style={{ background: neon, boxShadow: `0 0 8px ${neon}` }}
-        />
-        {/* Rank */}
+      <div className="flex items-center gap-3 p-3 rounded-lg border border-border/60 bg-card hover:border-primary/50 hover:bg-muted/30 transition-all duration-200">
         {rank !== undefined && (
-          <span
-            className="absolute top-2 right-2 font-mono text-[10px] tracking-widest opacity-40"
-            style={{ color: neon }}
-          >
-            #{String(rank).padStart(2, "0")}
-          </span>
+          <span className="text-xs font-mono text-muted-foreground w-5 shrink-0 text-center">{rank}</span>
         )}
-        {/* Content */}
-        <div className="pl-4 pr-3 pt-3 pb-2 h-full flex flex-col justify-between">
-          <div className="flex items-center gap-2" style={{ color: neon, opacity: 0.7 }}>
-            {icon}
-            <span className="font-mono text-[9px] uppercase tracking-[0.2em]">// TOPIC</span>
-          </div>
-          <div>
-            <p
-              className="font-mono font-bold uppercase text-xs text-white leading-tight line-clamp-2"
-              style={{ textShadow: `0 0 10px ${neon}30` }}
-            >
-              {topic}
-            </p>
-            <p className="font-mono text-[10px] mt-0.5" style={{ color: neon, opacity: 0.5 }}>
-              {count.toString().padStart(4, "0")}&nbsp;ART
-            </p>
-          </div>
-        </div>
+        <Tag className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+        <span className="text-sm font-medium truncate flex-1 group-hover:text-primary transition-colors">{topic}</span>
+        <Badge variant="secondary" className="text-[11px] font-mono shrink-0">{count}</Badge>
       </div>
     </Link>
   );

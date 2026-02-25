@@ -39,10 +39,16 @@ function getTTLColor(ttl: number): string {
 
 interface CacheStatusResult {
   cached: boolean;
+  stale?: boolean;
   path: string;
   ttl?: string;
+  ttlLeft?: number;     // seconds until expiry
+  expiresAt?: string;   // ISO date string
+  htmlSize?: number;    // bytes
   cacheControl?: string;
   ssrSource?: string;
+  source?: string;
+  error?: string;
 }
 
 export function CacheSettingsPanel() {
@@ -124,8 +130,9 @@ export function CacheSettingsPanel() {
             Cloudflare ISR — Cache-First SSR
           </CardTitle>
           <CardDescription>
-            Кожна сторінка генерується SSR один раз і кешується на CF edge. Наступні запити (боти та юзери)
-            отримують готовий HTML миттєво без заглушки. Кеш оновлюється після TTL або ручного purge.
+            Кожна сторінка генерується SSR один раз і зберігається в таблиці <code>cached_pages</code> (Supabase).
+            CF Worker читає звідти при кожному BOT-запиті. CF CDN CACHE не використовується (<code>no-store</code>),
+            щоб уникнути некерованого застарілого кешу. Кеш оновлюється після TTL або ручного purge.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -197,7 +204,7 @@ export function CacheSettingsPanel() {
               <SearchCheck className="w-4 h-4 text-cyan-400" />
               Перевірити статус кешу
             </CardTitle>
-            <CardDescription>Чи закешована сторінка на поточному CF edge-вузлі</CardDescription>
+            <CardDescription>Перевіряє таблицю <code>cached_pages</code> в Supabase — реальний ISR кеш</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex gap-2">
@@ -215,23 +222,46 @@ export function CacheSettingsPanel() {
 
             {statusResult && (
               <div className="p-3 rounded-lg border bg-muted/20 space-y-1 text-sm">
-                <div className="flex items-center gap-2">
-                  <Badge variant={statusResult.cached ? 'default' : 'secondary'}>
-                    {statusResult.cached ? '✅ В кеші' : '❌ Не в кеші'}
-                  </Badge>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {!statusResult.cached && (
+                    <Badge variant="secondary">❌ Не в кеші</Badge>
+                  )}
+                  {statusResult.cached && !statusResult.stale && (
+                    <Badge variant="default">✅ Свіжий кеш</Badge>
+                  )}
+                  {statusResult.cached && statusResult.stale && (
+                    <Badge variant="outline" className="border-amber-500 text-amber-400">⏰ Застарілий (stale)</Badge>
+                  )}
                   <span className="font-mono text-xs text-muted-foreground">{statusResult.path}</span>
                 </div>
+                {statusResult.error && (
+                  <p className="text-xs text-red-400 font-mono">Помилка: {statusResult.error}</p>
+                )}
                 {statusResult.cached && (
-                  <>
-                    <p className="text-xs text-muted-foreground font-mono">
-                      TTL: <span className="text-amber-400">{statusResult.ttl}с</span>
-                    </p>
-                    {statusResult.ssrSource && (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-1">
+                    {statusResult.ttlLeft !== undefined && (
                       <p className="text-xs text-muted-foreground font-mono">
-                        Source: <span className="text-blue-400">{statusResult.ssrSource}</span>
+                        Залишилось: <span className={statusResult.stale ? 'text-red-400' : 'text-amber-400'}>
+                          {statusResult.stale ? 'прострочено' : `${statusResult.ttlLeft}с`}
+                        </span>
                       </p>
                     )}
-                  </>
+                    {statusResult.htmlSize !== undefined && (
+                      <p className="text-xs text-muted-foreground font-mono">
+                        HTML: <span className="text-green-400">{(statusResult.htmlSize / 1024).toFixed(1)} KB</span>
+                      </p>
+                    )}
+                    {statusResult.expiresAt && (
+                      <p className="text-xs text-muted-foreground font-mono col-span-2">
+                        Expires: <span className="text-blue-400">{new Date(statusResult.expiresAt).toLocaleString('uk-UA')}</span>
+                      </p>
+                    )}
+                    {statusResult.source && (
+                      <p className="text-xs text-muted-foreground font-mono col-span-2">
+                        Джерело: <span className="text-purple-400">{statusResult.source}</span>
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             )}
