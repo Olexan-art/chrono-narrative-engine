@@ -664,6 +664,61 @@ serve(async (req: Request) => {
         }
       }
 
+      // Directly invoke the cache-pages function (for manual cache warm from Dashboard)
+      case 'triggerCacheRefresh': {
+        // filter values: 'recent' (last 24h), 'news' (7d), 'wiki', 'all'
+        const { filter = 'recent', offset = 0, batchSize = 20 } = data || {};
+        const actionMap: Record<string, string> = {
+          recent: 'refresh-recent',
+          news:   'refresh-news',
+          wiki:   'refresh-wiki',
+          all:    'refresh-all',
+        };
+        const cacheAction = actionMap[filter] || 'refresh-recent';
+        try {
+          const adminPass = Deno.env.get('ADMIN_PASSWORD')!;
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+          const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+          // Use AbortController to return early after 25s (function limit);
+          // cache-pages will continue processing on its side.
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 25000);
+          let resp: Response;
+          let result: any;
+          try {
+            resp = await fetch(
+              `${supabaseUrl}/functions/v1/cache-pages?action=${encodeURIComponent(cacheAction)}&password=${encodeURIComponent(adminPass)}&batchSize=${batchSize}&offset=${offset}`,
+              {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${serviceKey}` },
+                signal: controller.signal,
+              }
+            );
+            result = await resp.json().catch(() => ({ status: resp.status }));
+          } catch (e: any) {
+            // AbortError = timed out but request was sent and is processing
+            if (e.name === 'AbortError') {
+              return new Response(
+                JSON.stringify({ success: true, status: 202, filter, cacheAction, result: { message: 'Cache warm triggered — processing continues in background' } }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+            throw e;
+          } finally {
+            clearTimeout(timeout);
+          }
+          return new Response(
+            JSON.stringify({ success: resp.ok, status: resp.status, filter, cacheAction, result }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (e) {
+          return new Response(
+            JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
       // Force-run a pg_cron job by job_name (cron.run(jobid)) — admin-only utility
       case 'runPgCronNow': {
         const { jobName } = data || {};
@@ -821,6 +876,8 @@ serve(async (req: Request) => {
                 cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/generate-week', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"mode": "auto"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName === 'news_retelling') {
                 cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/retell-news', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "process_queue"}'::jsonb, timeout:=60000) as request_id;`;
+              } else if (jobName === 'news_retelling_zai') {
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/bulk-retell-news-zai', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"country_code": "us", "time_range": "last_24h", "job_name": "${jobName}", "trigger": "cron"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName === 'cache_refresh') {
                 cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/cache-pages', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "refresh-all"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName.startsWith('bulk_retell_')) {
@@ -1761,11 +1818,17 @@ serve(async (req: Request) => {
           let timeLabel: string;
           
           if (groupByDay) {
-            period = new Date(v.created_at).toISOString().substring(0, 10);
-            timeLabel = new Date(period).toLocaleDateString('uk-UA', { month: 'short', day: 'numeric' });
+            // Use Kyiv timezone for date grouping
+            const d = new Date(v.created_at);
+            period = d.toLocaleDateString('en-CA', { timeZone: 'Europe/Kyiv' }); // gives YYYY-MM-DD in Kyiv time
+            timeLabel = new Date(period + 'T00:00:00.000Z').toLocaleDateString('uk-UA', { month: 'short', day: 'numeric', timeZone: 'UTC' });
           } else {
-            period = new Date(v.created_at).toISOString().substring(0, 13) + ':00:00.000Z';
-            timeLabel = new Date(period).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+            // Use Kyiv timezone for hour grouping
+            const d = new Date(v.created_at);
+            const kyivHour = parseInt(d.toLocaleTimeString('en-US', { hour: '2-digit', hour12: false, timeZone: 'Europe/Kyiv' }));
+            const kyivDate = d.toLocaleDateString('en-CA', { timeZone: 'Europe/Kyiv' }); // YYYY-MM-DD in Kyiv
+            period = `${kyivDate}T${String(kyivHour).padStart(2, '0')}`; // unique key per local hour
+            timeLabel = `${String(kyivHour % 24).padStart(2, '0')}:00`;
           }
           
           if (!periodMap.has(period)) {
@@ -2026,6 +2089,505 @@ serve(async (req: Request) => {
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      case 'getGooglebotRealtime': {
+        // Googlebot activity — timeline + pages with H1/H2/word count
+        // timeRange: '30m' (default), '24h', '7d'
+        const now = new Date();
+        const { timeRange: gbRange = '30m' } = body || {};
+
+        let pastDate: Date;
+        let bucketCount: number;
+        let bucketMs: number;
+        let bucketLabel: (d: Date) => string;
+        let groupByDay = false;
+
+        if (gbRange === '7d') {
+          pastDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          bucketCount = 7;
+          bucketMs = 24 * 60 * 60 * 1000;
+          groupByDay = true;
+          bucketLabel = (d: Date) => d.toLocaleDateString('uk-UA', { month: 'short', day: 'numeric', timeZone: 'Europe/Kyiv' });
+        } else if (gbRange === '24h') {
+          pastDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          bucketCount = 24;
+          bucketMs = 60 * 60 * 1000;
+          bucketLabel = (d: Date) => d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' });
+        } else {
+          // 30m default — 6 × 5 min
+          pastDate = new Date(now.getTime() - 30 * 60 * 1000);
+          bucketCount = 6;
+          bucketMs = 5 * 60 * 1000;
+          bucketLabel = (d: Date) => d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' });
+        }
+
+        const { data: googleVisits } = await supabase
+          .from('bot_visits')
+          .select('path, status_code, response_time_ms, cache_status, created_at, bot_type')
+          .ilike('bot_type', '%google%')
+          .gte('created_at', pastDate.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(5000);
+
+        // Build timeline buckets
+        const bucketMap = new Map<string, { time: string; count: number }>();
+        for (let i = 0; i < bucketCount; i++) {
+          const t = new Date(pastDate.getTime() + i * bucketMs);
+          bucketMap.set(String(i), { time: bucketLabel(t), count: 0 });
+        }
+        (googleVisits || []).forEach((v: any) => {
+          const diffMs = new Date(v.created_at).getTime() - pastDate.getTime();
+          const idx = Math.min(bucketCount - 1, Math.max(0, Math.floor(diffMs / bucketMs)));
+          const entry = bucketMap.get(String(idx));
+          if (entry) entry.count++;
+        });
+        const timeline = Array.from(bucketMap.values());
+
+        // Aggregate by page
+        const pathMap = new Map<string, any>();
+        (googleVisits || []).forEach((v: any) => {
+          if (!pathMap.has(v.path)) {
+            pathMap.set(v.path, {
+              path: v.path,
+              status_code: v.status_code,
+              response_time_ms: v.response_time_ms,
+              cache_status: v.cache_status,
+              created_at: v.created_at,
+              count: 0,
+              h1: null,
+              h2: null,
+              word_count: null,
+            });
+          }
+          pathMap.get(v.path).count++;
+        });
+
+        // Enrich with H1 / H2 / word count from cached_pages
+        const uniquePaths = Array.from(pathMap.keys()).slice(0, 50);
+        const cachedPathsSet = new Set<string>();
+        if (uniquePaths.length > 0) {
+          const { data: cachedPages } = await supabase
+            .from('cached_pages')
+            .select('path, html, title')
+            .in('path', uniquePaths);
+
+          (cachedPages || []).forEach((page: any) => {
+            const entry = pathMap.get(page.path);
+            if (!entry || !page.html) return;
+            cachedPathsSet.add(page.path);
+
+            const h1m = page.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+            if (h1m) entry.h1 = h1m[1].replace(/<[^>]+>/g, '').trim().substring(0, 100);
+
+            const h2m = page.html.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+            if (h2m) entry.h2 = h2m[1].replace(/<[^>]+>/g, '').trim().substring(0, 100);
+
+            const text = page.html
+              .replace(/<script[\s\S]*?<\/script>/gi, '')
+              .replace(/<style[\s\S]*?<\/style>/gi, '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            entry.word_count = text ? text.split(' ').filter((w: string) => w.length > 0).length : 0;
+          });
+
+          // Fallback for MISS paths not in cached_pages:
+          // Fetch title/description directly from news_rss_items for /news/CC/slug paths.
+          const missPaths = uniquePaths.filter(p => !cachedPathsSet.has(p));
+          const newsSlugs: { path: string; slug: string }[] = [];
+          for (const p of missPaths) {
+            const m = p.match(/^\/news\/[a-zA-Z]{2}\/([a-z0-9-]+)$/i);
+            if (m) newsSlugs.push({ path: p, slug: m[1] });
+          }
+          if (newsSlugs.length > 0) {
+            const { data: newsRows } = await supabase
+              .from('news_rss_items')
+              .select('slug, title_en, title, description_en, description, themes_en, themes')
+              .in('slug', newsSlugs.map(n => n.slug));
+
+            const slugToNews = new Map((newsRows || []).map((r: any) => [r.slug, r]));
+            for (const { path: np, slug } of newsSlugs) {
+              const news = slugToNews.get(slug);
+              if (!news) continue;
+              const entry = pathMap.get(np);
+              if (!entry) continue;
+              entry.h1 = (news.title_en || news.title || '').substring(0, 100);
+              const themes: string[] = news.themes_en || news.themes || [];
+              entry.h2 = Array.isArray(themes) ? themes.slice(0, 3).join(' · ').substring(0, 100) : '';
+              const descWords = (news.description_en || news.description || '').split(' ').filter(Boolean).length;
+              entry.word_count = descWords || null;
+              // Mark as DB-sourced (not from cache) so UI can differentiate
+              entry.h1_source = 'db';
+            }
+          }
+        }
+
+        const pages = Array.from(pathMap.values())
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 100);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            stats: { timeline, pages, total: googleVisits?.length || 0, uniquePages: pathMap.size, timeRange: gbRange }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'getBingbotRealtime': {
+        // Bingbot activity — timeline + pages with H1/H2/word count
+        const now = new Date();
+        const { timeRange: bbRange = '30m' } = body || {};
+
+        let bbPastDate: Date;
+        let bbBucketCount: number;
+        let bbBucketMs: number;
+        let bbBucketLabel: (d: Date) => string;
+
+        if (bbRange === '7d') {
+          bbPastDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          bbBucketCount = 7;
+          bbBucketMs = 24 * 60 * 60 * 1000;
+          bbBucketLabel = (d: Date) => d.toLocaleDateString('uk-UA', { month: 'short', day: 'numeric', timeZone: 'Europe/Kyiv' });
+        } else if (bbRange === '24h') {
+          bbPastDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          bbBucketCount = 24;
+          bbBucketMs = 60 * 60 * 1000;
+          bbBucketLabel = (d: Date) => d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' });
+        } else {
+          bbPastDate = new Date(now.getTime() - 30 * 60 * 1000);
+          bbBucketCount = 6;
+          bbBucketMs = 5 * 60 * 1000;
+          bbBucketLabel = (d: Date) => d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' });
+        }
+
+        const { data: bingVisits } = await supabase
+          .from('bot_visits')
+          .select('path, status_code, response_time_ms, cache_status, created_at, bot_type')
+          .ilike('bot_type', '%bing%')
+          .gte('created_at', bbPastDate.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(5000);
+
+        const bbBucketMap = new Map<string, { time: string; count: number }>();
+        for (let i = 0; i < bbBucketCount; i++) {
+          const t = new Date(bbPastDate.getTime() + i * bbBucketMs);
+          bbBucketMap.set(String(i), { time: bbBucketLabel(t), count: 0 });
+        }
+        (bingVisits || []).forEach((v: any) => {
+          const diffMs = new Date(v.created_at).getTime() - bbPastDate.getTime();
+          const idx = Math.min(bbBucketCount - 1, Math.max(0, Math.floor(diffMs / bbBucketMs)));
+          const entry = bbBucketMap.get(String(idx));
+          if (entry) entry.count++;
+        });
+        const bbTimeline = Array.from(bbBucketMap.values());
+
+        const bbPathMap = new Map<string, any>();
+        (bingVisits || []).forEach((v: any) => {
+          if (!bbPathMap.has(v.path)) {
+            bbPathMap.set(v.path, {
+              path: v.path, status_code: v.status_code, response_time_ms: v.response_time_ms,
+              cache_status: v.cache_status, created_at: v.created_at, count: 0,
+              h1: null, h2: null, word_count: null,
+            });
+          }
+          bbPathMap.get(v.path).count++;
+        });
+
+        const bbUniquePaths = Array.from(bbPathMap.keys()).slice(0, 50);
+        const bbCachedSet = new Set<string>();
+        if (bbUniquePaths.length > 0) {
+          const { data: bbCachedPages } = await supabase
+            .from('cached_pages').select('path, html, title').in('path', bbUniquePaths);
+          (bbCachedPages || []).forEach((page: any) => {
+            const entry = bbPathMap.get(page.path);
+            if (!entry || !page.html) return;
+            bbCachedSet.add(page.path);
+            const h1m = page.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+            if (h1m) entry.h1 = h1m[1].replace(/<[^>]+>/g, '').trim().substring(0, 100);
+            const h2m = page.html.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+            if (h2m) entry.h2 = h2m[1].replace(/<[^>]+>/g, '').trim().substring(0, 100);
+            const text = page.html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            entry.word_count = text ? text.split(' ').filter((w: string) => w.length > 0).length : 0;
+          });
+          const bbMissPaths = bbUniquePaths.filter(p => !bbCachedSet.has(p));
+          const bbNewsSlugs: { path: string; slug: string }[] = [];
+          for (const p of bbMissPaths) {
+            const m = p.match(/^\/news\/[a-zA-Z]{2}\/([a-z0-9-]+)$/i);
+            if (m) bbNewsSlugs.push({ path: p, slug: m[1] });
+          }
+          if (bbNewsSlugs.length > 0) {
+            const { data: bbNewsRows } = await supabase
+              .from('news_rss_items').select('slug, title_en, title, description_en, description, themes_en, themes')
+              .in('slug', bbNewsSlugs.map(n => n.slug));
+            const bbSlugMap = new Map((bbNewsRows || []).map((r: any) => [r.slug, r]));
+            for (const { path: np, slug } of bbNewsSlugs) {
+              const news = bbSlugMap.get(slug);
+              if (!news) continue;
+              const entry = bbPathMap.get(np);
+              if (!entry) continue;
+              entry.h1 = (news.title_en || news.title || '').substring(0, 100);
+              const themes: string[] = news.themes_en || news.themes || [];
+              entry.h2 = Array.isArray(themes) ? themes.slice(0, 3).join(' · ').substring(0, 100) : '';
+              entry.word_count = (news.description_en || news.description || '').split(' ').filter(Boolean).length || null;
+              entry.h1_source = 'db';
+            }
+          }
+        }
+
+        const bbPages = Array.from(bbPathMap.values())
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 100);
+
+        return new Response(
+          JSON.stringify({ success: true, stats: { timeline: bbTimeline, pages: bbPages, total: bingVisits?.length || 0, uniquePages: bbPathMap.size, timeRange: bbRange } }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'getLLMbotsRealtime': {
+        // LLM/AI bots activity (gptbot, claude, perplexity, etc.) — timeline + pages
+        const now = new Date();
+        const { timeRange: llmRange = '30m' } = body || {};
+
+        let llmPastDate: Date;
+        let llmBucketCount: number;
+        let llmBucketMs: number;
+        let llmBucketLabel: (d: Date) => string;
+
+        if (llmRange === '7d') {
+          llmPastDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          llmBucketCount = 7;
+          llmBucketMs = 24 * 60 * 60 * 1000;
+          llmBucketLabel = (d: Date) => d.toLocaleDateString('uk-UA', { month: 'short', day: 'numeric', timeZone: 'Europe/Kyiv' });
+        } else if (llmRange === '24h') {
+          llmPastDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          llmBucketCount = 24;
+          llmBucketMs = 60 * 60 * 1000;
+          llmBucketLabel = (d: Date) => d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' });
+        } else {
+          llmPastDate = new Date(now.getTime() - 30 * 60 * 1000);
+          llmBucketCount = 6;
+          llmBucketMs = 5 * 60 * 1000;
+          llmBucketLabel = (d: Date) => d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' });
+        }
+
+        const { data: llmVisits } = await supabase
+          .from('bot_visits')
+          .select('path, status_code, response_time_ms, cache_status, created_at, bot_type')
+          .eq('bot_category', 'ai')
+          .gte('created_at', llmPastDate.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(5000);
+
+        const llmBucketMap = new Map<string, { time: string; count: number }>();
+        for (let i = 0; i < llmBucketCount; i++) {
+          const t = new Date(llmPastDate.getTime() + i * llmBucketMs);
+          llmBucketMap.set(String(i), { time: llmBucketLabel(t), count: 0 });
+        }
+        (llmVisits || []).forEach((v: any) => {
+          const diffMs = new Date(v.created_at).getTime() - llmPastDate.getTime();
+          const idx = Math.min(llmBucketCount - 1, Math.max(0, Math.floor(diffMs / llmBucketMs)));
+          const entry = llmBucketMap.get(String(idx));
+          if (entry) entry.count++;
+        });
+        const llmTimeline = Array.from(llmBucketMap.values());
+
+        const llmPathMap = new Map<string, any>();
+        (llmVisits || []).forEach((v: any) => {
+          if (!llmPathMap.has(v.path)) {
+            llmPathMap.set(v.path, {
+              path: v.path, status_code: v.status_code, response_time_ms: v.response_time_ms,
+              cache_status: v.cache_status, created_at: v.created_at, count: 0,
+              bot_type: v.bot_type, h1: null, h2: null, word_count: null,
+            });
+          }
+          llmPathMap.get(v.path).count++;
+          // track all bot_types that visited this path
+          const entry = llmPathMap.get(v.path);
+          if (!entry.bot_types) entry.bot_types = new Set<string>();
+          entry.bot_types.add(v.bot_type);
+        });
+
+        const llmUniquePaths = Array.from(llmPathMap.keys()).slice(0, 50);
+        const llmCachedSet = new Set<string>();
+        if (llmUniquePaths.length > 0) {
+          const { data: llmCachedPages } = await supabase
+            .from('cached_pages').select('path, html, title').in('path', llmUniquePaths);
+          (llmCachedPages || []).forEach((page: any) => {
+            const entry = llmPathMap.get(page.path);
+            if (!entry || !page.html) return;
+            llmCachedSet.add(page.path);
+            const h1m = page.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+            if (h1m) entry.h1 = h1m[1].replace(/<[^>]+>/g, '').trim().substring(0, 100);
+            const h2m = page.html.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+            if (h2m) entry.h2 = h2m[1].replace(/<[^>]+>/g, '').trim().substring(0, 100);
+            const text = page.html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            entry.word_count = text ? text.split(' ').filter((w: string) => w.length > 0).length : 0;
+          });
+          const llmMissPaths = llmUniquePaths.filter(p => !llmCachedSet.has(p));
+          const llmNewsSlugs: { path: string; slug: string }[] = [];
+          for (const p of llmMissPaths) {
+            const m = p.match(/^\/news\/[a-zA-Z]{2}\/([a-z0-9-]+)$/i);
+            if (m) llmNewsSlugs.push({ path: p, slug: m[1] });
+          }
+          if (llmNewsSlugs.length > 0) {
+            const { data: llmNewsRows } = await supabase
+              .from('news_rss_items').select('slug, title_en, title, description_en, description, themes_en, themes')
+              .in('slug', llmNewsSlugs.map(n => n.slug));
+            const llmSlugMap = new Map((llmNewsRows || []).map((r: any) => [r.slug, r]));
+            for (const { path: np, slug } of llmNewsSlugs) {
+              const news = llmSlugMap.get(slug);
+              if (!news) continue;
+              const entry = llmPathMap.get(np);
+              if (!entry) continue;
+              entry.h1 = (news.title_en || news.title || '').substring(0, 100);
+              const themes: string[] = news.themes_en || news.themes || [];
+              entry.h2 = Array.isArray(themes) ? themes.slice(0, 3).join(' · ').substring(0, 100) : '';
+              entry.word_count = (news.description_en || news.description || '').split(' ').filter(Boolean).length || null;
+              entry.h1_source = 'db';
+            }
+          }
+        }
+
+        // Serialize Set → Array for JSON
+        const llmPages = Array.from(llmPathMap.values())
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 100)
+          .map((p: any) => ({ ...p, bot_types: p.bot_types ? Array.from(p.bot_types) : [p.bot_type] }));
+
+        // Bot type breakdown
+        const botTypeCounts = new Map<string, number>();
+        (llmVisits || []).forEach((v: any) => {
+          botTypeCounts.set(v.bot_type, (botTypeCounts.get(v.bot_type) || 0) + 1);
+        });
+        const botBreakdown = Array.from(botTypeCounts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .map(([bot_type, count]) => ({ bot_type, count }));
+
+        return new Response(
+          JSON.stringify({ success: true, stats: { timeline: llmTimeline, pages: llmPages, total: llmVisits?.length || 0, uniquePages: llmPathMap.size, timeRange: llmRange, botBreakdown } }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'getCachedPageContent': {
+        // Fetch cached HTML for a given path — for MISS popover
+        const { path: cpPath } = body || {};
+        if (!cpPath) {
+          return new Response(JSON.stringify({ success: false, error: 'path required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const { data: cachedRow } = await supabase
+          .from('cached_pages')
+          .select('path, html, title, updated_at, generation_time_ms')
+          .eq('path', cpPath)
+          .maybeSingle();
+
+        let plainText = '';
+        let headings: { level: number; text: string }[] = [];
+        if (cachedRow?.html) {
+          // Extract headings
+          const headingRe = /<h([1-6])[^>]*>([\s\S]*?)<\/h[1-6]>/gi;
+          let hm: RegExpExecArray | null;
+          while ((hm = headingRe.exec(cachedRow.html)) !== null) {
+            headings.push({ level: parseInt(hm[1]), text: hm[2].replace(/<[^>]+>/g, '').trim() });
+            if (headings.length >= 20) break;
+          }
+          // Strip to plain text
+          plainText = cachedRow.html
+            .replace(/<script[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .substring(0, 8000);
+        }
+
+        // If not in cache, try to populate from DB (news_rss_items) for news paths
+        let dbFallback: { title?: string; description?: string } = {};
+        if (!cachedRow) {
+          const newsMatch = cpPath.match(/^\/news\/[a-zA-Z]{2}\/([a-z0-9-]+)$/i);
+          if (newsMatch) {
+            const { data: newsItem } = await supabase
+              .from('news_rss_items')
+              .select('title_en, title, description_en, description')
+              .eq('slug', newsMatch[1])
+              .maybeSingle();
+            if (newsItem) {
+              dbFallback = {
+                title: newsItem.title_en || newsItem.title,
+                description: newsItem.description_en || newsItem.description,
+              };
+            }
+          }
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            content: cachedRow ? {
+              path: cachedRow.path,
+              title: cachedRow.title,
+              updated_at: cachedRow.updated_at,
+              generation_time_ms: cachedRow.generation_time_ms,
+              headings,
+              plainText,
+              exists: true
+            } : {
+              path: cpPath,
+              exists: false,
+              // DB fallback: let UI know the page EXISTS in DB even if cache is cold
+              ...(dbFallback.title ? { dbTitle: dbFallback.title, dbDescription: dbFallback.description, existsInDb: true } : {})
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'warmPage': {
+        // Pre-warm cache for a specific path by calling ssr-render
+        const { path: wpPath } = body || {};
+        if (!wpPath) {
+          return new Response(JSON.stringify({ success: false, error: 'path required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+        const ssrUrl = `${supabaseUrl}/functions/v1/ssr-render?path=${encodeURIComponent(wpPath)}&lang=en&cache=true`;
+        try {
+          const resp = await fetch(ssrUrl, {
+            headers: {
+              'Authorization': `Bearer ${anonKey}`,
+              'apikey': anonKey,
+              'Accept': 'text/html',
+            },
+          });
+          const html = await resp.text();
+          const xCache = resp.headers.get('X-Cache') || 'MISS';
+          return new Response(
+            JSON.stringify({
+              success: resp.ok,
+              status: resp.status,
+              xCache,
+              htmlSize: html.length,
+              path: wpPath,
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (e) {
+          return new Response(
+            JSON.stringify({ success: false, error: String(e), path: wpPath }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
 
       case 'getCloudflareAnalytics': {
