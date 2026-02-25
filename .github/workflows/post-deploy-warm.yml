@@ -1,0 +1,42 @@
+name: Deploy & Post-deploy Warm
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  deploy-and-warm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Wrangler
+        run: npm install -g wrangler@4
+
+      - name: Deploy worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          npx wrangler deploy cloudflare-worker.js --name bravennow-proxy --compatibility-date 2026-02-25
+
+      - name: Purge cached_pages via worker
+        env:
+          PURGE_SECRET: ${{ secrets.PURGE_SECRET }}
+        run: |
+          curl -fsS -X POST "https://bravennow.com/api/cache-purge?secret=${PURGE_SECRET}&path=all" || true
+
+      - name: Warm important pages (bot UA)
+        run: |
+          UA='Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
+          PATHS=("/" "/news" "/news/us" "/wiki" "/sitemap" "/chapters")
+          for p in "${PATHS[@]}"; do
+            echo "Warming $p"
+            curl -fsS -A "$UA" "https://bravennow.com${p}" -o /dev/null || true
+            sleep 1
+          done
