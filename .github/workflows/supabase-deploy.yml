@@ -53,6 +53,7 @@ jobs:
           echo "Deploying updated Supabase functions..."
           supabase functions deploy bulk-retell-news --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
           supabase functions deploy admin --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
+          supabase functions deploy ssr-render --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
 
           echo "(You can add more functions to deploy here if needed)"
 
