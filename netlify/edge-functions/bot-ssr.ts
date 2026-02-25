@@ -86,6 +86,14 @@ async function fetchFromCachedPages(cachePath: string): Promise<string | null> {
     if (!rows || rows.length === 0) return null;
 
     const row = rows[0];
+    // Log cached row details for debugging (length + snippet)
+    try {
+      const htmlSample = (row.html || '').slice(0, 200).replace(/\s+/g, ' ');
+      console.log(`[bot-ssr] cached_pages row for ${cachePath}: html_length=${(row.html||'').length}, expires_at=${row.expires_at}, sample="${htmlSample.replace(/"/g, '\\"')}"`);
+    } catch (e) {
+      console.log('[bot-ssr] cached_pages row logging failed', String(e));
+    }
+
     // Return even if expired - stale is better than nothing
     return row.html || null;
   } catch (error) {
@@ -227,15 +235,18 @@ export default async function handler(request: Request, context: Context) {
         const cachedHtmlForUser = await fetchFromCachedPages(pathname);
         if (cachedHtmlForUser) {
           console.log(`[bot-ssr] Serving cached page to regular user for ${pathname}`);
-          return new Response(cachedHtmlForUser, {
-            status: 200,
-            headers: {
-              'Content-Type': 'text/html; charset=utf-8',
-              'Cache-Control': 'public, max-age=300',
-              'X-SSR-Source': 'cached-pages-fast-path',
-              'X-Worker-Version': 'v2026.02.23-isr-v1',
-            },
-          });
+            // Add diagnostic header with cached HTML length to help debugging
+            const cachedLength = (cachedHtmlForUser || '').length;
+            return new Response(cachedHtmlForUser, {
+              status: 200,
+              headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'public, max-age=300',
+                'X-SSR-Source': 'cached-pages-fast-path',
+                'X-Worker-Version': 'v2026.02.23-isr-v1',
+                'X-Cached-Length': String(cachedLength),
+              },
+            });
         }
       } catch (e) {
         console.error(`[bot-ssr] cached_pages fast-path error for user ${pathname}:`, e);

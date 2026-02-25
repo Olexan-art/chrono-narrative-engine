@@ -162,6 +162,11 @@ Deno.serve(async (req) => {
 
       if (cached?.html) {
         const isFresh = new Date(cached.expires_at) > new Date();
+        try {
+          console.log(`[ssr-render] cached_pages read for ${path}: html_length=${(cached.html||'').length}, expires_at=${cached.expires_at}, isFresh=${isFresh}`);
+        } catch (e) {
+          console.log('[ssr-render] failed to log cached_pages read', String(e));
+        }
         if (isFresh) {
           console.log(`Serving cached page for ${path} [CACHE HIT]`);
           if (botInfo) {
@@ -1114,6 +1119,7 @@ Deno.serve(async (req) => {
 
     // If live-render produced empty/minimal content, return stale cache or SPA shell as fallback
     const htmlSizeBytes = new TextEncoder().encode(fullHtml).length;
+    console.log(`[ssr-render] live render for ${path}: html_size_bytes=${htmlSizeBytes}`);
     if (htmlSizeBytes < 8000) {
       if (staleHtml) {
         console.warn(`Live-render produced tiny HTML (${htmlSizeBytes}B) for ${path}, returning stale cache.`);
@@ -1153,6 +1159,13 @@ Deno.serve(async (req) => {
 
     let upsertError: string | null = null;
     try {
+      try {
+        const sample = fullHtml.slice(0, 200).replace(/\s+/g, ' ');
+        console.log(`[ssr-render] upsert cached_pages for ${path}: size=${htmlSizeBytes}, ttl_min=${cacheTtlMinutes}, sample="${sample.replace(/"/g, '\\"')}"`);
+      } catch (e) {
+        console.log('[ssr-render] upsert logging failed', String(e));
+      }
+
       const { error: cacheErr } = await supabase
         .from("cached_pages")
         .upsert({
