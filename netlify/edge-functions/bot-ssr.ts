@@ -221,8 +221,27 @@ export default async function handler(request: Request, context: Context) {
       }
       console.warn(`[bot-ssr] No cache available for ${pathname}, serving SPA shell`);
     }
-    // Regular users: skip SSR cache entirely - let them load the SPA directly
-    // This ensures they always get fresh content with correct URLs
+    // Regular users: try the cached_pages fast-path first (serve pre-rendered HTML if available)
+    if (!isBotRequest) {
+      try {
+        const cachedHtmlForUser = await fetchFromCachedPages(pathname);
+        if (cachedHtmlForUser) {
+          console.log(`[bot-ssr] Serving cached page to regular user for ${pathname}`);
+          return new Response(cachedHtmlForUser, {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'public, max-age=300',
+              'X-SSR-Source': 'cached-pages-fast-path',
+              'X-Worker-Version': 'v2026.02.23-isr-v1',
+            },
+          });
+        }
+      } catch (e) {
+        console.error(`[bot-ssr] cached_pages fast-path error for user ${pathname}:`, e);
+      }
+      // If no cached page, fallthrough to SPA by calling next()
+    }
   }
 
   return context.next();
