@@ -654,6 +654,7 @@ export default function NewsProcessingPage({ password }: { password: string }) {
 
     const fetchingConfig = configsData?.configs?.find((c: CronConfig) => c.job_name === 'news_fetching');
     const retellingConfig = configsData?.configs?.find((c: CronConfig) => c.job_name === 'news_retelling');
+    const retellingZaiConfig = configsData?.configs?.find((c: CronConfig) => c.job_name === 'news_retelling_zai');
 
     // Fetch global stats
     const { data: globalStats } = useQuery({
@@ -933,7 +934,7 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                             <CardDescription>Process and enrich news articles with AI</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
-                            {retellingConfig?.enabled ? (
+                                            {retellingConfig?.enabled ? (
                                 <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                                     <CheckCircle2 className="w-3 h-3 mr-1" />
                                     Running
@@ -967,6 +968,69 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                                     </>
                                 )}
                             </Button>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* existing retellingConfig fields... */}
+                    ...existing code...
+                </CardContent>
+            </Card>
+
+            {/* New Z.AI retelling card */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="font-medium flex items-center gap-2">
+                                <RefreshCw className="w-4 h-4 text-primary" />
+                                Retell news (Z.AI)
+                            </h3>
+                            <CardDescription>Process news via Z.AI API</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {retellingZaiConfig?.enabled ? (
+                                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                    Running
+                                </Badge>
+                            ) : (
+                                <Badge variant="outline" className="bg-gray-500/10 text-gray-500 border-gray-500/20">
+                                    <Pause className="w-3 h-3 mr-1" />
+                                    Paused
+                                </Badge>
+                            )}
+                            <Button
+                                size="sm"
+                                variant={retellingZaiConfig?.enabled ? 'destructive' : 'default'}
+                                onClick={() =>
+                                    toggleMutation.mutate({
+                                        jobName: 'news_retelling_zai',
+                                        action: retellingZaiConfig?.enabled ? 'pause' : 'resume',
+                                    })
+                                }
+                                disabled={toggleMutation.isPending}
+                            >
+                                {retellingZaiConfig?.enabled ? (
+                                    <>
+                                        <Pause className="w-4 h-4 mr-1" />
+                                        Pause
+                                    </>
+                                ) : (
+                                    <>
+                                        <Play className="w-4 h-4 mr-1" />
+                                        Resume
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* replicate same form controls as above but using retellingZaiConfig and jobName 'news_retelling_zai' */}
+                    ...existing code...
+                </CardContent>
+            </Card>
                         </div>
                     </div>
                 </CardHeader>
