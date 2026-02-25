@@ -201,7 +201,6 @@ async function handleRequest(request, event) {
         if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
           event.waitUntil(asyncWarmPath(pathname));
           let cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
-          // (release) do not inject debug markers into cached HTML
           return new Response(cleaned, {
             status: 200,
             headers: {
