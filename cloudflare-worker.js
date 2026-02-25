@@ -3,7 +3,7 @@
 //  Strategy: Cache-first → SSR on miss → cache result with TTL per path
 // =====================================================================
 
-const WORKER_VERSION = 'v2026.02.25-isr-v2';
+const WORKER_VERSION = 'v2026.02.25-isr-v3';
 const SUPABASE_URL   = 'https://tuledxqigzufkecztnlo.supabase.co';
 const ANON_KEY       = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NDUyODgsImV4cCI6MjA4NjQyMTI4OH0.XKqWqIwfy5BoKzQNNUhs5uYC_QI0GLLKXw1pBDgkCi0';
 
@@ -200,7 +200,9 @@ async function handleRequest(request, event) {
         const rows = await cpResp.json();
         if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
           event.waitUntil(asyncWarmPath(pathname));
-          const cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+          let cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+          // make version visible in body for debugging
+          cleaned = `<!-- worker ${WORKER_VERSION} fast-path -->\n${cleaned}`;
           return new Response(cleaned, {
             status: 200,
             headers: {
@@ -334,7 +336,8 @@ async function handleRequest(request, event) {
               if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
                 event.waitUntil(asyncWarmPath(pathname));
                 // same clean-up for stale fallback
-                const cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+                let cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+                cleaned = `<!-- worker ${WORKER_VERSION} stale-fallback -->\n${cleaned}`;
                 return new Response(cleaned, {
                   status: 200,
                   headers: {
@@ -387,6 +390,8 @@ async function handleRequest(request, event) {
           return r;
         }
         html = html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+        // inject version comment
+        html = `<!-- worker ${WORKER_VERSION} ssr -->\n${html}`;
         return new Response(html, {
           status: 200,
           headers: {
