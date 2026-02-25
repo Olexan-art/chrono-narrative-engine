@@ -3,7 +3,7 @@
 //  Strategy: Cache-first → SSR on miss → cache result with TTL per path
 // =====================================================================
 
-const WORKER_VERSION = 'v2026.02.23-isr-v1';
+const WORKER_VERSION = 'v2026.02.25-isr-v2';
 const SUPABASE_URL   = 'https://tuledxqigzufkecztnlo.supabase.co';
 const ANON_KEY       = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NDUyODgsImV4cCI6MjA4NjQyMTI4OH0.XKqWqIwfy5BoKzQNNUhs5uYC_QI0GLLKXw1pBDgkCi0';
 
@@ -178,14 +178,43 @@ async function handleRequest(request, event) {
     }
   }
 
-  // ── 6. ISR: Cache-first → SSR on miss → cache result (BOTS ONLY) ────
+  // ── 6. ISR: Cache-first → SSR on miss → cache result ────
   //
-  //  Regular users always get the SPA shell from Netlify — React hydrates
-  //  instantly and they never see a blank page.
-  //  Bots/crawlers get a full SSR HTML cached on CF edge (ISR pattern).
-  //  SSR HTML contains a JS-redirect for real users, so serving it to
-  //  regular browsers causes a redirect loop — hence the bot-only guard.
+  //  For the fastest response we prefer serving whatever HTML we already
+  //  have stored in the `cached_pages` table, regardless of whether the
+  //  requester is a bot or a real user.  That lets humans get a full server-
+  //  rendered page instead of a tiny SPA shell at no additional cost.  We
+  //  strip the client-side redirect script from the cached HTML, so there
+  //  is no risk of a redirect loop when regular browsers are returned the
+  //  cached content.
   //
+  //  Bots and origin failures still fall back to live SSR as before.
+  //
+    // try DB fast-path first (everyone)
+    try {
+      const restUrl = `${SUPABASE_URL}/rest/v1/cached_pages?path=eq.${encodeURIComponent(pathname)}&select=html,html_size_bytes&limit=1`;
+      const cpResp = await fetch(restUrl, {
+        headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}`, 'Accept': 'application/json' }
+      });
+      if (cpResp.ok) {
+        const rows = await cpResp.json();
+        if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
+          event.waitUntil(asyncWarmPath(pathname));
+          const cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+          return new Response(cleaned, {
+            status: 200,
+            headers: {
+              'Content-Type':     'text/html; charset=utf-8',
+              'Cache-Control':    `public, max-age=${getTTL(pathname)}`,
+              'X-Cache':          'CACHED-PAGES-FAST-PATH',
+              'X-Cached-Length':  String(cleaned.length),
+              'X-Worker-Version': WORKER_VERSION,
+            },
+          });
+        }
+      }
+    } catch (_) { /* ignore db failure and continue with normal flow */ }
+
     // ── 6. ISR/SSR: Regular users -> try Netlify SPA origin first, then SSR on 404
     // ── Bots -> always SSR (cache=true)
     const ttl    = getTTL(pathname);
@@ -205,13 +234,58 @@ async function handleRequest(request, event) {
           redirect: 'manual',
         });
         const originResp = await fetch(originReq);
-        // If Netlify has a valid response (200..299), return it directly.
+        // If Netlify has a valid response (200..299), inspect it.
         if (originResp && originResp.ok) {
-          const r = new Response(originResp.body, originResp);
-          r.headers.set('X-Cache',          'BYPASS-SPA');
-          r.headers.set('X-Worker-Version', WORKER_VERSION);
-          r.headers.set('Cache-Control',    'no-cache, no-store, must-revalidate');
-          return r;
+          const contentType = (originResp.headers.get('Content-Type') || '').toLowerCase();
+          // For HTML responses, read the body to detect small SPA shell.
+          if (contentType.includes('text/html')) {
+            try {
+              const originText = await originResp.text();
+              // If origin served a small HTML (likely SPA shell), try DB cached_pages
+              if (originText.length < 10000) {
+                try {
+                  const restUrl = `${SUPABASE_URL}/rest/v1/cached_pages?path=eq.${encodeURIComponent(pathname)}&select=html,html_size_bytes&limit=1`;
+                  const cpResp = await fetch(restUrl, {
+                    headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}`, 'Accept': 'application/json' }
+                  });
+                  if (cpResp.ok) {
+                    const rows = await cpResp.json();
+                    if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
+                      event.waitUntil(asyncWarmPath(pathname));
+                      // strip the client-side redirect script so regular browsers
+                      // don't reload the same URL in an infinite loop
+                      const cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+                      const out = new Response(cleaned, {
+                        status: 200,
+                        headers: {
+                          'Content-Type':     'text/html; charset=utf-8',
+                          'Cache-Control':    `public, max-age=${getTTL(pathname)}`,
+                          'X-Cache':          'CACHED-PAGES-FAST-PATH',
+                          'X-Cached-Length':  String(cleaned.length),
+                          'X-Worker-Version': WORKER_VERSION,
+                        },
+                      });
+                      return out;
+                    }
+                  }
+                } catch (_) { /* ignore and fall back to origin */ }
+              }
+              // Not a small SPA (or no DB fallback) — return origin HTML
+              const r = new Response(originText, {
+                status: originResp.status,
+                statusText: originResp.statusText,
+                headers: originResp.headers,
+              });
+              r.headers.set('X-Cache',          'BYPASS-SPA');
+              r.headers.set('X-Worker-Version', WORKER_VERSION);
+              r.headers.set('Cache-Control',    'no-cache, no-store, must-revalidate');
+              return r;
+            } catch (e) {
+              // If reading origin body failed, fall through to return origin response object
+            }
+          }
+          // Non-HTML or inspection failed: return origin response as-is
+          return originResp;
         }
         // If Netlify returned something other than 404/410, forward it.
         if (originResp && originResp.status && originResp.status !== 404 && originResp.status !== 410) {
@@ -259,7 +333,9 @@ async function handleRequest(request, event) {
               const rows = await cpResp.json();
               if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
                 event.waitUntil(asyncWarmPath(pathname));
-                return new Response(rows[0].html, {
+                // same clean-up for stale fallback
+                const cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+                return new Response(cleaned, {
                   status: 200,
                   headers: {
                     'Content-Type':     'text/html; charset=utf-8',
