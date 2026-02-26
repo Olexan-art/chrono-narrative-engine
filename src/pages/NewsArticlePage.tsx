@@ -1088,7 +1088,7 @@ export default function NewsArticlePage() {
                         type: 'organization' as const,
                         relevance: 1
                       }] : []),
-                      ...mainEntityData.relatedEntities
+                      ...(mainEntityData.relatedEntities || [])
                         .filter(e => e && e.id)
                         .map(e => ({
                           ...e,

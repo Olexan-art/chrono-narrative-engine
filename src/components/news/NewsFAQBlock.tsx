@@ -62,13 +62,13 @@ export function NewsFAQBlock({ faqs = [], className = '' }: NewsFAQBlockProps) {
         {hasFaqs ? (
           <div className="space-y-2">
             {sortedFaqs.map((faq) => {
-              const isExpanded = expandedIds.has(faq.id!);
+              const isExpanded = expandedIds.has(faq.id);
               return (
                 <div key={faq.id} className="border rounded-lg">
                   <Button
                     variant="ghost"
                     className="w-full justify-between text-left p-4 hover:bg-accent/50"
-                    onClick={() => toggleExpanded(faq.id!)}
+                    onClick={() => toggleExpanded(faq.id)}
                   >
                     <div className="flex-1 pr-2">
                       <span className="text-sm font-medium">{faq.question}</span>
@@ -99,7 +99,7 @@ export function NewsFAQBlock({ faqs = [], className = '' }: NewsFAQBlockProps) {
                 variant="link"
                 size="sm"
                 className="w-full text-xs"
-                onClick={() => setExpandedIds(new Set(sortedFaqs.slice(0, 5).map(f => f.id!)))}
+                onClick={() => setExpandedIds(new Set(sortedFaqs.slice(0, 5).map(f => f.id).filter(id => id !== undefined)))}
               >
                 {language === 'uk' 
                   ? 'Розкрити перші 5 питань' 

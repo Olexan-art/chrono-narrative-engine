@@ -23,20 +23,8 @@ async function testNewBlocks() {
   const page = await browser.newPage();
   
   try {
-    // First, get a news article URL
-    console.log('Finding a news article to test...');
-    await page.goto('https://bravennow.com/news/ua');
-    
-    // Wait for news articles to load
-    await page.waitForSelector('article a[href^="/news/"]', { timeout: 10000 });
-    
-    // Get first article link
-    const articleLink = await page.locator('article a[href^="/news/"]').first().getAttribute('href');
-    if (!articleLink) {
-      throw new Error('No news articles found');
-    }
-    
-    const articleUrl = `https://bravennow.com${articleLink}`;
+    // Use a direct news article URL for testing
+    const articleUrl = 'https://bravennow.com/news/us/russian-president-vladimir-putin-announced-key-priorities-for-russia';
     console.log(`\nTesting article: ${articleUrl}\n`);
     
     // Navigate to the article
