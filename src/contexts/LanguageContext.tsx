@@ -117,7 +117,6 @@ const translations: Record<Language, Record<string, string>> = {
     'newsdigest.description': 'Актуальні новини з усього світу по країнам та категоріям',
     'newsdigest.empty': 'Новин поки немає',
     'newsdigest.empty_desc': 'RSS канали ще не налаштовані або новини не завантажені',
-    'nav.newsdigest': 'Кротовиина',
 
     // RSS News
     'rss_news.latest': 'ОСТАННІ НОВИНИ',

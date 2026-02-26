@@ -1259,9 +1259,9 @@ function generateHeaderHTML(lang: string, baseUrl: string) {
   const t = (key: string) => {
     // Simplified translation map for header
     const map: any = {
-      'en': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.newsdigest': 'News Digest', 'nav.calendar': 'Calendar', 'nav.topics': 'Topics' },
-      'uk': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.newsdigest': 'Дайджест', 'nav.calendar': 'Календар', 'nav.topics': 'Теми' },
-      'pl': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.newsdigest': 'Przegląd', 'nav.calendar': 'Kalendarz', 'nav.topics': 'Tematy' }
+      'en': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.calendar': 'Calendar', 'nav.topics': 'Topics' },
+      'uk': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.calendar': 'Календар', 'nav.topics': 'Теми' },
+      'pl': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.calendar': 'Kalendarz', 'nav.topics': 'Tematy' }
     };
     return map[lang]?.[key] || map['en'][key] || key;
   };
@@ -1285,10 +1285,6 @@ function generateHeaderHTML(lang: string, baseUrl: string) {
 
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex items-center gap-2">
-          <a href="${baseUrl}/news-digest" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
-            ${ICONS.globe}
-            <span>${t("nav.newsdigest")}</span>
-          </a>
           <a href="${baseUrl}/ink-abyss" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
             ${ICONS.palette}
             <span>Ink Abyss</span>
@@ -1319,10 +1315,6 @@ function generateHeaderHTML(lang: string, baseUrl: string) {
       <input type="checkbox" id="mobile-menu-toggle" class="hidden peer" />
       <div class="hidden peer-checked:block md:hidden border-t border-border bg-card/95 backdrop-blur-sm">
         <nav class="container mx-auto px-4 py-3 flex flex-col gap-1">
-          <a href="${baseUrl}/news-digest" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
-             ${ICONS.globe}
-            ${t("nav.newsdigest")}
-          </a>
           <a href="${baseUrl}/ink-abyss" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
              ${ICONS.palette}
             Ink Abyss
@@ -1363,7 +1355,6 @@ function generateFooterHTML(lang: string, baseUrl: string) {
         </a>
         <nav class="flex flex-wrap items-center gap-2 justify-center">
           <a href="${baseUrl}/" class="inline-flex items-center gap-1 text-sm hover:underline">${t('nav.read')}</a>
-          <a href="${baseUrl}/news-digest" class="inline-flex items-center gap-1 text-sm hover:underline">${t('nav.newsdigest')}</a>
           <a href="${baseUrl}/ink-abyss" class="inline-flex items-center gap-1 text-sm hover:underline">Ink Abyss</a>
           <a href="${baseUrl}/media-calendar" class="inline-flex items-center gap-1 text-sm hover:underline">${t('nav.calendar')}</a>
           <a href="${baseUrl}/wiki" class="inline-flex items-center gap-1 text-sm hover:underline">Wiki</a>

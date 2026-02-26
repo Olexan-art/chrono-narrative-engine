@@ -16,9 +16,21 @@ on:
           - 'true'
           - 'false'
 
+concurrency:
+  group: auto-release-prod
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      # Optional Build Hook fallback for Netlify
+      NETLIFY_BUILD_HOOK_URL: ${{ secrets.NETLIFY_BUILD_HOOK_URL }}
+      # Cloudflare (optional, used for cache purge)
+      CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      # Base URL for testing/summary
+      PROD_BASE_URL: ${{ secrets.PROD_BASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,15 +45,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests PyYAML
 
-      - name: Purge and warm caches
-        env:
-          PROD_BASE_URL: ${{ secrets.PROD_BASE_URL || 'https://bravennow.com' }}
-          CACHE_PURGE_ENDPOINTS: ${{ secrets.CACHE_PURGE_ENDPOINTS }}
-          CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      - name: Pre-warm (no purge) — optional
         run: |
-          # Run cache purge and warming
-          python scripts/release_prod.py --version "v$(date +%Y%m%d-%H%M%S)" || echo "Cache operations completed with warnings"
+          echo "Pre-warm endpoints (optional step)"
+          python scripts/release_prod.py --version "v$(date +%Y%m%d-%H%M%S)" --skip-cache || true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -59,8 +66,20 @@ jobs:
       - name: Build project
         run: pnpm run build
 
-      - name: Deploy to Netlify
-        if: github.event.inputs.deploy_netlify != 'false'
+      - name: Deploy to Netlify via Build Hook (fallback)
+        if: github.event.inputs.deploy_netlify != 'false' && env.NETLIFY_BUILD_HOOK_URL != ''
+        run: |
+          echo "Triggering Netlify via Build Hook..."
+          RESP=$(curl -s -w "\nHTTP:%{http_code}" -X POST "$NETLIFY_BUILD_HOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"trigger\":\"auto_release\",\"branch\":\"${{ github.ref_name }}\",\"commit\":\"${{ github.sha }}\"}")
+          echo "$RESP" | sed -n '1,200p'
+          CODE=$(echo "$RESP" | sed -n '$p' | cut -d: -f2)
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "Build hook failed with HTTP $CODE"; exit 1; fi
+
+      - name: Deploy to Netlify (actions)
+        if: github.event.inputs.deploy_netlify != 'false' && env.NETLIFY_BUILD_HOOK_URL == ''
         uses: nwtgck/actions-netlify@v3.0
         with:
           publish-dir: './dist'
@@ -74,6 +93,15 @@ jobs:
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+      - name: Purge Cloudflare cache (post-deploy)
+        if: env.CF_ZONE_ID != '' && env.CF_API_TOKEN != ''
+        run: |
+          echo "Purging Cloudflare cache (post-deploy)..."
+          curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/purge_cache" \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}' | sed -n '1,200p'
 
       - name: Verify deployment
         if: github.event.inputs.deploy_netlify != 'false'

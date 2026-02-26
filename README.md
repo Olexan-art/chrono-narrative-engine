@@ -1,8 +1,14 @@
-# Welcome to your Lovable project
+# Chrono Narrative Engine
+
+[![CI Smoke](https://github.com/Olexan-art/chrono-narrative-engine/actions/workflows/ci-smoke.yml/badge.svg)](https://github.com/Olexan-art/chrono-narrative-engine/actions/workflows/ci-smoke.yml)
+[![Auto Release](https://github.com/Olexan-art/chrono-narrative-engine/actions/workflows/auto-release-prod.yml/badge.svg)](https://github.com/Olexan-art/chrono-narrative-engine/actions/workflows/auto-release-prod.yml)
+[![Netlify Deploy](https://github.com/Olexan-art/chrono-narrative-engine/actions/workflows/netlify-deploy.yml/badge.svg)](https://github.com/Olexan-art/chrono-narrative-engine/actions/workflows/netlify-deploy.yml)
+[![Supabase Deploy](https://github.com/Olexan-art/chrono-narrative-engine/actions/workflows/supabase-deploy.yml/badge.svg)](https://github.com/Olexan-art/chrono-narrative-engine/actions/workflows/supabase-deploy.yml)
+[![Fallback Retell](https://github.com/Olexan-art/chrono-narrative-engine/actions/workflows/fallback-bulk-retell-us.yml/badge.svg)](https://github.com/Olexan-art/chrono-narrative-engine/actions/workflows/fallback-bulk-retell-us.yml)
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**Prod URL**: https://bravennow.com
 
 ## How can I edit this code?
 

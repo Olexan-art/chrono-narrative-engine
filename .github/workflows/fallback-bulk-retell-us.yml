@@ -5,6 +5,10 @@ on:
     - cron: '*/15 * * * *'    # every 15 minutes
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   fallback-bulk-retell-us:
     name: Fallback bulk-retell-news (US)
@@ -71,3 +75,33 @@ jobs:
         run: |
           echo "Enabled: ${{ steps.check.outputs.enabled }}"
           echo "Fallback run finished — status: ${{ steps.invoke.outputs.status }}"
+
+  trigger-deploys:
+    name: Trigger Deploy Pipelines (Netlify + Supabase)
+    needs: fallback-bulk-retell-us
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch Supabase Functions Deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          echo "Dispatching supabase-deploy.yml..."
+          curl -s -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${REPO}/actions/workflows/supabase-deploy.yml/dispatches \
+            -d '{"ref":"main"}'
+      - name: Dispatch Netlify Deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          echo "Dispatching netlify-deploy.yml..."
+          curl -s -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${REPO}/actions/workflows/netlify-deploy.yml/dispatches \
+            -d '{"ref":"main"}'
