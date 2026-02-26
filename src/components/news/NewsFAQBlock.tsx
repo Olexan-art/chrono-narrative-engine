@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/hooks/useLanguage';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface FAQItem {
   id?: string | number;

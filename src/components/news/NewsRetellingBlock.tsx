@@ -3,7 +3,7 @@ import { BookOpen, Volume2, Pause, Play } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useLanguage } from '@/hooks/useLanguage';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface RetellingData {
   summary?: string;

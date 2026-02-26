@@ -2,7 +2,7 @@ import React from 'react';
 import { History, Clock, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { useLanguage } from '@/hooks/useLanguage';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TimelineEvent {
   date: string;

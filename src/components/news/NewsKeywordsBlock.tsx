@@ -2,7 +2,7 @@ import React from 'react';
 import { Tags } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useLanguage } from '@/hooks/useLanguage';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Link } from 'react-router-dom';
 
 interface Keyword {

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Users, Building2, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useLanguage } from '@/hooks/useLanguage';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface MentionedEntity {
   id: number;

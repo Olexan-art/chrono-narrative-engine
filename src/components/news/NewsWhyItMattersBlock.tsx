@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertCircle, TrendingUp, Globe, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLanguage } from '@/hooks/useLanguage';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface WhyItMattersData {
   text?: string;

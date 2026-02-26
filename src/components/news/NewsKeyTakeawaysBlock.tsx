@@ -1,7 +1,7 @@
 import React from 'react';
 import { Lightbulb, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLanguage } from '@/hooks/useLanguage';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface NewsKeyTakeawaysBlockProps {
   takeaways?: string[] | { id?: string | number; text: string; priority?: number }[];
