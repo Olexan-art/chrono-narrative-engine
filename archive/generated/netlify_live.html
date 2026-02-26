@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="uk">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/favicon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="BravenNow" />
+  <meta name="theme-color" content="#0c1222" />
+
+  <!-- Preconnect to critical origins -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://tuledxqigzufkecztnlo.supabase.co" />
+
+  <!-- Non-render-blocking font loading -->
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=optional"
+    onload="this.onload=null;this.rel='stylesheet'" />
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=optional"
+    onload="this.onload=null;this.rel='stylesheet'" />
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=optional"
+    onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=optional" />
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=optional" />
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=optional" />
+  </noscript>
+
+  <title>Synchronization Point - Smart News, Real News</title>
+  <meta name="description"
+    content="A book that writes itself. An archivist structures the chaos of human history through the lens of news, generating daily stories from real-world news." />
+  <meta name="author" content="Synchronization Point" />
+  <meta name="keywords" content="AI, science fiction, news, narrative, story, Ukraine, generated, book, archivist" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Synchronization Point" />
+  <meta property="og:title" content="Synchronization Point - Smart News, Real News" />
+  <meta property="og:description"
+    content="A book that writes itself. An archivist structures the chaos of human history through the lens of news, generating daily stories from real-world news." />
+  <meta property="og:image" content="https://bravennow.com/favicon.png" />
+  <meta property="og:url" content="https://bravennow.com/" />
+  <meta property="og:locale" content="uk_UA" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:locale:alternate" content="pl_PL" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@SyncPoint" />
+  <meta name="twitter:title" content="Synchronization Point - Smart News, Real News" />
+  <meta name="twitter:description"
+    content="A book that writes itself. An archivist structures the chaos of human history through the lens of news, generating daily stories from real-world news." />
+  <meta name="twitter:image" content="https://bravennow.com/favicon.png" />
+
+  <!-- Robots -->
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+
+  <!-- Google verification -->
+  <meta name="google-site-verification" content="hNYXESbAKpGZuxDjmbCFKQ3TcqzBwhRTWKkxMSoNd3Q" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Synchronization Point",
+        "alternateName": "Точка Синхронізації",
+        "url": "https://bravennow.com",
+        "description": "A book that writes itself. An archivist structures the chaos of human history through the lens of news, generating daily stories from real-world news.",
+        "inLanguage": ["uk", "en", "pl"],
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://bravennow.com/search?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Synchronization Point",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://bravennow.com/favicon.png"
+          }
+        }
+      }
+    </script>
+
+  <!-- Google Analytics - deferred to reduce unused JS on initial load -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    function loadGA() {
+      if (window._gaLoaded) return;
+      window._gaLoaded = true;
+      gtag('js', new Date());
+      gtag('config', 'G-C05XF9ZX6B');
+      var s = document.createElement('script');
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=G-C05XF9ZX6B';
+      s.async = true;
+      document.head.appendChild(s);
+    }
+    // Load GA after first user interaction or after 3s idle
+    ['scroll', 'click', 'keydown', 'touchstart'].forEach(function (e) {
+      window.addEventListener(e, loadGA, { once: true, passive: true });
+    });
+    setTimeout(loadGA, 3000);
+  </script>
+
+  <!-- Unregister legacy service worker from vite-plugin-pwa -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        for (let registration of registrations) {
+          registration.unregister().then(function (success) {
+            if (success) {
+              console.log('[SW] Legacy service worker unregistered successfully');
+            }
+          });
+        }
+      });
+    }
+  </script>
+  <script type="module" crossorigin src="/assets/index-P7Hwck3b.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/vendor-query-DD0rkZTH.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-react-MJERarxo.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-date-Bc9lJLL-.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-DOOfIUA7.css">
+</head>
+
+<body>
+  <!-- SEO Content for Crawlers - VISIBLE BY DEFAULT, hidden only after React hydrates -->
+  <div id="seo-content"
+    style="font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+    <header>
+      <h1>BravenNow | Smart News, Real News</h1>
+      <p>
+        <strong>Brave New World</strong> — A book that writes itself through smart news based on real news
+        events.
+      </p>
+    </header>
+
+    <main>
+      <section>
+        <h2>About the Project</h2>
+        <p>
+          Synchronization Point is an innovative smart news platform that transforms daily news into compelling
+          narratives. Our archivist structures the chaos of human history, creating a continuous narrative that
+          reflects our world through the lens of real events.
+        </p>
+      </section>
+
+      <section>
+        <h2>Features</h2>
+        <ul>
+          <li><strong>Daily Stories</strong> — New AI-generated narratives every day based on current events</li>
+          <li><strong>News Digest</strong> — Curated news from USA, Ukraine, Poland, and India with AI retelling</li>
+          <li><strong>Character Dialogues</strong> — Unique characters discuss and comment on world events</li>
+          <li><strong>Multilingual</strong> — Available in Ukrainian, English, and Polish</li>
+          <li><strong>Chapter Structure</strong> — Stories organized into volumes, chapters, and parts</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Navigation</h2>
+        <nav>
+          <ul>
+            <li><a href="https://bravennow.com/">Home</a></li>
+            <li><a href="https://bravennow.com/read">Latest Stories</a></li>
+            <li><a href="https://bravennow.com/chapters">All Chapters</a></li>
+            <li><a href="https://bravennow.com/volumes">All Volumes</a></li>
+            <li><a href="https://bravennow.com/news">News Hub</a></li>
+            <li><a href="https://bravennow.com/news/us">USA News</a></li>
+            <li><a href="https://bravennow.com/news/ua">Ukraine News</a></li>
+            <li><a href="https://bravennow.com/news/pl">Poland News</a></li>
+            <li><a href="https://bravennow.com/news/in">India News</a></li>
+            <li><a href="https://bravennow.com/calendar">Story Calendar</a></li>
+            <li><a href="https://bravennow.com/sitemap">Sitemap</a></li>
+          </ul>
+        </nav>
+      </section>
+
+      <section>
+        <h2>Content Structure</h2>
+        <p>The narrative is organized hierarchically:</p>
+        <ul>
+          <li><strong>Month → Volume</strong> — Each month becomes a new volume in the ongoing saga</li>
+          <li><strong>Week → Chapter</strong> — Weekly chapters with thematic coherence</li>
+          <li><strong>Day → Part</strong> — Daily stories that build the narrative</li>
+          <li><strong>News → Story</strong> — Real events transformed into fiction</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Countries Covered</h2>
+        <ul>
+          <li>🇺🇸 <a href="https://bravennow.com/news/us">United States</a> — American news and events</li>
+          <li>🇺🇦 <a href="https://bravennow.com/news/ua">Ukraine</a> — Ukrainian news and events</li>
+          <li>🇵🇱 <a href="https://bravennow.com/news/pl">Poland</a> — Polish news and events</li>
+          <li>🇮🇳 <a href="https://bravennow.com/news/in">India</a> — Indian news and events</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="border-t border-border/40 bg-[#030711]/95 backdrop-blur-md transition-colors duration-300">
+      <div class="container mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between">
+        <a href="/" class="flex items-center gap-2">
+          <img src="/favicon.svg" alt="logo" class="h-6 w-6" />
+        </a>
+        <nav class="flex flex-wrap items-center gap-2 justify-center">
+          <a href="/" class="text-sm hover:underline">Read</a>
+          <a href="/news-digest" class="text-sm hover:underline">News Digest</a>
+          <a href="/ink-abyss" class="text-sm hover:underline">Ink Abyss</a>
+          <a href="/media-calendar" class="text-sm hover:underline">Calendar</a>
+          <a href="/wiki" class="text-sm hover:underline">Wiki</a>
+        </nav>
+        <div class="mt-2 md:mt-0"></div>
+      </div>
+      <div class="container mx-auto px-4 text-center text-sm text-muted-foreground font-mono py-2">
+        <span id="footer-year">© <span id="footer-year-span"></span> Synchronization Point. AI-generated content based on real news events.</span>
+        <br />
+        Contact: <a href="https://bravennow.com" class="hover:text-primary transition-colors">bravennow.com</a>
+      </div>
+    </footer>
+    <script>
+      document.getElementById('footer-year-span').textContent = new Date().getFullYear();
+    </script>
+  </div>
+
+  <!-- React App Root -->
+  <div id="root"></div>
+
+
+  <!-- Hide SEO content ONLY after React successfully mounts -->
+  <script>
+    (function () {
+      var seoContent = document.getElementById('seo-content');
+      var root = document.getElementById('root');
+      if (root && seoContent) {
+        function hideSeo() {
+          if (root.children.length > 0) {
+            seoContent.style.display = 'none';
+            return true;
+          }
+          return false;
+        }
+        // Check immediately in case React already mounted
+        if (!hideSeo()) {
+          // Use MutationObserver for reliable detection
+          var observer = new MutationObserver(function () {
+            if (hideSeo()) {
+              observer.disconnect();
+            }
+          });
+          observer.observe(root, { childList: true, subtree: true });
+
+          // Fallback: poll every 200ms for 10s
+          var attempts = 0;
+          var interval = setInterval(function () {
+            attempts++;
+            if (hideSeo() || attempts > 50) {
+              clearInterval(interval);
+              if (observer) observer.disconnect();
+            }
+          }, 200);
+        }
+      }
+    })();
+  </script>
+
+  <!-- Noscript fallback - show SEO content, hide React root -->
+  <noscript>
+    <style>
+      #root {
+        display: none;
+      }
+    </style>
+    <p style="font-family: system-ui, sans-serif; padding: 20px;">
+      This website requires JavaScript to function. Please enable JavaScript or use a modern browser.
+    </p>
+  </noscript>
+</body>
+
+</html>
