@@ -1,0 +1,6 @@
+name = "bravennow-proxy"
+compatibility_date = "2026-02-25"
+type = "javascript"
+main = "cloudflare-worker.js"
+
+# Minimal wrangler config to allow non-interactive deploy from local environment.

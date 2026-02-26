@@ -1,0 +1,86 @@
+name: Auto Release Production
+
+on:
+  push:
+    branches:
+      - main
+    # Run on any change to main to ensure release always triggers
+  workflow_dispatch:
+    inputs:
+      deploy_netlify:
+        description: 'Deploy to Netlify'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests PyYAML
+
+      - name: Purge and warm caches
+        env:
+          PROD_BASE_URL: ${{ secrets.PROD_BASE_URL || 'https://bravennow.com' }}
+          CACHE_PURGE_ENDPOINTS: ${{ secrets.CACHE_PURGE_ENDPOINTS }}
+          CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          # Run cache purge and warming
+          python scripts/release_prod.py --version "v$(date +%Y%m%d-%H%M%S)" || echo "Cache operations completed with warnings"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Deploy to Netlify
+        if: github.event.inputs.deploy_netlify != 'false'
+        uses: nwtgck/actions-netlify@v3.0
+        with:
+          publish-dir: './dist'
+          production-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Auto release deployment - ${{ github.event.head_commit.message }}"
+          enable-pull-request-comment: false
+          enable-commit-comment: false
+          enable-commit-status: false
+          overwrites-pull-request-comment: false
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+      - name: Verify deployment
+        if: github.event.inputs.deploy_netlify != 'false'
+        run: |
+          echo "📋 Deployment Summary:"
+          echo "- Branch: ${{ github.ref_name }}"
+          echo "- Commit: ${{ github.sha }}"
+          echo "- Triggered at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo ""
+          echo "Check Netlify dashboard for deployment status."

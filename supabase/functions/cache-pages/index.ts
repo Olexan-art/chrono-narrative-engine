@@ -455,14 +455,109 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceKey);
 
   try {
+    // Parity check: compare SSR cache=true vs cache=false for given paths
+    if (action === 'parity-check') {
+      // Accept CSV paths or use defaults
+      const pathsParam = url.searchParams.get('paths') || bodyJson.paths || '';
+      const autoFix = url.searchParams.get('autoFix') === 'true' || bodyJson.autoFix === true;
+      const defaultPaths = ['/', '/news/US', '/wiki'];
+      const paths: string[] = pathsParam
+        ? String(pathsParam).split(',').map((p: string) => p.trim()).filter((p: string) => p)
+        : defaultPaths;
+
+      // Helpers
+      const fetchSSR = async (path: string, useCache: boolean): Promise<string> => {
+        const u = `${SSR_ENDPOINT}?path=${encodeURIComponent(path)}&lang=en&cache=${useCache ? 'true' : 'false'}`;
+        const resp = await fetch(u, {
+          headers: {
+            'Authorization': `Bearer ${serviceKey}`,
+            'apikey': serviceKey,
+            'Accept': 'text/html',
+          },
+        });
+        if (!resp.ok) {
+          const t = await resp.text().catch(() => '');
+          throw new Error(`SSR ${useCache ? 'cache' : 'live'} failed for ${path}: ${resp.status} ${t?.slice(0,200)}`);
+        }
+        return await resp.text();
+      };
+
+      const getCounts = (html: string) => {
+        const img = (html.match(/<img\b/gi) || []).length;
+        const int1 = (html.match(/href=\"\//gi) || []).length;
+        const int2 = (html.match(/href=\"https?:\/\/bravennow\.com\//gi) || []).length;
+        const internal = int1 + int2;
+        let text = html
+          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ');
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        return { images: img, words, internalLinks: internal };
+      };
+
+      const results: any[] = [];
+      let refreshed: string[] = [];
+      for (const p of paths) {
+        try {
+          const live = await fetchSSR(p, false);
+          const cached = await fetchSSR(p, true);
+          const lc = getCounts(live);
+          const cc = getCounts(cached);
+          const diff = {
+            path: p,
+            live: lc,
+            cached: cc,
+            equal: lc.images === cc.images && lc.words === cc.words && lc.internalLinks === cc.internalLinks,
+          };
+          results.push(diff);
+          if (!diff.equal && autoFix) {
+            const r = await generateAndCachePage(supabase, p, serviceKey);
+            if (r.success) refreshed.push(p);
+          }
+        } catch (e) {
+          results.push({ path: p, error: e instanceof Error ? e.message : String(e) });
+        }
+      }
+
+      return new Response(JSON.stringify({
+        action: 'parity-check',
+        autoFix,
+        results,
+        refreshed,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (action === 'refresh-single' && specificPath) {
-      // Refresh a single page
-      const result = await generateAndCachePage(supabase, specificPath, serviceKey);
+      // Refresh a single page, plus cascade to related hubs if it's a news article
+      const primary = await generateAndCachePage(supabase, specificPath, serviceKey);
+
+      const relatedResults: Array<{ path: string; success: boolean; error?: string }> = [];
+      const newsMatch = specificPath.match(/^\/news\/(\w{2})\/[a-z0-9-]+$/i);
+      if (newsMatch) {
+        const cc = newsMatch[1];
+        const relatedPaths = Array.from(new Set([
+          `/news/${cc.toUpperCase()}`,
+          '/news',
+          '/',
+        ]));
+        for (const rp of relatedPaths) {
+          try {
+            const r = await generateAndCachePage(supabase, rp, serviceKey);
+            relatedResults.push({ path: rp, success: r.success, ...(r.success ? {} : { error: r.error || 'unknown' }) });
+          } catch (e) {
+            relatedResults.push({ path: rp, success: false, error: e instanceof Error ? e.message : String(e) });
+          }
+        }
+      }
 
       return new Response(JSON.stringify({
         action: 'refresh-single',
         path: specificPath,
-        ...result,
+        ...primary,
+        related: relatedResults,
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -608,7 +703,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       error: 'Invalid action',
-      validActions: ['refresh-all', 'refresh-single', 'refresh-recent', 'refresh-news', 'clear-expired', 'stats'],
+      validActions: ['refresh-all', 'refresh-single', 'refresh-recent', 'refresh-news', 'refresh-wiki', 'clear-expired', 'stats', 'parity-check'],
     }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

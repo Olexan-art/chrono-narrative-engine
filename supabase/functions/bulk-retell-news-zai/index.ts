@@ -6,7 +6,6 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const ZAI_API_KEY = '5091499010b143b98e55a87deb51fc8e.XZcwqXfXuxr0fjR0';
 const ZAI_API_URL = 'https://api.z.ai/v1/retell'; // Приклад, замініть на актуальний endpoint
 
 serve(async (req) => {
@@ -89,6 +88,8 @@ serve(async (req) => {
                 processedIds.add(newsItem.id);
 
                 // Виклик Z.AI API
+                const ZAI_API_KEY = Deno.env.get('ZAI_API_KEY');
+                if (!ZAI_API_KEY) throw new Error('ZAI_API_KEY not configured');
                 const zaiResponse = await fetch(ZAI_API_URL, {
                     method: 'POST',
                     headers: {
@@ -109,6 +110,13 @@ serve(async (req) => {
                     await supabase.from('news_rss_items').update({
                         key_points: result.key_points || result.summary || null
                     }).eq('id', newsItem.id);
+
+                    // Примусово оновити кеш сторінки новини
+                    const adminPass = Deno.env.get('ADMIN_PASSWORD');
+                    const cacheUrl = `${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(`/news/${country.code}/${newsItem.slug}`)}&password=${adminPass}`;
+                    try {
+                        await fetch(cacheUrl, { headers: { 'Authorization': `Bearer ${supabaseKey}` } });
+                    } catch (_) { /* non-fatal */ }
                     successCount++;
                 } else {
                     errorCount++;

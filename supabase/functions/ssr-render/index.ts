@@ -620,7 +620,42 @@ Deno.serve(async (req) => {
           }));
         }
 
-        html = generateNewsHTML(newsItem, lang, canonicalUrl, moreFromCountry || [], otherCountriesNews, wikiEntities, mainEntityForGraph, relatedEntitiesForGraph);
+        // Determine previous/next articles within same country by published_at
+        let prevNext: any = {};
+        try {
+          const [{ data: prevItem }] = await supabase
+            .from('news_rss_items')
+            .select('slug, country:news_countries(code), title, title_en')
+            .lt('published_at', newsItem.published_at || newsItem.created_at)
+            .eq('country_id', newsItem.country_id)
+            .eq('is_archived', false)
+            .order('published_at', { ascending: false })
+            .limit(1);
+          const [{ data: nextItem }] = await supabase
+            .from('news_rss_items')
+            .select('slug, country:news_countries(code), title, title_en')
+            .gt('published_at', newsItem.published_at || newsItem.created_at)
+            .eq('country_id', newsItem.country_id)
+            .eq('is_archived', false)
+            .order('published_at', { ascending: true })
+            .limit(1);
+          if (prevItem && prevItem.length > 0) prevNext.prev = prevItem[0];
+          if (nextItem && nextItem.length > 0) prevNext.next = nextItem[0];
+        } catch (e) {
+          // ignore
+        }
+
+        html = generateNewsHTML(
+          newsItem,
+          lang,
+          canonicalUrl,
+          moreFromCountry || [],
+          otherCountriesNews,
+          wikiEntities,
+          mainEntityForGraph,
+          relatedEntitiesForGraph,
+          prevNext
+        );
       }
     } else if (newsCountryMatch) {
       // News country listing page: /news/us - include cross-country links
@@ -1217,15 +1252,16 @@ const ICONS = {
   calendar: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>`,
   users: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
   menu: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>`,
+  hash: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg>`
 };
 
 function generateHeaderHTML(lang: string, baseUrl: string) {
   const t = (key: string) => {
     // Simplified translation map for header
     const map: any = {
-      'en': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.read': 'Read', 'nav.newsdigest': 'News Digest', 'nav.calendar': 'Calendar', 'nav.admin': 'Admin' },
-      'uk': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.read': 'Читати', 'nav.newsdigest': 'Дайджест', 'nav.calendar': 'Календар', 'nav.admin': 'Адмін' },
-      'pl': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.read': 'Czytaj', 'nav.newsdigest': 'Przegląd', 'nav.calendar': 'Kalendarz', 'nav.admin': 'Admin' }
+      'en': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.newsdigest': 'News Digest', 'nav.calendar': 'Calendar', 'nav.topics': 'Topics' },
+      'uk': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.newsdigest': 'Дайджест', 'nav.calendar': 'Календар', 'nav.topics': 'Теми' },
+      'pl': { 'hero.title': 'BravenNow', 'header.subtitle': 'Brave New World', 'nav.newsdigest': 'Przegląd', 'nav.calendar': 'Kalendarz', 'nav.topics': 'Tematy' }
     };
     return map[lang]?.[key] || map['en'][key] || key;
   };
@@ -1249,10 +1285,6 @@ function generateHeaderHTML(lang: string, baseUrl: string) {
 
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex items-center gap-2">
-          <a href="${baseUrl}/" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
-            ${ICONS.bookOpen}
-            <span>${t("nav.read")}</span>
-          </a>
           <a href="${baseUrl}/news-digest" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
             ${ICONS.globe}
             <span>${t("nav.newsdigest")}</span>
@@ -1269,6 +1301,10 @@ function generateHeaderHTML(lang: string, baseUrl: string) {
             ${ICONS.users}
             <span>Wiki</span>
           </a>
+          <a href="${baseUrl}/topics" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-foreground no-underline gap-2">
+            ${ICONS.hash}
+            <span>${t('nav.topics')}</span>
+          </a>
         </nav>
 
         <!-- Mobile Navigation Trigger -->
@@ -1283,10 +1319,6 @@ function generateHeaderHTML(lang: string, baseUrl: string) {
       <input type="checkbox" id="mobile-menu-toggle" class="hidden peer" />
       <div class="hidden peer-checked:block md:hidden border-t border-border bg-card/95 backdrop-blur-sm">
         <nav class="container mx-auto px-4 py-3 flex flex-col gap-1">
-          <a href="${baseUrl}/" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
-            ${ICONS.bookOpen}
-            ${t("nav.read")}
-          </a>
           <a href="${baseUrl}/news-digest" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
              ${ICONS.globe}
             ${t("nav.newsdigest")}
@@ -1303,6 +1335,10 @@ function generateHeaderHTML(lang: string, baseUrl: string) {
              ${ICONS.users}
             Wiki
           </a>
+            <a href="${baseUrl}/topics" class="inline-flex w-full items-center justify-start rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 text-foreground no-underline gap-3">
+               ${ICONS.hash}
+              ${t('nav.topics')}
+            </a>
         </nav>
       </div>
     </header>
@@ -1512,6 +1548,13 @@ function generateStoryHTML(part: any, lang: string, canonicalUrl: string) {
       </div>
       
       <h1 itemprop="headline">${escapeHtml(title)}</h1>
+      ${sourceHost ? `
+        <div style="margin:8px 0 16px 0; display:inline-flex; align-items:center; gap:8px; font-size:12px; color:hsl(var(--muted-foreground));">
+          <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(16,185,129,0.35);background:rgba(16,185,129,0.08);color:#10b981;border-radius:999px;padding:4px 10px;">
+            ✅ Verified — <a href="${escapeHtml(newsItem.url)}" target="_blank" rel="nofollow noopener" style="color:inherit;text-decoration:none;">${escapeHtml(sourceHost)}</a>
+          </span>
+        </div>
+      ` : ""}
       
       <div class="story-content" itemprop="articleBody">
         ${escapeHtml(content)}
@@ -1553,11 +1596,29 @@ function generateChapterHTML(chapter: any, lang: string, canonicalUrl: string) {
   `;
 }
 
-function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, moreFromCountry: any[] = [], otherCountriesNews: any[] = [], wikiEntities: any[] = [], mainEntityForGraph: any = null, relatedEntitiesForGraph: any[] = []) {
+function generateNewsHTML(
+  newsItem: any,
+  lang: string,
+  canonicalUrl: string,
+  moreFromCountry: any[] = [],
+  otherCountriesNews: any[] = [],
+  wikiEntities: any[] = [],
+  mainEntityForGraph: any = null,
+  relatedEntitiesForGraph: any[] = [],
+  prevNext: { prev?: { slug: string; country?: { code: string }; title?: string; title_en?: string }, next?: { slug: string; country?: { code: string }; title?: string; title_en?: string } } = {}
+) {
   const title = newsItem.title_en || newsItem.title;
   const content = newsItem.content_en || newsItem.content || newsItem.description_en || newsItem.description || "";
   const countryName = newsItem.country?.name_en || newsItem.country?.name || "";
   const countryCode = newsItem.country?.code?.toLowerCase() || "us";
+  // Source host for Verified badge / Source block
+  let sourceHost = "";
+  try {
+    if (newsItem.url) {
+      const u = new URL(newsItem.url);
+      sourceHost = (u.hostname || "").replace(/^www\./, "");
+    }
+  } catch {}
 
   // Parse key_points from JSON field
   const keyPoints = newsItem.key_points_en || newsItem.key_points || [];
@@ -1603,6 +1664,7 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
         </time>
         ${countryName ? ` | <span>${escapeHtml(countryName)}</span>` : ""}
         ${newsItem.category ? ` | <span itemprop="articleSection">${escapeHtml(newsItem.category)}</span>` : ""}
+        ${sourceHost ? ` | <span style="color:hsl(var(--success));font-weight:500;">✓ Verified - ${escapeHtml(sourceHost)}</span>` : ""}
       </div>
       
       <h1 itemprop="headline">${escapeHtml(title)}</h1>
@@ -1697,26 +1759,54 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
         </section>
       ` : ""}
       
-      ${mainEntityForGraph && relatedEntitiesForGraph.length > 0 ? `
-        <section>
-          <h3>🔗 Entity Intersection Graph</h3>
-          <p>Connections for <strong>${escapeHtml(mainEntityForGraph.name_en || mainEntityForGraph.name)}</strong>:</p>
-          <ul>
-            ${relatedEntitiesForGraph.map((e: any) => {
+      <section style="margin-top:24px;padding:20px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--card));">
+        <h3 style="margin:0 0 16px 0;font-size:1.25rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+          <svg style="width:20px;height:20px;color:hsl(var(--primary));" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="18" cy="6" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="18" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+          </svg>
+          Entity Intersection Graph
+        </h3>
+        ${(mainEntityForGraph && relatedEntitiesForGraph.length > 0) ? `
+          <p style="margin:0 0 12px 0;font-size:0.95rem;color:hsl(var(--muted-foreground));">
+            Connections for <strong style="color:hsl(var(--foreground));">${escapeHtml(mainEntityForGraph.name_en || mainEntityForGraph.name)}</strong>:
+          </p>
+          <div style="display:grid;gap:8px;">
+            ${relatedEntitiesForGraph.slice(0, 5).map((e: any) => {
     const eName = e.name_en || e.name;
     const eSlug = e.slug || e.id;
     const typeIcon = e.entity_type === 'person' ? '👤' : e.entity_type === 'company' ? '🏢' : '🌐';
+    const bgColor = e.entity_type === 'person' ? 'rgba(99,102,241,0.1)' : e.entity_type === 'company' ? 'rgba(236,72,153,0.1)' : 'rgba(59,130,246,0.1)';
+    const borderColor = e.entity_type === 'person' ? 'rgba(99,102,241,0.3)' : e.entity_type === 'company' ? 'rgba(236,72,153,0.3)' : 'rgba(59,130,246,0.3)';
     return `
-                <li>
-                  ${typeIcon} <a href="${BASE_URL}/wiki/${eSlug}">${escapeHtml(eName)}</a>
-                  <span>(${e.shared_news_count} shared articles)</span>
-                </li>
-              `;
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid ${borderColor};border-radius:8px;background:${bgColor};">
+                <a href="${BASE_URL}/wiki/${eSlug}" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:hsl(var(--foreground));font-weight:500;">
+                  <span style="font-size:1.2rem;">${typeIcon}</span>
+                  <span>${escapeHtml(eName)}</span>
+                </a>
+                <span style="font-size:0.875rem;color:hsl(var(--muted-foreground));background:hsl(var(--background));padding:4px 8px;border-radius:4px;">
+                  ${e.shared_news_count} shared
+                </span>
+              </div>
+            `;
   }).join("")}
-          </ul>
-          <p><a href="${BASE_URL}/wiki/${mainEntityForGraph.slug || mainEntityForGraph.id}">View full profile →</a></p>
-        </section>
-      ` : ""}
+          </div>
+          <a href="${BASE_URL}/wiki/${mainEntityForGraph.slug || mainEntityForGraph.id}" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:0.875rem;color:hsl(var(--primary));text-decoration:none;">
+            View full profile
+            <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14"></path>
+              <path d="m12 5 7 7-7 7"></path>
+            </svg>
+          </a>
+        ` : `
+          <p style="margin:0;color:hsl(var(--muted-foreground));font-size:0.9rem;">
+            No entity connections available yet for this article.
+          </p>
+        `}
+      </section>
       
       ${newsItem.news_analysis ? `
         <section style="margin-top:24px;padding:20px;border:1px solid hsl(var(--border));border-radius:12px;background:linear-gradient(to bottom right, hsl(var(--card)), hsl(var(--muted)/0.3));">
@@ -1817,8 +1907,61 @@ function generateNewsHTML(newsItem: any, lang: string, canonicalUrl: string, mor
         </section>
       ` : ""}
       
-      ${newsItem.url ? `<p><a href="${escapeHtml(newsItem.url)}" rel="nofollow noopener" target="_blank">Original source</a></p>` : ""}
+      ${sourceHost ? `
+        <section style="margin-top:24px;padding:16px;border:1px solid hsl(var(--border));border-radius:8px;background:hsl(var(--card));">
+          <h3 style="margin:0 0 8px 0;font-size:1.1rem;font-weight:600;display:flex;align-items:center;gap:8px;">
+            <svg style="width:20px;height:20px;color:hsl(var(--primary));" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="9 11 12 14 15 11"></polyline>
+              <path d="M12 14V6"></path>
+            </svg>
+            Source
+          </h3>
+          <p style="margin:0;font-size:0.95rem;">
+            <a href="${escapeHtml(newsItem.url)}" rel="nofollow noopener" target="_blank" style="color:hsl(var(--primary));text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+              ${escapeHtml(sourceHost)}
+              <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </a>
+          </p>
+        </section>
+      ` : ""}
     </article>
+
+    <nav style="margin-top:32px;padding:20px 0;border-top:2px solid hsl(var(--border));">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        ${prevNext?.prev ? `
+          <a href="${BASE_URL}/news/${(prevNext.prev.country?.code || countryCode).toLowerCase()}/${prevNext.prev.slug}" style="display:flex;flex-direction:column;align-items:flex-start;padding:16px;border:1px solid hsl(var(--border));border-radius:8px;text-decoration:none;color:hsl(var(--foreground));transition:all 0.2s ease;background:hsl(var(--card));" onmouseover="this.style.borderColor='hsl(var(--primary))';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='hsl(var(--border))';this.style.transform='translateY(0)'">
+            <span style="display:flex;align-items:center;gap:6px;font-size:0.875rem;color:hsl(var(--muted-foreground));margin-bottom:8px;">
+              <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m15 18-6-6 6-6"></path>
+              </svg>
+              Previous Article
+            </span>
+            <span style="font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+              ${escapeHtml(prevNext.prev.title_en || prevNext.prev.title || 'Previous Article')}
+            </span>
+          </a>
+        ` : '<div></div>'}
+        
+        ${prevNext?.next ? `
+          <a href="${BASE_URL}/news/${(prevNext.next.country?.code || countryCode).toLowerCase()}/${prevNext.next.slug}" style="display:flex;flex-direction:column;align-items:flex-end;text-align:right;padding:16px;border:1px solid hsl(var(--border));border-radius:8px;text-decoration:none;color:hsl(var(--foreground));transition:all 0.2s ease;background:hsl(var(--card));" onmouseover="this.style.borderColor='hsl(var(--primary))';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='hsl(var(--border))';this.style.transform='translateY(0)'">
+            <span style="display:flex;align-items:center;gap:6px;font-size:0.875rem;color:hsl(var(--muted-foreground));margin-bottom:8px;">
+              Next Article
+              <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m9 18 6-6-6-6"></path>
+              </svg>
+            </span>
+            <span style="font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+              ${escapeHtml(prevNext.next.title_en || prevNext.next.title || 'Next Article')}
+            </span>
+          </a>
+        ` : '<div></div>'}
+      </div>
+    </nav>
     
     
     ${moreFromCountry.length > 0 ? `

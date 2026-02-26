@@ -1,0 +1,1 @@
+{"success":false,"errors":[{"code":1012,"message":"Request must contain one of \"purge_everything\", \"files\", \"tags\", \"hosts\" or \"prefixes\""}],"messages":[],"result":null}
