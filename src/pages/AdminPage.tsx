@@ -774,7 +774,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {stats && <StatsCard stats={stats} />}
+        {/* Stats summary cards removed per admin request */}
 
         <Tabs defaultValue="dashboard" className="mt-8">
           <TabsList className="flex flex-wrap gap-1 h-auto py-2">
