@@ -103,6 +103,14 @@ jobs:
             -H "Content-Type: application/json" \
             --data '{"purge_everything":true}' | sed -n '1,200p'
 
+      - name: Warm main site cache (post-deploy)
+        run: |
+          echo "Running warm_main_cache script..."
+          node scripts/warm_main_cache.js
+        env:
+          SUPABASE_FUNCTIONS_URL: ${{ secrets.SUPABASE_FUNCTIONS_URL }}
+          PROD_BASE_URL: ${{ secrets.PROD_BASE_URL }}
+
       - name: Verify deployment
         if: github.event.inputs.deploy_netlify != 'false'
         run: |

@@ -2,8 +2,9 @@
 // Warm main site cache: call ssr-render (if available) and then GET live pages/images
 // Usage: SUPABASE_FUNCTIONS_URL=https://... PROD_BASE_URL=https://bravennow.com node scripts/warm_main_cache.js
 
-const fetch = global.fetch || require('node-fetch');
-const url = require('url');
+import url from 'url';
+
+const fetch = globalThis.fetch;
 
 const SUPABASE_FUNCTIONS_URL = process.env.SUPABASE_FUNCTIONS_URL;
 const PROD_BASE_URL = process.env.PROD_BASE_URL || 'https://bravennow.com';
