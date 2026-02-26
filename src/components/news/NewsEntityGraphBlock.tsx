@@ -34,8 +34,10 @@ export function NewsEntityGraphBlock({
   className = '' 
 }: NewsEntityGraphBlockProps) {
   const { language } = useLanguage();
+  // Ensure only well-formed entities are processed
+  const safeEntities = (entities || []).filter((e) => e && e.id !== undefined && e.name);
 
-  const hasData = entities.length > 0;
+  const hasData = safeEntities.length > 0;
 
   const getEntityIcon = (type: string) => {
     switch (type) {
@@ -58,7 +60,7 @@ export function NewsEntityGraphBlock({
   };
 
   // Group entities by type
-  const groupedEntities = entities.reduce((acc, entity) => {
+  const groupedEntities = safeEntities.reduce((acc, entity) => {
     if (!acc[entity.type]) acc[entity.type] = [];
     acc[entity.type].push(entity);
     return acc;

@@ -240,7 +240,7 @@ export default function NewsArticlePage() {
 
       if (!newsLinks?.length) return { mainEntity, relatedEntities: [] };
 
-      const newsIds = newsLinks.map(l => l.news_item_id);
+      const newsIds = newsLinks.filter(l => l && l.news_item_id).map(l => l.news_item_id);
 
       // Find other entities from those news items
       const { data: otherLinks } = await supabase
@@ -1014,7 +1014,7 @@ export default function NewsArticlePage() {
 
                 {/* Key Takeaways */}
                 <NewsKeyTakeawaysBlock
-                  takeaways={keyPoints.slice(0, 3).map(kp => kp.text)}
+                  takeaways={keyPoints.slice(0, 3).filter(kp => kp && kp.text).map(kp => kp.text)}
                 />
 
                 {/* Topics Navigation */}
@@ -1104,7 +1104,9 @@ export default function NewsArticlePage() {
                 <NewsCartoonsBlock
                   caricatures={[]}
                   newsId={article.id}
-                  entityIds={mainEntityData?.relatedEntities?.filter(e => e && e.id).map(e => e.id) || []}
+                  entityIds={(mainEntityData?.relatedEntities || [])
+                    .filter(e => e && e.id)
+                    .map(e => e.id)}
                 />
               </div>
 

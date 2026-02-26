@@ -41,7 +41,8 @@ export function NewsMoreAboutBlock({
     return 0;
   });
 
-  const hasArticles = sortedArticles.length > 0;
+  const safeArticles = sortedArticles.filter(a => a && a.id !== undefined && a.title);
+  const hasArticles = safeArticles.length > 0;
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -67,7 +68,7 @@ export function NewsMoreAboutBlock({
       <CardContent>
         {hasArticles ? (
           <div className="space-y-3">
-            {sortedArticles.slice(0, 6).map((article) => (
+            {safeArticles.slice(0, 6).map((article) => (
               <div key={article.id} className="group">
                 <Link
                   to={article.url || `/news/${article.id}`}
@@ -98,7 +99,7 @@ export function NewsMoreAboutBlock({
               </div>
             ))}
             
-            {sortedArticles.length > 6 && (
+            {safeArticles.length > 6 && (
               <div className="pt-2 text-center">
                 <Link 
                   to={entityId ? `/entities/${entityId}/news` : `/search?q=${encodeURIComponent(entityName || '')}`}
@@ -106,10 +107,10 @@ export function NewsMoreAboutBlock({
                 >
                   <ExternalLink className="w-3 h-3" />
                   {language === 'uk' 
-                    ? `Всі новини (${sortedArticles.length})` 
+                    ? `Всі новини (${safeArticles.length})` 
                     : language === 'pl'
-                      ? `Wszystkie wiadomości (${sortedArticles.length})`
-                      : `All news (${sortedArticles.length})`}
+                      ? `Wszystkie wiadomości (${safeArticles.length})`
+                      : `All news (${safeArticles.length})`}
                 </Link>
               </div>
             )}
