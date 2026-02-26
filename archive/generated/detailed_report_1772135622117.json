@@ -1,0 +1,62 @@
+{
+  "url": "https://bravennow.com/news/us/top-republicans-speak-out-about-pete-hegseth-as-his-fate-remains-unclear-vdpvby",
+  "timestamp": 1772135622117,
+  "screenshotsDir": "screenshots_1772135622117",
+  "htmlFile": "detailed_render_1772135622117.html",
+  "content": {
+    "title": "Новину не знайдено",
+    "sections": [
+      {
+        "name": "Topics",
+        "found": true,
+        "visible": true,
+        "headerText": "BravenNowBrave New WorldNews DigestInk AbyssКалендарWikiTopics🇺🇦🇺🇦Новину не знайденоПовернутись до новин",
+        "contentPreview": "",
+        "element": {
+          "tag": "DIV",
+          "className": "min-h-screen bg-background",
+          "id": "",
+          "rect": {
+            "top": 0,
+            "left": 0,
+            "width": 1920,
+            "height": 1080
+          },
+          "styles": {
+            "display": "block",
+            "visibility": "visible",
+            "opacity": "1"
+          }
+        }
+      }
+    ],
+    "allHeaders": [
+      {
+        "level": "H1",
+        "text": "Новину не знайдено",
+        "visible": true
+      }
+    ],
+    "allParagraphs": [
+      {
+        "text": "Ми використовуємо cookies для покращення вашого досвіду. Продовжуючи, ви погоджуєтесь з нашою політи",
+        "visible": true
+      }
+    ],
+    "missingContent": [
+      "Verified",
+      "Cartoons",
+      "Keywords",
+      "Key Takeaways",
+      "Retelling",
+      "Why It Matters",
+      "Context & Background",
+      "What Happens Next",
+      "FAQ",
+      "More news about",
+      "Entity Intersection Graph",
+      "Source",
+      "Mentioned Entities"
+    ]
+  }
+}

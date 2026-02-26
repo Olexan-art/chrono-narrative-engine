@@ -1,0 +1,647 @@
+{
+  "url": "https://bravennow.com/news/ua",
+  "timestamp": 1772135658213,
+  "screenshotsDir": "screenshots_1772135658213",
+  "htmlFile": "detailed_render_1772135658213.html",
+  "content": {
+    "title": "🇺🇦Україна",
+    "sections": [
+      {
+        "name": "Topics",
+        "found": true,
+        "visible": true,
+        "headerText": "Topics",
+        "contentPreview": "",
+        "element": {
+          "tag": "SPAN",
+          "className": "",
+          "id": "",
+          "rect": {
+            "top": 30,
+            "left": 1518.5,
+            "width": 39.4375,
+            "height": 20
+          },
+          "styles": {
+            "display": "block",
+            "visibility": "visible",
+            "opacity": "1"
+          }
+        }
+      }
+    ],
+    "allHeaders": [
+      {
+        "level": "H1",
+        "text": "🇺🇦Україна",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Ukraine War Latest: More than 90,000 Ukrainians officially missing due to Russia's war, commissioner says",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Film awards race shows what stories about war West prefers to hear",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Swedish military jams suspected Russian drone near French nuclear aircraft carrier",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Японія виділила 41 млн доларів на відбудову України",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Prosecutors, police, SBU suspected of illegal surveillance to obstruct Ukraine's biggest graft case",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "EU Sanctions Envoy Visits Bishkek Amid Concerns Over Russian Circumvention",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Russian FPV drone on fiber optic cable reaches Kharkiv for 1st time since start of full-scale invasion, prosecutor's office says",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Deadly Drone Strike At Russian Chemical Plant Amid Wave Of Attacks",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Canadian AI software could flip Russia's disinformation war on Europe",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "На фронті від початку доби відбулось 120 боїв – Генштаб",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "How Russia blackmails the desperate families of Ukrainian POWs",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Ukraine brings back bodies of 1,000 fallen soldiers",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "US, Ukraine hold talks in Geneva to discuss recovery, next round of Russia negotiations",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "More than 90,000 Ukrainians officially missing due to Russia's war, commissioner says",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Росіяни знищили дамбу біля Костянтинівки, щоб вплинути на логістику ЗСУ – DeepState",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "В Україну повернули 1000 тіл загиблих захисників",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Дрон РФ порушив повітряний простір НАТО: Румунія підняла F-16",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "&apos;We Were Lucky To Make It&apos;: Ukrainians Endure Russian Strikes Ahead Of Talks",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "US, Iran Kick Off Crunch Nuclear Talks In Geneva Amid Fears Of Military Conflict",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "At least 1 killed, 33 injured in Russian attacks against Ukraine over past day",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Russia Strikes Ukraine Ahead Of Planned US-Ukrainian Talks In Geneva",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Ukraine’s reported Flamingo missile strikes may shift toward heavy strikes deeper into Russia, experts say",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "‘Time Is Not on Russia’s Side’: A Q & A With Michael Kofman",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Overlooked by the Western canon: Why Mykhailo Kotsiubynskyi matters now",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Зять та партнер Міндіча спільно літали з Росії у 2023 році – нардеп",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Порошенко передав екскаватори, антидронові сітки та квадроцикли у 9 підрозділів ЗСУ",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "'It's a disgrace' — Russian workers turn occupied Zaporizhzhia nuclear power plant into 'resort'",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Сили ППО знешкодили два “Циркони”, 24 крилаті ракети і 374 дрони",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "General Staff: Russia has lost 1,263,850 troops in Ukraine since Feb. 24, 2022",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Сили оборони відбили 235 штурмів окупантів: де атакували найінтенсивніше",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "ЗСУ знищили 1360 окупантів, 25 артсистем та три танки",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Explosions reported in Kyiv, other Ukrainian cities as Russia launches combined missile and drone attack",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "While global attention is divided, the largest displacement crisis in Europe is deepening",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Trump, Zelenskyy Speak By Phone Ahead Of Geneva Talks As Pressure Mounts For Tougher Line On Russia",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Ukraine war latest: Claiming Ukraine threat, Orban deploys troops to 'protect energy infrastructure'",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "US, Iran To Meet For Nuclear Talks Amid Fears Of Military Conflict",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Explainer: How Russia uses false allegations to sabotage Ukraine peace talks",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "4 Ukrainian defense companies sign partnership deals with European allies valued at nearly $950 million",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Zelensky, Trump hold phone call ahead of Ukraine-US talks in Geneva",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Kremlin dampens Witkoff's hopes for early Putin-Zelensky meeting",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Презентація Galaxy Unpacked: де та коли дивитися онлайн-відеотрансляцію",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Suspect in murder of top Ukrainian ex-official arrested in Germany",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "1st Ukrainian drone factory starts production in UK, Zaluzhnyi says",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "The problem with counting military losses in Russia's war",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "The Great Capitulation Is Over. What Will Take Its Place?",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Corruption exposed in aircraft shelter project, Air Force logistics commander, SBU official detained",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Hungary deploys soldiers to protect energy infrastructure citing Ukrainian threat",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "320 тисяч доларів за “захисні споруди”: затримано командувача логістики Повітряних сил",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Рада викликала главу МВС Клименка через “VIP-ухилянта” Петрова – нардеп",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Zelensky dismisses Russian recent nuclear claims as 'political pressure'",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Новинки Samsung і вигідні подарунки: де та коли дивитися трансляцію Galaxy Unpacked",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "У Києві молодь на замовлення підпалювала електрокари Tesla",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "“Миру до 4 липня не буде”: які реальні перспективи завершення війни",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Chart of the week: Ukraine's reconstruction needs rise 12% to $588 billion",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Thanks, Ukrainians Say, but Please Stop Calling Us Resilient",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Ukraine Wants to Join the E.U. to Secure Peace. Here’s What to Know.",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Inside the Kyiv Independent: See how we survive the Russia-inflicted energy crisis",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "At least 5 killed, 18 injured in Russian attacks against Ukraine over the past day",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Армія РФ 30 разів обстріляла Сумську область: поранена жінка",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "General Staff: Russia has lost 1,262,490 troops in Ukraine since Feb. 24, 2022",
+        "visible": true
+      },
+      {
+        "level": "H2",
+        "text": "Новини інших країн",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "США",
+        "visible": true
+      },
+      {
+        "level": "H4",
+        "text": "Form 13F Alpine Global Management For: 26 February",
+        "visible": true
+      },
+      {
+        "level": "H4",
+        "text": "Memory shortage could cause the biggest smartphone shipments dip in over a decade",
+        "visible": true
+      },
+      {
+        "level": "H4",
+        "text": "LA-Shot ‘Kill Me Now’ Wrapped By Michael Polish",
+        "visible": true
+      },
+      {
+        "level": "H3",
+        "text": "Велика Британія",
+        "visible": true
+      },
+      {
+        "level": "H4",
+        "text": "Cuba vows to fight ‘terrorist aggression’ after attack from US-registered boat",
+        "visible": true
+      },
+      {
+        "level": "H4",
+        "text": "Will The US Attack Iran?",
+        "visible": true
+      },
+      {
+        "level": "H4",
+        "text": "Research suggests mating direction bias between Neanderthals and humans",
+        "visible": true
+      }
+    ],
+    "allParagraphs": [
+      {
+        "text": "Ми використовуємо cookies для покращення вашого досвіду. Продовжуючи, ви погоджуєтесь з нашою політи",
+        "visible": true
+      },
+      {
+        "text": "Key developments on Feb. 26:   More than 90,000 Ukrainians officially missing due to Russia&apos;s w",
+        "visible": true
+      },
+      {
+        "text": "Two films about Russia and Ukraine are generating buzz in this year&apos;s film awards season: Mstys",
+        "visible": true
+      },
+      {
+        "text": "Swedish broadcaster SVT reported that Swedish forces used electronic countermeasures after a suspect",
+        "visible": true
+      },
+      {
+        "text": "Уряд Японії виділяє 6,2 мільярда єн, що становить близько 41 мільйона доларів, на першочергові потре",
+        "visible": true
+      },
+      {
+        "text": "Employees of several agencies looked for warrants in the Midas case in the official register for cou",
+        "visible": true
+      },
+      {
+        "text": "European Union sanctions envoy David O’Sullivan arrived in Bishkek for high-level meetings with Kyrg",
+        "visible": true
+      },
+      {
+        "text": "The drone hit a tree around 3 p.m. local time in Kyivskyi district on Feb. 25. No casualties were re",
+        "visible": true
+      },
+      {
+        "text": "Drone strikes hit multiple sites across Russia, including a chemical plant where officials say at le",
+        "visible": true
+      },
+      {
+        "text": "A new artificial intelligence (AI) agent could equip Europe to better defend itself against the barr",
+        "visible": true
+      },
+      {
+        "text": "Від початку доби на фронті відбулося 120 бойових зіткнень. Про це йдеться у зведенні Генштабу. Проти",
+        "visible": true
+      },
+      {
+        "text": "Karina Remez knew her husband — 33-year-old Dmytro Remez — had been captured in 2022 while defending",
+        "visible": true
+      },
+      {
+        "text": "\"Law enforcement investigators, together with representatives of Ukrainian expert institutions, will",
+        "visible": true
+      },
+      {
+        "text": "Ukrainian delegates are meeting U.S. envoys Steve Witkoff and Jared Kushner in Geneva as part of the",
+        "visible": true
+      },
+      {
+        "text": "Most missing persons are members of Ukraine's security and defense sector.",
+        "visible": true
+      },
+      {
+        "text": "Військові російської окупаційної армії підірвали дамбу у районі населеного пункту Осикове біля Костя",
+        "visible": true
+      },
+      {
+        "text": "Сьогодні, 26 лютого, в Україну в рамках репатріаційних заходів повернули тіла (останки) тисячі загиб",
+        "visible": true
+      },
+      {
+        "text": "Напередодні, 25 лютого, під час російської атаки на Україну один з ворожих дронів перетнув повітряни",
+        "visible": true
+      },
+      {
+        "text": "Russian drone attacks targeted several Ukrainian cities overnight on February 26 ahead of planned ta",
+        "visible": true
+      },
+      {
+        "text": "US and Iranian officials kicked off talks in Geneva on February 26 for what is seen as a last-ditch ",
+        "visible": true
+      },
+      {
+        "text": "Russia launched 420 drones and 39 missiles of various types, including 11 ballistic missiles, at Ukr",
+        "visible": true
+      },
+      {
+        "text": "Russian forces rained down drones and missiles on multiple Ukrainian regions ahead of planned talks ",
+        "visible": true
+      },
+      {
+        "text": "Ukraine has increasingly reported using domestically produced Flamingo cruise missiles since Novembe",
+        "visible": true
+      },
+      {
+        "text": "If the battle for Ukraine Is not World War I or World War III, what is it?",
+        "visible": true
+      },
+      {
+        "text": "Editor&apos;s Note: This story is part of the  \"Hidden Canon\"  – a special series celebrating Ukrain",
+        "visible": true
+      },
+      {
+        "text": "У 2023 році зять Тімура Міндіча, який є організатором масштабної схеми зловживань в енергетичному се",
+        "visible": true
+      },
+      {
+        "text": "Петро Порошенко передав партію техніки у 9 підрозділів ЗСУ – зокрема, екскаватори, контейнерні ремон",
+        "visible": true
+      },
+      {
+        "text": "When one thinks about the conditions at a nuclear power plant, the image that comes to mind would li",
+        "visible": true
+      },
+      {
+        "text": "Сили протиповітряної оборони знешкодили два російські “Циркони”, чотири балістичні ракети, 24 крилат",
+        "visible": true
+      },
+      {
+        "text": "The number includes 1,360 casualties that Russian forces suffered over the past day.",
+        "visible": true
+      },
+      {
+        "text": "Протягом минулої доби відбулося 235 боїв на різних напрямках: росіяни атакували ракетами, бомбами та",
+        "visible": true
+      },
+      {
+        "text": "особового складу / personnel – близько 1 263 850 (+1 360) осіб / persons танків / tanks – 11 704 (+3",
+        "visible": true
+      },
+      {
+        "text": "Kyiv came under a combined Russian aerial attack in the early hours of Feb. 26, with ballistic missi",
+        "visible": true
+      },
+      {
+        "text": "I came to Ukraine in September of last year, well into the fourth year of the war that had already r",
+        "visible": true
+      },
+      {
+        "text": "US President Donald Trump and Ukrainian President Volodymyr Zelenskyy spoke by phone on February 25,",
+        "visible": true
+      },
+      {
+        "text": "Key developments on Feb. 25:    Claiming Ukraine threat, Orban deploys troops to &apos;protect energ",
+        "visible": true
+      },
+      {
+        "text": "US and Iranian officials are set to hold a fresh round of nuclear talks in Geneva on February 26 for",
+        "visible": true
+      },
+      {
+        "text": "Every time negotiations between Russia, Ukraine, and the U.S. appear to gain momentum, Moscow introd",
+        "visible": true
+      },
+      {
+        "text": "The Ukrainian Council of Defence Industry said the agreements include cooperation in the production ",
+        "visible": true
+      },
+      {
+        "text": "The two leaders spoke a day before Ukraine's National Security and Defense Council Secretary Rustem ",
+        "visible": true
+      },
+      {
+        "text": "A Kremlin spokesperson questioned \"whether there's any point in holding a summit\" between Putin and ",
+        "visible": true
+      },
+      {
+        "text": "Сьогодні, 25 лютого, відбудеться презентація Galaxy Unpacked — Samsung презентує нові мобільні прист",
+        "visible": true
+      },
+      {
+        "text": "The suspect in the murder of former Ukrainian top official Andriy Portnov was arrested in the German",
+        "visible": true
+      },
+      {
+        "text": "Valerii Zaluzhnyi said the launch of Ukrainian drone company Ukrspecsystems' production in the U.K. ",
+        "visible": true
+      },
+      {
+        "text": "The Kyiv Independent’s Chris York speaks with Olha Polishchuk, a conflict data analyst who tracks mi",
+        "visible": true
+      },
+      {
+        "text": "Appeasing a predatory hegemon doesn’t work.",
+        "visible": true
+      },
+      {
+        "text": "The suspects in the embezzlement scheme were caught \"red-handed\" while trying to illegally transfer ",
+        "visible": true
+      },
+      {
+        "text": "\"I see that Ukraine is preparing further actions aimed at disrupting the operation of Hungary's ener",
+        "visible": true
+      },
+      {
+        "text": "В одній з областей України на корупції під час будівництва укриттів для літаків викрили командувача ",
+        "visible": true
+      },
+      {
+        "text": "Верховна Рада викликала на засідання парламенту міністра внутрішніх справ Ігоря Клименка через “VIP-",
+        "visible": true
+      },
+      {
+        "text": "\"Usually, when Russia fails to win on the battlefield, it start looking for nuclear weapons on Ukrai",
+        "visible": true
+      },
+      {
+        "text": "У середу, 25 лютого 2026 року, о 20:00 відбудеться презентація Galaxy Unpacked, під час якої Samsung",
+        "visible": true
+      },
+      {
+        "text": "В одному з районів Києва 19-річний хлопець та 16-річна дівчина спалили на замовлення три автомобілі ",
+        "visible": true
+      },
+      {
+        "text": "Оптимістичні очікування щодо підписання мирних угод до 4 липня не мають під собою фактичного підґрун",
+        "visible": true
+      },
+      {
+        "text": "The total cost of reconstruction and recovery in Ukraine is $588 billion, the World Bank said in a n",
+        "visible": true
+      },
+      {
+        "text": "Ukraine must project strength to secure continued Western support. But its people want the world to ",
+        "visible": true
+      },
+      {
+        "text": "Negotiators agree that joining the bloc is critical to Kyiv’s future. But obstacles abound, and comp",
+        "visible": true
+      },
+      {
+        "text": "At 4 p.m. every day, the Kyiv Independent office goes dark.   After hours of working without heating",
+        "visible": true
+      },
+      {
+        "text": "The Air Force said that Russia attacked Ukraine with 115 drones overnight, of which around 60 were S",
+        "visible": true
+      },
+      {
+        "text": "Російські окупанти протягом доби 30 разів обстріляли Сумську область, під ударами були 19 населених ",
+        "visible": true
+      },
+      {
+        "text": "The number includes 1,070 casualties that Russian forces suffered over the past day.",
+        "visible": true
+      }
+    ],
+    "missingContent": [
+      "Verified",
+      "Cartoons",
+      "Keywords",
+      "Key Takeaways",
+      "Retelling",
+      "Why It Matters",
+      "Context & Background",
+      "What Happens Next",
+      "FAQ",
+      "More news about",
+      "Entity Intersection Graph",
+      "Source",
+      "Mentioned Entities"
+    ]
+  }
+}

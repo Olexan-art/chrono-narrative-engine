@@ -1,0 +1,37 @@
+{
+  "path": "/news/us/oscar-presenters-javier-bardem-demi-moore-chris-evans-chase-infiniti-kumail-nanjiani-maya-rudolph-ar",
+  "cached": {
+    "Verified": false,
+    "Cartoons": false,
+    "Keywords": true,
+    "Key Takeaways": true,
+    "Topics": true,
+    "Retelling": true,
+    "Why It Matters": true,
+    "Context & Background": true,
+    "What Happens Next": true,
+    "FAQ": true,
+    "More news about": false,
+    "Entity Intersection Graph": true,
+    "Source": true,
+    "Mentioned Entities": false,
+    "TopicsNav": true
+  },
+  "live": {
+    "Verified": false,
+    "Cartoons": false,
+    "Keywords": true,
+    "Key Takeaways": true,
+    "Topics": true,
+    "Retelling": true,
+    "Why It Matters": true,
+    "Context & Background": true,
+    "What Happens Next": true,
+    "FAQ": true,
+    "More news about": false,
+    "Entity Intersection Graph": true,
+    "Source": true,
+    "Mentioned Entities": false,
+    "TopicsNav": true
+  }
+}

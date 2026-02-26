@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-02-26T19:03:16.762Z",
+  "results": [
+    {
+      "url": "https://bravennow.com/api/sitemap",
+      "status": 200,
+      "ok": true,
+      "contentType": "text/html; charset=UTF-8",
+      "length": 6692
+    },
+    {
+      "url": "https://bravennow.com/api/wiki-sitemap",
+      "status": 200,
+      "ok": true,
+      "contentType": "text/html; charset=UTF-8",
+      "length": 6692
+    },
+    {
+      "url": "https://bravennow.com/api/news-sitemap?country=us",
+      "status": 200,
+      "ok": true,
+      "contentType": "text/html; charset=UTF-8",
+      "length": 6692
+    },
+    {
+      "url": "https://bravennow.com/sitemap.xml",
+      "status": 404,
+      "ok": false,
+      "contentType": "text/html; charset=utf-8",
+      "length": 3437
+    }
+  ]
+}

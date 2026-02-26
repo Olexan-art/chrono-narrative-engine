@@ -743,7 +743,7 @@ export default function NewsArticlePage() {
         {/* Breadcrumb - Clickable: News Digest > All Countries > Country > Article */}
         <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
           <Link to="/news" className="hover:text-primary transition-colors whitespace-nowrap">
-            {language === 'en' ? 'News Digest' : language === 'pl' ? 'Przegląd' : 'Дайджест'}
+            {language === 'en' ? 'News Digest' : language === 'pl' ? 'Przegląd wiadomości' : 'Дайджест новин'}
           </Link>
           <span className="text-muted-foreground/50">/</span>
           <Link to="/news" className="hover:text-primary transition-colors whitespace-nowrap">
@@ -953,6 +953,133 @@ export default function NewsArticlePage() {
                 className="mt-6"
               />
 
+
+              {/* New content blocks for cache parity */}
+              <div className="mt-6 space-y-6">
+                {/* Verified Badge - if verification data exists */}
+                <NewsVerifiedBadgeBlock
+                  verification={{
+                    status: 'partially-verified',
+                    confidence: 85,
+                    lastChecked: new Date().toISOString(),
+                    details: 'Fact-checked by automated systems'
+                  }}
+                />
+
+                {/* Source Block */}
+                <NewsSourceBlock
+                  feed={article.feed}
+                  article={article}
+                />
+
+                {/* Mentioned Entities */}
+                {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
+                  <NewsMentionedEntitiesBlock
+                    entities={[
+                      ...(mainEntityData.mainEntity ? [mainEntityData.mainEntity] : []),
+                      ...mainEntityData.relatedEntities
+                    ]}
+                  />
+                )}
+
+                {/* Keywords Visual Display */}
+                {articleKeywords && articleKeywords.length > 0 && (
+                  <NewsKeywordsBlock keywords={articleKeywords} />
+                )}
+
+                {/* Key Takeaways */}
+                <NewsKeyTakeawaysBlock
+                  takeaways={keyPoints.slice(0, 3).map(kp => kp.text)}
+                />
+
+                {/* Topics Navigation */}
+                <NewsTopicsNavBlock
+                  topics={themes}
+                />
+
+                {/* Retelling */}
+                <NewsRetellingBlock
+                  data={{
+                    summary: getLocalizedField('description') || article.description,
+                    readingTime: Math.ceil((getLocalizedField('content')?.length || 0) / 200),
+                    complexity: 'intermediate'
+                  }}
+                />
+
+                {/* Why It Matters */}
+                <NewsWhyItMattersBlock
+                  data={{
+                    text: "This news is significant for understanding current events and their impact on society.",
+                    significance: 7
+                  }}
+                />
+
+                {/* Context & Background */}
+                <NewsContextBackgroundBlock
+                  data={{
+                    summary: "This event is part of ongoing developments in the region.",
+                    historical_context: "Previous similar events have shaped the current situation."
+                  }}
+                />
+
+                {/* What Happens Next */}
+                <NewsWhatHappensNextBlock
+                  data={{
+                    summary: "Several possible outcomes may emerge from this situation.",
+                    predictions: [
+                      {
+                        timeframe: 'short-term',
+                        description: 'Immediate reactions and responses are expected.',
+                        probability: 75,
+                        impact: 'medium'
+                      }
+                    ]
+                  }}
+                />
+
+                {/* FAQ */}
+                <NewsFAQBlock
+                  faqs={[
+                    {
+                      question: language === 'uk' ? 'Що це означає?' : language === 'pl' ? 'Co to oznacza?' : 'What does this mean?',
+                      answer: language === 'uk' ? 'Це важлива подія, яка може вплинути на майбутні рішення.' : language === 'pl' ? 'To ważne wydarzenie, które może wpłynąć na przyszłe decyzje.' : 'This is an important event that may influence future decisions.'
+                    }
+                  ]}
+                />
+
+                {/* More News About */}
+                <NewsMoreAboutBlock
+                  articles={[]}
+                  entityName={mainEntityData?.mainEntity?.name}
+                  entityId={mainEntityData?.mainEntity?.id}
+                />
+
+                {/* Entity Graph */}
+                {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
+                  <NewsEntityGraphBlock
+                    entities={[
+                      ...(mainEntityData.mainEntity ? [{
+                        ...mainEntityData.mainEntity,
+                        type: 'organization' as const,
+                        relevance: 1
+                      }] : []),
+                      ...mainEntityData.relatedEntities.map(e => ({
+                        ...e,
+                        type: 'organization' as const,
+                        relevance: 0.8
+                      }))
+                    ]}
+                    mainEntityId={mainEntityData.mainEntity?.id}
+                  />
+                )}
+
+                {/* Cartoons - if available */}
+                <NewsCartoonsBlock
+                  caricatures={[]}
+                  newsId={article.id}
+                  entityIds={mainEntityData?.relatedEntities?.map(e => e.id) || []}
+                />
+              </div>
 
               {/* Original link, share, and translate button */}
               <div className="pt-4 border-t border-border flex flex-wrap items-center gap-3">

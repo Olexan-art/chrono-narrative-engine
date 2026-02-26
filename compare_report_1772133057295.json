@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-02-26T19:10:55.235Z",
+  "items": [
+    {
+      "path": "/news/us/oscar-presenters-javier-bardem-demi-moore-chris-evans-chase-infiniti-kumail-nanjiani-maya-rudolph-ar",
+      "summary": {
+        "live": {
+          "images": 5,
+          "links": 30,
+          "words": 1243
+        },
+        "cached": {
+          "images": 5,
+          "links": 30,
+          "words": 1243
+        }
+      },
+      "missingImages": [],
+      "missingLinks": [],
+      "wordDiffs": []
+    }
+  ]
+}

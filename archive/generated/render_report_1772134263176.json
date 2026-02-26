@@ -1,0 +1,47 @@
+{
+  "path": "/news/us/oscar-presenters-javier-bardem-demi-moore-chris-evans-chase-infiniti-kumail-nanjiani-maya-rudolph-ar",
+  "liveUrl": "https://bravennow.com/news/us/oscar-presenters-javier-bardem-demi-moore-chris-evans-chase-infiniti-kumail-nanjiani-maya-rudolph-ar",
+  "timestamp": 1772134263176,
+  "results": {
+    "js_render": "C:\\Users\\oleksandrtsyrkin\\HRONOVS_new\\chrono-narrative-engine\\archive\\generated/render_js_1772134263176.html",
+    "nojs_render": "C:\\Users\\oleksandrtsyrkin\\HRONOVS_new\\chrono-narrative-engine\\archive\\generated/render_nojs_1772134263176.html",
+    "cached_ssr": null,
+    "live_ssr": null
+  },
+  "sectionPresence": {
+    "js_render": {
+      "Verified": false,
+      "Cartoons": false,
+      "Keywords": true,
+      "Key Takeaways": false,
+      "Topics": true,
+      "Retelling": true,
+      "Why It Matters": true,
+      "Context & Background": true,
+      "What Happens Next": true,
+      "FAQ": true,
+      "More news about": true,
+      "Entity Intersection Graph": false,
+      "Source": false,
+      "Mentioned Entities": true
+    },
+    "nojs_render": {
+      "Verified": false,
+      "Cartoons": false,
+      "Keywords": false,
+      "Key Takeaways": false,
+      "Topics": false,
+      "Retelling": true,
+      "Why It Matters": false,
+      "Context & Background": false,
+      "What Happens Next": false,
+      "FAQ": false,
+      "More news about": false,
+      "Entity Intersection Graph": false,
+      "Source": false,
+      "Mentioned Entities": false
+    },
+    "cached_ssr": {},
+    "live_ssr": {}
+  }
+}
