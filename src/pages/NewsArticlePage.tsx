@@ -282,12 +282,18 @@ export default function NewsArticlePage() {
 
   // Fetch narrative analyses for entities linked to this news
   const entityIds = useMemo(() => {
-    if (!mainEntityData) return [];
-    const ids = [mainEntityData.mainEntity.id];
-    mainEntityData.relatedEntities?.forEach((e: any) => {
-      if (e && e.id) ids.push(e.id);
-    });
-    return ids;
+    if (!mainEntityData) return [] as any[];
+    const ids: any[] = [];
+    if (mainEntityData.mainEntity && mainEntityData.mainEntity.id) {
+      ids.push(mainEntityData.mainEntity.id);
+    }
+    if (Array.isArray(mainEntityData.relatedEntities)) {
+      mainEntityData.relatedEntities.forEach((e: any) => {
+        if (e && e.id) ids.push(e.id);
+      });
+    }
+    // Deduplicate and ensure only truthy values
+    return Array.from(new Set(ids.filter(Boolean)));
   }, [mainEntityData]);
 
   const { data: entityNarratives = {} } = useQuery({
