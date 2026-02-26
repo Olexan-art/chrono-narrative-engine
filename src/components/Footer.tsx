@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Globe, Palette, Calendar, Users, Hash, Mail } from "lucide-react";
+import { Palette, Calendar, Users, Hash, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -17,12 +17,6 @@ export function Footer() {
         </Link>
 
         <nav className="flex flex-wrap items-center gap-2 justify-center">
-          <Link to="/news-digest">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Globe className="w-4 h-4" />
-              <span>{t("nav.newsdigest")}</span>
-            </Button>
-          </Link>
           <Link to="/ink-abyss">
             <Button variant="ghost" size="sm" className="gap-2">
               <Palette className="w-4 h-4" />
