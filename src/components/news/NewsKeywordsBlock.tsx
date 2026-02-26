@@ -21,12 +21,14 @@ export function NewsKeywordsBlock({ keywords = [], className = '' }: NewsKeyword
   const { language } = useLanguage();
 
   // Normalize keywords to objects
-  const normalizedKeywords: Keyword[] = keywords.map((kw, index) => {
-    if (typeof kw === 'string') {
-      return { id: index, word: kw };
-    }
-    return kw;
-  });
+  const normalizedKeywords: Keyword[] = keywords
+    .filter(kw => kw !== undefined && kw !== null)
+    .map((kw, index) => {
+      if (typeof kw === 'string') {
+        return { id: index, word: kw };
+      }
+      return kw;
+    });
 
   // Sort by relevance if available
   const sortedKeywords = [...normalizedKeywords].sort((a, b) => {

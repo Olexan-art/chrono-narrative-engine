@@ -55,7 +55,7 @@ export function NewsMentionedEntitiesBlock({
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-2">
-          {entities.map(entity => (
+          {entities.filter(entity => entity && entity.id).map(entity => (
             <Link
               key={entity.id}
               to={`/wiki/${entity.id}`}

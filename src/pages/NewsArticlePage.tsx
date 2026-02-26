@@ -284,7 +284,9 @@ export default function NewsArticlePage() {
   const entityIds = useMemo(() => {
     if (!mainEntityData) return [];
     const ids = [mainEntityData.mainEntity.id];
-    mainEntityData.relatedEntities?.forEach((e: any) => ids.push(e.id));
+    mainEntityData.relatedEntities?.forEach((e: any) => {
+      if (e && e.id) ids.push(e.id);
+    });
     return ids;
   }, [mainEntityData]);
 
@@ -994,7 +996,7 @@ export default function NewsArticlePage() {
                   <NewsMentionedEntitiesBlock
                     entities={[
                       ...(mainEntityData.mainEntity ? [mainEntityData.mainEntity] : []),
-                      ...mainEntityData.relatedEntities
+                      ...mainEntityData.relatedEntities.filter(e => e && e.id)
                     ]}
                   />
                 )}
@@ -1080,11 +1082,13 @@ export default function NewsArticlePage() {
                         type: 'organization' as const,
                         relevance: 1
                       }] : []),
-                      ...mainEntityData.relatedEntities.map(e => ({
-                        ...e,
-                        type: 'organization' as const,
-                        relevance: 0.8
-                      }))
+                      ...mainEntityData.relatedEntities
+                        .filter(e => e && e.id)
+                        .map(e => ({
+                          ...e,
+                          type: 'organization' as const,
+                          relevance: 0.8
+                        }))
                     ]}
                     mainEntityId={mainEntityData.mainEntity?.id}
                   />
@@ -1094,7 +1098,7 @@ export default function NewsArticlePage() {
                 <NewsCartoonsBlock
                   caricatures={[]}
                   newsId={article.id}
-                  entityIds={mainEntityData?.relatedEntities?.map(e => e.id) || []}
+                  entityIds={mainEntityData?.relatedEntities?.filter(e => e && e.id).map(e => e.id) || []}
                 />
               </div>
 

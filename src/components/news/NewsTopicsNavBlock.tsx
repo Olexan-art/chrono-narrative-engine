@@ -22,19 +22,21 @@ export function NewsTopicsNavBlock({ topics = [], className = '' }: NewsTopicsNa
   const { language } = useLanguage();
 
   // Normalize topics
-  const normalizedTopics: Topic[] = topics.map((topic, index) => {
-    if (typeof topic === 'string') {
-      return { 
-        id: index, 
-        name: topic,
-        slug: topic.toLowerCase().replace(/\s+/g, '-')
+  const normalizedTopics: Topic[] = topics
+    .filter(topic => topic !== undefined && topic !== null)
+    .map((topic, index) => {
+      if (typeof topic === 'string') {
+        return { 
+          id: index, 
+          name: topic,
+          slug: topic.toLowerCase().replace(/\s+/g, '-')
+        };
+      }
+      return {
+        ...topic,
+        slug: topic.slug || topic.name.toLowerCase().replace(/\s+/g, '-')
       };
-    }
-    return {
-      ...topic,
-      slug: topic.slug || topic.name.toLowerCase().replace(/\s+/g, '-')
-    };
-  });
+    });
 
   // Sort by relevance or count
   const sortedTopics = [...normalizedTopics].sort((a, b) => {
