@@ -30,7 +30,13 @@ export class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     const chunkError = isChunkLoadError(error);
-    if (chunkError) {
+    return { hasError: true, error, isChunkError: chunkError };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[ErrorBoundary]', error, info.componentStack);
+
+    if (isChunkLoadError(error)) {
       // Auto-reload immediately (once per 10s to avoid infinite loop)
       const lastReload = Number(sessionStorage.getItem('chunkReloadAt') || '0');
       if (Date.now() - lastReload > 10_000) {
@@ -38,11 +44,6 @@ export class ErrorBoundary extends Component<Props, State> {
         window.location.reload();
       }
     }
-    return { hasError: true, error, isChunkError: chunkError };
-  }
-
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[ErrorBoundary]', error, info.componentStack);
   }
 
   render() {
@@ -55,6 +56,15 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="text-muted-foreground text-sm">
               Сторінка оновлюється після нового деплою.
             </p>
+            <button
+              className="mt-4 px-4 py-2 border border-border rounded text-sm hover:bg-muted transition-colors opacity-80"
+              onClick={() => {
+                sessionStorage.removeItem('chunkReloadAt');
+                window.location.reload();
+              }}
+            >
+              Оновити сторінку зараз
+            </button>
           </div>
         );
       }
