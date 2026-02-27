@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SEOHead } from "@/components/SEOHead";
 import { Header } from "@/components/Header";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { topicPath } from "@/lib/topicSlug";
 
 const BASE_URL = 'https://bravennow.com';
 
@@ -51,6 +52,30 @@ export default function SitemapPage() {
           .limit(200)
       ]);
 
+      // Fetch themes for top topics (all-time counts)
+      const topicsResult = await supabase
+        .from('news_rss_items')
+        .select('themes')
+        .not('themes', 'is', null)
+        .limit(30000);
+
+      // Count topics
+      const topicCounts = new Map<string, number>();
+      for (const item of topicsResult.data || []) {
+        if (Array.isArray(item.themes)) {
+          for (const t of item.themes) {
+            if (t && typeof t === 'string') {
+              topicCounts.set(t, (topicCounts.get(t) || 0) + 1);
+            }
+          }
+        }
+      }
+
+      const topTopics = Array.from(topicCounts.entries())
+        .map(([topic, count]) => ({ topic, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 100);
+
       // Group news by country
       const newsByCountry: Record<string, any[]> = {};
       const countryMap = new Map(countriesResult.data?.map(c => [c.id, c]) || []);
@@ -72,7 +97,8 @@ export default function SitemapPage() {
         volumes: volumesResult.data || [],
         countries: countriesResult.data || [],
         newsByCountry,
-        wikiEntities: wikiResult.data || []
+        wikiEntities: wikiResult.data || [],
+        topTopics
       };
     }
   });
@@ -121,9 +147,7 @@ export default function SitemapPage() {
               <ul className="space-y-2">
                 {[
                   { url: '/', name: 'Home' },
-                  { url: '/calendar', name: 'Calendar' },
-                  { url: '/chapters', name: 'Chapters' },
-                  { url: '/volumes', name: 'Volumes' },
+                  { url: '/topics', name: 'Topics' },
                   { url: '/news', name: 'News Hub' },
                   { url: '/wiki', name: 'Entity Catalog' }
                 ].map(page => (
@@ -140,74 +164,29 @@ export default function SitemapPage() {
               </ul>
             </section>
 
+            {/* Topics */}
             <section className="bg-card border border-border rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-primary" />
-                Recent Stories
+                <Globe className="w-5 h-5 text-primary" />
+                Topics
               </h2>
-              <ul className="space-y-2 max-h-[300px] overflow-y-auto">
-                {data?.parts.map(part => (
-                  <li key={`${part.date}-${part.number}`} className="flex items-center gap-2">
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    <Link
-                      to={`/read/${part.date}/${part.number}`}
-                      className="text-primary hover:underline truncate"
-                    >
-                      {part.date} - {getTitle(part)}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                to="/calendar"
-                className="text-sm text-muted-foreground hover:text-primary mt-4 inline-block"
-              >
-                View all →
-              </Link>
-            </section>
-
-            {/* Chapters */}
-            <section className="bg-card border border-border rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-primary" />
-                Chapters
-              </h2>
-              <ul className="space-y-2 columns-2 md:columns-3">
-                {data?.chapters.map(chapter => (
-                  <li key={chapter.number} className="flex items-center gap-2 break-inside-avoid">
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    <Link
-                      to={`/chapter/${chapter.number}`}
-                      className="text-primary hover:underline"
-                    >
-                      Chapter {chapter.number}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            {/* Volumes */}
-            <section className="bg-card border border-border rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Library className="w-5 h-5 text-primary" />
-                Volumes
-              </h2>
-              <ul className="space-y-2 columns-2 md:columns-3">
-                {data?.volumes.map(volume => {
-                  const yearMonth = `${volume.year}-${String(volume.month).padStart(2, '0')}`;
-                  return (
-                    <li key={yearMonth} className="flex items-center gap-2 break-inside-avoid">
+              <ul className="space-y-2 max-h-[320px] overflow-y-auto">
+                {data?.topTopics && data.topTopics.length > 0 ? (
+                  data.topTopics.map((t: any) => (
+                    <li key={t.topic} className="flex items-center gap-2">
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      <Link
-                        to={`/volume/${yearMonth}`}
-                        className="text-primary hover:underline"
-                      >
-                        {yearMonth}
+                      <Link to={topicPath(t.topic)} className="text-primary hover:underline truncate">
+                        {t.topic}
                       </Link>
+                      <span className="text-xs text-muted-foreground">({t.count})</span>
                     </li>
-                  );
-                })}
+                  ))
+                ) : (
+                  <li className="flex items-center gap-2">
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <a href="/topics" className="text-primary hover:underline">All Topics</a>
+                  </li>
+                )}
               </ul>
             </section>
 
