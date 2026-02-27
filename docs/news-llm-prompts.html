@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Звіт: промпти та флоу генерації новин (LLM)</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.1.0/github-markdown.min.css">
+  <style>
+    body { background:#0b1220; color:#e6eef8; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding:24px }
+    .markdown-body { max-width: 900px; margin: 0 auto; background: #071127; padding: 28px; border-radius: 8px; box-shadow: 0 6px 30px rgba(2,6,23,0.6) }
+    pre { background:#00121a; color:#dff5ff; padding:12px; border-radius:6px; overflow:auto }
+    a { color:#7dd3fc }
+  </style>
+</head>
+<body>
+  <main class="markdown-body" id="content">Loading report…</main>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    async function fetchAndRender() {
+      try {
+        const resp = await fetch('/docs/news-llm-prompts.md');
+        if (!resp.ok) throw new Error('Markdown not found');
+        const md = await resp.text();
+        const html = marked.parse(md);
+        document.getElementById('content').innerHTML = html;
+      } catch (err) {
+        document.getElementById('content').innerHTML = '<h2>Не вдалося завантажити звіт</h2><p>' + String(err) + '</p>';
+      }
+    }
+    fetchAndRender();
+  </script>
+</body>
+</html>

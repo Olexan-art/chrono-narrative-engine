@@ -691,6 +691,39 @@ Category: ${news.category || 'general'}`;
       await updateNewsCache(countryCode, news.slug, supabaseUrl);
     }
 
+    // Trigger analysis generation for this news item asynchronously
+    try {
+      console.log('Triggering generate-news-analysis for newsId:', newsId);
+      const analysisResp = await fetch(`${supabaseUrl}/functions/v1/generate-news-analysis`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          newsId,
+          newsTitle: getTitle(),
+          newsContent: retoldContent,
+          model: settings.llm_text_model || undefined
+        })
+      });
+
+      if (!analysisResp.ok) {
+        const txt = await analysisResp.text();
+        console.error('generate-news-analysis returned error:', analysisResp.status, txt);
+      } else {
+        const ar = await analysisResp.json();
+        console.log('generate-news-analysis result:', ar.success ? 'OK' : ar.error);
+      }
+
+      // Refresh cache again so NewsAnalysisBlock picks up the newly saved analysis
+      if (news.slug) {
+        await updateNewsCache(countryCode, news.slug, supabaseUrl);
+      }
+    } catch (analysisErr) {
+      console.error('Error triggering generate-news-analysis:', analysisErr);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       content: retoldContent,

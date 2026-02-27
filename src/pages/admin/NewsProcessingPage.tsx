@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { callEdgeFunction } from '@/lib/api';
-import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, RefreshCw, BarChart3, Zap, Timer, AlertCircle } from 'lucide-react';
+import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, RefreshCw, BarChart3, Zap, Timer, AlertCircle, ExternalLink } from 'lucide-react';
 import { LLM_MODELS } from '@/types/database';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { BulkRetellCronPanelEnhanced } from '@/components/admin/BulkRetellCronPanelEnhanced';
@@ -736,10 +736,21 @@ export default function NewsProcessingPage({ password }: { password: string }) {
 
     return (
         <div className="container mx-auto p-6 space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold">News Processing</h1>
-                <p className="text-muted-foreground">Manage automated news fetching and retelling</p>
-            </div>
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold">News Processing</h1>
+                            <p className="text-muted-foreground">Manage automated news fetching and retelling</p>
+                        </div>
+
+                        <div className="ml-4">
+                            <Button asChild size="sm" variant="outline" className="gap-2">
+                                <a href="/docs/news-llm-prompts.html" target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="w-4 h-4" />
+                                    Prompts & Flow (HTML)
+                                </a>
+                            </Button>
+                        </div>
+                    </div>
 
             {globalStats?.history && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
