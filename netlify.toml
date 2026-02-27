@@ -68,3 +68,10 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[[redirects]]
+  # Redirect legacy chapters page to homepage
+  from = "/chapters"
+  to = "/"
+  status = 301
+  force = true
