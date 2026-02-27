@@ -27,19 +27,14 @@ import { OriginalSourceBlock } from "@/components/OriginalSourceBlock";
 import { NewsImageBlock } from "@/components/NewsImageBlock";
 import { NewsVoteBlock } from "@/components/NewsVoteBlock";
 import { NarrativeAnalysisBlock } from "@/components/NarrativeAnalysisBlock";
+import { NewsAnalysisBlock } from "@/components/NewsAnalysisBlock";
 
 // New blocks imports
 import { NewsSourceBlock } from "@/components/news/NewsSourceBlock";
 import { NewsMentionedEntitiesBlock } from "@/components/news/NewsMentionedEntitiesBlock";
-import { NewsCartoonsBlock } from "@/components/news/NewsCartoonsBlock";
 import { NewsKeywordsBlock } from "@/components/news/NewsKeywordsBlock";
 import { NewsKeyTakeawaysBlock } from "@/components/news/NewsKeyTakeawaysBlock";
 import { NewsTopicsNavBlock } from "@/components/news/NewsTopicsNavBlock";
-import { NewsWhyItMattersBlock } from "@/components/news/NewsWhyItMattersBlock";
-import { NewsContextBackgroundBlock } from "@/components/news/NewsContextBackgroundBlock";
-import { NewsWhatHappensNextBlock } from "@/components/news/NewsWhatHappensNextBlock";
-import { NewsFAQBlock } from "@/components/news/NewsFAQBlock";
-import { NewsMoreAboutBlock } from "@/components/news/NewsMoreAboutBlock";
 import { NewsEntityGraphBlock } from "@/components/news/NewsEntityGraphBlock";
 import { NewsRetellingBlock } from "@/components/news/NewsRetellingBlock";
 import { NewsVerifiedBadgeBlock } from "@/components/news/NewsVerifiedBadgeBlock";
@@ -926,7 +921,13 @@ export default function NewsArticlePage() {
                 </div>
               </AdminTextSelectionPopover>
 
-              {/* Deep News Analysis removed */}
+              {/* Deep News Analysis - Why it matters, Context, What's Next, FAQ */}
+              <NewsAnalysisBlock
+                newsId={article.id}
+                newsTitle={getLocalizedField('title') || article.title}
+                newsContent={getLocalizedField('content') || article.content || getLocalizedField('description') || article.description || ''}
+                className="mt-6"
+              />
 
               {/* Original Source Block */}
               <OriginalSourceBlock
@@ -1024,54 +1025,6 @@ export default function NewsArticlePage() {
                   }}
                 />
 
-                {/* Why It Matters */}
-                <NewsWhyItMattersBlock
-                  data={{
-                    text: "This news is significant for understanding current events and their impact on society.",
-                    significance: 7
-                  }}
-                />
-
-                {/* Context & Background */}
-                <NewsContextBackgroundBlock
-                  data={{
-                    summary: "This event is part of ongoing developments in the region.",
-                    historical_context: "Previous similar events have shaped the current situation."
-                  }}
-                />
-
-                {/* What Happens Next */}
-                <NewsWhatHappensNextBlock
-                  data={{
-                    summary: "Several possible outcomes may emerge from this situation.",
-                    predictions: [
-                      {
-                        timeframe: 'short-term',
-                        description: 'Immediate reactions and responses are expected.',
-                        probability: 75,
-                        impact: 'medium'
-                      }
-                    ]
-                  }}
-                />
-
-                {/* FAQ */}
-                <NewsFAQBlock
-                  faqs={[
-                    {
-                      question: language === 'uk' ? 'Що це означає?' : language === 'pl' ? 'Co to oznacza?' : 'What does this mean?',
-                      answer: language === 'uk' ? 'Це важлива подія, яка може вплинути на майбутні рішення.' : language === 'pl' ? 'To ważne wydarzenie, które może wpłynąć na przyszłe decyzje.' : 'This is an important event that may influence future decisions.'
-                    }
-                  ]}
-                />
-
-                {/* More News About */}
-                <NewsMoreAboutBlock
-                  articles={[]}
-                  entityName={mainEntityData?.mainEntity?.name}
-                  entityId={mainEntityData?.mainEntity?.id}
-                />
-
                 {/* Entity Graph */}
                 {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
                   <NewsEntityGraphBlock
@@ -1093,14 +1046,7 @@ export default function NewsArticlePage() {
                   />
                 )}
 
-                {/* Cartoons - if available */}
-                <NewsCartoonsBlock
-                  caricatures={[]}
-                  newsId={article.id}
-                  entityIds={(mainEntityData?.relatedEntities || [])
-                    .filter(e => e && e.id)
-                    .map(e => e.id)}
-                />
+                {/* Cartoons removed — generation handled via Deep Analysis */}
               </div>
 
               {/* Original link, share, and translate button */}
