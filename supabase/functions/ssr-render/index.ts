@@ -137,10 +137,23 @@ Deno.serve(async (req) => {
       if (purgeSecret !== PURGE_SECRET_VALUE) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      // path=all → delete all cached_pages
       if (path === "all") {
-        const { error } = await supabase.from("cached_pages").delete().neq("path", "__never__");
-        return new Response(JSON.stringify({ ok: !error, purged: "all", error: error?.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        let deletedCount = 0;
+        let lastError = null;
+        try {
+          while (true) {
+            const { data, error } = await supabase.from("cached_pages").select("path").limit(50);
+            if (error) { lastError = error.message; break; }
+            if (!data || data.length === 0) break;
+            const paths = data.map((d: any) => d.path);
+            const { error: delError } = await supabase.from("cached_pages").delete().in("path", paths);
+            if (delError) { lastError = delError.message; break; }
+            deletedCount += paths.length;
+          }
+        } catch (e: any) {
+          lastError = e?.message || String(e);
+        }
+        return new Response(JSON.stringify({ ok: !lastError, purged: "all", count: deletedCount, error: lastError }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const { error } = await supabase.from("cached_pages").delete().eq("path", path);
       console.log(`[ssr-render] Cache purged: ${path} error=${error?.message}`);
@@ -1558,13 +1571,7 @@ function generateStoryHTML(part: any, lang: string, canonicalUrl: string) {
       </div>
       
       <h1 itemprop="headline">${escapeHtml(title)}</h1>
-      ${sourceHost ? `
-        <div style="margin:8px 0 16px 0; display:inline-flex; align-items:center; gap:8px; font-size:12px; color:hsl(var(--muted-foreground));">
-          <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(16,185,129,0.35);background:rgba(16,185,129,0.08);color:#10b981;border-radius:999px;padding:4px 10px;">
-            ✅ Verified — <a href="${escapeHtml(newsItem.url)}" target="_blank" rel="nofollow noopener" style="color:inherit;text-decoration:none;">${escapeHtml(sourceHost)}</a>
-          </span>
-        </div>
-      ` : ""}
+
       
       <div class="story-content" itemprop="articleBody">
         ${escapeHtml(content)}
