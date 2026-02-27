@@ -81,7 +81,8 @@ serve(async (req) => {
         query = query.order('fetched_at', { ascending: false });
 
         // If caller requested a narrow recent window (last_1h) — run progressive multi‑pass
-        const concurrency = 5;
+        // Concurrency bumped up to increase throughput
+        const concurrency = 15;
         let successCount = 0;
         let errorCount = 0;
         const errors: any[] = [];
@@ -137,7 +138,7 @@ serve(async (req) => {
                     .gte('fetched_at', windowStart.toISOString())
                     .lt('fetched_at', windowEnd.toISOString())
                     .order('fetched_at', { ascending: false })
-                    .limit(50);
+                    .limit(100);
 
                 if (windowError) {
                     throw new Error(`Failed to fetch news (window ${minutes}m): ${windowError.message}`);
@@ -165,7 +166,7 @@ serve(async (req) => {
             }
         } else {
             // Fallback: original single-pass fetch (newest-first or force_all behaviour)
-            const { data: newsItems, error: newsError } = await query.limit(100);
+            const { data: newsItems, error: newsError } = await query.limit(200);
 
             if (newsError) {
                 throw new Error(`Failed to fetch news: ${newsError.message}`);

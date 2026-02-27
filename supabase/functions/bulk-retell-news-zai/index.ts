@@ -76,7 +76,7 @@ serve(async (req) => {
 
         query = query.order('fetched_at', { ascending: false });
 
-        const concurrency = 10;
+        const concurrency = 20;
         let successCount = 0;
         let errorCount = 0;
         const errors: any[] = [];
@@ -117,6 +117,27 @@ serve(async (req) => {
                     try {
                         await fetch(cacheUrl, { headers: { 'Authorization': `Bearer ${supabaseKey}` } });
                     } catch (_) { /* non-fatal */ }
+
+                    // Automatically trigger Deep Analysis
+                    try {
+                        console.log('Triggering generate-news-analysis for newsId:', newsItem.id);
+                        fetch(`${supabaseUrl}/functions/v1/generate-news-analysis`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${supabaseKey}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                newsId: newsItem.id,
+                                newsTitle: newsItem.title,
+                                newsContent: result.key_points || result.summary || null,
+                                model: llm_model || undefined
+                            })
+                        }).catch(e => console.error('Error triggering generate-news-analysis asynchronously:', e));
+                    } catch (analysisErr) {
+                        console.error('Error triggering generate-news-analysis:', analysisErr);
+                    }
+
                     successCount++;
                 } else {
                     errorCount++;
@@ -145,7 +166,7 @@ serve(async (req) => {
                     .gte('fetched_at', windowStart.toISOString())
                     .lt('fetched_at', windowEnd.toISOString())
                     .order('fetched_at', { ascending: false })
-                    .limit(50);
+                    .limit(100);
 
                 if (windowError) {
                     throw new Error(`Failed to fetch news (window ${minutes}m): ${windowError.message}`);
@@ -171,7 +192,7 @@ serve(async (req) => {
                 cumulativeOffset += minutes;
             }
         } else {
-            const { data: newsItems, error: newsError } = await query.limit(100);
+            const { data: newsItems, error: newsError } = await query.limit(200);
 
             if (newsError) {
                 throw new Error(`Failed to fetch news: ${newsError.message}`);
