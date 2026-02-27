@@ -81,8 +81,8 @@ serve(async (req) => {
         query = query.order('fetched_at', { ascending: false });
 
         // If caller requested a narrow recent window (last_1h) — run progressive multi‑pass
-        // Concurrency bumped up to increase throughput
-        const concurrency = 15;
+        // Concurrency lowered to respect LLM API rate limits (e.g. 15 RPM for some free tiers)
+        const concurrency = 3;
         let successCount = 0;
         let errorCount = 0;
         const errors: any[] = [];
@@ -106,7 +106,17 @@ serve(async (req) => {
                     }),
                 });
 
-                if (!retellResponse.ok) throw new Error(`Status ${retellResponse.status}`);
+                // Wait briefly before moving to the next item in the queue to avoid API bursts
+                await new Promise(r => setTimeout(r, 2000));
+
+                if (!retellResponse.ok) {
+                    let errDetails = "";
+                    try {
+                        const errJson = await retellResponse.json();
+                        errDetails = errJson.error || errJson.message || "";
+                    } catch (e) { }
+                    throw new Error(`Status ${retellResponse.status} ${errDetails}`);
+                }
                 const result = await retellResponse.json();
                 if (result.success) {
                     successCount++;
