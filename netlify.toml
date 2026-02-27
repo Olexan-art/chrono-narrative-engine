@@ -75,3 +75,4 @@
   to = "/"
   status = 301
   force = true
+  context = "production"
