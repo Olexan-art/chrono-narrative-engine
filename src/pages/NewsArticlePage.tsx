@@ -27,7 +27,6 @@ import { OriginalSourceBlock } from "@/components/OriginalSourceBlock";
 import { NewsImageBlock } from "@/components/NewsImageBlock";
 import { NewsVoteBlock } from "@/components/NewsVoteBlock";
 import { NarrativeAnalysisBlock } from "@/components/NarrativeAnalysisBlock";
-import { NewsAnalysisBlock } from "@/components/NewsAnalysisBlock";
 
 // New blocks imports
 import { NewsSourceBlock } from "@/components/news/NewsSourceBlock";
@@ -927,13 +926,7 @@ export default function NewsArticlePage() {
                 </div>
               </AdminTextSelectionPopover>
 
-              {/* Deep News Analysis - Why it matters, Context, What's Next, FAQ */}
-              <NewsAnalysisBlock
-                newsId={article.id}
-                newsTitle={getLocalizedField('title') || article.title}
-                newsContent={getLocalizedField('content') || article.content || getLocalizedField('description') || article.description || ''}
-                className="mt-6 hidden"
-              />
+              {/* Deep News Analysis removed */}
 
               {/* Original Source Block */}
               <OriginalSourceBlock
