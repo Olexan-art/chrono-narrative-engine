@@ -123,6 +123,9 @@ export default function NewsArticlePage() {
   const [selectedModel, setSelectedModel] = useState(ZAI_MODELS[0]?.value || '');
   const [selectedTweetModel, setSelectedTweetModel] = useState(ZAI_MODELS[0]?.value || '');
 
+  // Toggle to hide optional blocks on the news article page (useful for quick UI changes)
+  const HIDE_KEY_BLOCKS = true;
+
   // Helper to get localized field - defined early so can be used in mutations
   const getLocalizedField = (field: string, articleData?: any) => {
     const data = articleData || article;
@@ -1006,24 +1009,26 @@ export default function NewsArticlePage() {
                   <NewsKeywordsBlock keywords={articleKeywords} />
                 )}
 
-                {/* Key Takeaways */}
-                <NewsKeyTakeawaysBlock
-                  takeaways={keyPoints.slice(0, 3).filter(kp => kp && kp.text).map(kp => kp.text)}
-                />
+                {/* Optional blocks (Key Takeaways, Topics nav, Retelling) — hidden when HIDE_KEY_BLOCKS is true */}
+                {!HIDE_KEY_BLOCKS && (
+                  <>
+                    <NewsKeyTakeawaysBlock
+                      takeaways={keyPoints.slice(0, 3).filter(kp => kp && kp.text).map(kp => kp.text)}
+                    />
 
-                {/* Topics Navigation */}
-                <NewsTopicsNavBlock
-                  topics={themes}
-                />
+                    <NewsTopicsNavBlock
+                      topics={themes}
+                    />
 
-                {/* Retelling */}
-                <NewsRetellingBlock
-                  data={{
-                    summary: getLocalizedField('description') || article.description,
-                    readingTime: Math.ceil((getLocalizedField('content')?.length || 0) / 200),
-                    complexity: 'intermediate'
-                  }}
-                />
+                    <NewsRetellingBlock
+                      data={{
+                        summary: getLocalizedField('description') || article.description,
+                        readingTime: Math.ceil((getLocalizedField('content')?.length || 0) / 200),
+                        complexity: 'intermediate'
+                      }}
+                    />
+                  </>
+                )}
 
                 {/* Entity Graph */}
                 {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
