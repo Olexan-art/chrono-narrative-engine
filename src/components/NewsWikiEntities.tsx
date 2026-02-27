@@ -48,7 +48,7 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
   const { language } = useLanguage();
   const queryClient = useQueryClient();
   const { isAuthenticated: isAdmin } = useAdminStore();
-  
+
   const [editingEntityId, setEditingEntityId] = useState<string | null>(null);
   const [editUrl, setEditUrl] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
@@ -112,19 +112,19 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
     onSuccess: (newEntities) => {
       if (newEntities.length > 0) {
         toast.success(
-          language === 'uk' 
-            ? `Знайдено ${newEntities.length} сутностей` 
+          language === 'uk'
+            ? `Знайдено ${newEntities.length} сутностей`
             : language === 'pl'
-            ? `Znaleziono ${newEntities.length} podmiotów`
-            : `Found ${newEntities.length} entities`
+              ? `Znaleziono ${newEntities.length} podmiotów`
+              : `Found ${newEntities.length} entities`
         );
       } else {
         toast.info(
-          language === 'uk' 
-            ? 'Сутності не знайдено' 
+          language === 'uk'
+            ? 'Сутності не знайдено'
             : language === 'pl'
-            ? 'Nie znaleziono podmiotów'
-            : 'No entities found'
+              ? 'Nie znaleziono podmiotów'
+              : 'No entities found'
         );
       }
       queryClient.invalidateQueries({ queryKey: ['news-wiki-entities', newsId] });
@@ -137,10 +137,10 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
   // Update entity URL mutation
   const updateUrlMutation = useMutation({
     mutationFn: async ({ entityId, newUrl, isEnglish }: { entityId: string; newUrl: string; isEnglish: boolean }) => {
-      const updateData = isEnglish 
+      const updateData = isEnglish
         ? { wiki_url_en: newUrl }
         : { wiki_url: newUrl };
-      
+
       const { error } = await supabase
         .from('wiki_entities')
         .update(updateData)
@@ -150,11 +150,11 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
     },
     onSuccess: () => {
       toast.success(
-        language === 'uk' 
-          ? 'URL оновлено' 
+        language === 'uk'
+          ? 'URL оновлено'
           : language === 'pl'
-          ? 'URL zaktualizowany'
-          : 'URL updated'
+            ? 'URL zaktualizowany'
+            : 'URL updated'
       );
       setEditingEntityId(null);
       setEditUrl("");
@@ -187,11 +187,11 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
     },
     onSuccess: () => {
       toast.success(
-        language === 'uk' 
-          ? 'Сутність додано' 
+        language === 'uk'
+          ? 'Сутність додано'
           : language === 'pl'
-          ? 'Dodano podmiot'
-          : 'Entity added'
+            ? 'Dodano podmiot'
+            : 'Entity added'
       );
       setShowAddForm(false);
       setNewWikiUrl("");
@@ -214,11 +214,11 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
     },
     onSuccess: () => {
       toast.success(
-        language === 'uk' 
-          ? 'Сутність видалено' 
+        language === 'uk'
+          ? 'Сутність видалено'
           : language === 'pl'
-          ? 'Podmiot usunięty'
-          : 'Entity removed'
+            ? 'Podmiot usunięty'
+            : 'Entity removed'
       );
       queryClient.invalidateQueries({ queryKey: ['news-wiki-entities', newsId] });
       queryClient.invalidateQueries({ queryKey: ['news-with-entities'] });
@@ -235,8 +235,8 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
 
   const handleSaveUrl = (entityId: string) => {
     if (!editUrl.trim()) return;
-    updateUrlMutation.mutate({ 
-      entityId, 
+    updateUrlMutation.mutate({
+      entityId,
       newUrl: editUrl.trim(),
       isEnglish: language === 'en'
     });
@@ -246,11 +246,11 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
     if (!newWikiUrl.trim()) return;
     if (!newWikiUrl.includes('wikipedia.org')) {
       toast.error(
-        language === 'uk' 
-          ? 'Введіть коректний URL Wikipedia' 
+        language === 'uk'
+          ? 'Введіть коректний URL Wikipedia'
           : language === 'pl'
-          ? 'Wprowadź poprawny URL Wikipedii'
-          : 'Enter a valid Wikipedia URL'
+            ? 'Wprowadź poprawny URL Wikipedii'
+            : 'Enter a valid Wikipedia URL'
       );
       return;
     }
@@ -320,9 +320,9 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
                 </div>
               ) : (
                 <>
-                  <WikiEntityCard 
-                    entity={link.wiki_entity} 
-                    compact={entityLinks.length > 2} 
+                  <WikiEntityCard
+                    entity={link.wiki_entity}
+                    compact={entityLinks.length > 2}
                     showLink={true}
                   />
                   {/* Narrative indicator with summary & sentiment */}
@@ -330,9 +330,9 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
                     const narr = entityNarratives[link.wiki_entity.id] as any;
                     let analysis = narr.analysis || narr;
                     if (typeof analysis === 'string') {
-                      try { analysis = JSON.parse(analysis); } catch {}
+                      try { analysis = JSON.parse(analysis); } catch { }
                     }
-                    const sentiment = analysis.sentiment || 'neutral';
+                    const sentiment = (analysis.sentiment || 'neutral').toLowerCase();
                     const sentimentConfig: Record<string, { icon: string; bg: string; border: string; text: string }> = {
                       positive: { icon: '🟢', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-600' },
                       negative: { icon: '🔴', bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-600' },
@@ -391,11 +391,11 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
           ))
         ) : (
           <p className="text-xs text-muted-foreground">
-            {language === 'uk' 
-              ? 'Сутності ще не визначені' 
-              : language === 'pl' 
-              ? 'Podmioty jeszcze nie zdefiniowane' 
-              : 'No entities identified yet'}
+            {language === 'uk'
+              ? 'Сутності ще не визначені'
+              : language === 'pl'
+                ? 'Podmioty jeszcze nie zdefiniowane'
+                : 'No entities identified yet'}
           </p>
         )}
 
@@ -436,9 +436,9 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
         {isAdmin && (
           <div className="flex gap-2 pt-2">
             {!showAddForm && (
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="flex-1"
                 onClick={() => setShowAddForm(true)}
               >
@@ -447,9 +447,9 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
               </Button>
             )}
             {showSearchButton && (
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="flex-1"
                 onClick={() => searchMutation.mutate()}
                 disabled={searchMutation.isPending}

@@ -65,7 +65,7 @@ export function NarrativesAdminPanel() {
         language: row.language,
         news_count: row.news_count,
         is_regenerated: row.is_regenerated,
-        sentiment: row.analysis?.sentiment || 'neutral',
+        sentiment: (row.analysis?.sentiment || 'neutral').toLowerCase(),
         summary: row.analysis?.narrative_summary || '',
         entity_name: row.entity?.name || '—',
         entity_name_en: row.entity?.name_en,
@@ -274,7 +274,7 @@ export function NarrativesAdminPanel() {
                 {narratives.map((n) => (
                   <TableRow key={n.id}>
                     <TableCell>
-                      <Link 
+                      <Link
                         to={`/wiki/${n.entity_slug || n.entity_id}`}
                         className="text-sm font-medium text-primary hover:underline"
                       >

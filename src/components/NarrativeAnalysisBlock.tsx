@@ -41,7 +41,7 @@ export function NarrativeAnalysisBlock({
 
   if (!analysis) return null;
 
-  const sentimentStyle = getSentimentStyle(analysis.sentiment || 'neutral', language);
+  const sentimentStyle = getSentimentStyle((analysis.sentiment || 'neutral').toLowerCase(), language);
 
   return (
     <div className={`space-y-2 ${animated ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : ''} ${className}`}>

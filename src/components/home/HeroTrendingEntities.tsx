@@ -38,11 +38,11 @@ async function fetchTrendingEntities24h(): Promise<TrendingEntity[]> {
 
   // Count mentions per entity
   const entityMap = new Map<string, { entity: any; count: number }>();
-  
+
   for (const mention of recentMentions) {
     if (!mention.wiki_entity) continue;
     const entity = mention.wiki_entity as any;
-    
+
     const existing = entityMap.get(entity.id);
     if (existing) {
       existing.count++;
@@ -123,16 +123,15 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
       {trendingEntities.map((entity, idx) => {
         const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
         const wikiUrl = language === 'en' && entity.wiki_url_en ? entity.wiki_url_en : entity.wiki_url;
-        
+
         return (
           <div key={entity.id} className="space-y-0">
             <Link
               to={`/wiki/${entity.slug || entity.id}`}
-              className={`flex items-center gap-3 p-3 rounded-lg border bg-card/50 hover:bg-primary/5 transition-all duration-300 group animate-fade-in ${
-                idx === 0 && topNarrative
+              className={`flex items-center gap-3 p-3 rounded-lg border bg-card/50 hover:bg-primary/5 transition-all duration-300 group animate-fade-in ${idx === 0 && topNarrative
                   ? 'border-primary/40 shadow-[0_0_15px_hsl(var(--primary)/0.15)]'
                   : 'border-border/50 hover:border-primary/30'
-              }`}
+                }`}
               style={{ animationDelay: `${idx * 100}ms` }}
             >
               {/* Entity Image */}
@@ -143,9 +142,8 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
                     alt={name}
                     width={48}
                     height={48}
-                    className={`w-12 h-12 rounded-full object-cover border-2 group-hover:border-primary/50 transition-colors ${
-                      idx === 0 && topNarrative ? 'border-primary/40' : 'border-primary/20'
-                    }`}
+                    className={`w-12 h-12 rounded-full object-cover border-2 group-hover:border-primary/50 transition-colors ${idx === 0 && topNarrative ? 'border-primary/40' : 'border-primary/20'
+                      }`}
                   />
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center border-2 border-border">
@@ -177,7 +175,7 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
 
               {/* Sentiment badge for #1 entity with narrative */}
               {idx === 0 && topNarrative?.analysis && (() => {
-                const sentiment = (topNarrative.analysis as any).sentiment || 'neutral';
+                const sentiment = ((topNarrative.analysis as any).sentiment || 'neutral').toLowerCase();
                 const s = getSentimentStyleHero(sentiment, language);
                 return (
                   <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full ${s.bg} ${s.border} border animate-in fade-in duration-500`}>
@@ -202,7 +200,7 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
             {/* Narrative overlay for #1 entity */}
             {idx === 0 && topNarrative?.analysis && (() => {
               const a = topNarrative.analysis as any;
-              const sentiment = a.sentiment || 'neutral';
+              const sentiment = (a.sentiment || 'neutral').toLowerCase();
               const sStyle = getSentimentStyleHero(sentiment, language);
               return (
                 <div className="mx-2 -mt-1 p-2.5 rounded-b-lg border border-t-0 border-primary/20 bg-gradient-to-b from-primary/5 to-card/80 animate-in fade-in slide-in-from-top-1 duration-700">
