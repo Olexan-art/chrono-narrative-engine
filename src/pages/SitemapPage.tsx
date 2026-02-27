@@ -19,21 +19,7 @@ export default function SitemapPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['html-sitemap'],
     queryFn: async () => {
-      const [partsResult, chaptersResult, volumesResult, countriesResult, newsResult, wikiResult] = await Promise.all([
-        supabase
-          .from('parts')
-          .select('date, title, title_en, number')
-          .eq('status', 'published')
-          .order('date', { ascending: false })
-          .limit(50),
-        supabase
-          .from('chapters')
-          .select('number, title, title_en')
-          .order('number', { ascending: false }),
-        supabase
-          .from('volumes')
-          .select('year, month, title, title_en')
-          .order('year', { ascending: false }),
+      const [countriesResult, newsResult, wikiResult] = await Promise.all([
         supabase
           .from('news_countries')
           .select('id, code, name, name_en')
@@ -92,9 +78,6 @@ export default function SitemapPage() {
       }
 
       return {
-        parts: partsResult.data || [],
-        chapters: chaptersResult.data || [],
-        volumes: volumesResult.data || [],
         countries: countriesResult.data || [],
         newsByCountry,
         wikiEntities: wikiResult.data || [],
