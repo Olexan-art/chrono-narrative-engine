@@ -938,9 +938,11 @@ serve(async (req) => {
       }
 
       // Limit processing to avoid timeout (edge function has ~50s limit)
-      // Each item takes ~2-5s for retelling, so limit to 20 items per run
-      const MAX_ITEMS_PER_RUN = 20;
+      // Make max items per run configurable via `FETCH_MAX_RETELL` (default 60)
+      const MAX_ITEMS_PER_RUN = Number(Deno.env.get('FETCH_MAX_RETELL') || '60');
       const itemsToProcess = allToProcess.slice(0, MAX_ITEMS_PER_RUN);
+      // Per-item delay (ms) between retell/generation calls to avoid rate limits
+      const retellDelay = Number(Deno.env.get('RETELL_DELAY_MS') || '200');
       const skippedCount = Math.max(0, allToProcess.length - MAX_ITEMS_PER_RUN);
 
       console.log(`Processing queue: ${itemsToProcess.length} items (${skippedCount} skipped due to limit). Total candidates: ${allToProcess.length}`);
@@ -990,7 +992,7 @@ serve(async (req) => {
           } catch (error) {
             console.error(`Error auto-retelling news ${newsId}:`, error);
           }
-          await new Promise(r => setTimeout(r, 300));
+          await new Promise(r => setTimeout(r, retellDelay));
         }
 
         // Step 2: Generate dialogue
@@ -1052,7 +1054,7 @@ serve(async (req) => {
           } catch (error) {
             console.error(`Error generating dialogue for ${newsId}:`, error);
           }
-          await new Promise(r => setTimeout(r, 300));
+          await new Promise(r => setTimeout(r, retellDelay));
         }
       }
 
@@ -1148,7 +1150,7 @@ serve(async (req) => {
     // Process pending news items that should have been retold but weren't (catch-up for missed items)
     // Now with batch processing and concurrency control
     if (action === 'process_pending') {
-      const { countryCode, limit: processLimit = 20, batchSize = 5, llmModel: requestedModel } = body;
+      const { countryCode, limit: processLimit = 100, batchSize = 10, llmModel: requestedModel } = body;
 
       // Get auto-generation settings including LLM model
       const { data: settings } = await supabase
@@ -1320,8 +1322,9 @@ serve(async (req) => {
         }
       }
 
-      // Process items in batches with concurrency
-      const effectiveBatchSize = Math.min(batchSize, 5); // Cap at 5 concurrent
+      // Process items in batches with concurrency (cap increased)
+      const effectiveBatchSize = Math.min(batchSize, 10); // Cap at 10 concurrent
+      const batchDelayMs = Number(Deno.env.get('BATCH_DELAY_MS') || '100');
       for (let i = 0; i < pendingItems.length; i += effectiveBatchSize) {
         const batch = pendingItems.slice(i, i + effectiveBatchSize);
         console.log(`[Pending] Processing batch ${Math.floor(i / effectiveBatchSize) + 1}/${Math.ceil(pendingItems.length / effectiveBatchSize)} (${batch.length} items)`);
@@ -1334,7 +1337,7 @@ serve(async (req) => {
 
         // Small delay between batches to avoid rate limiting
         if (i + effectiveBatchSize < pendingItems.length) {
-          await new Promise(r => setTimeout(r, 300));
+          await new Promise(r => setTimeout(r, batchDelayMs));
         }
       }
       console.log(`[Pending] Processed ${totalProcessed} items: ${totalRetelled} retelled, ${totalDialogues} dialogues, ${totalTweets} tweets`);
@@ -1411,6 +1414,7 @@ serve(async (req) => {
       let totalInserted = 0;
       let totalRetelled = 0;
       let retellCounter = 0;
+      const retellDelayBulk = Number(Deno.env.get('RETELL_DELAY_MS') || '200');
 
       for (const feed of feeds || []) {
         try {
@@ -1498,7 +1502,7 @@ serve(async (req) => {
           for (const newsId of itemsToRetell) {
             await autoRetellNews(newsId, supabaseUrl);
             totalRetelled++;
-            await new Promise(r => setTimeout(r, 300));
+            await new Promise(r => setTimeout(r, retellDelayBulk));
           }
 
           results.push({ feedName: feed.name, success: true, inserted: insertedCount, retelled: itemsToRetell.length });
@@ -1774,6 +1778,7 @@ serve(async (req) => {
     // Fetch US RSS feeds only with automatic retelling
     if (action === 'fetch_us_rss') {
       const startTime = Date.now();
+      const retellDelayUs = Number(Deno.env.get('RETELL_DELAY_MS') || '200');
 
       // Get US country ID
       const { data: usCountry } = await supabase
@@ -1932,7 +1937,7 @@ serve(async (req) => {
             }
 
             // Small delay to avoid rate limiting
-            await new Promise(r => setTimeout(r, 300));
+            await new Promise(r => setTimeout(r, retellDelayUs));
           }
 
           results.push({
