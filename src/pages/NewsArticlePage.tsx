@@ -932,7 +932,7 @@ export default function NewsArticlePage() {
                 newsId={article.id}
                 newsTitle={getLocalizedField('title') || article.title}
                 newsContent={getLocalizedField('content') || article.content || getLocalizedField('description') || article.description || ''}
-                className="mt-6"
+                className="mt-6 hidden"
               />
 
               {/* Original Source Block */}
@@ -1015,11 +1015,13 @@ export default function NewsArticlePage() {
                 {/* Key Takeaways */}
                 <NewsKeyTakeawaysBlock
                   takeaways={keyPoints.slice(0, 3).filter(kp => kp && kp.text).map(kp => kp.text)}
+                  className="hidden"
                 />
 
                 {/* Topics Navigation */}
                 <NewsTopicsNavBlock
                   topics={themes}
+                  className="hidden"
                 />
 
                 {/* Retelling */}
@@ -1029,6 +1031,7 @@ export default function NewsArticlePage() {
                     readingTime: Math.ceil((getLocalizedField('content')?.length || 0) / 200),
                     complexity: 'intermediate'
                   }}
+                  className="hidden"
                 />
 
                 {/* Why It Matters */}
@@ -1037,6 +1040,7 @@ export default function NewsArticlePage() {
                     text: "This news is significant for understanding current events and their impact on society.",
                     significance: 7
                   }}
+                  className="hidden"
                 />
 
                 {/* Context & Background */}
@@ -1045,6 +1049,7 @@ export default function NewsArticlePage() {
                     summary: "This event is part of ongoing developments in the region.",
                     historical_context: "Previous similar events have shaped the current situation."
                   }}
+                  className="hidden"
                 />
 
                 {/* What Happens Next */}
@@ -1060,6 +1065,7 @@ export default function NewsArticlePage() {
                       }
                     ]
                   }}
+                  className="hidden"
                 />
 
                 {/* FAQ */}
@@ -1070,6 +1076,7 @@ export default function NewsArticlePage() {
                       answer: language === 'uk' ? 'Це важлива подія, яка може вплинути на майбутні рішення.' : language === 'pl' ? 'To ważne wydarzenie, które może wpłynąć na przyszłe decyzje.' : 'This is an important event that may influence future decisions.'
                     }
                   ]}
+                  className="hidden"
                 />
 
                 {/* More News About */}
@@ -1077,6 +1084,7 @@ export default function NewsArticlePage() {
                   articles={[]}
                   entityName={mainEntityData?.mainEntity?.name}
                   entityId={mainEntityData?.mainEntity?.id}
+                  className="hidden"
                 />
 
                 {/* Entity Graph */}
@@ -1107,6 +1115,7 @@ export default function NewsArticlePage() {
                   entityIds={(mainEntityData?.relatedEntities || [])
                     .filter(e => e && e.id)
                     .map(e => e.id)}
+                  className="hidden"
                 />
               </div>
 
