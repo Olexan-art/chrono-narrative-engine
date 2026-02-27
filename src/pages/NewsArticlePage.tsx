@@ -977,7 +977,7 @@ export default function NewsArticlePage() {
               <div className="mt-6 space-y-6">
                 {/* Verified Badge - if verification data exists */}
                 <NewsVerifiedBadgeBlock
-                  verification={{
+                  verification={article?.news_analysis?.verification || {
                     status: 'partially-verified',
                     confidence: 85,
                     lastChecked: new Date().toISOString(),

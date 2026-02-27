@@ -20,6 +20,15 @@ interface NewsAnalysis {
   faq?: Array<{ question: string; answer: string }>;
 }
 
+interface VerificationCard {
+  status?: string;
+  confidence?: number;
+  sources?: Array<{ publisher: string; datetime?: string; snippet?: string }>;
+  last_checked?: string;
+  why?: string;
+  short_card?: string;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -113,6 +122,56 @@ Provide comprehensive analysis in JSON format as specified.`;
       ...analysis,
       generated_at: new Date().toISOString(),
     };
+
+    // --- Generate verification summary using separate LLM call ---
+    try {
+      const verificationSystem = `Role: Senior fact-checking lead for an AI news site.\n\nYou must produce JSON only.`;
+
+      const verificationUser = `Given:\nA) Article text:\n${newsContent}\n\nB) Source list: Provide 2-6 independent sources if available (publisher + datetime + snippet)\n\nC) Site policy: automated checks only, no human editor unless flagged.\n\nDo:\n1) Return a concise card with: Status label (one of: Verified, Mostly Verified, Mixed, Unverified), Confidence (0-100), "Why this status" (1-2 sentences), "What we checked" (list), "Limitations" (list), "How to improve" (list).\n2) Also return a machine-friendly JSON object with fields: status, confidence, sources (publisher, datetime, snippet), last_checked (ISO), why, what_we_checked, limitations, suggestions.\n\nConstraints:\n- Never imply certainty when evidence is single-source.\n- Use timestamps where possible.\n\nRespond ONLY with valid JSON.`;
+
+      console.log('Calling LLM for verification card...');
+      const verificationText = await callLLM(supabase, settings, verificationSystem, verificationUser, model);
+      console.log(`Verification LLM response length: ${verificationText.length}`);
+
+      // Try to extract JSON
+      const vmatch = verificationText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+      const vtext = vmatch ? vmatch[1] : verificationText;
+      let vjson: VerificationCard | null = null;
+      try {
+        vjson = JSON.parse(vtext.trim());
+      } catch (e) {
+        console.warn('Failed to parse verification JSON, falling back to best-effort extraction');
+        // Fallback: try to find simple fields via regex
+      }
+
+      if (vjson) {
+        // Map status labels to internal enum used by UI
+        const statusMap: Record<string, string> = {
+          'Verified': 'verified',
+          'Mostly Verified': 'partially-verified',
+          'Mixed': 'disputed',
+          'Unverified': 'unverified'
+        };
+
+        const verificationObj = {
+          status: statusMap[(vjson.status || '').toString()] || 'partially-verified',
+          confidence: typeof vjson.confidence === 'number' ? vjson.confidence : undefined,
+          sources: (vjson.sources || []).map(s => {
+            const pub = typeof s.publisher === 'string' ? s.publisher : (s as any).publisher || '';
+            const dt = s.datetime || (s as any).datetime || undefined;
+            const sn = s.snippet || (s as any).snippet || undefined;
+            return `${pub}${dt ? ' — ' + dt : ''}${sn ? ' — "' + sn + '"' : ''}`;
+          }),
+          lastChecked: vjson.last_checked || new Date().toISOString(),
+          details: vjson.why || vjson.short_card || undefined,
+          factCheckers: (vjson.sources || []).map(s => s.publisher || (s as any).publisher || '').filter(Boolean),
+        };
+
+        (analysisWithMeta as any).verification = verificationObj;
+      }
+    } catch (verErr) {
+      console.error('Verification generation failed:', verErr);
+    }
 
     // Save to database
     const { error: updateError } = await supabase

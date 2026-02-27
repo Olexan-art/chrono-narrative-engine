@@ -271,6 +271,57 @@ export default function NewsTopicPage() {
       }));
   }, [newsItems, entityCountByNewsId, language]);
 
+  // ── daily views for news in this topic (sum of daily_views.entity_type='news') ──
+  const { data: newsDailyViews = [] } = useQuery({
+    queryKey: ['topic-news-daily-views', topic, newsIds.length],
+    queryFn: async () => {
+      if (!newsIds.length) return [];
+      const { data, error } = await supabase
+        .from('daily_views')
+        .select('view_date, views, entity_id')
+        .eq('entity_type', 'news')
+        .in('entity_id', newsIds)
+        .order('view_date', { ascending: true });
+
+      if (error || !data) return [];
+
+      const byDate: Record<string, number> = {};
+      for (const row of data) {
+        byDate[row.view_date] = (byDate[row.view_date] || 0) + (row.views || 0);
+      }
+
+      return Object.entries(byDate).map(([date, views]) => ({ date, views }));
+    },
+    enabled: newsIds.length > 0,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // ── daily views for wiki entities that appear in this topic's news ──
+  const { data: entityDailyViews = [] } = useQuery({
+    queryKey: ['topic-entity-daily-views', topic, newsIds.length],
+    queryFn: async () => {
+      const entityIds = Array.from(new Set(entityLinks.map(l => l.wiki_entity?.id).filter(Boolean)));
+      if (!entityIds.length) return [];
+      const { data, error } = await supabase
+        .from('daily_views')
+        .select('view_date, views, entity_id')
+        .eq('entity_type', 'wiki')
+        .in('entity_id', entityIds)
+        .order('view_date', { ascending: true });
+
+      if (error || !data) return [];
+
+      const byDate: Record<string, number> = {};
+      for (const row of data) {
+        byDate[row.view_date] = (byDate[row.view_date] || 0) + (row.views || 0);
+      }
+
+      return Object.entries(byDate).map(([date, views]) => ({ date, views }));
+    },
+    enabled: entityLinks.length > 0,
+    staleTime: 1000 * 60 * 5,
+  });
+
   /** Hero image – first news with an image */
   const heroImage = useMemo(
     () => newsItems.find((n) => n.image_url)?.image_url ?? null,
@@ -776,6 +827,64 @@ export default function NewsTopicPage() {
                     </CardContent>
                   </Card>
                 )}
+
+                    {/* Chart 3: Sum of page views for all news in this topic (per day) */}
+                    <Card className="border-primary/20">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          {language === 'en' ? 'Daily pageviews — topic news (sum)' : 'Перегляди за день — всі новини теми (сума)'}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <AreaChart data={chartData.map(d => ({ ...d,
+                            views: (newsDailyViews.find(v => v.date === d.date)?.views || 0)
+                          }))} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                            <defs>
+                              <linearGradient id="newsViewsGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#f97316" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} interval={Math.floor(chartData.length / 8)} />
+                            <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
+                            <Tooltip formatter={(v) => [v, language === 'en' ? 'views' : 'переглядів']} contentStyle={{ background: "#0f1929", border: "1px solid rgba(249,115,22,0.3)", borderRadius: 8 }} />
+                            <Area type="monotone" dataKey="views" stroke="#f97316" fill="url(#newsViewsGrad)" strokeWidth={2} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+
+                    {/* Chart 4: Sum of page views for all entities mentioned in topic news (per day) */}
+                    <Card className="border-primary/20">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4" />
+                          {language === 'en' ? 'Daily pageviews — topic entities (sum)' : 'Перегляди за день — всі сутності теми (сума)'}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <AreaChart data={chartData.map(d => ({ ...d,
+                            entityViews: (entityDailyViews.find(v => v.date === d.date)?.views || 0)
+                          }))} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                            <defs>
+                              <linearGradient id="entityViewsGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="#60a5fa" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} interval={Math.floor(chartData.length / 8)} />
+                            <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
+                            <Tooltip formatter={(v) => [v, language === 'en' ? 'views' : 'переглядів']} contentStyle={{ background: "#0f1929", border: "1px solid rgba(96,165,250,0.3)", borderRadius: 8 }} />
+                            <Area type="monotone" dataKey="entityViews" stroke="#60a5fa" fill="url(#entityViewsGrad)" strokeWidth={2} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
               </section>
             )}
 
