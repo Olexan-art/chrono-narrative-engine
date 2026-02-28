@@ -727,35 +727,54 @@ Be factual. Do not speculate.`;
             } catch (fallbackErr: any) {
               addLog(`❌ Спроба ручної реконструкції JSON...`, 'error');
               try {
-                const whyMatters = responseText.match(/"why_it_matters"\s*:\s*"([^"]+)"/);
-                const whatNext = responseText.match(/"what_happens_next"\s*:\s*"([^"]+)"/);
+                // Highly robust regex that extracts strings even if the JSON is truncated or unclosed
+                const extractString = (key: string) => {
+                  const regex = new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)(?="\\s*,\\s*"[a-z_]+"\\s*:|"\\s*}|"$|$)`);
+                  const match = responseText.match(regex);
+                  return match ? match[1].replace(/\\"/g, '"').trim() : '';
+                };
+
+                const whyMatters = extractString('why_it_matters');
+                const whatNext = extractString('what_happens_next');
+
+                // For context_background, we try to extract array items using a dirty approach
+                let context_background: string[] = [];
+                const ctxMatch = responseText.match(/"context_background"\s*:\s*\[([\s\S]*?)(?:\]\s*,|\]\s*}|\]$|$)/);
+                if (ctxMatch) {
+                  context_background = ctxMatch[1]
+                    .split(/",\s*"/)
+                    .map(s => s.replace(/^["\s\[]+|["\s\]]+$/g, '').replace(/\\"/g, '"'))
+                    .filter(Boolean);
+                }
+
                 if (whyMatters || whatNext) {
                   analysis = {
-                    why_it_matters: whyMatters ? whyMatters[1] : '',
-                    context_background: [],
-                    what_happens_next: whatNext ? whatNext[1] : '',
+                    why_it_matters: whyMatters,
+                    context_background,
+                    what_happens_next: whatNext,
                     faq: [],
                     generated_at: new Date().toISOString(),
                     partial: true
                   };
-                  addLog('⚠️ Створено частковий аналіз з доступних даних', 'warn');
+                  addLog('⚠️ Створено частковий аналіз після ручного відновлення', 'warn');
                 } else {
-                  throw new Error(`Не вдалося розібрати JSON: ${fallbackErr.message}`);
+                  throw new Error(`Не вдалося знайти головні поля.`);
                 }
-              } catch (lastErr) {
-                throw new Error(`JSON parse failed: ${parseErr.message}. All recovery attempts failed.`);
+              } catch (lastErr: any) {
+                throw new Error(`JSON parse failed: ${parseErr.message}. Fallback array extraction failed: ${lastErr.message}`);
               }
             }
           }
 
-          if (!analysis.why_it_matters || !analysis.context_background || !analysis.what_happens_next || !analysis.faq) {
+          if (!analysis || !analysis.why_it_matters || !Array.isArray(analysis.context_background) || !analysis.what_happens_next || !Array.isArray(analysis.faq)) {
             addLog('Неповна структура аналізу. Доповнення...', 'warn');
             analysis = {
-              why_it_matters: analysis.why_it_matters || '',
-              context_background: Array.isArray(analysis.context_background) ? analysis.context_background : [],
-              what_happens_next: analysis.what_happens_next || '',
-              faq: Array.isArray(analysis.faq) ? analysis.faq : [],
-              generated_at: new Date().toISOString()
+              why_it_matters: analysis?.why_it_matters || '',
+              context_background: Array.isArray(analysis?.context_background) ? analysis.context_background : [],
+              what_happens_next: analysis?.what_happens_next || '',
+              faq: Array.isArray(analysis?.faq) ? analysis.faq : [],
+              generated_at: new Date().toISOString(),
+              partial: analysis?.partial || false
             };
           }
 
