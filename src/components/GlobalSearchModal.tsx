@@ -5,7 +5,7 @@ import {
     Search, Hash, Globe, Users, Loader2, ArrowRight, X
 } from 'lucide-react';
 import {
-    Dialog, DialogContent, DialogHeader, DialogTitle
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { topicPath } from '@/lib/topicSlug';
 import { useDebounce } from '@/hooks/useDebounce';
+import { OptimizedImage } from '@/components/OptimizedImage';
 
 interface GlobalSearchModalProps {
     isOpen: boolean;
@@ -133,6 +134,7 @@ export function GlobalSearchModal({ isOpen, onOpenChange }: GlobalSearchModalPro
             <DialogContent className="sm:max-w-xl p-0 gap-0 overflow-hidden bg-background/95 backdrop-blur-md border border-border/50 shadow-2xl">
                 <DialogHeader className="p-4 border-b border-white/5 relative">
                     <DialogTitle className="sr-only">Search</DialogTitle>
+                    <DialogDescription className="sr-only">Global site search for news, wiki entities, and topics.</DialogDescription>
                     <div className="flex items-center gap-3">
                         <Search className="w-5 h-5 text-muted-foreground" />
                         <Input
@@ -209,7 +211,12 @@ export function GlobalSearchModal({ isOpen, onOpenChange }: GlobalSearchModalPro
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         {entity.image_url ? (
-                                                            <img src={entity.image_url} alt={name} className="w-8 h-8 rounded-md object-cover flex-shrink-0" />
+                                                            <OptimizedImage
+                                                                src={entity.image_url}
+                                                                alt={name}
+                                                                containerClassName="w-8 h-8 rounded-md flex-shrink-0"
+                                                                className="w-full h-full object-cover rounded-md"
+                                                            />
                                                         ) : (
                                                             <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center flex-shrink-0">
                                                                 <Users className="w-4 h-4 text-foreground/60" />
@@ -247,7 +254,12 @@ export function GlobalSearchModal({ isOpen, onOpenChange }: GlobalSearchModalPro
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         {news.image_url ? (
-                                                            <img src={news.image_url} alt={title} className="w-10 h-10 rounded-md object-cover flex-shrink-0" />
+                                                            <OptimizedImage
+                                                                src={news.image_url}
+                                                                alt={title}
+                                                                containerClassName="w-10 h-10 rounded-md flex-shrink-0 bg-transparent"
+                                                                className="w-full h-full object-cover rounded-md"
+                                                            />
                                                         ) : (
                                                             <div className="w-10 h-10 rounded-md bg-secondary flex items-center justify-center flex-shrink-0">
                                                                 <Globe className="w-5 h-5 text-foreground/60" />

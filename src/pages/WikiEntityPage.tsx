@@ -574,13 +574,13 @@ export default function WikiEntityPage() {
     queryKey: ['entity-db-categories', entity?.id],
     queryFn: async (): Promise<string[]> => {
       if (!entity?.id) return [];
-      
+
       const { data } = await supabase
         .from('wiki_entity_categories')
         .select('category')
         .eq('wiki_entity_id', entity.id)
         .limit(50);
-      
+
       return (data || []).map(c => c.category).filter(Boolean);
     },
     enabled: !!entity?.id,
@@ -2577,119 +2577,119 @@ export default function WikiEntityPage() {
             <div className="space-y-6">
               {/* Information Card — generation admin-only, content visible to all */}
               {(isAdmin || infoCardContent) && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Lightbulb className="w-5 h-5 text-primary" />
-                    {language === 'uk' ? 'Інформаційна картка' : 'Information Card'}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {language === 'uk'
-                      ? 'Короткий AI-огляд сутності з відкритих джерел'
-                      : 'Quick AI overview from open sources'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {/* Generate button — admin only, shown when no content yet */}
-                  {!infoCardContent && isAdmin && (
-                    <div className="flex flex-col gap-2">
-                      <Select value={selectedInfoCardModel} onValueChange={setSelectedInfoCardModel}>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder={language === 'uk' ? 'Оберіть модель' : 'Select model'} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableModels.map(m => (
-                            <SelectItem key={m.value} value={m.value} className="text-xs">
-                              {m.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        size="sm"
-                        className="w-full gap-2"
-                        onClick={generateInfoCard}
-                        disabled={isGeneratingInfoCard}
-                      >
-                        {isGeneratingInfoCard ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            {language === 'uk' ? 'Генерую...' : 'Generating...'}
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-3.5 h-3.5" />
-                            {language === 'uk' ? 'Згенерувати картку' : 'Generate card'}
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-
-                  {infoCardContent && (
-                    <div className="space-y-3">
-                      {/* Regenerate controls — admin only */}
-                      {isAdmin && (
-                        <div className="flex gap-2">
-                          <Select value={selectedInfoCardModel} onValueChange={setSelectedInfoCardModel}>
-                            <SelectTrigger className="h-7 text-xs flex-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableModels.map(m => (
-                                <SelectItem key={m.value} value={m.value} className="text-xs">
-                                  {m.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 shrink-0"
-                            onClick={generateInfoCard}
-                            disabled={isGeneratingInfoCard}
-                            title={language === 'uk' ? 'Перегенерувати' : 'Regenerate'}
-                          >
-                            {isGeneratingInfoCard
-                              ? <Loader2 className="w-3 h-3 animate-spin" />
-                              : <RefreshCw className="w-3 h-3" />
-                            }
-                          </Button>
-                        </div>
-                      )}
-
-                      {/* Generated content */}
-                      <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-foreground [&_p]:text-muted-foreground [&_p]:mb-3 [&_ul]:text-muted-foreground [&_li]:mb-1 [&_blockquote]:text-muted-foreground/70 [&_blockquote]:border-l-2 [&_blockquote]:pl-2">
-                        <MarkdownContent content={infoCardContent} />
-                      </div>
-
-                      {/* Sources footer */}
-                      {infoCardSources.length > 0 && (
-                        <div className="pt-2 border-t border-border/50">
-                          <p className="text-[10px] text-muted-foreground mb-1 font-medium uppercase tracking-wider">
-                            {language === 'uk' ? 'Джерела' : 'Sources'}
-                          </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {infoCardSources.map((src) => (
-                              <a
-                                key={src.url}
-                                href={src.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
-                              >
-                                <ExternalLink className="w-2.5 h-2.5" />
-                                {src.title}
-                              </a>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Lightbulb className="w-5 h-5 text-primary" />
+                      {language === 'uk' ? 'Інформаційна картка' : 'Information Card'}
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      {language === 'uk'
+                        ? 'Короткий AI-огляд сутності з відкритих джерел'
+                        : 'Quick AI overview from open sources'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* Generate button — admin only, shown when no content yet */}
+                    {!infoCardContent && isAdmin && (
+                      <div className="flex flex-col gap-2">
+                        <Select value={selectedInfoCardModel} onValueChange={setSelectedInfoCardModel}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder={language === 'uk' ? 'Оберіть модель' : 'Select model'} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableModels.map(m => (
+                              <SelectItem key={m.value} value={m.value} className="text-xs">
+                                {m.label}
+                              </SelectItem>
                             ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="sm"
+                          className="w-full gap-2"
+                          onClick={generateInfoCard}
+                          disabled={isGeneratingInfoCard}
+                        >
+                          {isGeneratingInfoCard ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              {language === 'uk' ? 'Генерую...' : 'Generating...'}
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3.5 h-3.5" />
+                              {language === 'uk' ? 'Згенерувати картку' : 'Generate card'}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+
+                    {infoCardContent && (
+                      <div className="space-y-3">
+                        {/* Regenerate controls — admin only */}
+                        {isAdmin && (
+                          <div className="flex gap-2">
+                            <Select value={selectedInfoCardModel} onValueChange={setSelectedInfoCardModel}>
+                              <SelectTrigger className="h-7 text-xs flex-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableModels.map(m => (
+                                  <SelectItem key={m.value} value={m.value} className="text-xs">
+                                    {m.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 shrink-0"
+                              onClick={generateInfoCard}
+                              disabled={isGeneratingInfoCard}
+                              title={language === 'uk' ? 'Перегенерувати' : 'Regenerate'}
+                            >
+                              {isGeneratingInfoCard
+                                ? <Loader2 className="w-3 h-3 animate-spin" />
+                                : <RefreshCw className="w-3 h-3" />
+                              }
+                            </Button>
                           </div>
+                        )}
+
+                        {/* Generated content */}
+                        <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-foreground [&_p]:text-muted-foreground [&_p]:mb-3 [&_ul]:text-muted-foreground [&_li]:mb-1 [&_blockquote]:text-muted-foreground/70 [&_blockquote]:border-l-2 [&_blockquote]:pl-2">
+                          <MarkdownContent content={infoCardContent} />
                         </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+
+                        {/* Sources footer */}
+                        {infoCardSources.length > 0 && (
+                          <div className="pt-2 border-t border-border/50">
+                            <p className="text-[10px] text-muted-foreground mb-1 font-medium uppercase tracking-wider">
+                              {language === 'uk' ? 'Джерела' : 'Sources'}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {infoCardSources.map((src) => (
+                                <a
+                                  key={src.url}
+                                  href={src.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                                >
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                  {src.title}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               )}
 
               {/* Related Entities */}
@@ -3087,6 +3087,9 @@ export default function WikiEntityPage() {
             <DialogTitle>
               {language === 'uk' ? 'Знайдені дані з Wikipedia' : 'Wikipedia Data Found'}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Wikipedia extracted data and metadata
+            </DialogDescription>
           </DialogHeader>
 
           {extendedData && (
@@ -3237,7 +3240,7 @@ export default function WikiEntityPage() {
               <Link2 className="w-5 h-5" />
               {language === 'uk' ? 'Пов\'язані сутності' : 'Related Entities'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="sr-only">
               {language === 'uk' ? 'Пошук сутностей через спільні новини або Wikipedia' : 'Find entities via shared news or Wikipedia'}
             </DialogDescription>
           </DialogHeader>
