@@ -124,7 +124,7 @@ export default function NewsArticlePage() {
   const [selectedTweetModel, setSelectedTweetModel] = useState(ZAI_MODELS[0]?.value || '');
 
   // Toggle to hide optional blocks on the news article page (useful for quick UI changes)
-  const HIDE_KEY_BLOCKS = true;
+  const HIDE_KEY_BLOCKS = false;
 
   // Helper to get localized field - defined early so can be used in mutations
   const getLocalizedField = (field: string, articleData?: any) => {
@@ -730,11 +730,11 @@ export default function NewsArticlePage() {
         '@type': entity.entity_type === 'person' ? 'Person' : 'Organization',
         name: language === 'en' && entity.name_en ? entity.name_en : entity.name,
       };
-      
+
       if (entity.image_url) {
         entitySchema.image = entity.image_url;
       }
-      
+
       if (entity.wiki_url) {
         entitySchema.sameAs = entity.wiki_url;
       }
@@ -794,7 +794,7 @@ export default function NewsArticlePage() {
               {article.published_at && <meta itemProp="datePublished" content={article.published_at} />}
               {article.updated_at && <meta itemProp="dateModified" content={article.updated_at} />}
               {article.image_url && <meta itemProp="image" content={article.image_url} />}
-              
+
               {/* Header */}
               <header>
                 <div className="flex items-center gap-2 mb-3">
@@ -805,7 +805,7 @@ export default function NewsArticlePage() {
                     {article.category || article.feed?.category || 'general'}
                   </Badge>
                   {article.published_at && (
-                    <time 
+                    <time
                       className="text-xs text-muted-foreground"
                       dateTime={article.published_at}
                       itemProp="datePublished"
