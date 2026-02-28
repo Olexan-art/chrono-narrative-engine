@@ -436,12 +436,17 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
     const systemPrompt = "Summarize this entity in one sentence.";
     const userPrompt = `Name: ${testEntity.name}\nType: ${testEntity.entity_type}\nDescription: ${testEntity.description?.slice(0, 300)}`;
 
-    for (const model of models) {
-      if (abortRef.current) break;
-      addLog(`Тестування моделі: ${model}...`, 'info');
-      const startTime = performance.now();
+    const queue = [...models];
+    let currentIndex = 0;
+    const concurrency = 2;
+
+    const checkModel = async (model: string) => {
       try {
+        if (abortRef.current) return;
+        addLog(`Тестування моделі: ${model}...`, 'info');
+        const startTime = performance.now();
         let text = '';
+
         if (provider === 'ollama') {
           const resp = await fetch(`${ollamaUrl}/api/chat`, {
             method: 'POST',
@@ -461,15 +466,28 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
           const body = await resp.json();
           text = body?.choices?.[0]?.message?.content || '';
         }
+
         const endTime = performance.now();
         const duration = (endTime - startTime) / 1000;
-        setTestResults(prev => [...prev, { model, time: duration, status: 'ok' }]);
+        setTestResults(prev => [...prev.filter(r => r.model !== model), { model, time: duration, status: 'ok' }]);
         addLog(`Модель ${model}: ${duration.toFixed(2)}с - SUCCESS`, 'success');
       } catch {
-        setTestResults(prev => [...prev, { model, time: 0, status: 'error' }]);
+        setTestResults(prev => [...prev.filter(r => r.model !== model), { model, time: 0, status: 'error' }]);
         addLog(`Модель ${model}: ERROR`, 'error');
       }
-    }
+    };
+
+    const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
+      while (queue.length > 0 && !abortRef.current) {
+        const model = queue.shift();
+        if (model) {
+          await checkModel(model);
+          await new Promise(r => setTimeout(r, 200));
+        }
+      }
+    });
+
+    await Promise.all(workers);
     setIsTesting(false);
   };
 
@@ -709,9 +727,9 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
             {logs.length === 0 && <div className="text-muted-foreground italic opacity-30 text-center py-12">Очікування команд...</div>}
             {logs.map(log => (
               <div key={log.id} className={`border-l-2 pl-2 flex items-start gap-2 ${log.type === 'error' ? 'text-red-400 border-red-500 bg-red-500/5' :
-                  log.type === 'success' ? 'text-green-400 border-green-500 bg-green-500/5' :
-                    log.type === 'warn' ? 'text-orange-400 border-orange-500 bg-orange-500/5' :
-                      'text-blue-300 border-blue-500 bg-blue-500/5'
+                log.type === 'success' ? 'text-green-400 border-green-500 bg-green-500/5' :
+                  log.type === 'warn' ? 'text-orange-400 border-orange-500 bg-orange-500/5' :
+                    'text-blue-300 border-blue-500 bg-blue-500/5'
                 }`}>
                 <span className="opacity-40 text-[9px] shrink-0 pt-0.5">[{new Date(log.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
                 <span>{log.msg}</span>
@@ -835,8 +853,8 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-bold border ${r.pushed
-                          ? 'bg-green-500/5 text-green-400 border-green-500/30'
-                          : 'bg-yellow-500/5 text-yellow-500 border-yellow-500/30'
+                        ? 'bg-green-500/5 text-green-400 border-green-500/30'
+                        : 'bg-yellow-500/5 text-yellow-500 border-yellow-500/30'
                         }`}>
                         {r.pushed ? 'Опубліковано' : 'В черзі'}
                       </span>
