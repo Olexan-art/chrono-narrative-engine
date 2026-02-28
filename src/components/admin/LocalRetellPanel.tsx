@@ -598,12 +598,7 @@ Be factual. Do not speculate.`;
               max_tokens: 1500
             };
 
-            // Try JSON mode if supported (OpenAI-compatible models)
-            try {
-              requestBody.response_format = { type: "json_object" };
-            } catch (e) {
-              // If not supported, continue without it
-            }
+            // Removed response_format: { type: "json_object" } as it causes 400 errors in some LM Studio versions
 
             const resp = await fetch(`${lmStudioUrl}/chat/completions`, {
               method: 'POST',
