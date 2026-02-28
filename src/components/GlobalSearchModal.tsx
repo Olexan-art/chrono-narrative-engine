@@ -56,7 +56,7 @@ export function GlobalSearchModal({ isOpen, onOpenChange }: GlobalSearchModalPro
 
             const { data, error } = await supabase
                 .from('news_rss_items')
-                .select(`id, slug, ${titleField}, image_url, published_at`)
+                .select(`id, slug, ${titleField}, image_url, published_at, news_countries ( code )`)
                 .ilike(titleField, `%${debouncedQuery}%`)
                 .order('published_at', { ascending: false })
                 .limit(5);
@@ -246,10 +246,11 @@ export function GlobalSearchModal({ isOpen, onOpenChange }: GlobalSearchModalPro
                                         {newsResults.map(newsRaw => {
                                             const news = newsRaw as any;
                                             const title = language === 'en' ? (news.title_en || news.title) : news.title;
+                                            const countryCode = news.news_countries?.code || 'us';
                                             return (
                                                 <button
                                                     key={news.id}
-                                                    onClick={() => handleNavigate(`/news/${news.slug || news.id}`)}
+                                                    onClick={() => handleNavigate(`/news/${countryCode}/${news.slug || news.id}`)}
                                                     className="flex items-center justify-between w-full px-3 py-2 rounded-lg hover:bg-white/5 group transition-colors text-left"
                                                 >
                                                     <div className="flex items-center gap-3">
