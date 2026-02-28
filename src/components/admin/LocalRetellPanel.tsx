@@ -42,7 +42,7 @@ export function LocalRetellPanel({ password }: { password: string }) {
   const abortRef = useRef<boolean>(false);
 
   // Realtime logs and tests
-  const [logs, setLogs] = useState<{ id: number; msg: string; type: 'info' | 'success' | 'error' | 'warn' }[]>([]);
+  const [logs, setLogs] = useState<{ id: number; msg: React.ReactNode; type: 'info' | 'success' | 'error' | 'warn' }[]>([]);
   const [testResults, setTestResults] = useState<{ model: string; time: number; status: 'ok' | 'error' }[]>([]);
   const [isTesting, setIsTesting] = useState(false);
   const [lastPushedLinks, setLastPushedLinks] = useState<{ id: string; title: string; url: string }[]>([]);
@@ -69,8 +69,8 @@ export function LocalRetellPanel({ password }: { password: string }) {
     enabled: !!selectedNewsForAnalysis,
   });
 
-  const addLog = useCallback((msg: string, type: 'info' | 'success' | 'error' | 'warn' = 'info') => {
-    setLogs(prev => [{ id: Date.now(), msg, type }, ...prev].slice(0, 30));
+  const addLog = useCallback((msg: React.ReactNode, type: 'info' | 'success' | 'error' | 'warn' = 'info') => {
+    setLogs(prev => [{ id: Date.now() + Math.random(), msg, type }, ...prev].slice(0, 30));
   }, []);
 
   useEffect(() => {
@@ -464,13 +464,22 @@ export function LocalRetellPanel({ password }: { password: string }) {
           .order('id', { ascending: false })
           .limit(5);
 
-        if (data) {
+        if (data && data.length > 0) {
           const links = data.map((d: any) => ({
             id: d.news_rss_items?.id,
             title: d.news_rss_items?.title,
-            url: `https://hronovs.news/news/${d.news_rss_items?.news_countries?.code}/${d.news_rss_items?.slug}`
+            url: `https://bravennow.com/news/${d.news_rss_items?.news_countries?.code || 'us'}/${d.news_rss_items?.slug}`
           }));
           setLastPushedLinks(links);
+
+          links.forEach((link: any) => {
+            addLog(
+              <span className="flex items-center gap-1 flex-wrap">
+                🔗 Прод: <a href={link.url} target="_blank" rel="noreferrer" className="underline hover:text-green-300 ml-1 truncate max-w-[300px]">{link.url}</a>
+              </span>,
+              'success'
+            );
+          });
         }
 
         alert(`Опубліковано: оброблено=${res.processed}, добавлено=${res.pushed}, пропущено=${res.skipped}`);
