@@ -650,17 +650,39 @@ Be factual. Do not speculate.`;
           let analysis: any = null;
           try {
             let jsonText = responseText;
+            const startBrace = jsonText.indexOf('{');
 
-            // Strictly extract from first '{' to last '}' to ignore any markdown wraps or extra trailing text
-            const firstBrace = jsonText.indexOf('{');
-            const lastBrace = jsonText.lastIndexOf('}');
+            if (startBrace !== -1) {
+              let endBrace = jsonText.lastIndexOf('}');
+              let foundValid = false;
 
-            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
-              jsonText = jsonText.substring(firstBrace, lastBrace + 1);
+              // Brute-force find the valid JSON object by testing substrings backwards
+              // This fixes cases where the LLM appends trailing extra JSON objects or garbage with '}'
+              while (endBrace > startBrace) {
+                const candidate = jsonText.substring(startBrace, endBrace + 1);
+                try {
+                  const cleaned = cleanJSON(candidate);
+                  analysis = JSON.parse(cleaned);
+                  foundValid = true;
+                  jsonText = cleaned; // Update jsonText (for context in logs if needed)
+                  break;
+                } catch {
+                  // If parse fails, step backwards to the previous '}'
+                  endBrace = jsonText.lastIndexOf('}', endBrace - 1);
+                }
+              }
+
+              // If brute-force failed, fallback to greedy substring for the manual fallback logic below
+              if (!foundValid) {
+                const lastBrace = jsonText.lastIndexOf('}');
+                if (lastBrace > startBrace) {
+                  jsonText = cleanJSON(jsonText.substring(startBrace, lastBrace + 1));
+                }
+                analysis = JSON.parse(jsonText); // This will throw and trigger the catch block below
+              }
+            } else {
+              analysis = JSON.parse(cleanJSON(jsonText)); // This will throw
             }
-
-            jsonText = cleanJSON(jsonText);
-            analysis = JSON.parse(jsonText);
           } catch (parseErr: any) {
             addLog(`⚠️ Помилка парсингу JSON: ${parseErr.message}`, 'warn');
 
