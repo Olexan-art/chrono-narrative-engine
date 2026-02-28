@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { Clock, Menu, X, Globe, Palette, Calendar, Users, Bot, RefreshCw, Hash } from "lucide-react";
+import { Clock, Menu, X, Globe, Palette, Calendar, Users, Bot, RefreshCw, Hash, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+import { GlobalSearchModal } from "./GlobalSearchModal";
 import { Logo } from "@/components/Logo";
 
 export function Header() {
   const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   return (
     <header className="border-b border-border/40 bg-[#030711]/95 backdrop-blur-md sticky top-0 z-50 transition-colors duration-300">
@@ -20,6 +22,19 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search className="w-4 h-4" />
+            <span>Search...</span>
+            <kbd className="hidden lg:inline-flex h-5 items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 ml-2">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </Button>
+          <div className="w-[1px] h-4 bg-border/50 mx-1"></div>
           <Link to="/news-digest">
             <Button variant="ghost" size="sm" className="gap-2">
               <Globe className="w-4 h-4" />
@@ -55,6 +70,14 @@ export function Header() {
 
         {/* Mobile Navigation */}
         <div className="flex md:hidden items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 text-muted-foreground"
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search className="w-5 h-5" />
+          </Button>
           <LanguageSwitcher />
           <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -99,6 +122,8 @@ export function Header() {
           </nav>
         </div>
       )}
+
+      <GlobalSearchModal isOpen={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   );
 }
