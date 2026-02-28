@@ -523,16 +523,15 @@ export function LocalRetellPanel({ password }: { password: string }) {
     setAnalysisProgress({ total: newsToProcess.length, done: 0, success: 0, failed: 0 });
 
     try {
-      for (let i = 0; i < newsToProcess.length; i++) {
-        if (abortRef.current) {
-          addLog('Генерацію перервано користувачем', 'warn');
-          break;
-        }
+      const counts = { success: 0, fail: 0 };
+      const concurrency = 2;
+      const queue = [...newsToProcess];
+      let currentIndex = 0;
 
-        const newsItem = newsToProcess[i];
-        addLog(`[${i + 1}/${newsToProcess.length}] Генерація аналізу: ${newsItem.title?.slice(0, 60)}...`, 'info');
-
+      const processAnalysisItem = async (newsItem: any, i: number) => {
         try {
+          if (abortRef.current) return;
+          addLog(`[${i + 1}/${newsToProcess.length}] Генерація аналізу: ${newsItem.title?.slice(0, 60)}...`, 'info');
 
           const systemPrompt = `You are an expert news analyst. Analyze the following news article and provide a comprehensive analysis in STRICT VALID JSON format.
 
@@ -552,7 +551,7 @@ CRITICAL JSON RULES:
 2. Use ONLY double quotes ("), never single quotes (')
 3. NO trailing commas anywhere
 4. NO line breaks inside string values - use spaces instead
-5. Escape ALL special characters: \" for quotes, \\\\ for backslashes
+5. Escape ALL special characters: \\" for quotes, \\\\ for backslashes
 6. context_background: simple array of 3-5 short strings
 7. faq: array of 3-4 simple objects
 
@@ -627,31 +626,22 @@ Be factual. Do not speculate.`;
               .trim();
 
             // Fix common quote issues in values - escape unescaped quotes
-            // This regex finds quotes inside string values that aren't escaped
             try {
-              // Replace problematic quotes in string values
               cleaned = cleaned.replace(/"([^"]*)":\s*"([^"]*)"/g, (match, key, value) => {
-                // If value contains unescaped quotes, remove them or replace with single quote
                 const cleanValue = value.replace(/"/g, "'");
                 return `"${key}":"${cleanValue}"`;
               });
             } catch (e) {
-              // If regex fails, continue with original
             }
 
             // Try to fix unclosed arrays/objects
             const openBraces = (cleaned.match(/\{/g) || []).length;
-            const closeBraces = (cleaned.match(/\}/g) || []).length;
+            const closeBraces = (cleaned.match(/\\}/g) || []).length;
             const openBrackets = (cleaned.match(/\[/g) || []).length;
             const closeBrackets = (cleaned.match(/\]/g) || []).length;
 
-            // Add missing closing braces
-            if (openBraces > closeBraces) {
-              cleaned += '}'.repeat(openBraces - closeBraces);
-            }
-            if (openBrackets > closeBrackets) {
-              cleaned += ']'.repeat(openBrackets - closeBrackets);
-            }
+            if (openBraces > closeBraces) cleaned += '}'.repeat(openBraces - closeBraces);
+            if (openBrackets > closeBrackets) cleaned += ']'.repeat(openBrackets - closeBrackets);
 
             return cleaned;
           };
@@ -659,22 +649,16 @@ Be factual. Do not speculate.`;
           // Parse JSON response with better error handling
           let analysis: any = null;
           try {
-            // Try to extract JSON from markdown code blocks
             const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) || responseText.match(/```\s*([\s\S]*?)\s*```/) || [null, responseText];
             let jsonText = (jsonMatch[1] || responseText).trim();
-
-            // Clean JSON
             jsonText = cleanJSON(jsonText);
-
             analysis = JSON.parse(jsonText);
           } catch (parseErr: any) {
             addLog(`⚠️ Помилка парсингу JSON: ${parseErr.message}`, 'warn');
 
-            // Extract position from error message if available
             const posMatch = parseErr.message.match(/column (\d+)/);
             const errorPos = posMatch ? parseInt(posMatch[1]) : 300;
 
-            // Show context around the error position
             const start = Math.max(0, errorPos - 150);
             const end = Math.min(responseText.length, errorPos + 150);
             const preview = responseText.slice(start, end).replace(/\n/g, ' ');
@@ -693,30 +677,19 @@ Be factual. Do not speculate.`;
               const match = responseText.match(/\{[\s\S]*\}/);
               if (match) {
                 let jsonText = cleanJSON(match[0]);
-
-                // Additional aggressive cleaning for problematic strings
-                // Try to fix quotes in array elements
                 jsonText = jsonText.replace(/\[(.*?)\]/gs, (arrMatch) => {
-                  // Fix trailing commas and quotes in arrays
-                  return arrMatch
-                    .replace(/,\s*]/g, ']')
-                    .replace(/,\s*,/g, ',');
+                  return arrMatch.replace(/,\s*]/g, ']').replace(/,\s*,/g, ',');
                 });
-
                 analysis = JSON.parse(jsonText);
                 addLog('✓ JSON успішно відновлено через fallback', 'success');
               } else {
                 throw new Error(`Не вдалося знайти JSON об'єкт. Помилка: ${parseErr.message}`);
               }
             } catch (fallbackErr: any) {
-              // Last resort: try manual reconstruction
               addLog(`❌ Спроба ручної реконструкції JSON...`, 'error');
-
               try {
-                // Try to extract at least partial data
                 const whyMatters = responseText.match(/"why_it_matters"\s*:\s*"([^"]+)"/);
                 const whatNext = responseText.match(/"what_happens_next"\s*:\s*"([^"]+)"/);
-
                 if (whyMatters || whatNext) {
                   analysis = {
                     why_it_matters: whyMatters ? whyMatters[1] : '',
@@ -736,7 +709,6 @@ Be factual. Do not speculate.`;
             }
           }
 
-          // Validate structure
           if (!analysis.why_it_matters || !analysis.context_background || !analysis.what_happens_next || !analysis.faq) {
             addLog('Неповна структура аналізу. Доповнення...', 'warn');
             analysis = {
@@ -748,11 +720,9 @@ Be factual. Do not speculate.`;
             };
           }
 
-          // Add metadata
           analysis.generated_at = new Date().toISOString();
           analysis.model = `${provider}/${selectedModel}`;
 
-          // Save to database
           const { error: updateError } = await supabase
             .from('news_rss_items')
             .update({ news_analysis: analysis })
@@ -761,37 +731,45 @@ Be factual. Do not speculate.`;
           if (updateError) throw updateError;
 
           addLog(`✓ [${i + 1}/${newsToProcess.length}] Успішно за ${duration}с: ${newsItem.title?.slice(0, 40)}`, 'success');
-          successCount++;
-          setAnalysisProgress({ total: newsToProcess.length, done: i + 1, success: successCount, failed: failCount });
+          counts.success++;
+          setAnalysisProgress(p => ({ ...p, done: p.done + 1, success: counts.success }));
 
-          // Invalidate cache for this specific news
           queryClient.invalidateQueries({ queryKey: ['news-analysis', newsItem.id] });
           if (newsItem.id === selectedNewsForAnalysis) {
             refetchSelectedAnalysis();
           }
 
-          // Small delay between requests
-          if (i < newsToProcess.length - 1) {
-            await new Promise(r => setTimeout(r, 500));
-          }
-
         } catch (itemErr: any) {
           const itemErrorMsg = itemErr?.message || String(itemErr);
           addLog(`✗ Помилка: ${newsItem.title?.slice(0, 40)}: ${itemErrorMsg}`, 'error');
-
-          // Show more context for JSON errors
           if (itemErrorMsg.includes('JSON')) {
             console.error('[Deep Analysis] Full error for debugging:', itemErr);
             console.error('[Deep Analysis] News item:', newsItem.title);
           }
-
-          failCount++;
-          setAnalysisProgress({ total: newsToProcess.length, done: i + 1, success: successCount, failed: failCount });
+          counts.fail++;
+          setAnalysisProgress(p => ({ ...p, done: p.done + 1, failed: counts.fail }));
         }
+      };
+
+      const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
+        while (queue.length > 0 && !abortRef.current) {
+          const item = queue.shift();
+          const i = currentIndex++;
+          if (item) {
+            await processAnalysisItem(item, i);
+            await new Promise(r => setTimeout(r, 500));
+          }
+        }
+      });
+
+      await Promise.all(workers);
+
+      if (abortRef.current) {
+        addLog('Генерацію перервано користувачем', 'warn');
       }
 
       // Final summary
-      addLog(`Завершено! Успішно: ${successCount}, Помилок: ${failCount}`, successCount > 0 ? 'success' : 'warn');
+      addLog(`Завершено! Успішно: ${counts.success}, Помилок: ${counts.fail}`, counts.success > 0 ? 'success' : 'warn');
 
     } catch (err: any) {
       const errorMsg = err?.message || String(err);
