@@ -649,8 +649,16 @@ Be factual. Do not speculate.`;
           // Parse JSON response with better error handling
           let analysis: any = null;
           try {
-            const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) || responseText.match(/```\s*([\s\S]*?)\s*```/) || [null, responseText];
-            let jsonText = (jsonMatch[1] || responseText).trim();
+            let jsonText = responseText;
+
+            // Strictly extract from first '{' to last '}' to ignore any markdown wraps or extra trailing text
+            const firstBrace = jsonText.indexOf('{');
+            const lastBrace = jsonText.lastIndexOf('}');
+
+            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
+              jsonText = jsonText.substring(firstBrace, lastBrace + 1);
+            }
+
             jsonText = cleanJSON(jsonText);
             analysis = JSON.parse(jsonText);
           } catch (parseErr: any) {
@@ -672,7 +680,7 @@ Be factual. Do not speculate.`;
 
             addLog(`Позиція помилки: ${errorPos}, контекст: ${marker}${preview.slice(0, 200)}${endMarker}`, 'warn');
 
-            // Fallback: try to find JSON object in response
+            // Fallback: try to find JSON object in response and aggressively clean standard structures
             try {
               const match = responseText.match(/\{[\s\S]*\}/);
               if (match) {
