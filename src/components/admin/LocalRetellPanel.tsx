@@ -17,19 +17,19 @@ type ConnectionStatus = 'unknown' | 'checking' | 'connected' | 'error';
 export function LocalRetellPanel({ password }: { password: string }) {
   const queryClient = useQueryClient();
   const [isDevHost, setIsDevHost] = useState(false);
-  
+
   // Settings
   const [provider, setProvider] = useState<Provider>('ollama');
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
   const [lmStudioUrl, setLmStudioUrl] = useState('http://localhost:1234/v1');
-  
+
   const [models, setModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [batchSize, setBatchSize] = useState<number>(10);
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [onlyWithoutRetell, setOnlyWithoutRetell] = useState<boolean>(true);
-  
+
   // State
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState({ total: 0, done: 0, success: 0, failed: 0, skipped: 0 });
@@ -40,13 +40,13 @@ export function LocalRetellPanel({ password }: { password: string }) {
   const [tableReady, setTableReady] = useState<boolean | null>(null);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const abortRef = useRef<boolean>(false);
-  
+
   // Realtime logs and tests
   const [logs, setLogs] = useState<{ id: number; msg: string; type: 'info' | 'success' | 'error' | 'warn' }[]>([]);
   const [testResults, setTestResults] = useState<{ model: string; time: number; status: 'ok' | 'error' }[]>([]);
   const [isTesting, setIsTesting] = useState(false);
   const [lastPushedLinks, setLastPushedLinks] = useState<{ id: string; title: string; url: string }[]>([]);
-  
+
   // Deep Analysis generation
   const [selectedNewsForAnalysis, setSelectedNewsForAnalysis] = useState<string>('');
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
@@ -126,9 +126,9 @@ export function LocalRetellPanel({ password }: { password: string }) {
     queryKey: ['local-dev-news-for-date', selectedCountry, selectedDate],
     queryFn: async () => {
       if (!selectedCountry || !selectedDate) return [];
-      
+
       console.log('[LocalRetellPanel] Loading news for:', selectedCountry, selectedDate);
-      
+
       const startOfDay = `${selectedDate}T00:00:00`;
       const endOfDay = `${selectedDate}T23:59:59`;
       const { data, error } = await supabase
@@ -138,28 +138,28 @@ export function LocalRetellPanel({ password }: { password: string }) {
         .gte('fetched_at', startOfDay)
         .lte('fetched_at', endOfDay)
         .order('fetched_at', { ascending: true });
-      
+
       if (error) {
         console.error('[LocalRetellPanel] Error loading news:', error);
         return [];
       }
-      
+
       console.log('[LocalRetellPanel] Loaded news items:', data?.length || 0);
-      
+
       // Separately check which news have analysis (lighter query)
       const ids = (data || []).map(n => n.id);
       if (ids.length === 0) return [];
-      
+
       const { data: analysisCheck } = await supabase
         .from('news_rss_items')
         .select('id')
         .in('id', ids)
         .not('news_analysis', 'is', null);
-      
+
       const hasAnalysisSet = new Set((analysisCheck || []).map((a: any) => a.id));
-      
+
       console.log('[LocalRetellPanel] News with analysis:', hasAnalysisSet.size);
-      
+
       return (data || []).map((n: any) => ({
         ...n,
         has_analysis: hasAnalysisSet.has(n.id)
@@ -257,7 +257,7 @@ export function LocalRetellPanel({ password }: { password: string }) {
 
     if (batchSize > 0) list = list.slice(0, batchSize);
     setProgress({ total: list.length, done: 0, success: 0, failed: 0, skipped: 0 });
-    
+
     if (list.length === 0) {
       addLog('Немає новин для обробки! Спробуйте іншу дату або зніміть фільтр "тільки без переказу".', 'warn');
       setIsRunning(false);
@@ -268,14 +268,15 @@ export function LocalRetellPanel({ password }: { password: string }) {
 
     const systemPrompt = `You are a professional journalist. Return JSON with keys: content, key_points (array), themes (array), keywords (array). First paragraph must answer WHO, WHAT, WHERE, WHEN, WHY. Do NOT invent facts.`;
 
-    for (let i = 0; i < list.length; i++) {
-      if (abortRef.current) {
-        addLog('Обробку перервано користувачем', 'warn');
-        break;
-      }
-      const item = list[i];
+    let activeWorkers = 0;
+    const concurrency = 2;
+    const queue = [...list];
+    let currentIndex = 0;
+
+    const processItem = async (item: any, index: number) => {
       try {
-        addLog(`[${i+1}/${list.length}] Обробка: ${item.title?.slice(0, 50)}...`, 'info');
+        if (abortRef.current) return;
+        addLog(`[${index + 1}/${list.length}] Обробка: ${item.title?.slice(0, 50)}...`, 'info');
         const userPrompt = `Title: ${item.title}\n\nOriginal content: ${item.original_content || item.content || ''}\n\nRespond with JSON only.`;
         let text = '';
         const startTime = Date.now();
@@ -327,12 +328,28 @@ export function LocalRetellPanel({ password }: { password: string }) {
         if (saveErr) throw saveErr;
         addLog(`Успішно за ${duration}с: ${item.title?.slice(0, 40)}`, 'success');
         setProgress(p => ({ ...p, done: p.done + 1, success: p.success + 1 }));
-        await new Promise(r => setTimeout(r, 250));
       } catch (err: any) {
         addLog(`Помилка: ${item.title?.slice(0, 40)}: ${err.message}`, 'error');
         setLastError(`${item.title?.slice(0, 40)}: ${err.message}`);
         setProgress(p => ({ ...p, done: p.done + 1, failed: p.failed + 1 }));
       }
+    };
+
+    const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
+      while (queue.length > 0 && !abortRef.current) {
+        const item = queue.shift();
+        const index = currentIndex++;
+        if (item) {
+          await processItem(item, index);
+          await new Promise(r => setTimeout(r, 250)); // small delay between requests for a single worker
+        }
+      }
+    });
+
+    await Promise.all(workers);
+
+    if (abortRef.current) {
+      addLog('Обробку перервано користувачем', 'warn');
     }
     setIsRunning(false);
     addLog(`Завершено! Успішно: ${progress.success}, Помилок: ${progress.failed}`, 'info');
@@ -398,12 +415,12 @@ export function LocalRetellPanel({ password }: { password: string }) {
 
   const clearStaging = async () => {
     if (!confirm('Ви впевнені, що хочете очистити ВСІ перекази зі стейджингу?')) return;
-    
+
     try {
       addLog('Очищення таблиці стейджингу...', 'warn');
       const { error } = await (supabase as any).from('ollama_retell_staging').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       if (error) throw error;
-      
+
       addLog('Стейджинг успішно очищено', 'success');
       refetchStats();
       refetchRecent();
@@ -420,7 +437,7 @@ export function LocalRetellPanel({ password }: { password: string }) {
         addLog(`Синхронізація успішна: ${res.pushed} новин перенесено в Live`, 'success');
         refetchStats();
         refetchRecent();
-        
+
         // Fetch recently pushed for the links section
         const { data } = await (supabase as any)
           .from('ollama_retell_staging')
@@ -428,7 +445,7 @@ export function LocalRetellPanel({ password }: { password: string }) {
           .eq('pushed', true)
           .order('id', { ascending: false })
           .limit(5);
-        
+
         if (data) {
           const links = data.map((d: any) => ({
             id: d.news_rss_items?.id,
@@ -443,9 +460,9 @@ export function LocalRetellPanel({ password }: { password: string }) {
         addLog(`Помилка публікації: ${res?.error || 'unknown'}`, 'error');
         alert('Помилка: ' + (res?.error || 'unknown'));
       }
-    } catch (e: any) { 
+    } catch (e: any) {
       addLog(`Критична помилка публікації: ${e.message}`, 'error');
-      alert('Помилка публікації'); 
+      alert('Помилка публікації');
     }
   };
 
@@ -457,7 +474,7 @@ export function LocalRetellPanel({ password }: { password: string }) {
 
     // Determine which news items to process
     let newsToProcess: any[] = [];
-    
+
     if (generateAllWithoutAnalysis) {
       // Process all news without analysis
       newsToProcess = newsForDate.filter((n: any) => !n.has_analysis);
@@ -495,7 +512,7 @@ export function LocalRetellPanel({ password }: { password: string }) {
         }
 
         const newsItem = newsToProcess[i];
-        addLog(`[${i+1}/${newsToProcess.length}] Генерація аналізу: ${newsItem.title?.slice(0, 60)}...`, 'info');
+        addLog(`[${i + 1}/${newsToProcess.length}] Генерація аналізу: ${newsItem.title?.slice(0, 60)}...`, 'info');
 
         try {
 
@@ -562,14 +579,14 @@ Be factual. Do not speculate.`;
               temperature: 0.3,
               max_tokens: 1500
             };
-            
+
             // Try JSON mode if supported (OpenAI-compatible models)
             try {
               requestBody.response_format = { type: "json_object" };
             } catch (e) {
               // If not supported, continue without it
             }
-            
+
             const resp = await fetch(`${lmStudioUrl}/chat/completions`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -582,7 +599,7 @@ Be factual. Do not speculate.`;
 
           const duration = ((Date.now() - startTime) / 1000).toFixed(1);
           addLog(`Отримано відповідь за ${duration}с. Парсинг JSON...`, 'info');
-          
+
           // Log full response for debugging
           console.log('[Deep Analysis] Full LLM response:', responseText);
           console.log('[Deep Analysis] Response length:', responseText.length, 'chars');
@@ -595,7 +612,7 @@ Be factual. Do not speculate.`;
               .replace(/,\s*,/g, ',')           // Remove double commas
               .replace(/\r/g, '')               // Remove carriage returns
               .trim();
-            
+
             // Fix common quote issues in values - escape unescaped quotes
             // This regex finds quotes inside string values that aren't escaped
             try {
@@ -608,13 +625,13 @@ Be factual. Do not speculate.`;
             } catch (e) {
               // If regex fails, continue with original
             }
-            
+
             // Try to fix unclosed arrays/objects
             const openBraces = (cleaned.match(/\{/g) || []).length;
             const closeBraces = (cleaned.match(/\}/g) || []).length;
             const openBrackets = (cleaned.match(/\[/g) || []).length;
             const closeBrackets = (cleaned.match(/\]/g) || []).length;
-            
+
             // Add missing closing braces
             if (openBraces > closeBraces) {
               cleaned += '}'.repeat(openBraces - closeBraces);
@@ -622,7 +639,7 @@ Be factual. Do not speculate.`;
             if (openBrackets > closeBrackets) {
               cleaned += ']'.repeat(openBrackets - closeBrackets);
             }
-            
+
             return cleaned;
           };
 
@@ -632,38 +649,38 @@ Be factual. Do not speculate.`;
             // Try to extract JSON from markdown code blocks
             const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) || responseText.match(/```\s*([\s\S]*?)\s*```/) || [null, responseText];
             let jsonText = (jsonMatch[1] || responseText).trim();
-            
+
             // Clean JSON
             jsonText = cleanJSON(jsonText);
-            
+
             analysis = JSON.parse(jsonText);
           } catch (parseErr: any) {
             addLog(`⚠️ Помилка парсингу JSON: ${parseErr.message}`, 'warn');
-            
+
             // Extract position from error message if available
             const posMatch = parseErr.message.match(/column (\d+)/);
             const errorPos = posMatch ? parseInt(posMatch[1]) : 300;
-            
+
             // Show context around the error position
             const start = Math.max(0, errorPos - 150);
             const end = Math.min(responseText.length, errorPos + 150);
             const preview = responseText.slice(start, end).replace(/\n/g, ' ');
             const marker = start > 0 ? '...' : '';
             const endMarker = end < responseText.length ? '...' : '';
-            
+
             console.error('[Deep Analysis] JSON Parse Error:', parseErr.message);
             console.error('[Deep Analysis] Error at position:', errorPos);
             console.error('[Deep Analysis] Context around error:', marker + preview + endMarker);
             console.error('[Deep Analysis] Full response length:', responseText.length);
-            
+
             addLog(`Позиція помилки: ${errorPos}, контекст: ${marker}${preview.slice(0, 200)}${endMarker}`, 'warn');
-            
+
             // Fallback: try to find JSON object in response
             try {
               const match = responseText.match(/\{[\s\S]*\}/);
               if (match) {
                 let jsonText = cleanJSON(match[0]);
-                
+
                 // Additional aggressive cleaning for problematic strings
                 // Try to fix quotes in array elements
                 jsonText = jsonText.replace(/\[(.*?)\]/gs, (arrMatch) => {
@@ -672,7 +689,7 @@ Be factual. Do not speculate.`;
                     .replace(/,\s*]/g, ']')
                     .replace(/,\s*,/g, ',');
                 });
-                
+
                 analysis = JSON.parse(jsonText);
                 addLog('✓ JSON успішно відновлено через fallback', 'success');
               } else {
@@ -681,12 +698,12 @@ Be factual. Do not speculate.`;
             } catch (fallbackErr: any) {
               // Last resort: try manual reconstruction
               addLog(`❌ Спроба ручної реконструкції JSON...`, 'error');
-              
+
               try {
                 // Try to extract at least partial data
                 const whyMatters = responseText.match(/"why_it_matters"\s*:\s*"([^"]+)"/);
                 const whatNext = responseText.match(/"what_happens_next"\s*:\s*"([^"]+)"/);
-                
+
                 if (whyMatters || whatNext) {
                   analysis = {
                     why_it_matters: whyMatters ? whyMatters[1] : '',
@@ -730,10 +747,10 @@ Be factual. Do not speculate.`;
 
           if (updateError) throw updateError;
 
-          addLog(`✓ [${i+1}/${newsToProcess.length}] Успішно за ${duration}с: ${newsItem.title?.slice(0, 40)}`, 'success');
+          addLog(`✓ [${i + 1}/${newsToProcess.length}] Успішно за ${duration}с: ${newsItem.title?.slice(0, 40)}`, 'success');
           successCount++;
           setAnalysisProgress({ total: newsToProcess.length, done: i + 1, success: successCount, failed: failCount });
-          
+
           // Invalidate cache for this specific news
           queryClient.invalidateQueries({ queryKey: ['news-analysis', newsItem.id] });
           if (newsItem.id === selectedNewsForAnalysis) {
@@ -748,13 +765,13 @@ Be factual. Do not speculate.`;
         } catch (itemErr: any) {
           const itemErrorMsg = itemErr?.message || String(itemErr);
           addLog(`✗ Помилка: ${newsItem.title?.slice(0, 40)}: ${itemErrorMsg}`, 'error');
-          
+
           // Show more context for JSON errors
           if (itemErrorMsg.includes('JSON')) {
             console.error('[Deep Analysis] Full error for debugging:', itemErr);
             console.error('[Deep Analysis] News item:', newsItem.title);
           }
-          
+
           failCount++;
           setAnalysisProgress({ total: newsToProcess.length, done: i + 1, success: successCount, failed: failCount });
         }
@@ -762,7 +779,7 @@ Be factual. Do not speculate.`;
 
       // Final summary
       addLog(`Завершено! Успішно: ${successCount}, Помилок: ${failCount}`, successCount > 0 ? 'success' : 'warn');
-      
+
     } catch (err: any) {
       const errorMsg = err?.message || String(err);
       addLog(`Критична помилка: ${errorMsg}`, 'error');
@@ -801,8 +818,8 @@ Be factual. Do not speculate.`;
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs uppercase text-muted-foreground">Endpoint URL</Label>
-              <Input 
-                value={provider === 'ollama' ? ollamaUrl : lmStudioUrl} 
+              <Input
+                value={provider === 'ollama' ? ollamaUrl : lmStudioUrl}
                 onChange={e => provider === 'ollama' ? setOllamaUrl(e.target.value) : setLmStudioUrl(e.target.value)}
                 className="font-mono text-xs"
               />
@@ -862,12 +879,12 @@ Be factual. Do not speculate.`;
           <p className="text-xs text-muted-foreground">
             Створює комплексний аналіз новини: чому це важливо, контекст, що буде далі, FAQ
           </p>
-          
+
           {/* Filter and mode selection */}
           <div className="flex flex-wrap gap-3 items-center p-3 rounded bg-purple-500/5 border border-purple-500/20">
             <div className="flex items-center gap-2">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 id="filterNoAnalysis"
                 checked={onlyWithoutAnalysisFilter}
                 onChange={(e) => setOnlyWithoutAnalysisFilter(e.target.checked)}
@@ -879,8 +896,8 @@ Be factual. Do not speculate.`;
             </div>
             <div className="h-4 w-px bg-purple-500/30" />
             <div className="flex items-center gap-2">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 id="generateAllMode"
                 checked={generateAllWithoutAnalysis}
                 onChange={(e) => {
@@ -912,16 +929,16 @@ Be factual. Do not speculate.`;
                   </div>
                 </div>
               ) : (
-                <Select 
-                  value={selectedNewsForAnalysis} 
-                  onValueChange={setSelectedNewsForAnalysis} 
+                <Select
+                  value={selectedNewsForAnalysis}
+                  onValueChange={setSelectedNewsForAnalysis}
                   disabled={newsLoading || !selectedCountry || !selectedDate || newsForDate.length === 0}
                 >
                   <SelectTrigger className="text-xs">
                     <SelectValue placeholder={
-                      newsLoading ? "Завантаження..." : 
-                      newsForDate.length === 0 ? "Спочатку оберіть країну та дату" : 
-                      "Оберіть новину..."
+                      newsLoading ? "Завантаження..." :
+                        newsForDate.length === 0 ? "Спочатку оберіть країну та дату" :
+                          "Оберіть новину..."
                     } />
                   </SelectTrigger>
                   <SelectContent>
@@ -934,7 +951,7 @@ Be factual. Do not speculate.`;
                             <div className="truncate">
                               {news.title}
                               <span className="text-[10px] text-muted-foreground ml-2">
-                                ({new Date(news.fetched_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})})
+                                ({new Date(news.fetched_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
                               </span>
                             </div>
                           </div>
@@ -945,15 +962,15 @@ Be factual. Do not speculate.`;
               )}
             </div>
             <div className="flex items-end">
-              <Button 
+              <Button
                 className={`w-full gap-2 ${generateAllWithoutAnalysis ? 'bg-orange-600 hover:bg-orange-700 animate-pulse' : 'bg-purple-600 hover:bg-purple-700'}`}
                 onClick={generateDeepAnalysis}
                 disabled={
                   newsLoading ||
-                  (!generateAllWithoutAnalysis && !selectedNewsForAnalysis) || 
-                  !selectedModel || 
-                  isGeneratingAnalysis || 
-                  isRunning || 
+                  (!generateAllWithoutAnalysis && !selectedNewsForAnalysis) ||
+                  !selectedModel ||
+                  isGeneratingAnalysis ||
+                  isRunning ||
                   isTesting ||
                   (generateAllWithoutAnalysis && newsForDate.filter((n: any) => !n.has_analysis).length === 0)
                 }
@@ -995,14 +1012,14 @@ Be factual. Do not speculate.`;
               Новин не знайдено за обрану дату
             </div>
           )}
-          
+
           {/* Progress bar for batch analysis generation */}
           {isGeneratingAnalysis && analysisProgress.total > 0 && (
             <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
               <div className="flex justify-between text-xs font-mono">
                 <span className="flex items-center gap-2">
                   Обробка: {analysisProgress.done}/{analysisProgress.total}
-                  {analysisProgress.done > 0 && <span className="opacity-50">({Math.round((analysisProgress.done/analysisProgress.total)*100)}%)</span>}
+                  {analysisProgress.done > 0 && <span className="opacity-50">({Math.round((analysisProgress.done / analysisProgress.total) * 100)}%)</span>}
                 </span>
                 <div className="flex gap-4">
                   <span className="text-green-400 flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/10">
@@ -1015,8 +1032,8 @@ Be factual. Do not speculate.`;
               </div>
               <Progress value={(analysisProgress.done / analysisProgress.total) * 100} className="h-2.5 bg-purple-500/20" />
               <div className="flex justify-end">
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   size="sm"
                   onClick={stop}
                   className="gap-1 h-7 text-xs"
@@ -1027,7 +1044,7 @@ Be factual. Do not speculate.`;
               </div>
             </div>
           )}
-          
+
           {/* Display generated analysis preview */}
           {selectedNewsAnalysis?.news_analysis && (
             <div className="mt-4 space-y-3 p-4 rounded-lg bg-purple-500/5 border border-purple-500/20">
@@ -1076,8 +1093,8 @@ Be factual. Do not speculate.`;
                 )}
               </div>
               <div className="pt-2 border-t border-purple-500/20">
-                <a 
-                  href={`/news/view/${selectedNewsForAnalysis}`} 
+                <a
+                  href={`/news/view/${selectedNewsForAnalysis}`}
                   target="_blank"
                   className="text-[10px] text-purple-400 hover:text-purple-300 underline flex items-center gap-1"
                 >
@@ -1094,8 +1111,8 @@ Be factual. Do not speculate.`;
             {isRunning ? 'Запущено...' : 'Запустити переказ → staging'}
           </Button>
           <Button variant="outline" onClick={runAutoTest} disabled={isRunning || isTesting || !selectedModel || !selectedCountry || !selectedDate} className="flex-1 min-w-[200px]">
-             <Zap className={`w-4 h-4 mr-2 text-yellow-500 ${isTesting ? 'animate-pulse' : ''}`} />
-             {isTesting ? 'Тестування...' : 'Автотест моделей'}
+            <Zap className={`w-4 h-4 mr-2 text-yellow-500 ${isTesting ? 'animate-pulse' : ''}`} />
+            {isTesting ? 'Тестування...' : 'Автотест моделей'}
           </Button>
           <Button variant="destructive" onClick={stop} disabled={!isRunning && !isTesting}>
             <StopCircle className="w-4 h-4 mr-1" />
@@ -1111,10 +1128,10 @@ Be factual. Do not speculate.`;
             )}
           </Button>
 
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={clearStaging} 
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={clearStaging}
             title="Очистити стейджинг"
             className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
           >
@@ -1132,13 +1149,12 @@ Be factual. Do not speculate.`;
           <div className="h-44 overflow-y-auto rounded-md border border-border/50 bg-black/40 p-3 font-mono text-[11px] flex flex-col-reverse gap-1.5">
             {logs.length === 0 && <div className="text-muted-foreground italic opacity-30 text-center py-12">Очікування команд...</div>}
             {logs.map(log => (
-              <div key={log.id} className={`border-l-2 pl-2 flex items-start gap-2 ${
-                log.type === 'error' ? 'text-red-400 border-red-500 bg-red-500/5' : 
-                log.type === 'success' ? 'text-green-400 border-green-500 bg-green-500/5' : 
-                log.type === 'warn' ? 'text-orange-400 border-orange-500 bg-orange-500/5' : 
-                'text-blue-300 border-blue-500 bg-blue-500/5'
-              }`}>
-                <span className="opacity-40 text-[9px] shrink-0 pt-0.5">[{new Date(log.id).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}]</span>
+              <div key={log.id} className={`border-l-2 pl-2 flex items-start gap-2 ${log.type === 'error' ? 'text-red-400 border-red-500 bg-red-500/5' :
+                  log.type === 'success' ? 'text-green-400 border-green-500 bg-green-500/5' :
+                    log.type === 'warn' ? 'text-orange-400 border-orange-500 bg-orange-500/5' :
+                      'text-blue-300 border-blue-500 bg-blue-500/5'
+                }`}>
+                <span className="opacity-40 text-[9px] shrink-0 pt-0.5">[{new Date(log.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
                 <span>{log.msg}</span>
               </div>
             ))}
@@ -1168,8 +1184,8 @@ Be factual. Do not speculate.`;
                         {res.model}
                       </td>
                       <td className={`p-2 text-center`}>
-                        {res.status === 'ok' ? 
-                          <span className="text-green-500 flex items-center justify-center gap-1"><CheckCircle2 className="w-3 h-3" /> OK</span> : 
+                        {res.status === 'ok' ?
+                          <span className="text-green-500 flex items-center justify-center gap-1"><CheckCircle2 className="w-3 h-3" /> OK</span> :
                           <span className="text-red-500 flex items-center justify-center gap-1 font-bold"><AlertCircle className="w-3 h-3" /> ERR</span>
                         }
                       </td>
@@ -1199,12 +1215,12 @@ Be factual. Do not speculate.`;
               {lastPushedLinks.map((link, idx) => (
                 <div key={idx} className="flex items-center justify-between gap-3 p-2 rounded bg-green-500/5 text-xs border border-green-500/20 group hover:bg-green-500/10 transition-all">
                   <div className="truncate font-medium flex items-center gap-2">
-                    <span className="text-[10px] text-green-500/50">#{idx+1}</span>
+                    <span className="text-[10px] text-green-500/50">#{idx + 1}</span>
                     {link.title}
                   </div>
-                  <a 
-                    href={link.url} 
-                    target="_blank" 
+                  <a
+                    href={link.url}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="flex-shrink-0 px-3 py-1 rounded-full bg-green-500 text-green-950 font-bold hover:bg-green-400 flex items-center gap-1 transition-all"
                   >
@@ -1222,7 +1238,7 @@ Be factual. Do not speculate.`;
             <div className="flex justify-between text-xs font-mono">
               <span className="flex items-center gap-2">
                 Обробка: {progress.done}/{progress.total}
-                {progress.done > 0 && <span className="opacity-50">({Math.round((progress.done/progress.total)*100)}%)</span>}
+                {progress.done > 0 && <span className="opacity-50">({Math.round((progress.done / progress.total) * 100)}%)</span>}
               </span>
               <div className="flex gap-4">
                 <span className="text-green-400 flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/10"><CheckCircle2 className="w-3 h-3" /> {progress.success}</span>
@@ -1248,7 +1264,7 @@ Be factual. Do not speculate.`;
                       <div className="truncate font-medium group-hover:text-blue-400 transition-colors">{r.news_rss_items?.title || r.news_id}</div>
                       <div className="text-[10px] text-muted-foreground flex flex-wrap gap-2 mt-0.5">
                         <span className="font-mono text-[9px] px-1 bg-border/50 rounded flex items-center gap-1">
-                           <Zap className="w-2.5 h-2.5 text-blue-400" /> {r.model}
+                          <Zap className="w-2.5 h-2.5 text-blue-400" /> {r.model}
                         </span>
                         {r.news_rss_items?.source_url && (
                           <a href={r.news_rss_items.source_url} target="_blank" className="text-muted-foreground hover:text-blue-300 hover:underline flex items-center gap-1">
@@ -1258,15 +1274,14 @@ Be factual. Do not speculate.`;
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-bold border ${
-                        r.pushed 
-                        ? 'bg-green-500/5 text-green-400 border-green-500/30' 
-                        : 'bg-yellow-500/5 text-yellow-500 border-yellow-500/30'
-                      }`}>
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-bold border ${r.pushed
+                          ? 'bg-green-500/5 text-green-400 border-green-500/30'
+                          : 'bg-yellow-500/5 text-yellow-500 border-yellow-500/30'
+                        }`}>
                         {r.pushed ? 'Опубліковано' : 'В черзі'}
                       </span>
                       <span className="text-[8px] opacity-40 font-mono flex items-center gap-1">
-                         <Clock className="w-2.5 h-2.5" /> {new Date(r.created_at).toLocaleTimeString()}
+                        <Clock className="w-2.5 h-2.5" /> {new Date(r.created_at).toLocaleTimeString()}
                       </span>
                     </div>
                   </div>

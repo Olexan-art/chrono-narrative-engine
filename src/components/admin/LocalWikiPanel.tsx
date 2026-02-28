@@ -18,19 +18,19 @@ type ConnectionStatus = 'unknown' | 'checking' | 'connected' | 'error';
 export function LocalWikiPanel({ password }: { password: string }) {
   const queryClient = useQueryClient();
   const [isDevHost, setIsDevHost] = useState(false);
-  
+
   // Settings
   const [provider, setProvider] = useState<Provider>('ollama');
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
   const [lmStudioUrl, setLmStudioUrl] = useState('http://localhost:1234/v1');
-  
+
   const [models, setModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [batchSize, setBatchSize] = useState<number>(10);
   const [onlyWithoutInfoCard, setOnlyWithoutInfoCard] = useState<boolean>(true);
   const [selectedEntityType, setSelectedEntityType] = useState<string>('all');
   const [language, setLanguage] = useState<'uk' | 'en'>('uk');
-  
+
   // State
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState({ total: 0, done: 0, success: 0, failed: 0, skipped: 0 });
@@ -41,7 +41,7 @@ export function LocalWikiPanel({ password }: { password: string }) {
   const [tableReady, setTableReady] = useState<boolean | null>(null);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const abortRef = useRef<boolean>(false);
-  
+
   // Realtime logs and tests
   const [logs, setLogs] = useState<{ id: number; msg: string; type: 'info' | 'success' | 'error' | 'warn' }[]>([]);
   const [testResults, setTestResults] = useState<{ model: string; time: number; status: 'ok' | 'error' }[]>([]);
@@ -99,7 +99,7 @@ export function LocalWikiPanel({ password }: { password: string }) {
       let query = supabase
         .from('wiki_entities')
         .select('id, name, entity_type, description, wiki_url, wiki_url_en, raw_data, created_at');
-      
+
       if (selectedEntityType !== 'all') {
         query = query.eq('entity_type', selectedEntityType);
       }
@@ -122,17 +122,17 @@ export function LocalWikiPanel({ password }: { password: string }) {
     queryKey: ['wiki-total-stats', selectedEntityType],
     queryFn: async () => {
       let query = supabase.from('wiki_entities').select('id, raw_data');
-      
+
       if (selectedEntityType !== 'all') {
         query = query.eq('entity_type', selectedEntityType);
       }
 
       const { data } = await query;
       const all = data || [];
-      const withInfoCard = all.filter((e: any) => 
+      const withInfoCard = all.filter((e: any) =>
         e.raw_data?.info_card_content && e.raw_data.info_card_content.length >= 100
       ).length;
-      
+
       return {
         total: all.length,
         withInfoCard,
@@ -236,7 +236,7 @@ export function LocalWikiPanel({ password }: { password: string }) {
 
     let list = batchSize === 0 ? [...wikiEntities] : [...wikiEntities].slice(0, batchSize);
     setProgress({ total: list.length, done: 0, success: 0, failed: 0, skipped: 0 });
-    
+
     if (list.length === 0) {
       addLog('Немає сутностей для обробки! Спробуйте інший фільтр.', 'warn');
       setIsRunning(false);
@@ -249,17 +249,18 @@ export function LocalWikiPanel({ password }: { password: string }) {
       ? `You are an expert encyclopedic analyst. Generate a comprehensive, well-structured information card in Markdown. Be accurate, informative, and factual. Use only information from the provided data. Respond only with Markdown, no preamble or commentary.`
       : `Ти експерт-аналітик-енциклопедист. Згенеруй детальну, добре структуровану інформаційну картку в Markdown. Будь точним, інформативним і фактичним. Використовуй тільки надані дані. Відповідай тільки Markdown без вступу і коментарів.`;
 
-    for (let i = 0; i < list.length; i++) {
-      if (abortRef.current) {
-        addLog('Обробку перервано користувачем', 'warn');
-        break;
-      }
-      const entity = list[i];
+    let activeWorkers = 0;
+    const concurrency = 2;
+    const queue = [...list];
+    let currentIndex = 0;
+
+    const processItem = async (entity: any, index: number) => {
       try {
-        addLog(`[${i+1}/${list.length}] Обробка: ${entity.name}...`, 'info');
+        if (abortRef.current) return;
+        addLog(`[${index + 1}/${list.length}] Обробка: ${entity.name}...`, 'info');
 
         const entityExtract = (entity.raw_data as any)?.extract || entity.description || '';
-        
+
         const userPrompt = language === 'en'
           ? `Create a comprehensive information card for "${entity.name}" (${entity.entity_type}).
 
@@ -333,13 +334,13 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
           const resp = await fetch(`${ollamaUrl}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              model: selectedModel, 
+            body: JSON.stringify({
+              model: selectedModel,
               messages: [
-                { role: 'system', content: systemPrompt }, 
+                { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt }
-              ], 
-              stream: false 
+              ],
+              stream: false
             })
           });
           if (!resp.ok) throw new Error(`Ollama Error ${resp.status}: ${await resp.text()}`);
@@ -350,13 +351,13 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
           const resp = await fetch(`${lmStudioUrl}/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              model: selectedModel, 
+            body: JSON.stringify({
+              model: selectedModel,
               messages: [
-                { role: 'system', content: systemPrompt }, 
+                { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt }
-              ], 
-              stream: false 
+              ],
+              stream: false
             })
           });
           if (!resp.ok) throw new Error(`LM Studio Error ${resp.status}: ${await resp.text()}`);
@@ -393,12 +394,28 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
         if (saveErr) throw saveErr;
         addLog(`Успішно за ${duration}с: ${entity.name}`, 'success');
         setProgress(p => ({ ...p, done: p.done + 1, success: p.success + 1 }));
-        await new Promise(r => setTimeout(r, 250));
       } catch (err: any) {
         addLog(`Помилка: ${entity.name}: ${err.message}`, 'error');
         setLastError(`${entity.name}: ${err.message}`);
         setProgress(p => ({ ...p, done: p.done + 1, failed: p.failed + 1 }));
       }
+    };
+
+    const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
+      while (queue.length > 0 && !abortRef.current) {
+        const entity = queue.shift();
+        const index = currentIndex++;
+        if (entity) {
+          await processItem(entity, index);
+          await new Promise(r => setTimeout(r, 250)); // small delay between requests for a single worker
+        }
+      }
+    });
+
+    await Promise.all(workers);
+
+    if (abortRef.current) {
+      addLog('Обробку перервано користувачем', 'warn');
     }
     setIsRunning(false);
     addLog(`Завершено! Успішно: ${progress.success}, Помилок: ${progress.failed}`, 'info');
@@ -463,12 +480,12 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
 
   const clearStaging = async () => {
     if (!confirm('Ви впевнені, що хочете очистити ВСІ Information Cards зі стейджингу?')) return;
-    
+
     try {
       addLog('Очищення таблиці стейджингу...', 'warn');
       const { error } = await (supabase as any).from('ollama_wiki_staging').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       if (error) throw error;
-      
+
       addLog('Стейджинг успішно очищено', 'success');
       refetchStats();
       refetchRecent();
@@ -485,7 +502,7 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
         addLog(`Синхронізація успішна: ${res.pushed} сутностей перенесено в Live`, 'success');
         refetchStats();
         refetchRecent();
-        
+
         // Fetch recently pushed for the links section
         const { data } = await (supabase as any)
           .from('ollama_wiki_staging')
@@ -493,7 +510,7 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
           .eq('pushed', true)
           .order('id', { ascending: false })
           .limit(5);
-        
+
         if (data) {
           const links = data.map((d: any) => ({
             id: d.wiki_entities?.id,
@@ -508,9 +525,9 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
         addLog(`Помилка публікації: ${res?.error || 'unknown'}`, 'error');
         alert('Помилка: ' + (res?.error || 'unknown'));
       }
-    } catch (e: any) { 
+    } catch (e: any) {
       addLog(`Критична помилка публікації: ${e.message}`, 'error');
-      alert('Помилка публікації'); 
+      alert('Помилка публікації');
     }
   };
 
@@ -543,8 +560,8 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs uppercase text-muted-foreground">Endpoint URL</Label>
-              <Input 
-                value={provider === 'ollama' ? ollamaUrl : lmStudioUrl} 
+              <Input
+                value={provider === 'ollama' ? ollamaUrl : lmStudioUrl}
                 onChange={e => provider === 'ollama' ? setOllamaUrl(e.target.value) : setLmStudioUrl(e.target.value)}
                 className="font-mono text-xs"
               />
@@ -600,14 +617,14 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
         </div>
 
         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/20 border border-border/50">
-          <Checkbox 
-            id="filter-no-info-card" 
+          <Checkbox
+            id="filter-no-info-card"
             checked={onlyWithoutInfoCard}
             onCheckedChange={(checked) => setOnlyWithoutInfoCard(checked as boolean)}
           />
           <div className="flex-1">
-            <Label 
-              htmlFor="filter-no-info-card" 
+            <Label
+              htmlFor="filter-no-info-card"
               className="cursor-pointer font-medium flex items-center gap-2"
             >
               Тільки без Info Card
@@ -653,8 +670,8 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
             {isRunning ? 'Запущено...' : 'Запустити генерацію → staging'}
           </Button>
           <Button variant="outline" onClick={runAutoTest} disabled={isRunning || isTesting || !selectedModel} className="flex-1 min-w-[200px]">
-             <Zap className={`w-4 h-4 mr-2 text-yellow-500 ${isTesting ? 'animate-pulse' : ''}`} />
-             {isTesting ? 'Тестування...' : 'Автотест моделей'}
+            <Zap className={`w-4 h-4 mr-2 text-yellow-500 ${isTesting ? 'animate-pulse' : ''}`} />
+            {isTesting ? 'Тестування...' : 'Автотест моделей'}
           </Button>
           <Button variant="destructive" onClick={stop} disabled={!isRunning && !isTesting}>
             <StopCircle className="w-4 h-4 mr-1" />
@@ -670,10 +687,10 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
             )}
           </Button>
 
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={clearStaging} 
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={clearStaging}
             title="Очистити стейджинг"
             className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
           >
@@ -691,13 +708,12 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
           <div className="h-44 overflow-y-auto rounded-md border border-border/50 bg-black/40 p-3 font-mono text-[11px] flex flex-col-reverse gap-1.5">
             {logs.length === 0 && <div className="text-muted-foreground italic opacity-30 text-center py-12">Очікування команд...</div>}
             {logs.map(log => (
-              <div key={log.id} className={`border-l-2 pl-2 flex items-start gap-2 ${
-                log.type === 'error' ? 'text-red-400 border-red-500 bg-red-500/5' : 
-                log.type === 'success' ? 'text-green-400 border-green-500 bg-green-500/5' : 
-                log.type === 'warn' ? 'text-orange-400 border-orange-500 bg-orange-500/5' : 
-                'text-blue-300 border-blue-500 bg-blue-500/5'
-              }`}>
-                <span className="opacity-40 text-[9px] shrink-0 pt-0.5">[{new Date(log.id).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}]</span>
+              <div key={log.id} className={`border-l-2 pl-2 flex items-start gap-2 ${log.type === 'error' ? 'text-red-400 border-red-500 bg-red-500/5' :
+                  log.type === 'success' ? 'text-green-400 border-green-500 bg-green-500/5' :
+                    log.type === 'warn' ? 'text-orange-400 border-orange-500 bg-orange-500/5' :
+                      'text-blue-300 border-blue-500 bg-blue-500/5'
+                }`}>
+                <span className="opacity-40 text-[9px] shrink-0 pt-0.5">[{new Date(log.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
                 <span>{log.msg}</span>
               </div>
             ))}
@@ -727,8 +743,8 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
                         {res.model}
                       </td>
                       <td className={`p-2 text-center`}>
-                        {res.status === 'ok' ? 
-                          <span className="text-green-500 flex items-center justify-center gap-1"><CheckCircle2 className="w-3 h-3" /> OK</span> : 
+                        {res.status === 'ok' ?
+                          <span className="text-green-500 flex items-center justify-center gap-1"><CheckCircle2 className="w-3 h-3" /> OK</span> :
                           <span className="text-red-500 flex items-center justify-center gap-1 font-bold"><AlertCircle className="w-3 h-3" /> ERR</span>
                         }
                       </td>
@@ -758,12 +774,12 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
               {lastPushedLinks.map((link, idx) => (
                 <div key={idx} className="flex items-center justify-between gap-3 p-2 rounded bg-green-500/5 text-xs border border-green-500/20 group hover:bg-green-500/10 transition-all">
                   <div className="truncate font-medium flex items-center gap-2">
-                    <span className="text-[10px] text-green-500/50">#{idx+1}</span>
+                    <span className="text-[10px] text-green-500/50">#{idx + 1}</span>
                     {link.name}
                   </div>
-                  <a 
-                    href={link.url} 
-                    target="_blank" 
+                  <a
+                    href={link.url}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="flex-shrink-0 px-3 py-1 rounded-full bg-green-500 text-green-950 font-bold hover:bg-green-400 flex items-center gap-1 transition-all"
                   >
@@ -781,7 +797,7 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
             <div className="flex justify-between text-xs font-mono">
               <span className="flex items-center gap-2">
                 Обробка: {progress.done}/{progress.total}
-                {progress.done > 0 && <span className="opacity-50">({Math.round((progress.done/progress.total)*100)}%)</span>}
+                {progress.done > 0 && <span className="opacity-50">({Math.round((progress.done / progress.total) * 100)}%)</span>}
               </span>
               <div className="flex gap-4">
                 <span className="text-green-400 flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/10"><CheckCircle2 className="w-3 h-3" /> {progress.success}</span>
@@ -807,7 +823,7 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
                       <div className="truncate font-medium group-hover:text-blue-400 transition-colors">{r.wiki_entities?.name || r.entity_id}</div>
                       <div className="text-[10px] text-muted-foreground flex flex-wrap gap-2 mt-0.5">
                         <span className="font-mono text-[9px] px-1 bg-border/50 rounded flex items-center gap-1">
-                           <Zap className="w-2.5 h-2.5 text-blue-400" /> {r.model}
+                          <Zap className="w-2.5 h-2.5 text-blue-400" /> {r.model}
                         </span>
                         <span className="text-[9px] opacity-60">{r.language === 'uk' ? '🇺🇦' : '🇬🇧'} {r.language}</span>
                         {r.wiki_entities?.wiki_url && (
@@ -818,15 +834,14 @@ ${entity.wiki_url_en && entity.wiki_url_en !== entity.wiki_url ? `- [Wikipedia E
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-bold border ${
-                        r.pushed 
-                        ? 'bg-green-500/5 text-green-400 border-green-500/30' 
-                        : 'bg-yellow-500/5 text-yellow-500 border-yellow-500/30'
-                      }`}>
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-bold border ${r.pushed
+                          ? 'bg-green-500/5 text-green-400 border-green-500/30'
+                          : 'bg-yellow-500/5 text-yellow-500 border-yellow-500/30'
+                        }`}>
                         {r.pushed ? 'Опубліковано' : 'В черзі'}
                       </span>
                       <span className="text-[8px] opacity-40 font-mono flex items-center gap-1">
-                         <Clock className="w-2.5 h-2.5" /> {new Date(r.created_at).toLocaleTimeString()}
+                        <Clock className="w-2.5 h-2.5" /> {new Date(r.created_at).toLocaleTimeString()}
                       </span>
                     </div>
                   </div>
