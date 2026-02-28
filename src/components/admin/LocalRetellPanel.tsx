@@ -645,7 +645,7 @@ Be factual. Do not speculate.`;
 
             // Try to fix unclosed arrays/objects
             const openBraces = (cleaned.match(/\{/g) || []).length;
-            const closeBraces = (cleaned.match(/\\}/g) || []).length;
+            const closeBraces = (cleaned.match(/\}/g) || []).length;
             const openBrackets = (cleaned.match(/\[/g) || []).length;
             const closeBrackets = (cleaned.match(/\]/g) || []).length;
 
