@@ -4,8 +4,8 @@
 // =====================================================================
 
 const WORKER_VERSION = 'v2026.02.25-isr-v4';
-const SUPABASE_URL   = 'https://tuledxqigzufkecztnlo.supabase.co';
-const ANON_KEY       = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NDUyODgsImV4cCI6MjA4NjQyMTI4OH0.XKqWqIwfy5BoKzQNNUhs5uYC_QI0GLLKXw1pBDgkCi0';
+const SUPABASE_URL = 'https://tuledxqigzufkecztnlo.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NDUyODgsImV4cCI6MjA4NjQyMTI4OH0.XKqWqIwfy5BoKzQNNUhs5uYC_QI0GLLKXw1pBDgkCi0';
 
 // Secret for /api/cache-purge endpoint — also stored in CacheSettingsPanel.tsx
 const PURGE_SECRET = 'bnn-cache-purge-key-2026';
@@ -16,16 +16,16 @@ const TEMP_DISABLE_CACHED_FAST_PATH = true; // Keep disabled - users need full S
 
 // ── TTL rules (seconds). First matching rule wins. ──────────────────
 const TTL_RULES = [
-  { label: 'Головна',   pattern: /^\/$|^\/home$/,          ttl: 6  * 3600 },
-  { label: 'Новини',    pattern: /^\/news(\/|$)/,           ttl: 1  * 3600 },
-  { label: 'Статті',    pattern: /^\/read\//,               ttl: 1  * 3600 },
-  { label: 'Дати',      pattern: /^\/date\//,               ttl: 2  * 3600 },
-  { label: 'Wiki',      pattern: /^\/wiki(\/|$)/,           ttl: 24 * 3600 },
-  { label: 'Теми',      pattern: /^\/topics(\/|$)/,         ttl: 6  * 3600 },
-  { label: 'Глава',     pattern: /^\/chapter(s)?(\/|$)/,    ttl: 12 * 3600 },
-  { label: 'Том',       pattern: /^\/volume(s)?(\/|$)/,     ttl: 12 * 3600 },
-  { label: 'Календар',  pattern: /^\/calendar(\/|$)/,       ttl: 6  * 3600 },
-  { label: 'Sitemap',   pattern: /^\/sitemap/,              ttl: 12 * 3600 },
+  { label: 'Головна', pattern: /^\/$|^\/home$/, ttl: 6 * 3600 },
+  { label: 'Новини', pattern: /^\/news(\/|$)/, ttl: 1 * 3600 },
+  { label: 'Статті', pattern: /^\/read\//, ttl: 1 * 3600 },
+  { label: 'Дати', pattern: /^\/date\//, ttl: 2 * 3600 },
+  { label: 'Wiki', pattern: /^\/wiki(\/|$)/, ttl: 24 * 3600 },
+  { label: 'Теми', pattern: /^\/topics(\/|$)/, ttl: 6 * 3600 },
+  { label: 'Глава', pattern: /^\/chapter(s)?(\/|$)/, ttl: 12 * 3600 },
+  { label: 'Том', pattern: /^\/volume(s)?(\/|$)/, ttl: 12 * 3600 },
+  { label: 'Календар', pattern: /^\/calendar(\/|$)/, ttl: 6 * 3600 },
+  { label: 'Sitemap', pattern: /^\/sitemap/, ttl: 12 * 3600 },
 ];
 const DEFAULT_TTL = 3600; // 1h for unknown HTML paths
 
@@ -67,7 +67,7 @@ function isBot(userAgent) {
 function isBotAllowlist(userAgent) {
   if (!userAgent) return false;
   const ua = userAgent.toLowerCase();
-  const ALLOW = ['googlebot','bingbot','yandex','gptbot','gpt','chatgpt-user','anthropic-ai','claudebot','claude-web','perplexitybot','gemini','amazonbot','applebot'];
+  const ALLOW = ['googlebot', 'bingbot', 'yandex', 'gptbot', 'gpt', 'chatgpt-user', 'anthropic-ai', 'claudebot', 'claude-web', 'perplexitybot', 'gemini', 'amazonbot', 'applebot'];
   for (const token of ALLOW) {
     if (ua.indexOf(token) !== -1) return true;
   }
@@ -91,8 +91,8 @@ async function asyncWarmPath(pathname) {
     await fetch(warmUrl, {
       headers: {
         'Authorization': `Bearer ${ANON_KEY}`,
-        'apikey':        ANON_KEY,
-        'Accept':        'text/html',
+        'apikey': ANON_KEY,
+        'Accept': 'text/html',
       },
     });
     console.log(`[Worker] asyncWarmPath done: ${pathname}`);
@@ -107,17 +107,17 @@ async function logBotFallback(pathname, cacheStatus, userAgent) {
     await fetch(`${SUPABASE_URL}/rest/v1/bot_visits`, {
       method: 'POST',
       headers: {
-        'apikey':        ANON_KEY,
+        'apikey': ANON_KEY,
         'Authorization': `Bearer ${ANON_KEY}`,
-        'Content-Type':  'application/json',
-        'Prefer':        'return=minimal',
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
       },
       body: JSON.stringify({
-        bot_type:     'worker-fallback',
+        bot_type: 'worker-fallback',
         bot_category: 'other',
-        path:         pathname,
-        user_agent:   userAgent ? userAgent.substring(0, 500) : null,
-        status_code:  200,
+        path: pathname,
+        user_agent: userAgent ? userAgent.substring(0, 500) : null,
+        status_code: 200,
         cache_status: cacheStatus,
       }),
     });
@@ -125,8 +125,8 @@ async function logBotFallback(pathname, cacheStatus, userAgent) {
 }
 
 async function handleRequest(request, event) {
-  const url       = new URL(request.url);
-  const pathname  = url.pathname;
+  const url = new URL(request.url);
+  const pathname = url.pathname;
   const userAgent = request.headers.get('user-agent') || '';
   const isBotRequest = isBot(userAgent);
 
@@ -153,26 +153,26 @@ async function handleRequest(request, event) {
   if (pathname.startsWith('/rest/') || pathname.startsWith('/functions/')) {
     const targetUrl = SUPABASE_URL + pathname + url.search;
     return fetch(targetUrl, {
-      method:  request.method,
+      method: request.method,
       headers: request.headers,
-      body:    request.body
+      body: request.body
     });
   }
-  
+
   // Debug endpoint to force refresh a specific path
   if (pathname === '/___worker_force_refresh') {
     const targetPath = url.searchParams.get('path') || '/';
     const purgeResp = await caches.default.delete(new Request(`https://bravennow.com${targetPath}`));
-    return new Response(JSON.stringify({ 
-      path: targetPath, 
+    return new Response(JSON.stringify({
+      path: targetPath,
       purged: purgeResp,
       timestamp: new Date().toISOString()
-    }), { 
-      status: 200, 
-      headers: { 
+    }), {
+      status: 200,
+      headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store'
-      } 
+      }
     });
   }
 
@@ -193,18 +193,39 @@ async function handleRequest(request, event) {
     return fetch(netlifyOrigin + pathname + url.search, { headers: request.headers });
   }
 
+  // ── 3.5. API Proxy to Supabase Edge Functions ───────────────────────
+  if (pathname.startsWith('/api/')) {
+    const funcName = pathname.replace('/api/', '');
+    const targetUrl = `${SUPABASE_URL}/functions/v1/${funcName}${url.search}`;
+
+    const newHeaders = new Headers(request.headers);
+    if (!newHeaders.has('Authorization')) {
+      newHeaders.set('Authorization', `Bearer ${ANON_KEY}`);
+    }
+    if (!newHeaders.has('apikey')) {
+      newHeaders.set('apikey', ANON_KEY);
+    }
+
+    // Pass everything through unmodified except for injecting auth
+    return fetch(targetUrl, {
+      method: request.method,
+      headers: newHeaders,
+      body: request.body
+    });
+  }
+
   // ── 3b. Regular Users HTML — ALWAYS serve full SPA from Netlify ─────
   // Do this before any bot/cached logic to guarantee JS loads for users.
   if (!isBotRequest) {
     const netlifyOrigin = 'https://chrono-narrative-engine.netlify.app';
     let originResp = await fetch(netlifyOrigin + pathname + url.search, { headers: request.headers });
-    
+
     // If Netlify returns 404, serve the SPA shell (index.html) instead
     // This is needed for client-side routing in React
     if (originResp.status === 404 || originResp.status === 410) {
       originResp = await fetch(netlifyOrigin + '/index.html', { headers: request.headers });
     }
-    
+
     // Add headers to prevent caching issues
     const out = new Response(originResp.body, originResp);
     out.headers.set('X-Cache', 'ORIGIN-SPA-USER');
@@ -222,10 +243,6 @@ async function handleRequest(request, event) {
   }
 
 
-  // ── 4. API routes — pass-through ────────────────────────────────────
-  if (pathname.startsWith('/api/')) {
-    return fetch(request);
-  }
 
   // ── 5. Admin pages — never cache, always SPA via Netlify origin ────
   if (pathname.startsWith('/admin')) {
@@ -233,9 +250,9 @@ async function handleRequest(request, event) {
     const originUrl = netlifyOrigin + pathname + url.search;
     try {
       const originReq = new Request(originUrl, {
-        method:  request.method,
+        method: request.method,
         headers: request.headers,
-        body:    request.body,
+        body: request.body,
         redirect: 'manual',
       });
       const originResp = await fetch(originReq);
@@ -272,184 +289,184 @@ async function handleRequest(request, event) {
   //
   //  Bots and origin failures still fall back to live SSR as before.
   //
-    // Bot-only DB fast-path: serve cached_pages only when the
-    // request is classified as a bot by the stronger `isBot` check.
-    // We previously used a secondary allowlist but that proved too loose
-    // and let some browser UAs slip through.  Only `isBotRequest` is now
-    // trusted for allowing cache hits.
-    if (isBotRequest && !TEMP_DISABLE_CACHED_FAST_PATH) {
-      try {
-        const restUrl = `${SUPABASE_URL}/rest/v1/cached_pages?path=eq.${encodeURIComponent(pathname)}&select=html,html_size_bytes&limit=1`;
-        const cpResp = await fetch(restUrl, {
-          headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}`, 'Accept': 'application/json' }
-        });
-        if (cpResp.ok) {
-          const rows = await cpResp.json();
-          if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
-            event.waitUntil(asyncWarmPath(pathname));
-            let cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
-            return new Response(cleaned, {
-              status: 200,
-              headers: {
-                'Content-Type':     'text/html; charset=utf-8',
-                // bots can cache locally but we never want Cloudflare edge
-                // to store these responses, since a misclassification or
-                // later logic change could expose stale HTML to users.
-                'Cache-Control':    `no-store, max-age=0`,
-                'Surrogate-Control':'no-store',
-                'X-Cache':          'CACHED-PAGES-FAST-PATH',
-                'X-Cached-Length':  String(cleaned.length),
-                'X-Worker-Version': WORKER_VERSION,
-              },
-            });
-          }
-        }
-      } catch (_) { /* ignore db failure and continue with normal flow */ }
-    }
-
-    // ── 6. ISR/SSR: Only for bots now (users are handled above)
-    // Regular users already got their full SPA from Netlify above.
-    // This section only handles bot requests with SSR.
-    const ttl    = getTTL(pathname);
-    const ssrUrl = `${SUPABASE_URL}/functions/v1/ssr-render?path=${encodeURIComponent(pathname)}&lang=en&cache=true`;
-    
-    // At this point, we know it's a bot request (users were handled above)
-    let shouldSSR = true;
-
-    // If we decided to SSR (bots or when origin failed/returned SPA), render via SSR function
-    if (shouldSSR) {
-      try {
-        const ssrResponse = await fetch(ssrUrl, {
-          headers: {
-            'Authorization': `Bearer ${ANON_KEY}`,
-            'apikey':        ANON_KEY,
-            'User-Agent':    userAgent,
-            'Accept':        'text/html',
-          },
-        });
-        if (ssrResponse.status === 301 || ssrResponse.status === 308) {
-          const location = ssrResponse.headers.get('Location');
-          if (location) {
-            return new Response(null, {
-              status: ssrResponse.status,
-              headers: {
-                'Location':         location,
-                'Cache-Control':    'public, max-age=86400',
-                'X-Worker-Version': WORKER_VERSION,
-                'X-Redirect-Type':  'SSR-UUID-SLUG',
-              },
-            });
-          }
-        }
-        if (ssrResponse.ok) {
-          let html = await ssrResponse.text();
-          if (html.length < 10000) {
-            // 1. Try cached_pages stale entry — even expired is better than SPA
-            try {
-              const restUrl = `${SUPABASE_URL}/rest/v1/cached_pages?path=eq.${encodeURIComponent(pathname)}&select=html&limit=1`;
-              const cpResp  = await fetch(restUrl, {
-                headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}`, 'Accept': 'application/json' }
-              });
-              if (cpResp.ok) {
-                const rows = await cpResp.json();
-                if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
-                  event.waitUntil(asyncWarmPath(pathname));
-                  let cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
-                  return new Response(cleaned, {
-                    status: 200,
-                    headers: {
-                      'Content-Type':     'text/html; charset=utf-8',
-                      'Cache-Control':    'no-store',
-                      'X-Cache':          'STALE-DB-FALLBACK',
-                      'X-SSR-Size':       String(html.length),
-                      'X-Worker-Version': WORKER_VERSION,
-                    },
-                  });
-                }
-              }
-            } catch (_) { /* ignore, try fresh render */ }
-            // 2. Try a fresh force-render (cache=false)
-            try {
-              const freshUrl = `${SUPABASE_URL}/functions/v1/ssr-render?path=${encodeURIComponent(pathname)}&lang=en&cache=false`;
-              const freshResp = await fetch(freshUrl, {
-                headers: {
-                  'Authorization': `Bearer ${ANON_KEY}`,
-                  'apikey':        ANON_KEY,
-                  'User-Agent':    userAgent,
-                  'Accept':        'text/html',
-                },
-              });
-              if (freshResp.ok) {
-                const freshHtml = await freshResp.text();
-                if (freshHtml.length >= 10000) {
-                  event.waitUntil(asyncWarmPath(pathname));
-                  const stripped = freshHtml.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
-                  return new Response(stripped, {
-                    status: 200,
-                    headers: {
-                      'Content-Type':     'text/html; charset=utf-8',
-                      'Cache-Control':    'no-store',
-                      'X-Cache':          'SSR-FORCE-RENDER',
-                      'X-Worker-Version': WORKER_VERSION,
-                      'X-Bot-Detected':   'true',
-                    },
-                  });
-                }
-              }
-            } catch (_) { /* ignore, fall through to SPA */ }
-            event.waitUntil(logBotFallback(pathname, 'SSR-TOO-SMALL', userAgent));
-            const fb = await fetch(request);
-            const r  = new Response(fb.body, fb);
-            r.headers.set('X-Cache',          'SSR-TOO-SMALL');
-            r.headers.set('X-SSR-Size',        String(html.length));
-            r.headers.set('X-Worker-Version',  WORKER_VERSION);
-            r.headers.set('Cache-Control',     'no-cache, no-store, must-revalidate');
-            return r;
-          }
-          html = html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
-          return new Response(html, {
+  // Bot-only DB fast-path: serve cached_pages only when the
+  // request is classified as a bot by the stronger `isBot` check.
+  // We previously used a secondary allowlist but that proved too loose
+  // and let some browser UAs slip through.  Only `isBotRequest` is now
+  // trusted for allowing cache hits.
+  if (isBotRequest && !TEMP_DISABLE_CACHED_FAST_PATH) {
+    try {
+      const restUrl = `${SUPABASE_URL}/rest/v1/cached_pages?path=eq.${encodeURIComponent(pathname)}&select=html,html_size_bytes&limit=1`;
+      const cpResp = await fetch(restUrl, {
+        headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}`, 'Accept': 'application/json' }
+      });
+      if (cpResp.ok) {
+        const rows = await cpResp.json();
+        if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
+          event.waitUntil(asyncWarmPath(pathname));
+          let cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+          return new Response(cleaned, {
             status: 200,
             headers: {
-              'Content-Type':     'text/html; charset=utf-8',
-              'Cache-Control':    'no-store',
-              'X-Cache':          'SSR',
-              'X-Cache-TTL':      String(ttl),
+              'Content-Type': 'text/html; charset=utf-8',
+              // bots can cache locally but we never want Cloudflare edge
+              // to store these responses, since a misclassification or
+              // later logic change could expose stale HTML to users.
+              'Cache-Control': `no-store, max-age=0`,
+              'Surrogate-Control': 'no-store',
+              'X-Cache': 'CACHED-PAGES-FAST-PATH',
+              'X-Cached-Length': String(cleaned.length),
               'X-Worker-Version': WORKER_VERSION,
-              'X-Bot-Detected':   'true',
-              'X-SSR-Source':     'cloudflare-passthrough',
             },
           });
         }
-      } catch (e) {
-        event.waitUntil(logBotFallback(pathname, 'SSR-ERROR', userAgent));
-        event.waitUntil(asyncWarmPath(pathname));
       }
-      const fallback = await fetch(request);
-      const fb = new Response(fallback.body, fallback);
-      fb.headers.set('X-Cache',          'SSR-FALLBACK');
-      fb.headers.set('X-Worker-Version', WORKER_VERSION);
-      fb.headers.set('Cache-Control',    'no-cache, no-store, must-revalidate');
-      return fb;
-    }
+    } catch (_) { /* ignore db failure and continue with normal flow */ }
+  }
 
-    // If we get here it means we didn't SSR and origin didn't return usable
-    // HTML (or we explicitly handled origin earlier). Fall back to origin
-    // response as a last resort.
+  // ── 6. ISR/SSR: Only for bots now (users are handled above)
+  // Regular users already got their full SPA from Netlify above.
+  // This section only handles bot requests with SSR.
+  const ttl = getTTL(pathname);
+  const ssrUrl = `${SUPABASE_URL}/functions/v1/ssr-render?path=${encodeURIComponent(pathname)}&lang=en&cache=true`;
+
+  // At this point, we know it's a bot request (users were handled above)
+  let shouldSSR = true;
+
+  // If we decided to SSR (bots or when origin failed/returned SPA), render via SSR function
+  if (shouldSSR) {
     try {
-      const originResp = await fetch(netlifyOrigin + pathname + url.search, { headers: request.headers });
-      const out = new Response(originResp.body, originResp);
-      out.headers.set('X-Cache', 'ORIGIN-FINAL');
-      out.headers.set('X-Worker-Version', WORKER_VERSION);
-      return out;
+      const ssrResponse = await fetch(ssrUrl, {
+        headers: {
+          'Authorization': `Bearer ${ANON_KEY}`,
+          'apikey': ANON_KEY,
+          'User-Agent': userAgent,
+          'Accept': 'text/html',
+        },
+      });
+      if (ssrResponse.status === 301 || ssrResponse.status === 308) {
+        const location = ssrResponse.headers.get('Location');
+        if (location) {
+          return new Response(null, {
+            status: ssrResponse.status,
+            headers: {
+              'Location': location,
+              'Cache-Control': 'public, max-age=86400',
+              'X-Worker-Version': WORKER_VERSION,
+              'X-Redirect-Type': 'SSR-UUID-SLUG',
+            },
+          });
+        }
+      }
+      if (ssrResponse.ok) {
+        let html = await ssrResponse.text();
+        if (html.length < 10000) {
+          // 1. Try cached_pages stale entry — even expired is better than SPA
+          try {
+            const restUrl = `${SUPABASE_URL}/rest/v1/cached_pages?path=eq.${encodeURIComponent(pathname)}&select=html&limit=1`;
+            const cpResp = await fetch(restUrl, {
+              headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}`, 'Accept': 'application/json' }
+            });
+            if (cpResp.ok) {
+              const rows = await cpResp.json();
+              if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
+                event.waitUntil(asyncWarmPath(pathname));
+                let cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+                return new Response(cleaned, {
+                  status: 200,
+                  headers: {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Cache-Control': 'no-store',
+                    'X-Cache': 'STALE-DB-FALLBACK',
+                    'X-SSR-Size': String(html.length),
+                    'X-Worker-Version': WORKER_VERSION,
+                  },
+                });
+              }
+            }
+          } catch (_) { /* ignore, try fresh render */ }
+          // 2. Try a fresh force-render (cache=false)
+          try {
+            const freshUrl = `${SUPABASE_URL}/functions/v1/ssr-render?path=${encodeURIComponent(pathname)}&lang=en&cache=false`;
+            const freshResp = await fetch(freshUrl, {
+              headers: {
+                'Authorization': `Bearer ${ANON_KEY}`,
+                'apikey': ANON_KEY,
+                'User-Agent': userAgent,
+                'Accept': 'text/html',
+              },
+            });
+            if (freshResp.ok) {
+              const freshHtml = await freshResp.text();
+              if (freshHtml.length >= 10000) {
+                event.waitUntil(asyncWarmPath(pathname));
+                const stripped = freshHtml.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+                return new Response(stripped, {
+                  status: 200,
+                  headers: {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Cache-Control': 'no-store',
+                    'X-Cache': 'SSR-FORCE-RENDER',
+                    'X-Worker-Version': WORKER_VERSION,
+                    'X-Bot-Detected': 'true',
+                  },
+                });
+              }
+            }
+          } catch (_) { /* ignore, fall through to SPA */ }
+          event.waitUntil(logBotFallback(pathname, 'SSR-TOO-SMALL', userAgent));
+          const fb = await fetch(request);
+          const r = new Response(fb.body, fb);
+          r.headers.set('X-Cache', 'SSR-TOO-SMALL');
+          r.headers.set('X-SSR-Size', String(html.length));
+          r.headers.set('X-Worker-Version', WORKER_VERSION);
+          r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+          return r;
+        }
+        html = html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
+        return new Response(html, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store',
+            'X-Cache': 'SSR',
+            'X-Cache-TTL': String(ttl),
+            'X-Worker-Version': WORKER_VERSION,
+            'X-Bot-Detected': 'true',
+            'X-SSR-Source': 'cloudflare-passthrough',
+          },
+        });
+      }
     } catch (e) {
-      // final fallback: proxy the original request
-      const fallback = await fetch(request);
-      const fb = new Response(fallback.body, fallback);
-      fb.headers.set('X-Cache',          'ORIGIN-ERROR-FALLBACK');
-      fb.headers.set('X-Worker-Version', WORKER_VERSION);
-      fb.headers.set('Cache-Control',    'no-cache, no-store, must-revalidate');
-      return fb;
+      event.waitUntil(logBotFallback(pathname, 'SSR-ERROR', userAgent));
+      event.waitUntil(asyncWarmPath(pathname));
     }
+    const fallback = await fetch(request);
+    const fb = new Response(fallback.body, fallback);
+    fb.headers.set('X-Cache', 'SSR-FALLBACK');
+    fb.headers.set('X-Worker-Version', WORKER_VERSION);
+    fb.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return fb;
+  }
+
+  // If we get here it means we didn't SSR and origin didn't return usable
+  // HTML (or we explicitly handled origin earlier). Fall back to origin
+  // response as a last resort.
+  try {
+    const originResp = await fetch(netlifyOrigin + pathname + url.search, { headers: request.headers });
+    const out = new Response(originResp.body, originResp);
+    out.headers.set('X-Cache', 'ORIGIN-FINAL');
+    out.headers.set('X-Worker-Version', WORKER_VERSION);
+    return out;
+  } catch (e) {
+    // final fallback: proxy the original request
+    const fallback = await fetch(request);
+    const fb = new Response(fallback.body, fallback);
+    fb.headers.set('X-Cache', 'ORIGIN-ERROR-FALLBACK');
+    fb.headers.set('X-Worker-Version', WORKER_VERSION);
+    fb.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return fb;
+  }
 
 }
 
@@ -503,12 +520,12 @@ async function handleCachePurge(request, url) {
       headers: { 'Authorization': `Bearer ${ANON_KEY}`, 'apikey': ANON_KEY }
     });
     const result = await resp.json();
-    return new Response(JSON.stringify({ 
-      ok: result.ok, 
-      path: pathParam, 
+    return new Response(JSON.stringify({
+      ok: result.ok,
+      path: pathParam,
       purged: pathParam,
       cfPurged,
-      ...result 
+      ...result
     }), {
       status: resp.ok ? 200 : resp.status,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -534,9 +551,9 @@ async function handleCacheStatus(url) {
     const restUrl = `${SUPABASE_URL}/rest/v1/cached_pages?path=eq.${encodeURIComponent(pathParam)}&select=path,expires_at,html&limit=1`;
     const resp = await fetch(restUrl, {
       headers: {
-        'apikey':        ANON_KEY,
+        'apikey': ANON_KEY,
         'Authorization': `Bearer ${ANON_KEY}`,
-        'Accept':        'application/json',
+        'Accept': 'application/json',
       },
     });
 
@@ -553,21 +570,21 @@ async function handleCacheStatus(url) {
       });
     }
 
-    const row       = rows[0];
+    const row = rows[0];
     const expiresAt = new Date(row.expires_at);
-    const now       = new Date();
+    const now = new Date();
     const isExpired = expiresAt <= now;
-    const ttlLeft   = Math.max(0, Math.round((expiresAt.getTime() - now.getTime()) / 1000));
-    const htmlSize  = row.html ? row.html.length : 0;
+    const ttlLeft = Math.max(0, Math.round((expiresAt.getTime() - now.getTime()) / 1000));
+    const htmlSize = row.html ? row.html.length : 0;
 
     return new Response(JSON.stringify({
-      cached:     true,
-      stale:      isExpired,
-      path:       pathParam,
-      expiresAt:  row.expires_at,
-      ttlLeft:    isExpired ? 0 : ttlLeft,
+      cached: true,
+      stale: isExpired,
+      path: pathParam,
+      expiresAt: row.expires_at,
+      ttlLeft: isExpired ? 0 : ttlLeft,
       htmlSize,
-      source:     'supabase-cached_pages',
+      source: 'supabase-cached_pages',
     }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
