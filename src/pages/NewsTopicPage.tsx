@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { MarkdownContent } from "@/components/MarkdownContent";
 import { SEOHead } from "@/components/SEOHead";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -536,9 +537,9 @@ export default function NewsTopicPage() {
                 <p className="text-muted-foreground leading-relaxed">
                   {language === "en"
                     ? (topicMeta?.description_en ||
-                        `"${topic}" is a live news category on BraveNNow. We've collected ${totalNewsCount} articles from different countries, published over ${chartData.length} days. Each article is automatically linked to real-world entities — people, companies and organisations — so you can instantly see who is involved and click through to their full profiles. Right now this category is connected to ${entityStats.length} such entities.`)
+                      `"${topic}" is a live news category on BraveNNow. We've collected ${totalNewsCount} articles from different countries, published over ${chartData.length} days. Each article is automatically linked to real-world entities — people, companies and organisations — so you can instantly see who is involved and click through to their full profiles. Right now this category is connected to ${entityStats.length} such entities.`)
                     : (topicMeta?.description ||
-                        `«${topic}» — це жива категорія новин на BraveNNow. Ми зібрали ${totalNewsCount} статей з різних країн, опублікованих протягом ${chartData.length} днів. Кожна стаття автоматично пов'язана з реальними персонами, компаніями та організаціями — тож ви одразу бачите, хто причетний, і можете перейти до їхніх повних профілів. Зараз у цій категорії є ${entityStats.length} таких сутностей.`)}
+                      `«${topic}» — це жива категорія новин на BraveNNow. Ми зібрали ${totalNewsCount} статей з різних країн, опублікованих протягом ${chartData.length} днів. Кожна стаття автоматично пов'язана з реальними персонами, компаніями та організаціями — тож ви одразу бачите, хто причетний, і можете перейти до їхніх повних профілів. Зараз у цій категорії є ${entityStats.length} таких сутностей.`)}
                 </p>
 
                 {/* Related topics */}
@@ -688,8 +689,8 @@ export default function NewsTopicPage() {
                         {timelineExpanded
                           ? language === "en" ? "Show less" : "Сховати"
                           : language === "en"
-                          ? `Show all ${newsItems.length} articles`
-                          : `Показати всі ${newsItems.length} статей`}
+                            ? `Show all ${newsItems.length} articles`
+                            : `Показати всі ${newsItems.length} статей`}
                       </Button>
                     </div>
                   )}
@@ -828,63 +829,65 @@ export default function NewsTopicPage() {
                   </Card>
                 )}
 
-                    {/* Chart 3: Sum of page views for all news in this topic (per day) */}
-                    <Card className="border-primary/20">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          {language === 'en' ? 'Daily pageviews — topic news (sum)' : 'Перегляди за день — всі новини теми (сума)'}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <ResponsiveContainer width="100%" height={200}>
-                          <AreaChart data={chartData.map(d => ({ ...d,
-                            views: (newsDailyViews.find(v => v.date === d.date)?.views || 0)
-                          }))} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
-                            <defs>
-                              <linearGradient id="newsViewsGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#f97316" stopOpacity={0.4} />
-                                <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} interval={Math.floor(chartData.length / 8)} />
-                            <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
-                            <Tooltip formatter={(v) => [v, language === 'en' ? 'views' : 'переглядів']} contentStyle={{ background: "#0f1929", border: "1px solid rgba(249,115,22,0.3)", borderRadius: 8 }} />
-                            <Area type="monotone" dataKey="views" stroke="#f97316" fill="url(#newsViewsGrad)" strokeWidth={2} />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </CardContent>
-                    </Card>
+                {/* Chart 3: Sum of page views for all news in this topic (per day) */}
+                <Card className="border-primary/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      {language === 'en' ? 'Daily pageviews — topic news (sum)' : 'Перегляди за день — всі новини теми (сума)'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <AreaChart data={chartData.map(d => ({
+                        ...d,
+                        views: (newsDailyViews.find(v => v.date === d.date)?.views || 0)
+                      }))} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                        <defs>
+                          <linearGradient id="newsViewsGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                        <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} interval={Math.floor(chartData.length / 8)} />
+                        <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
+                        <Tooltip formatter={(v) => [v, language === 'en' ? 'views' : 'переглядів']} contentStyle={{ background: "#0f1929", border: "1px solid rgba(249,115,22,0.3)", borderRadius: 8 }} />
+                        <Area type="monotone" dataKey="views" stroke="#f97316" fill="url(#newsViewsGrad)" strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
 
-                    {/* Chart 4: Sum of page views for all entities mentioned in topic news (per day) */}
-                    <Card className="border-primary/20">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4" />
-                          {language === 'en' ? 'Daily pageviews — topic entities (sum)' : 'Перегляди за день — всі сутності теми (сума)'}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <ResponsiveContainer width="100%" height={200}>
-                          <AreaChart data={chartData.map(d => ({ ...d,
-                            entityViews: (entityDailyViews.find(v => v.date === d.date)?.views || 0)
-                          }))} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
-                            <defs>
-                              <linearGradient id="entityViewsGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.4} />
-                                <stop offset="95%" stopColor="#60a5fa" stopOpacity={0} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} interval={Math.floor(chartData.length / 8)} />
-                            <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
-                            <Tooltip formatter={(v) => [v, language === 'en' ? 'views' : 'переглядів']} contentStyle={{ background: "#0f1929", border: "1px solid rgba(96,165,250,0.3)", borderRadius: 8 }} />
-                            <Area type="monotone" dataKey="entityViews" stroke="#60a5fa" fill="url(#entityViewsGrad)" strokeWidth={2} />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </CardContent>
-                    </Card>
+                {/* Chart 4: Sum of page views for all entities mentioned in topic news (per day) */}
+                <Card className="border-primary/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4" />
+                      {language === 'en' ? 'Daily pageviews — topic entities (sum)' : 'Перегляди за день — всі сутності теми (сума)'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <AreaChart data={chartData.map(d => ({
+                        ...d,
+                        entityViews: (entityDailyViews.find(v => v.date === d.date)?.views || 0)
+                      }))} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                        <defs>
+                          <linearGradient id="entityViewsGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#60a5fa" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                        <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} interval={Math.floor(chartData.length / 8)} />
+                        <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
+                        <Tooltip formatter={(v) => [v, language === 'en' ? 'views' : 'переглядів']} contentStyle={{ background: "#0f1929", border: "1px solid rgba(96,165,250,0.3)", borderRadius: 8 }} />
+                        <Area type="monotone" dataKey="entityViews" stroke="#60a5fa" fill="url(#entityViewsGrad)" strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
               </section>
             )}
 
@@ -896,12 +899,12 @@ export default function NewsTopicPage() {
                   {language === "en" ? `About the topic: ${topic}` : `Про тему: ${topic}`}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="prose prose-invert prose-sm max-w-none text-muted-foreground space-y-4">
+              <CardContent className="text-muted-foreground space-y-4">
                 {/* If admin wrote a custom SEO text, show it; otherwise show auto-generated */}
                 {language === "en" && topicMeta?.seo_text_en ? (
-                  topicMeta.seo_text_en.split("\n\n").map((para, i) => <p key={i}>{para}</p>)
+                  <MarkdownContent content={topicMeta.seo_text_en} />
                 ) : language !== "en" && topicMeta?.seo_text ? (
-                  topicMeta.seo_text.split("\n\n").map((para, i) => <p key={i}>{para}</p>)
+                  <MarkdownContent content={topicMeta.seo_text} />
                 ) : language === "en" ? (
                   <>
                     <p>
@@ -918,9 +921,9 @@ export default function NewsTopicPage() {
                       (people, companies, organisations) mentioned across every article in this category.
                       {entityStats.length > 0 && (
                         <> The current topic is connected to <strong className="text-foreground">{entityStats.length} unique entities</strong> and
-                        spans <strong className="text-foreground">{chartData.length} days</strong> of coverage.
-                        Each entity has its own dedicated wiki page with a full history of news mentions,
-                        relationship graphs, and AI-generated analyses.</>
+                          spans <strong className="text-foreground">{chartData.length} days</strong> of coverage.
+                          Each entity has its own dedicated wiki page with a full history of news mentions,
+                          relationship graphs, and AI-generated analyses.</>
                       )}
                     </p>
                     <p>
@@ -928,7 +931,7 @@ export default function NewsTopicPage() {
                       correspond to major events or breaking news in the <em>{topic}</em> space.
                       {relatedTopics.length > 0 && (
                         <> Closely related topics include {relatedTopics.slice(0, 4).map(r => `"${r.topic}"`).join(", ")},
-                        which frequently appear alongside this category in the same news articles.</>
+                          which frequently appear alongside this category in the same news articles.</>
                       )}
                     </p>
                     <p>
@@ -954,9 +957,9 @@ export default function NewsTopicPage() {
                       категорії.
                       {entityStats.length > 0 && (
                         <> Поточна тема пов'язана з <strong className="text-foreground">{entityStats.length} унікальними сутностями</strong> та
-                        охоплює <strong className="text-foreground">{chartData.length} днів</strong> висвітлення.
-                        Кожна сутність має власну вікі-сторінку з повною історією згадувань у новинах,
-                        графами зв'язків та AI-генерованими аналізами.</>
+                          охоплює <strong className="text-foreground">{chartData.length} днів</strong> висвітлення.
+                          Кожна сутність має власну вікі-сторінку з повною історією згадувань у новинах,
+                          графами зв'язків та AI-генерованими аналізами.</>
                       )}
                     </p>
                     <p>
@@ -964,7 +967,7 @@ export default function NewsTopicPage() {
                       відповідають ключовим подіям або резонансним новинам у сфері <em>{topic}</em>.
                       {relatedTopics.length > 0 && (
                         <> Тісно пов'язані теми: {relatedTopics.slice(0, 4).map(r => `«${r.topic}»`).join(", ")},
-                        які часто з'являються поряд з цією категорією в одних і тих самих новинних статтях.</>
+                          які часто з'являються поряд з цією категорією в одних і тих самих новинних статтях.</>
                       )}
                     </p>
                     <p>
