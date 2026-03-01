@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { topicPath } from "@/lib/topicSlug";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,7 +10,7 @@ import {
   Download, FileText, ZoomIn, ThumbsUp, ThumbsDown, Hash, Edit,
   Briefcase, Flame, Shield, Heart, Zap, BookOpen, Scale, Megaphone,
   Swords, FolderOpen, Rss, BrainCircuit, ChevronDown, ChevronUp, Lightbulb,
-  Link2, Plus, HardDrive
+  Link2, Plus, HardDrive, ImagePlus
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
@@ -58,6 +58,7 @@ interface WikiEntity {
   created_at: string;
   last_searched_at: string | null;
   slug: string | null;
+  raw_data?: any;
 }
 
 interface NewsItem {
@@ -98,6 +99,14 @@ interface OutrageInk {
   likes: number;
   dislikes: number;
   news_item_id: string | null;
+}
+
+interface WikiEntityMedia {
+  id: string;
+  wiki_entity_id: string;
+  image_url: string;
+  title: string | null;
+  created_at: string;
 }
 
 interface ExtendedWikiData {
@@ -196,6 +205,13 @@ export default function WikiEntityPage() {
   const [isGeneratingInfoCard, setIsGeneratingInfoCard] = useState(false);
   const [selectedInfoCardModel, setSelectedInfoCardModel] = useState(ZAI_MODELS.find(m => m.value === 'GLM-4.5-Air')?.value || ZAI_MODELS.find(m => m.value === 'GLM-4.7-Flash')?.value || ZAI_MODELS[0]?.value || '');
   const [selectedNarrativeModel, setSelectedNarrativeModel] = useState('gpt-4o-mini');
+
+  // Media Gallery State
+  const [showMediaUploadDialog, setShowMediaUploadDialog] = useState(false);
+  const [mediaUploadFile, setMediaUploadFile] = useState<File | null>(null);
+  const [mediaUploadTitle, setMediaUploadTitle] = useState("");
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
 
@@ -429,6 +445,66 @@ export default function WikiEntityPage() {
     enabled: !!entity?.id,
   });
 
+  // Fetch entity media
+  const { data: entityMedia = [] } = useQuery({
+    queryKey: ['entity-media', entity?.id],
+    queryFn: async () => {
+      if (!entity?.id) return [];
+      const { data, error } = await supabase
+        .from('wiki_entity_media')
+        .select('*')
+        .eq('wiki_entity_id', entity.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as WikiEntityMedia[];
+    },
+    enabled: !!entity?.id,
+  });
+
+  const handleMediaUpload = async () => {
+    if (!mediaUploadFile || !entity?.id) return;
+
+    try {
+      setIsUploadingMedia(true);
+
+      const fileExt = mediaUploadFile.name.split('.').pop();
+      const fileName = `wiki-entities/${entity.id}-${Date.now()}.${fileExt}`;
+
+      // Upload to outrage-ink bucket as it represents user/admin uploaded media
+      const { error: uploadError } = await supabase.storage
+        .from('outrage-ink')
+        .upload(fileName, mediaUploadFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('outrage-ink')
+        .getPublicUrl(fileName);
+
+      const { error: dbError } = await supabase
+        .from('wiki_entity_media')
+        .insert({
+          wiki_entity_id: entity.id,
+          image_url: publicUrl,
+          title: mediaUploadTitle || null
+        });
+
+      if (dbError) throw dbError;
+
+      toast.success(language === 'uk' ? 'Зображення завантажено' : 'Image uploaded successfully');
+      setShowMediaUploadDialog(false);
+      setMediaUploadFile(null);
+      setMediaUploadTitle('');
+      queryClient.invalidateQueries({ queryKey: ['entity-media', entity.id] });
+    } catch (error: any) {
+      console.error('Error uploading media:', error);
+      toast.error(error.message || (language === 'uk' ? 'Помилка завантаження' : 'Error uploading image'));
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
+
   // Calculate caricature likes/dislikes
   const totalCaricatureLikes = useMemo(() =>
     caricatures.reduce((sum, c) => sum + (c.likes || 0), 0),
@@ -575,13 +651,14 @@ export default function WikiEntityPage() {
     queryFn: async (): Promise<string[]> => {
       if (!entity?.id) return [];
 
-      const { data } = await supabase
-        .from('wiki_entity_categories')
+      const { data, error } = await supabase
+        .from('wiki_entity_categories' as any)
         .select('category')
         .eq('wiki_entity_id', entity.id)
         .limit(50);
 
-      return (data || []).map(c => c.category).filter(Boolean);
+      if (error) return [];
+      return ((data as any[]) || []).map(c => c.category).filter(Boolean);
     },
     enabled: !!entity?.id,
     staleTime: 1000 * 60 * 10,
@@ -2369,6 +2446,54 @@ export default function WikiEntityPage() {
                         <EntityLinkedContent content={extract} excludeEntityId={entity?.id} extraEntities={[...relatedEntities, ...wikiLinkedEntities]} />
                       </AdminTextSelectionPopover>
 
+                      {/* Gallery / Infographics Block */}
+                      {(entityMedia.length > 0 || isAdmin) && (
+                        <div className="pt-4 border-t border-border/50">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                              <ImagePlus className="w-4 h-4" />
+                              {language === 'uk' ? 'Галерея та інфографіка' : 'Gallery & Infographics'}
+                            </h4>
+                            {isAdmin && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs px-2"
+                                onClick={() => setShowMediaUploadDialog(true)}
+                              >
+                                <Plus className="w-3 h-3 mr-1" />
+                                {language === 'uk' ? 'Додати зображення' : 'Add Image'}
+                              </Button>
+                            )}
+                          </div>
+
+                          {entityMedia.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                              {entityMedia.map((media) => (
+                                <div key={media.id} className="group relative aspect-video rounded-md overflow-hidden border border-border bg-muted">
+                                  <a href={media.image_url} target="_blank" rel="noopener noreferrer">
+                                    <img
+                                      src={media.image_url}
+                                      alt={media.title || 'Entity media'}
+                                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                    />
+                                  </a>
+                                  {media.title && (
+                                    <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1.5 text-center">
+                                      <p className="text-[10px] text-white truncate">{media.title}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">
+                              {language === 'uk' ? 'Немає зображень' : 'No images available'}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
                       {/* Categories Sub-block */}
                       {(dbCategories.length > 0 || wikiCategories.length > 0) && (
                         <div className="pt-4 border-t border-border/50">
@@ -3330,6 +3455,66 @@ export default function WikiEntityPage() {
               {language === 'uk' ? 'Натисніть кнопку пошуку' : 'Click a search button'}
             </p>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Media Upload Dialog */}
+      <Dialog open={showMediaUploadDialog} onOpenChange={setShowMediaUploadDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{language === 'uk' ? 'Додати зображення/інфографіку' : 'Add Image/Infographic'}</DialogTitle>
+            <DialogDescription>
+              {language === 'uk' ? 'Завантажте зображення та додайте необов\'язковий заголовок.' : 'Upload an image and provide an optional title.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{language === 'uk' ? 'Файл' : 'File'}</label>
+              <Input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setMediaUploadFile(e.target.files[0]);
+                  }
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{language === 'uk' ? 'Заголовок (опціонально)' : 'Title (optional)'}</label>
+              <Input
+                value={mediaUploadTitle}
+                onChange={(e) => setMediaUploadTitle(e.target.value)}
+                placeholder={language === 'uk' ? 'Введіть заголовок...' : 'Enter title...'}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowMediaUploadDialog(false);
+              setMediaUploadFile(null);
+              setMediaUploadTitle('');
+            }}>
+              {language === 'uk' ? 'Скасувати' : 'Cancel'}
+            </Button>
+            <Button
+              onClick={handleMediaUpload}
+              disabled={!mediaUploadFile || isUploadingMedia}
+            >
+              {isUploadingMedia ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {language === 'uk' ? 'Завантаження...' : 'Uploading...'}
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  {language === 'uk' ? 'Завантажити' : 'Upload'}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

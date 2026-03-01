@@ -124,7 +124,7 @@ export default function NewsArticlePage() {
   const [selectedTweetModel, setSelectedTweetModel] = useState(ZAI_MODELS[0]?.value || '');
 
   // Toggle to hide optional blocks on the news article page (useful for quick UI changes)
-  const HIDE_KEY_BLOCKS = false;
+  const HIDE_KEY_BLOCKS = true;
 
   // Helper to get localized field - defined early so can be used in mutations
   const getLocalizedField = (field: string, articleData?: any) => {
