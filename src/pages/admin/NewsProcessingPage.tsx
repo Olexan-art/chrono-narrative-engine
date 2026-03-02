@@ -12,6 +12,7 @@ import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, RefreshC
 import { LLM_MODELS } from '@/types/database';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { BulkRetellCronPanelEnhanced } from '@/components/admin/BulkRetellCronPanelEnhanced';
+import { useAdminStore } from '@/stores/adminStore';
 
 interface CronConfig {
     id: string;
@@ -299,62 +300,62 @@ function ProcessingDashboard({ password }: { password: string }) {
                 </CardContent>
             </Card>
 
-                {/* Bot visits + Unique Visitors */}
-                <div className="col-span-1 md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="md:col-span-2">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                <Activity className="w-5 h-5 text-primary" />
-                                Bot Visits (24h)
-                            </CardTitle>
-                            <CardDescription>Search bots vs LLM bots hourly visits</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {botVisits?.history && (
-                                <div className="h-[220px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={botVisits.history}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                            <XAxis dataKey="time" tickLine={false} axisLine={false} />
-                                            <YAxis tickLine={false} axisLine={false} />
-                                            <Tooltip />
-                                            <Legend />
-                                            <Area type="monotone" dataKey="search_bots" name="Search Bots" stroke="#60a5fa" fill="#60a5fa33" />
-                                            <Area type="monotone" dataKey="llm_bots" name="LLM Bots" stroke="#a78bfa" fill="#a78bfa33" />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            )}
-                            {!botVisits?.history && <p className="text-sm text-muted-foreground">No bot visit data available</p>}
-                        </CardContent>
-                    </Card>
+            {/* Bot visits + Unique Visitors */}
+            <div className="col-span-1 md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="md:col-span-2">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <Activity className="w-5 h-5 text-primary" />
+                            Bot Visits (24h)
+                        </CardTitle>
+                        <CardDescription>Search bots vs LLM bots hourly visits</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {botVisits?.history && (
+                            <div className="h-[220px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={botVisits.history}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                        <XAxis dataKey="time" tickLine={false} axisLine={false} />
+                                        <YAxis tickLine={false} axisLine={false} />
+                                        <Tooltip />
+                                        <Legend />
+                                        <Area type="monotone" dataKey="search_bots" name="Search Bots" stroke="#60a5fa" fill="#60a5fa33" />
+                                        <Area type="monotone" dataKey="llm_bots" name="LLM Bots" stroke="#a78bfa" fill="#a78bfa33" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        )}
+                        {!botVisits?.history && <p className="text-sm text-muted-foreground">No bot visit data available</p>}
+                    </CardContent>
+                </Card>
 
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">Unique Visitors — News</CardTitle>
-                            <CardDescription>Unique visitors on news pages (24h / 7d)</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{uniqueVisitors?.news?.h24 ?? '—'}</div>
-                            <div className="text-sm text-muted-foreground">24h</div>
-                            <div className="mt-2 text-3xl font-semibold">{uniqueVisitors?.news?.d7 ?? '—'}</div>
-                            <div className="text-sm text-muted-foreground">7d</div>
-                        </CardContent>
-                    </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Unique Visitors — News</CardTitle>
+                        <CardDescription>Unique visitors on news pages (24h / 7d)</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{uniqueVisitors?.news?.h24 ?? '—'}</div>
+                        <div className="text-sm text-muted-foreground">24h</div>
+                        <div className="mt-2 text-3xl font-semibold">{uniqueVisitors?.news?.d7 ?? '—'}</div>
+                        <div className="text-sm text-muted-foreground">7d</div>
+                    </CardContent>
+                </Card>
 
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">Unique Visitors — Wiki Entities</CardTitle>
-                            <CardDescription>Unique visitors on wiki entity pages (24h / 7d)</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{uniqueVisitors?.wiki?.h24 ?? '—'}</div>
-                            <div className="text-sm text-muted-foreground">24h</div>
-                            <div className="mt-2 text-3xl font-semibold">{uniqueVisitors?.wiki?.d7 ?? '—'}</div>
-                            <div className="text-sm text-muted-foreground">7d</div>
-                        </CardContent>
-                    </Card>
-                </div>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Unique Visitors — Wiki Entities</CardTitle>
+                        <CardDescription>Unique visitors on wiki entity pages (24h / 7d)</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{uniqueVisitors?.wiki?.h24 ?? '—'}</div>
+                        <div className="text-sm text-muted-foreground">24h</div>
+                        <div className="mt-2 text-3xl font-semibold">{uniqueVisitors?.wiki?.d7 ?? '—'}</div>
+                        <div className="text-sm text-muted-foreground">7d</div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 }
@@ -632,7 +633,9 @@ function DiagnosticInfo({ password }: { password: string }) {
     );
 }
 
-export default function NewsProcessingPage({ password }: { password: string }) {
+export default function NewsProcessingPage({ password: propPassword }: { password?: string } = {}) {
+    const { password: storePassword } = useAdminStore();
+    const password = propPassword || storePassword || '';
     const queryClient = useQueryClient();
 
     // Fetch cron configurations
@@ -736,21 +739,21 @@ export default function NewsProcessingPage({ password }: { password: string }) {
 
     return (
         <div className="container mx-auto p-6 space-y-6">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold">News Processing</h1>
-                            <p className="text-muted-foreground">Manage automated news fetching and retelling</p>
-                        </div>
+            <div className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold">News Processing</h1>
+                    <p className="text-muted-foreground">Manage automated news fetching and retelling</p>
+                </div>
 
-                        <div className="ml-4">
-                            <Button asChild size="sm" variant="outline" className="gap-2">
-                                <a href="/docs/news-llm-prompts.html" target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink className="w-4 h-4" />
-                                    Prompts & Flow (HTML)
-                                </a>
-                            </Button>
-                        </div>
-                    </div>
+                <div className="ml-4">
+                    <Button asChild size="sm" variant="outline" className="gap-2">
+                        <a href="/docs/news-llm-prompts.html" target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-4 h-4" />
+                            Prompts & Flow (HTML)
+                        </a>
+                    </Button>
+                </div>
+            </div>
 
             {globalStats?.history && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
@@ -945,7 +948,7 @@ export default function NewsProcessingPage({ password }: { password: string }) {
                             <CardDescription>Process and enrich news articles with AI</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
-                                            {retellingConfig?.enabled ? (
+                            {retellingConfig?.enabled ? (
                                 <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                                     <CheckCircle2 className="w-3 h-3 mr-1" />
                                     Running

@@ -12,6 +12,7 @@ import {
   Swords, FolderOpen, Rss, BrainCircuit, ChevronDown, ChevronUp, Lightbulb,
   Link2, Plus, HardDrive, ImagePlus
 } from "lucide-react";
+import { NewsScoreBadge, SourceScoring } from "@/components/news/NewsScoreBadge";
 import { Header } from "@/components/Header";
 import { SEOHead } from "@/components/SEOHead";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -75,6 +76,7 @@ interface NewsItem {
   keywords: string[] | null;
   likes: number;
   dislikes: number;
+  source_scoring?: SourceScoring | null;
   country: {
     code: string;
     flag: string;
@@ -355,7 +357,7 @@ export default function WikiEntityPage() {
           news_item:news_rss_items(
             id, slug, title, title_en, description, description_en,
             image_url, published_at, themes, themes_en, keywords, country_id,
-            likes, dislikes,
+            likes, dislikes, source_scoring,
             country:news_countries(code, flag, name)
           )
         `)
@@ -2652,11 +2654,14 @@ export default function WikiEntityPage() {
                           className="flex gap-4 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
                         >
                           {news.image_url && (
-                            <img
-                              src={news.image_url}
-                              alt=""
-                              className="w-20 h-20 rounded object-cover flex-shrink-0"
-                            />
+                            <div className="relative inline-block flex-shrink-0">
+                              <img
+                                src={news.image_url}
+                                alt=""
+                                className="w-20 h-20 rounded object-cover"
+                              />
+                              <NewsScoreBadge scoring={news.source_scoring} />
+                            </div>
                           )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">

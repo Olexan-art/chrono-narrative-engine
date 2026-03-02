@@ -45,6 +45,7 @@ const NewsTopicsCatalogPage = lazy(() => import("./pages/NewsTopicsCatalogPage")
 const NewsTopicPage = lazy(() => import("./pages/NewsTopicPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
+const LocalNewsPage = lazy(() => import("./pages/admin/LocalNewsPage"));
 
 import { AdminGuard } from "@/components/AdminGuard";
 
@@ -63,59 +64,60 @@ const queryClient = new QueryClient({
 
 const App = () => (
   <ErrorBoundary>
-  <HelmetProvider>
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <GDPRConsent />
-          <BrowserRouter>
-            <Suspense fallback={<div className="min-h-screen bg-background" />}>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/media-calendar" element={<PublicCalendarPage />} />
-                <Route path="/date/:date" element={<DateStoriesPage />} />
-                <Route path="/chapters" element={<ChaptersPage />} />
-                <Route path="/volumes" element={<VolumesPage />} />
-                <Route path="/volume/:yearMonth" element={<VolumePage />} />
-                <Route path="/volume-legacy/:id" element={<VolumeRedirect />} />
-                <Route path="/sitemap" element={<SitemapPage />} />
-                <Route path="/news" element={<NewsHubPage />} />
-                <Route path="/news-digest" element={<NewsDigestRedirect />} />
-                <Route path="/news/:countryCode" element={<CountryNewsPage />} />
-                <Route path="/news/:country/:slug" element={<NewsArticlePage />} />
-                <Route path="/ink-abyss" element={<InkAbyssPage />} />
-                <Route path="/read/:date" element={<ReadPage />} />
-                <Route path="/read/:date/:storyNumber" element={<ReadPage />} />
-                <Route path="/chapter/:number" element={<ChapterPage />} />
-                <Route path="/chapter-legacy/:id" element={<ChapterRedirect />} />
-                <Route element={<AdminGuard />}>
-                  <Route path="/admin" element={<AdminPage />} />
-                  <Route path="/admin/part/:id" element={<EditPartPage />} />
-                  <Route path="/admin/chapter/:id" element={<EditChapterPage />} />
-                  <Route path="/admin/llm" element={<LLMManagementPage />} />
-                  <Route path="/admin/news-processing" element={<NewsProcessingPage />} />
-                  <Route path="/admin/local-retell" element={<LocalRetellPage />} />
-                  <Route path="/admin/local-wiki" element={<LocalWikiPage />} />
-                </Route>
-                <Route path="/install" element={<InstallPage />} />
-                <Route path="/privacy" element={<PrivacyPage />} />
-                <Route path="/dmca" element={<DmcaPage />} />
-                <Route path="/wiki" element={<WikiCatalogPage />} />
-                <Route path="/wiki/:entityId" element={<WikiEntityPage />} />
-                <Route path="/topics" element={<NewsTopicsCatalogPage />} />
-                <Route path="/topics/:topicSlug" element={<NewsTopicPage />} />
-                <Route path="/contact" element={<ContactPage />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </TooltipProvider>
-      </LanguageProvider>
-    </QueryClientProvider>
-  </HelmetProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <GDPRConsent />
+            <BrowserRouter>
+              <Suspense fallback={<div className="min-h-screen bg-background" />}>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/calendar" element={<CalendarPage />} />
+                  <Route path="/media-calendar" element={<PublicCalendarPage />} />
+                  <Route path="/date/:date" element={<DateStoriesPage />} />
+                  <Route path="/chapters" element={<ChaptersPage />} />
+                  <Route path="/volumes" element={<VolumesPage />} />
+                  <Route path="/volume/:yearMonth" element={<VolumePage />} />
+                  <Route path="/volume-legacy/:id" element={<VolumeRedirect />} />
+                  <Route path="/sitemap" element={<SitemapPage />} />
+                  <Route path="/news" element={<NewsHubPage />} />
+                  <Route path="/news-digest" element={<NewsDigestRedirect />} />
+                  <Route path="/news/:countryCode" element={<CountryNewsPage />} />
+                  <Route path="/news/:country/:slug" element={<NewsArticlePage />} />
+                  <Route path="/ink-abyss" element={<InkAbyssPage />} />
+                  <Route path="/read/:date" element={<ReadPage />} />
+                  <Route path="/read/:date/:storyNumber" element={<ReadPage />} />
+                  <Route path="/chapter/:number" element={<ChapterPage />} />
+                  <Route path="/chapter-legacy/:id" element={<ChapterRedirect />} />
+                  <Route element={<AdminGuard />}>
+                    <Route path="/admin" element={<AdminPage />} />
+                    <Route path="/admin/part/:id" element={<EditPartPage />} />
+                    <Route path="/admin/chapter/:id" element={<EditChapterPage />} />
+                    <Route path="/admin/llm" element={<LLMManagementPage />} />
+                    <Route path="/admin/news-processing" element={<NewsProcessingPage />} />
+                    <Route path="/admin/local-retell" element={<LocalRetellPage />} />
+                    <Route path="/admin/local-wiki" element={<LocalWikiPage />} />
+                    <Route path="/admin/local-news" element={<LocalNewsPage />} />
+                  </Route>
+                  <Route path="/install" element={<InstallPage />} />
+                  <Route path="/privacy" element={<PrivacyPage />} />
+                  <Route path="/dmca" element={<DmcaPage />} />
+                  <Route path="/wiki" element={<WikiCatalogPage />} />
+                  <Route path="/wiki/:entityId" element={<WikiEntityPage />} />
+                  <Route path="/topics" element={<NewsTopicsCatalogPage />} />
+                  <Route path="/topics/:topicSlug" element={<NewsTopicPage />} />
+                  <Route path="/contact" element={<ContactPage />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </TooltipProvider>
+        </LanguageProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   </ErrorBoundary>
 );
 

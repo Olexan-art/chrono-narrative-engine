@@ -8,6 +8,7 @@ import {
   Loader2, ExternalLink, Hash, BarChart2, Layers, Clock,
   ChevronRight, Image as ImageIcon, Globe, Flame
 } from "lucide-react";
+import { NewsScoreBadge, SourceScoring } from "@/components/news/NewsScoreBadge";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area
@@ -39,6 +40,7 @@ interface TopicNewsItem {
   themes_en: string[] | null;
   likes: number | null;
   dislikes: number | null;
+  source_scoring: SourceScoring | null;
   country: {
     code: string;
     flag: string | null;
@@ -152,7 +154,7 @@ export default function NewsTopicPage() {
         .from("news_rss_items")
         .select(`
           id, slug, title, title_en, description, description_en,
-          image_url, published_at, themes, themes_en, likes, dislikes,
+          image_url, published_at, themes, themes_en, likes, dislikes, source_scoring,
           country:news_countries(code, flag, name, name_en)
         `)
         .contains("themes", [topic])
@@ -625,7 +627,7 @@ export default function NewsTopicPage() {
                               <div className="flex-1 min-w-0 flex gap-3">
                                 {/* Thumbnail */}
                                 {n.image_url && (
-                                  <Link to={url} className="flex-shrink-0">
+                                  <Link to={url} className="flex-shrink-0 relative inline-block">
                                     <img
                                       src={n.image_url}
                                       alt=""
@@ -634,6 +636,7 @@ export default function NewsTopicPage() {
                                         (e.target as HTMLImageElement).parentElement!.style.display = "none";
                                       }}
                                     />
+                                    <NewsScoreBadge scoring={n.source_scoring} />
                                   </Link>
                                 )}
 

@@ -38,6 +38,7 @@ import { NewsTopicsNavBlock } from "@/components/news/NewsTopicsNavBlock";
 import { NewsEntityGraphBlock } from "@/components/news/NewsEntityGraphBlock";
 import { NewsRetellingBlock } from "@/components/news/NewsRetellingBlock";
 import { NewsVerifiedBadgeBlock } from "@/components/news/NewsVerifiedBadgeBlock";
+import { NewsEvidenceBlock } from "@/components/news/NewsEvidenceBlock";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -887,17 +888,12 @@ export default function NewsArticlePage() {
                   onImageUpdate={() => queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] })}
                 />
 
-                {/* Voting block - prominent placement under image */}
-                <div className="mt-4 p-4 rounded-lg bg-card/50 border border-border/50">
-                  <NewsVoteBlock
-                    newsId={article.id}
-                    likes={(article as any).likes || 0}
-                    dislikes={(article as any).dislikes || 0}
-                    className="justify-center"
-                    showLabel={true}
-                    size="lg"
-                  />
-                </div>
+                {/* Evidence block - prominent placement under image */}
+                {(article as any).source_scoring && (
+                  <div className="mt-4 p-4 rounded-lg bg-card/50 border border-border/50">
+                    <NewsEvidenceBlock scoring={(article as any).source_scoring} />
+                  </div>
+                )}
               </header>
 
               {/* Key Points Block - before content */}

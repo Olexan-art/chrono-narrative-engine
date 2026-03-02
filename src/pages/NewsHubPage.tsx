@@ -12,6 +12,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
+import { NewsScoreBadge, SourceScoring } from "@/components/news/NewsScoreBadge";
 
 interface NewsCountry {
   id: string;
@@ -34,6 +35,7 @@ interface NewsItem {
   published_at: string | null;
   slug: string | null;
   category: string | null;
+  source_scoring: SourceScoring | null;
   news_rss_feeds: {
     name: string;
   };
@@ -79,7 +81,7 @@ export default function NewsHubPage() {
           .from('news_rss_items')
           .select(`
             id, title, title_en, description, description_en, content_en,
-            image_url, url, published_at, slug, category,
+            image_url, url, published_at, slug, category, source_scoring,
             news_rss_feeds(name)
           `)
           .eq('country_id', country.id)
@@ -90,7 +92,7 @@ export default function NewsHubPage() {
 
         results.push({
           country,
-          news: newsItems || [],
+          news: (newsItems as unknown as NewsItem[]) || [],
           totalCount: count || 0
         });
       }
@@ -217,22 +219,26 @@ export default function NewsHubPage() {
                                 }`}
                             >
                               {item.image_url ? (
-                                <img
-                                  src={item.image_url}
-                                  alt={language === 'en' ? (item.title_en || item.title) : item.title}
-                                  width={64}
-                                  height={64}
-                                  className="w-16 h-16 object-cover rounded shrink-0"
-                                  loading="lazy"
-                                />
+                                <div className="relative w-16 h-16 shrink-0">
+                                  <img
+                                    src={item.image_url}
+                                    alt={language === 'en' ? (item.title_en || item.title) : item.title}
+                                    width={64}
+                                    height={64}
+                                    className="w-full h-full object-cover rounded"
+                                    loading="lazy"
+                                  />
+                                  <NewsScoreBadge scoring={item.source_scoring} />
+                                </div>
                               ) : (
-                                <div className="w-16 h-16 shrink-0 rounded overflow-hidden">
+                                <div className="relative w-16 h-16 shrink-0 rounded overflow-hidden">
                                   <NewsLogoMosaic
                                     feedName={item.news_rss_feeds?.name}
                                     sourceUrl={item.url}
                                     className="w-full h-full"
                                     logoSize="sm"
                                   />
+                                  <NewsScoreBadge scoring={item.source_scoring} />
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">

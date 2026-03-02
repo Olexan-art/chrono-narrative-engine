@@ -1996,7 +1996,13 @@ function generateNewsHTML(
             </div>
           ` : ""}
         </section>
-      ` : ""
+      ` : ""}
+      
+      ${newsItem.source_scoring?.html ? `
+        <div style="margin-top:24px;padding-top:16px;border-top:1px solid hsl(var(--border));width:100%;overflow-x:auto;">
+          ${newsItem.source_scoring.html}
+        </div>
+      ` : ""}
     }
       
       ${newsItem.original_content && newsItem.original_content.length > 100 ? `

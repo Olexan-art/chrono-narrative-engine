@@ -632,6 +632,176 @@ serve(async (req: Request) => {
         }
       }
 
+      // --- Ollama Scoring staging helpers (dev-only) ----------------------------------------
+      case 'ensureOllamaScoringTable': {
+        // Creates ollama_scoring_staging table if not exists (one-time setup for dev)
+        try {
+          const { data: exists } = await supabase
+            .from('information_schema.tables' as any)
+            .select('table_name')
+            .eq('table_schema', 'public')
+            .eq('table_name', 'ollama_scoring_staging')
+            .maybeSingle();
+
+          if (exists) {
+            return new Response(JSON.stringify({ success: true, created: false, message: 'Table already exists' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
+
+          // Use pg directly for DDL
+          const { default: postgres } = await import('npm:postgres');
+          const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!);
+          await sql`
+            CREATE TABLE IF NOT EXISTS public.ollama_scoring_staging (
+              id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+              news_id uuid NOT NULL REFERENCES public.news_rss_items(id) ON DELETE CASCADE,
+              model text NOT NULL,
+              scoring_data jsonb,
+              html_content text,
+              created_at timestamptz DEFAULT now(),
+              pushed boolean DEFAULT false,
+              pushed_at timestamptz
+            )
+          `;
+          await sql`
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_ollama_scoring_staging_news_model
+              ON public.ollama_scoring_staging(news_id, model)
+          `;
+          await sql`ALTER TABLE public.ollama_scoring_staging ENABLE ROW LEVEL SECURITY`;
+          await sql`
+            CREATE POLICY "ollama_scoring_staging_allow_all" ON public.ollama_scoring_staging
+              FOR ALL USING (true) WITH CHECK (true)
+          `;
+          await sql.end();
+          return new Response(JSON.stringify({ success: true, created: true, message: 'Table created' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('ensureOllamaScoringTable error:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      case 'saveOllamaScoringStaged': {
+        if (!data || !data.scores) {
+          return new Response(JSON.stringify({ error: 'Missing scores data' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        const rows = Array.isArray(data.scores) ? data.scores : [data.scores];
+        try {
+          const { error } = await supabase
+            .from('ollama_scoring_staging')
+            .upsert(rows.map(r => ({
+              news_id: r.newsId,
+              model: r.model,
+              scoring_data: r.scoring_data,
+              html_content: r.html_content,
+              pushed: false
+            })), { onConflict: 'news_id,model' });
+
+          if (error) throw error;
+          return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('saveOllamaScoringStaged error:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      case 'listOllamaScoringStaged': {
+        const pushedFilter = data?.pushed;
+        const limit = data?.limit || 200;
+        try {
+          let q = supabase.from('ollama_scoring_staging').select('*, news_rss_items(title, url)').order('created_at', { ascending: false }).limit(limit);
+          if (pushedFilter === true) q = q.eq('pushed', true);
+          if (pushedFilter === false) q = q.eq('pushed', false);
+
+          const { data: rows, error } = await q;
+          if (error) throw error;
+          return new Response(JSON.stringify({ success: true, rows }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('listOllamaScoringStaged error:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      case 'pushOllamaScoringStagedToLive': {
+        try {
+          const ids: string[] | undefined = data?.ids;
+          let stagedQuery = supabase.from('ollama_scoring_staging').select('*').order('created_at', { ascending: true });
+          if (ids && Array.isArray(ids) && ids.length > 0) stagedQuery = stagedQuery.in('id', ids);
+          else stagedQuery = stagedQuery.eq('pushed', false);
+
+          const { data: stagedRows, error: stagedErr } = await stagedQuery;
+          if (stagedErr) throw stagedErr;
+          if (!stagedRows || stagedRows.length === 0) {
+            return new Response(JSON.stringify({ success: true, processed: 0, pushed: 0, skipped: 0 }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
+
+          let processed = 0;
+          let pushed = 0;
+          let skipped = 0;
+
+          for (const row of stagedRows) {
+            processed++;
+
+            // Check if entity already has source_scoring
+            const { data: existing, error: existingErr } = await supabase
+              .from('news_rss_items')
+              .select('source_scoring')
+              .eq('id', row.news_id)
+              .single();
+
+            if (existingErr) {
+              console.error('Failed to fetch news item for push:', existingErr);
+              skipped++;
+              continue;
+            }
+
+            // We will conditionally skip if it already has scoring
+            const existingScoring = existing?.source_scoring;
+            if (existingScoring && typeof existingScoring === 'object' && Object.keys(existingScoring).length > 0) {
+              // skip
+              skipped++;
+              continue; // Don't overwrite existing scoring unless forced
+            }
+
+            const sourceScoring = {
+              json: row.scoring_data,
+              html: row.html_content
+            };
+
+            const { error: updateErr } = await supabase
+              .from('news_rss_items')
+              .update({ source_scoring: sourceScoring })
+              .eq('id', row.news_id);
+
+            if (updateErr) {
+              console.error('Failed to apply staged scoring to news item:', updateErr);
+              skipped++;
+              continue;
+            }
+
+            // mark staging row as pushed
+            const { error: markErr } = await supabase
+              .from('ollama_scoring_staging')
+              .update({ pushed: true, pushed_at: new Date().toISOString() })
+              .eq('id', row.id);
+
+            if (markErr) console.error('Failed to mark staging row as pushed:', markErr);
+
+            pushed++;
+          }
+
+          return new Response(JSON.stringify({ success: true, processed, pushed, skipped }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('pushOllamaScoringStagedToLive error:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
       // --------------------------------------------------------------------------------------
 
       case 'getCronEvents': {

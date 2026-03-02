@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
 import { isNewsRetold, hasNewsDialogue } from "@/lib/countryContentConfig";
+import { NewsScoreBadge, SourceScoring } from "@/components/news/NewsScoreBadge";
 
 interface NewsCountry {
   id: string;
@@ -48,6 +49,7 @@ interface NewsItem {
   tweets: any;
   themes: string[] | null;
   themes_en: string[] | null;
+  source_scoring: SourceScoring | null;
   news_rss_feeds: {
     name: string;
   };
@@ -72,7 +74,7 @@ export default function CountryNewsPage() {
   const { language, t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  
+
   const dateLocale = language === 'uk' ? uk : language === 'pl' ? pl : enUS;
 
   // Fetch country info
@@ -115,14 +117,14 @@ export default function CountryNewsPage() {
     queryKey: ['country-news-infinite', country?.id, selectedCategory],
     queryFn: async ({ pageParam = 0 }) => {
       if (!country?.id) return { items: [], nextPage: null };
-      
+
       let query = supabase
         .from('news_rss_items')
         .select(`
           id, title, title_en, description, description_en, 
           content, content_en, content_hi, content_ta, content_te, content_bn,
           url, slug, image_url, category, published_at, chat_dialogue, tweets,
-          themes, themes_en,
+          themes, themes_en, source_scoring,
           news_rss_feeds!inner(name)
         `)
         .eq('country_id', country.id)
@@ -130,15 +132,15 @@ export default function CountryNewsPage() {
         .not('slug', 'is', null)
         .order('published_at', { ascending: false })
         .range(pageParam, pageParam + PAGE_SIZE - 1);
-      
+
       if (selectedCategory !== 'all') {
         query = query.eq('category', selectedCategory);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
-      
-      const items = data as NewsItem[];
+
+      const items = data as unknown as NewsItem[];
       return {
         items,
         nextPage: items.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null
@@ -244,17 +246,17 @@ export default function CountryNewsPage() {
   }
 
   const countryName = getCountryName(country);
-  const pageTitle = language === 'en' 
-    ? `${countryName} News - Wormhole` 
+  const pageTitle = language === 'en'
+    ? `${countryName} News - Wormhole`
     : language === 'pl'
-    ? `Wiadomości z ${countryName} - Krotowina`
-    : `Новини ${countryName} - Кротовиина`;
+      ? `Wiadomości z ${countryName} - Krotowina`
+      : `Новини ${countryName} - Кротовиина`;
 
   const pageDescription = language === 'en'
     ? `Latest news from ${countryName} with AI-powered retelling and character dialogues`
     : language === 'pl'
-    ? `Najnowsze wiadomości z ${countryName} z AI-streszczeniami i dialogami postaci`
-    : `Останні новини з ${countryName} з AI-переказом та діалогами персонажів`;
+      ? `Najnowsze wiadomości z ${countryName} z AI-streszczeniami i dialogami postaci`
+      : `Останні новини з ${countryName} з AI-переказом та діалогами персонажів`;
 
   // Build canonical URL with category filter if selected
   const getCanonicalUrl = () => {
@@ -308,11 +310,10 @@ export default function CountryNewsPage() {
               <Link
                 key={c.id}
                 to={`/news/${c.code.toLowerCase()}`}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm font-mono transition-all duration-200 ${
-                  c.code.toLowerCase() === countryCode?.toLowerCase()
-                    ? 'border-cyan-500/70 bg-cyan-950/40 text-cyan-300 shadow-[0_0_8px_rgba(0,255,255,0.25)]'
-                    : 'border-gray-700/50 bg-gray-900/30 text-gray-400 hover:border-cyan-700/50 hover:bg-cyan-950/20 hover:text-cyan-400 hover:shadow-[0_0_6px_rgba(0,255,255,0.15)]'
-                }`}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm font-mono transition-all duration-200 ${c.code.toLowerCase() === countryCode?.toLowerCase()
+                  ? 'border-cyan-500/70 bg-cyan-950/40 text-cyan-300 shadow-[0_0_8px_rgba(0,255,255,0.25)]'
+                  : 'border-gray-700/50 bg-gray-900/30 text-gray-400 hover:border-cyan-700/50 hover:bg-cyan-950/20 hover:text-cyan-400 hover:shadow-[0_0_6px_rgba(0,255,255,0.15)]'
+                  }`}
               >
                 <span>{c.flag}</span>
                 <span className="hidden sm:inline">
@@ -362,7 +363,7 @@ export default function CountryNewsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {newsItems.map((item, idx) => {
-              const localizedTitle = language === 'en' 
+              const localizedTitle = language === 'en'
                 ? (item.title_en || item.title)
                 : item.title;
               const localizedDescription = language === 'en'
@@ -370,19 +371,18 @@ export default function CountryNewsPage() {
                 : item.description;
               const isRetold = hasRetoldContent(item);
               const hasDialogue = hasDialogues(item);
-              
+
               return (
-                <Link 
-                  key={item.id} 
+                <Link
+                  key={item.id}
                   to={`/news/${countryCode?.toLowerCase()}/${item.slug}`}
                   className="block animate-fade-in"
                   style={{ animationDelay: `${idx * 30}ms` }}
                 >
-                  <Card className={`cosmic-card overflow-hidden group h-full transition-all duration-300 ${
-                    isRetold 
-                      ? 'border-primary/30 hover:border-primary/60 bg-primary/5' 
-                      : 'hover:border-primary/50'
-                  }`}>
+                  <Card className={`cosmic-card overflow-hidden group h-full transition-all duration-300 ${isRetold
+                    ? 'border-primary/30 hover:border-primary/60 bg-primary/5'
+                    : 'hover:border-primary/50'
+                    }`}>
                     {item.image_url ? (
                       <div className="aspect-video overflow-hidden relative">
                         <img
@@ -397,6 +397,7 @@ export default function CountryNewsPage() {
                             (e.target as HTMLImageElement).style.display = 'none';
                           }}
                         />
+                        <NewsScoreBadge scoring={item.source_scoring} />
                         {isRetold && (
                           <div className="absolute top-2 left-2">
                             <Badge className="bg-primary/90 text-primary-foreground gap-1">
@@ -408,12 +409,13 @@ export default function CountryNewsPage() {
                       </div>
                     ) : (
                       <div className="relative aspect-video overflow-hidden">
-                        <NewsLogoMosaic 
+                        <NewsLogoMosaic
                           feedName={item.news_rss_feeds?.name}
                           sourceUrl={item.url}
                           className="w-full h-full"
                           logoSize="md"
                         />
+                        <NewsScoreBadge scoring={item.source_scoring} />
                         {isRetold && (
                           <div className="absolute top-2 left-2">
                             <Badge className="bg-primary/90 text-primary-foreground gap-1">

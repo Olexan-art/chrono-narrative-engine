@@ -88,7 +88,7 @@ function CachePurgeButton() {
   async function purgeAll() {
     setLoading(true);
     try {
-      const res  = await fetch(
+      const res = await fetch(
         `/api/cache-purge?secret=${PURGE_SECRET}&path=all`,
         { method: 'POST' }
       );
@@ -895,6 +895,10 @@ export default function AdminPage() {
               <BookOpen className="w-4 h-4 text-purple-500" />
               Локальна Wiki
             </TabsTrigger>
+            <TabsTrigger value="local-news" className="gap-2">
+              <Zap className="w-4 h-4 text-blue-500" />
+              Локальні Новини
+            </TabsTrigger>
             <TabsTrigger value="bot-errors" className="gap-2">
               <AlertTriangle className="w-4 h-4 text-destructive" />
               Помилки
@@ -1008,6 +1012,21 @@ export default function AdminPage() {
               <Link to="/admin/local-wiki">
                 <Button size="lg" className="px-8">
                   Відкрити Local Wiki
+                </Button>
+              </Link>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="local-news" className="mt-6">
+            <div className="p-12 text-center border-2 border-dashed rounded-xl bg-card">
+              <Zap className="w-12 h-12 mx-auto mb-4 text-blue-500 animate-pulse" />
+              <h2 className="text-2xl font-bold mb-2">Локальні Новини та Scoring (Dev)</h2>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Цей модуль дозволяє генерувати Source Scoring та Deep Analysis новин через локально запущені LLM (Ollama, LM Studio).
+              </p>
+              <Link to="/admin/local-news">
+                <Button size="lg" className="px-8">
+                  Відкрити Local News
                 </Button>
               </Link>
             </div>
