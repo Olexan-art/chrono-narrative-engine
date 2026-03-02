@@ -107,6 +107,8 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {countriesWithNews.map(({ country, news }) => {
+            if (!country || !news) return null;
+
             const countryName = language === 'en'
               ? (country.name_en || country.name)
               : country.name;

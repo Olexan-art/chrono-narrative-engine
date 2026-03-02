@@ -305,12 +305,14 @@ overall = round(reliability*0.45 + importance*0.30 + corroboration*0.15 + scope_
 ---JSON_END---
 ---HTML_START---
 <!-- Твій HTML+CSS (без JS):
+- Обгорни весь код в один головний <div>
 - кільце Overall (conic-gradient + --value)
 - bar’и Reliability, Importance + 4–5 підметрик
 - decision meter з 4 сегментами (Low/Normal/Highlight/Push) + needle (позиція від --value)
 - бейджі: verification_status, confidence, last_updated (сьогоднішня дата), claimed_source
 Важливо: Використовуй темну тему (dark mode), яка підходить для сайту з фоном #0c1222. Текст має бути світлим, картки - напівпрозорими темними з тонкими рамками (border: 1px solid rgba(255,255,255,0.1)).
 Без зовнішніх бібліотек, тільки інлайн стилі або внутрішній <style>.
+КРИТИЧНО ВАЖЛИВО: Перевір, щоб УСІ відкриті HTML теги були закриті (</div>, </span>, тощо), інакше ти зламаєш верстку всього сайту.
 -->
 ---HTML_END---`;
 
