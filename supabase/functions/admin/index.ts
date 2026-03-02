@@ -75,12 +75,12 @@ serve(async (req: Request) => {
         if (error) throw error;
 
         const availability = {
-          hasOpenai: !!settings?.openai_api_key,
-          hasGemini: !!settings?.gemini_api_key,
-          hasGeminiV22: !!settings?.gemini_v22_api_key,
-          hasAnthropic: !!settings?.anthropic_api_key,
-          hasZai: !!settings?.zai_api_key,
-          hasMistral: !!settings?.mistral_api_key,
+          hasOpenai: !!settings?.openai_api_key || !!Deno.env.get('OPENAI_API_KEY') || !!Deno.env.get('OPENAI_API_KEY_SECONDARY'),
+          hasGemini: !!settings?.gemini_api_key || !!Deno.env.get('GEMINI_API_KEY'),
+          hasGeminiV22: !!settings?.gemini_v22_api_key || !!Deno.env.get('GEMINI_V22_API_KEY'),
+          hasAnthropic: !!settings?.anthropic_api_key || !!Deno.env.get('ANTHROPIC_API_KEY'),
+          hasZai: !!settings?.zai_api_key || !!Deno.env.get('ZAI_API_KEY'),
+          hasMistral: !!settings?.mistral_api_key || !!Deno.env.get('MISTRAL_API_KEY'),
         };
 
         return new Response(
