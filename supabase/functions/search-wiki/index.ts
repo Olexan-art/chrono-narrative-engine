@@ -125,17 +125,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
   }
 
   if (provider === 'lovable') {
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!apiKey) throw new Error('LOVABLE_API_KEY not configured');
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
-      signal: AbortSignal.timeout(90000),
-    });
-    if (!response.ok) throw new Error(`Lovable AI error: ${response.status}`);
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
+    throw new Error('Lovable AI is not supported for this operation. Please configure OpenAI or Gemini.');
   }
 
   if (provider === 'openai') {

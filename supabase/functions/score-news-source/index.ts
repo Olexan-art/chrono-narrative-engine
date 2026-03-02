@@ -78,31 +78,7 @@ async function callLLM(
       result = data.choices?.[0]?.message?.content || '';
     }
     else if (provider === 'lovable') {
-      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-      if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
-
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Lovable AI error: ${response.status} ${errorText}`);
-      }
-
-      const data = await response.json();
-      result = data.choices?.[0]?.message?.content || '';
+      throw new Error('Lovable AI is not supported for this operation. Please configure OpenAI or Gemini.');
     }
     else if (provider === 'openai') {
       const apiKey = settings.openai_api_key || Deno.env.get('OPENAI_API_KEY');
