@@ -55,7 +55,7 @@ async function fetchTrendingEntities(hoursAgo: number): Promise<WikiEntityWithNe
   const countryIds = [...new Set(recentMentions
     .filter(m => m.news_item)
     .map(m => (m.news_item as any).country_id))];
-  
+
   const { data: countries } = await supabase
     .from('news_countries')
     .select('id, code')
@@ -134,25 +134,27 @@ export const TrendingWikiEntities = memo(function TrendingWikiEntities() {
   if (trendingEntities24h.length === 0 && trendingEntitiesWeek.length === 0) return null;
 
   const renderEntityCard = (item: WikiEntityWithNews, idx: number) => {
+    if (!item?.entity) return null;
+
     const name = language === 'en' && item.entity.name_en ? item.entity.name_en : item.entity.name;
-    const description = language === 'en' && item.entity.description_en 
-      ? item.entity.description_en 
+    const description = language === 'en' && item.entity.description_en
+      ? item.entity.description_en
       : item.entity.description;
-    const wikiUrl = language === 'en' && item.entity.wiki_url_en 
-      ? item.entity.wiki_url_en 
+    const wikiUrl = language === 'en' && item.entity.wiki_url_en
+      ? item.entity.wiki_url_en
       : item.entity.wiki_url;
 
     return (
-      <Card 
-        key={item.entity.id} 
+      <Card
+        key={item.entity.id}
         className="overflow-hidden hover:shadow-md transition-shadow animate-fade-in"
         style={{ animationDelay: `${idx * 75}ms` }}
       >
         <CardContent className="p-0">
           <div className="flex items-start gap-3 p-3">
             {item.entity.image_url && (
-              <img 
-                src={getOptimizedUrl(item.entity.image_url, 128)} 
+              <img
+                src={getOptimizedUrl(item.entity.image_url, 128)}
                 alt={name}
                 className="w-16 h-16 object-cover rounded-lg shrink-0"
                 loading="lazy"
@@ -163,9 +165,9 @@ export const TrendingWikiEntities = memo(function TrendingWikiEntities() {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-1">
                 <h3 className="font-medium text-sm line-clamp-1">{name}</h3>
-                <a 
-                  href={wikiUrl} 
-                  target="_blank" 
+                <a
+                  href={wikiUrl}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-primary shrink-0"
                 >

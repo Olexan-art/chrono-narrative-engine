@@ -410,7 +410,7 @@ export default function NewsTopicPage() {
     language === "en" ? "category" : "категорія",
     language === "en" ? "timeline" : "таймлайн",
     language === "en" ? "analysis" : "аналіз",
-    ...entityStats.slice(0, 5).map(e => language === "en" && e.entity.name_en ? e.entity.name_en : e.entity.name),
+    ...entityStats.slice(0, 5).map(e => e?.entity ? (language === "en" && e.entity.name_en ? e.entity.name_en : e.entity.name) : ""),
     ...relatedTopics.slice(0, 4).map(r => r.topic),
   ];
 

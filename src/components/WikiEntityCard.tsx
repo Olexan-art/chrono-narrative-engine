@@ -27,7 +27,9 @@ export interface WikiEntityCardProps {
 
 export function WikiEntityCard({ entity, compact = false, showLink = false }: WikiEntityCardProps) {
   const { language } = useLanguage();
-  
+
+  if (!entity) return null;
+
   const name = (language === 'en' && entity.name_en) ? entity.name_en : entity.name;
   const description = (language === 'en' && entity.description_en) ? entity.description_en : entity.description;
   const extract = (language === 'en' && entity.extract_en) ? entity.extract_en : entity.extract;
@@ -53,30 +55,30 @@ export function WikiEntityCard({ entity, compact = false, showLink = false }: Wi
   // Extract key facts from the extract text
   const getKeyFacts = (): string[] => {
     if (!extract) return [];
-    
+
     // Split by sentences and take first 2-3 meaningful ones
     const sentences = extract
       .split(/(?<=[.!?])\s+/)
       .filter(s => s.length > 20 && s.length < 200)
       .slice(0, 2);
-    
+
     return sentences;
   };
 
   if (compact) {
     const CardWrapper = showLink ? Link : 'a';
-    const cardProps = showLink 
-      ? { to: `/wiki/${entity.id}` } 
+    const cardProps = showLink
+      ? { to: `/wiki/${entity.id}` }
       : { href: wikiUrl, target: "_blank", rel: "noopener noreferrer" };
 
     return (
-      <CardWrapper 
+      <CardWrapper
         {...(cardProps as any)}
         className="flex items-center gap-3 p-3 rounded-xl glass-effect hover-lift border-glow"
       >
         {entity.image_url ? (
-          <img 
-            src={entity.image_url} 
+          <img
+            src={entity.image_url}
             alt={name}
             className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
           />
@@ -107,8 +109,8 @@ export function WikiEntityCard({ entity, compact = false, showLink = false }: Wi
         <div className="flex gap-4">
           {/* Larger image */}
           {entity.image_url ? (
-            <img 
-              src={entity.image_url} 
+            <img
+              src={entity.image_url}
               alt={name}
               className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
             />
@@ -123,7 +125,7 @@ export function WikiEntityCard({ entity, compact = false, showLink = false }: Wi
               )}
             </div>
           )}
-          
+
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1">
               <Badge variant="outline" className="text-[10px] gap-1">
@@ -136,7 +138,7 @@ export function WikiEntityCard({ entity, compact = false, showLink = false }: Wi
               <p className="text-sm text-muted-foreground mb-2">{description}</p>
             )}
             <div className="flex items-center gap-3">
-              <a 
+              <a
                 href={wikiUrl}
                 target="_blank"
                 rel="noopener noreferrer"
