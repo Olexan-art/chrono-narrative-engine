@@ -14,9 +14,9 @@ serve(async (req) => {
   try {
     const { partId, chapterId, volumeId, targetLanguage } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY not configured');
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -35,7 +35,7 @@ serve(async (req) => {
         .select('title, content, chat_dialogue, tweets')
         .eq('id', partId)
         .single();
-      
+
       if (!part) throw new Error('Part not found');
       textToTranslate = `TITLE:\n${part.title}\n\nCONTENT:\n${part.content}`;
       chatDialogue = part.chat_dialogue as any[] | null;
@@ -48,7 +48,7 @@ serve(async (req) => {
         .select('title, description, narrator_monologue, narrator_commentary, chat_dialogue, tweets')
         .eq('id', chapterId)
         .single();
-      
+
       if (!chapter) throw new Error('Chapter not found');
       textToTranslate = `TITLE:\n${chapter.title}\n\nDESCRIPTION:\n${chapter.description || ''}\n\nNARRATOR_MONOLOGUE:\n${chapter.narrator_monologue || ''}\n\nNARRATOR_COMMENTARY:\n${chapter.narrator_commentary || ''}`;
       chatDialogue = chapter.chat_dialogue as any[] | null;
@@ -61,7 +61,7 @@ serve(async (req) => {
         .select('title, description, summary')
         .eq('id', volumeId)
         .single();
-      
+
       if (!volume) throw new Error('Volume not found');
       textToTranslate = `TITLE:\n${volume.title}\n\nDESCRIPTION:\n${volume.description || ''}\n\nSUMMARY:\n${volume.summary || ''}`;
       entityType = 'volume';
@@ -71,11 +71,11 @@ serve(async (req) => {
     }
 
     const langName = targetLanguage === 'en' ? 'English' : 'Polish';
-    
+
     // Build chat dialogue text for translation
     let chatDialogueText = '';
     if (chatDialogue && chatDialogue.length > 0) {
-      chatDialogueText = '\n\nCHAT_DIALOGUE:\n' + chatDialogue.map((msg, i) => 
+      chatDialogueText = '\n\nCHAT_DIALOGUE:\n' + chatDialogue.map((msg, i) =>
         `[${i}] ${msg.name}: ${msg.message}`
       ).join('\n');
     }
@@ -83,13 +83,13 @@ serve(async (req) => {
     // Build tweets text for translation
     let tweetsText = '';
     if (tweets && tweets.length > 0) {
-      tweetsText = '\n\nTWEETS:\n' + tweets.map((tweet, i) => 
+      tweetsText = '\n\nTWEETS:\n' + tweets.map((tweet, i) =>
         `[${i}] @${tweet.handle} (${tweet.author}): ${tweet.content}`
       ).join('\n');
     }
 
     const fullTextToTranslate = textToTranslate + chatDialogueText + tweetsText;
-    
+
     const systemPrompt = `You are a professional literary translator specializing in science fiction. Translate the following Ukrainian text to ${langName}.
 
 IMPORTANT RULES:
@@ -118,30 +118,27 @@ Only include fields that were present in the input.`;
     console.log(`Has chat_dialogue: ${chatDialogue?.length || 0} messages`);
     console.log(`Has tweets: ${tweets?.length || 0} tweets`);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: fullTextToTranslate }
-        ],
-        response_format: { type: "json_object" }
+        contents: [{ parts: [{ text: `${systemPrompt}\n\n${fullTextToTranslate}` }] }],
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI Gateway error:', response.status, errorText);
-      throw new Error(`AI Gateway error: ${response.status}`);
+      console.error('Gemini API error:', response.status, errorText);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const translatedContent = JSON.parse(data.choices?.[0]?.message?.content || '{}');
+    const translatedContent = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
 
     // Update database with translations
     const langSuffix = `_${targetLanguage}`;
