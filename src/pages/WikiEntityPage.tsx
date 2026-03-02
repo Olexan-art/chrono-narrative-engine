@@ -572,7 +572,7 @@ export default function WikiEntityPage() {
   });
 
   // Extract topics from news
-  const allTopics = allLinkedNews.reduce((acc, news) => {
+  const allTopics = paginatedNews.reduce((acc, news) => {
     const themes = language === 'en' && news.themes_en ? news.themes_en : news.themes;
     if (themes) {
       themes.forEach(t => {
@@ -589,7 +589,7 @@ export default function WikiEntityPage() {
   // Extract aggregated keywords from news
   const allKeywords = useMemo(() => {
     const keywordCount: Record<string, number> = {};
-    allLinkedNews.forEach(news => {
+    paginatedNews.forEach(news => {
       if (news.keywords) {
         news.keywords.forEach(kw => {
           keywordCount[kw] = (keywordCount[kw] || 0) + 1;
@@ -599,7 +599,7 @@ export default function WikiEntityPage() {
     return Object.entries(keywordCount)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 20);
-  }, [allLinkedNews]);
+  }, [paginatedNews]);
 
   // Fetch RSS feed sources for this entity's news
   const { data: feedSources = [] } = useQuery({
@@ -1226,7 +1226,7 @@ export default function WikiEntityPage() {
 
     if (caricature.news_item_id) {
       // Find from existing list or fetch
-      newsItem = allLinkedNews.find(n => n.id === caricature.news_item_id);
+      newsItem = paginatedNews.find(n => n.id === caricature.news_item_id);
 
       if (!newsItem) {
         const { data } = await supabase
@@ -1849,7 +1849,7 @@ export default function WikiEntityPage() {
               </Card>
 
               {/* Latest News Block */}
-              {allLinkedNews.length > 0 && (
+              {paginatedNews.length > 0 && (
                 <Card className="overflow-hidden border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
@@ -1864,7 +1864,7 @@ export default function WikiEntityPage() {
                   </CardHeader>
                   <CardContent className="pt-0">
                     {(() => {
-                      const latestNews = allLinkedNews[0];
+                      const latestNews = paginatedNews[0];
                       const newsTitle = language === 'en' && latestNews.title_en ? latestNews.title_en : latestNews.title;
                       const newsDesc = language === 'en' && latestNews.description_en ? latestNews.description_en : latestNews.description;
                       return (
@@ -2843,37 +2843,40 @@ export default function WikiEntityPage() {
                 <CardContent>
                   {relatedEntities.length > 0 ? (
                     <div className="space-y-3">
-                      {relatedEntities.map((related) => (
-                        <Link
-                          key={related.id}
-                          to={`/wiki/${related.slug || related.id}`}
-                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          {related.image_url ? (
-                            <img
-                              src={related.image_url}
-                              alt=""
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                              {related.entity_type === 'person' ? (
-                                <User className="w-4 h-4" />
-                              ) : (
-                                <Building2 className="w-4 h-4" />
-                              )}
+                      {relatedEntities.map((related) => {
+                        if (!related) return null;
+                        return (
+                          <Link
+                            key={related.id}
+                            to={`/wiki/${related.slug || related.id}`}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                          >
+                            {related.image_url ? (
+                              <img
+                                src={related.image_url}
+                                alt=""
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                                {related.entity_type === 'person' ? (
+                                  <User className="w-4 h-4" />
+                                ) : (
+                                  <Building2 className="w-4 h-4" />
+                                )}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm line-clamp-1">
+                                {language === 'en' && related.name_en ? related.name_en : related.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {related.shared_news_count} {language === 'uk' ? 'спільних новин' : 'shared news'}
+                              </p>
                             </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm line-clamp-1">
-                              {language === 'en' && related.name_en ? related.name_en : related.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {related.shared_news_count} {language === 'uk' ? 'спільних новин' : 'shared news'}
-                            </p>
-                          </div>
-                        </Link>
-                      ))}
+                          </Link>
+                        )
+                      })}
                     </div>
                   ) : (
                     <p className="text-muted-foreground text-sm text-center py-4">
@@ -2890,39 +2893,42 @@ export default function WikiEntityPage() {
                       </h4>
                       <div className="space-y-2">
                         {wikiLinkedEntities
-                          .filter(w => !relatedEntities.some(r => r.id === w.id))
-                          .map((linked) => (
-                            <Link
-                              key={linked.id}
-                              to={`/wiki/${linked.slug || linked.id}`}
-                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors border border-dashed border-border/50"
-                            >
-                              {linked.image_url ? (
-                                <img
-                                  src={linked.image_url}
-                                  alt=""
-                                  className="w-8 h-8 rounded-full object-cover opacity-80"
-                                />
-                              ) : (
-                                <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
-                                  {linked.entity_type === 'person' ? (
-                                    <User className="w-3 h-3 text-muted-foreground" />
-                                  ) : (
-                                    <Globe className="w-3 h-3 text-muted-foreground" />
-                                  )}
+                          .filter(w => w && !relatedEntities.some(r => r?.id === w.id))
+                          .map((linked) => {
+                            if (!linked) return null;
+                            return (
+                              <Link
+                                key={linked.id}
+                                to={`/wiki/${linked.slug || linked.id}`}
+                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors border border-dashed border-border/50"
+                              >
+                                {linked.image_url ? (
+                                  <img
+                                    src={linked.image_url}
+                                    alt=""
+                                    className="w-8 h-8 rounded-full object-cover opacity-80"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
+                                    {linked.entity_type === 'person' ? (
+                                      <User className="w-3 h-3 text-muted-foreground" />
+                                    ) : (
+                                      <Globe className="w-3 h-3 text-muted-foreground" />
+                                    )}
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-xs line-clamp-1">
+                                    {language === 'en' && linked.name_en ? linked.name_en : linked.name}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground capitalize">
+                                    {linked.entity_type}
+                                  </p>
                                 </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-xs line-clamp-1">
-                                  {language === 'en' && linked.name_en ? linked.name_en : linked.name}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground capitalize">
-                                  {linked.entity_type}
-                                </p>
-                              </div>
-                              <Link2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                            </Link>
-                          ))}
+                                <Link2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                              </Link>
+                            )
+                          })}
                       </div>
                     </div>
                   )}
@@ -3072,9 +3078,9 @@ export default function WikiEntityPage() {
               </Card>
 
               {/* Archive Block */}
-              {allLinkedNews.length > 0 && (() => {
+              {paginatedNews.length > 0 && (() => {
                 const archiveMap: Record<string, number> = {};
-                allLinkedNews.forEach(n => {
+                paginatedNews.forEach(n => {
                   if (n.published_at) {
                     const key = format(new Date(n.published_at), 'yyyy-MM');
                     archiveMap[key] = (archiveMap[key] || 0) + 1;
@@ -3150,9 +3156,9 @@ export default function WikiEntityPage() {
               })()}
 
               {/* Sources Block */}
-              {(allLinkedNews.length > 0 || feedSources.length > 0) && (() => {
+              {(paginatedNews.length > 0 || feedSources.length > 0) && (() => {
                 const sourceMap: Record<string, number> = {};
-                allLinkedNews.forEach(n => {
+                paginatedNews.forEach(n => {
                   const source = n.country?.name;
                   if (source) sourceMap[source] = (sourceMap[source] || 0) + 1;
                 });
@@ -3171,7 +3177,7 @@ export default function WikiEntityPage() {
                       {sources.length > 0 && (
                         <div className="grid grid-cols-1 gap-2">
                           {sources.map(([source, count]) => {
-                            const country = allLinkedNews.find(n => n.country?.name === source)?.country;
+                            const country = paginatedNews.find(n => n.country?.name === source)?.country;
                             return (
                               <div key={source} className="group/source flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-muted/60 to-muted/20 border border-border/40 hover:border-primary/30 hover:from-primary/10 hover:to-transparent transition-all duration-300">
                                 {country?.flag && <span className="text-xl">{country.flag}</span>}
