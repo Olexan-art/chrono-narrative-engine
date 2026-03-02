@@ -32,11 +32,11 @@ export const NewsScoreBadge: React.FC<NewsScoreBadgeProps> = ({ scoring: rawScor
     let BorderClass = 'border-gray-400/50';
     let Icon = Shield;
 
-    if (score >= 90) {
+    if (score > 70) {
         ColorClass = 'bg-green-500/90 text-white';
         BorderClass = 'border-green-400/50';
         Icon = ShieldCheck;
-    } else if (score >= 70) {
+    } else if (score >= 40) {
         ColorClass = 'bg-orange-500/90 text-white';
         BorderClass = 'border-orange-400/50';
         Icon = ShieldAlert;
@@ -49,15 +49,15 @@ export const NewsScoreBadge: React.FC<NewsScoreBadgeProps> = ({ scoring: rawScor
     return (
         <div
             className={cn(
-                "absolute bottom-1 right-1 flex items-center gap-1 px-1.5 py-0.5 rounded-sm backdrop-blur-sm border shadow-sm",
+                "absolute bottom-2 right-2 flex items-center gap-2 px-3 py-1.5 rounded-md backdrop-blur-sm border shadow-md",
                 ColorClass,
                 BorderClass,
                 className
             )}
             title={`Source Trust Score: ${score}/100`}
         >
-            <Icon className="w-2.5 h-2.5" />
-            <span className="text-[10px] font-bold tracking-tighter tabular-nums leading-none">
+            <Icon className="w-5 h-5" />
+            <span className="text-[20px] font-bold tracking-tighter tabular-nums leading-none">
                 {score}
             </span>
         </div>

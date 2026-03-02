@@ -42,8 +42,8 @@ export const NewsEvidenceBlock: React.FC<NewsEvidenceBlockProps> = ({ scoring: r
 
     // Get color scale
     let ScoreColor = 'text-gray-400';
-    if (overallScore >= 90) ScoreColor = 'text-green-500';
-    else if (overallScore >= 70) ScoreColor = 'text-orange-500';
+    if (overallScore > 70) ScoreColor = 'text-green-500';
+    else if (overallScore >= 40) ScoreColor = 'text-orange-500';
     else ScoreColor = 'text-red-500';
 
     const tTitle = language === 'en' ? 'Supporting Evidence & Claims' : language === 'pl' ? 'Dowody i twierdzenia' : 'Оцінка джерела та докази';
