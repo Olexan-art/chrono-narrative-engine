@@ -51,50 +51,15 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
   const { data: countriesWithNews = [], isLoading } = useQuery({
     queryKey: ['country-news-section', language],
     queryFn: async () => {
-      // First get active countries
-      const { data: countries } = await supabase
-        .from('news_countries')
-        .select('id, code, name, name_en, flag')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
+      // Use the new RPC function to fetch everything in 1 optimized database query
+      const { data, error } = await supabase.rpc('get_latest_news_by_country', { news_limit: NEWS_PER_COUNTRY });
 
-      if (!countries?.length) return [];
-
-      // For each country, fetch 6 latest news
-      const results: CountryWithNews[] = [];
-      
-      for (const country of countries) {
-        const { data: newsItems } = await supabase
-          .from('news_rss_items')
-          .select(`
-            id, 
-            title, 
-            title_en,
-            description,
-            description_en,
-            content_en,
-            image_url, 
-            published_at, 
-            slug,
-            category
-          `)
-          .eq('country_id', country.id)
-          .not('slug', 'is', null)
-          .order('published_at', { ascending: false })
-          .limit(NEWS_PER_COUNTRY);
-
-        if (newsItems?.length) {
-          results.push({
-            country,
-            news: newsItems.map(item => ({
-              ...item,
-              country
-            }))
-          });
-        }
+      if (error) {
+        console.error('Error fetching country news via RPC:', error);
+        return [];
       }
 
-      return results;
+      return (data || []) as CountryWithNews[];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -142,7 +107,7 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {countriesWithNews.map(({ country, news }) => {
-            const countryName = language === 'en' 
+            const countryName = language === 'en'
               ? (country.name_en || country.name)
               : country.name;
 
@@ -154,7 +119,7 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
                     <span className="text-xl">{country.flag}</span>
                     <span className="font-medium text-sm">{countryName}</span>
                   </div>
-                  <Link 
+                  <Link
                     to={`/news/${country.code.toLowerCase()}`}
                     className="text-xs text-primary hover:underline"
                   >
@@ -165,7 +130,7 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
                 {/* News Cards */}
                 <div className="space-y-2">
                   {news.map((item, idx) => {
-                    const localizedTitle = language === 'en' 
+                    const localizedTitle = language === 'en'
                       ? (item.title_en || item.title)
                       : item.title;
                     const isRetold = item.content_en && item.content_en.length > 100;
@@ -176,18 +141,17 @@ export const CountryNewsSection = memo(function CountryNewsSection() {
                         to={`/news/${country.code.toLowerCase()}/${item.slug}`}
                         className="group block"
                       >
-                        <article 
-                          className={`flex gap-3 p-2 rounded-lg border bg-card transition-all duration-200 ${
-                            isRetold 
-                              ? 'border-primary/30 hover:border-primary/50 bg-primary/5' 
-                              : 'border-border/50 hover:border-primary/50 hover:bg-primary/5'
-                          }`}
+                        <article
+                          className={`flex gap-3 p-2 rounded-lg border bg-card transition-all duration-200 ${isRetold
+                            ? 'border-primary/30 hover:border-primary/50 bg-primary/5'
+                            : 'border-border/50 hover:border-primary/50 hover:bg-primary/5'
+                            }`}
                           style={{ animationDelay: `${idx * 50}ms` }}
                         >
                           {item.image_url && (
-                            <OptimizedImage 
-                              src={item.image_url} 
-                              alt="" 
+                            <OptimizedImage
+                              src={item.image_url}
+                              alt=""
                               className="w-16 h-16 object-cover rounded shrink-0"
                               containerClassName="w-16 h-16 shrink-0 rounded"
                             />

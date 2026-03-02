@@ -69,7 +69,7 @@ export default function NewsHubPage() {
         // Get count
         const { count } = await supabase
           .from('news_rss_items')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'estimated', head: true })
           .eq('country_id', country.id)
           .eq('is_archived', false)
           .not('slug', 'is', null);
@@ -212,8 +212,8 @@ export default function NewsHubPage() {
                           >
                             <article
                               className={`flex gap-3 p-2.5 rounded-lg border transition-all duration-200 ${isRetold
-                                  ? 'border-primary/30 bg-primary/5 hover:border-primary/50'
-                                  : 'border-border/50 hover:border-primary/50 hover:bg-primary/5'
+                                ? 'border-primary/30 bg-primary/5 hover:border-primary/50'
+                                : 'border-border/50 hover:border-primary/50 hover:bg-primary/5'
                                 }`}
                             >
                               {item.image_url ? (

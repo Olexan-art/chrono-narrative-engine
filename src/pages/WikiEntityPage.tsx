@@ -328,10 +328,27 @@ export default function WikiEntityPage() {
   // Track views for wiki entity pages
   useTrackView('wiki', entity?.id);
 
-  // Fetch ALL linked news (no limit for proper counting and pagination)
-  const { data: allLinkedNews = [] } = useQuery({
-    queryKey: ['entity-news-all', entity?.id],
+  // Use estimated count or a separate lightweight query for accurate total
+  const { data: newsTotalCount = 0 } = useQuery({
+    queryKey: ['entity-news-count', entity?.id],
     queryFn: async () => {
+      const { count } = await supabase
+        .from('news_wiki_entities')
+        .select('id', { count: 'exact', head: true })
+        .eq('wiki_entity_id', entity?.id);
+      return count || 0;
+    },
+    enabled: !!entity?.id,
+    staleTime: 1000 * 60 * 60, // Total mentions don't change very rapidly
+  });
+
+  // Fetch paginated news
+  const { data: paginatedNews = [], isLoading: isNewsLoading } = useQuery({
+    queryKey: ['entity-news-paginated', entity?.id, newsPage],
+    queryFn: async () => {
+      const start = (newsPage - 1) * NEWS_PER_PAGE;
+      const end = start + NEWS_PER_PAGE - 1;
+
       const { data, error } = await supabase
         .from('news_wiki_entities')
         .select(`
@@ -343,7 +360,8 @@ export default function WikiEntityPage() {
           )
         `)
         .eq('wiki_entity_id', entity?.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(start, end);
 
       if (error) throw error;
 
@@ -359,26 +377,23 @@ export default function WikiEntityPage() {
   });
 
   // Pagination logic for news
-  const totalNewsPages = Math.ceil(allLinkedNews.length / NEWS_PER_PAGE);
-  const paginatedNews = useMemo(() => {
-    const start = (newsPage - 1) * NEWS_PER_PAGE;
-    return allLinkedNews.slice(start, start + NEWS_PER_PAGE);
-  }, [allLinkedNews, newsPage]);
+  const totalNewsPages = Math.ceil(newsTotalCount / NEWS_PER_PAGE);
 
-  // Count total mentions (number of linked news)
-  const totalMentions = allLinkedNews.length;
+  // Count total mentions (number of linked news) from lightweight query
+  const totalMentions = newsTotalCount;
 
-  // Get all news IDs for aggregating views
-  const newsIds = useMemo(() => allLinkedNews.map(n => n.id), [allLinkedNews]);
+  // Since we don't have all news locally, we'll only collect IDs for current page views
+  // If we really need total likes/dislikes across entire entity lifetime, we should do that server-side
+  const newsIds = useMemo(() => paginatedNews.map(n => n.id), [paginatedNews]);
 
-  // Calculate total news likes/dislikes
+  // Calculate total news likes/dislikes (currently for the visible page only to save DB overload)
   const totalNewsLikes = useMemo(() =>
-    allLinkedNews.reduce((sum, n) => sum + (n.likes || 0), 0),
-    [allLinkedNews]
+    paginatedNews.reduce((sum, n) => sum + (n.likes || 0), 0),
+    [paginatedNews]
   );
   const totalNewsDislikes = useMemo(() =>
-    allLinkedNews.reduce((sum, n) => sum + (n.dislikes || 0), 0),
-    [allLinkedNews]
+    paginatedNews.reduce((sum, n) => sum + (n.dislikes || 0), 0),
+    [paginatedNews]
   );
 
   // Aggregate views from all news

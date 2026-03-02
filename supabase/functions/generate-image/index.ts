@@ -78,26 +78,28 @@ async function generateWithOpenAI(prompt: string, apiKey: string, model: string)
 }
 
 async function generateWithGemini(prompt: string, apiKey: string, model: string): Promise<string> {
-  // Gemini Imagen API
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model || 'imagen-3'}:generate?key=${apiKey}`, {
+  // Gemini Imagen API via predict endpoint
+  const targetModel = model === 'imagen-3' ? 'imagen-4.0-fast-generate-001' : (model || 'imagen-4.0-fast-generate-001');
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:predict?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      prompt: { text: prompt },
-      numberOfImages: 1,
-      aspectRatio: "1:1"
+      instances: [{ prompt: prompt }],
+      parameters: { sampleCount: 1 }
     }),
   });
 
   if (!response.ok) {
-    console.log('Gemini image failed:', response.status);
+    const errorText = await response.text();
+    console.log('Gemini image failed:', response.status, errorText);
     throw new Error(`Gemini image generation failed: ${response.status}`);
   }
 
   const data = await response.json();
-  const b64 = data.generatedImages?.[0]?.image?.imageBytes;
+  const b64 = data.predictions?.[0]?.bytesBase64Encoded;
   if (!b64) {
-    console.log('No Gemini image returned');
+    console.log('No Gemini image returned in predictions', data);
     throw new Error('No Gemini image returned');
   }
   return `data:image/png;base64,${b64}`;

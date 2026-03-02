@@ -35,9 +35,9 @@ async function callLLM(
 
   if (overrideModel) {
     if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
-      provider = 'lovable';
+      provider = settings.gemini_api_key ? 'gemini' : 'lovable';
     } else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) {
-      provider = 'lovable';
+      provider = settings.openai_api_key ? 'openai' : 'lovable';
     } else if (overrideModel.startsWith('mistral-') || overrideModel.startsWith('codestral')) {
       provider = 'mistral';
     } else if (overrideModel.startsWith('GLM-') || overrideModel.startsWith('glm-')) {
@@ -108,6 +108,9 @@ async function callLLM(
       const apiKey = settings.openai_api_key || Deno.env.get('OPENAI_API_KEY');
       if (!apiKey) throw new Error('OpenAI API key not configured');
 
+      // Strip "openai/" prefix if present to get the actual model name
+      const modelName = model ? model.replace('openai/', '') : 'gpt-4o';
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -115,7 +118,7 @@ async function callLLM(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model: modelName,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
@@ -135,7 +138,10 @@ async function callLLM(
       const apiKey = settings.gemini_api_key || Deno.env.get('GEMINI_API_KEY');
       if (!apiKey) throw new Error('Gemini API key not configured');
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      // Strip "google/" prefix if present
+      const modelName = model ? model.replace('google/', '') : 'gemini-1.5-pro';
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -303,7 +309,8 @@ overall = round(reliability*0.45 + importance*0.30 + corroboration*0.15 + scope_
 - bar’и Reliability, Importance + 4–5 підметрик
 - decision meter з 4 сегментами (Low/Normal/Highlight/Push) + needle (позиція від --value)
 - бейджі: verification_status, confidence, last_updated (сьогоднішня дата), claimed_source
-Без бібліотек.
+Важливо: Використовуй темну тему (dark mode), яка підходить для сайту з фоном #0c1222. Текст має бути світлим, картки - напівпрозорими темними з тонкими рамками (border: 1px solid rgba(255,255,255,0.1)).
+Без зовнішніх бібліотек, тільки інлайн стилі або внутрішній <style>.
 -->
 ---HTML_END---`;
 

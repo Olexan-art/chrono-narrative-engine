@@ -111,7 +111,7 @@ export default function NewsTopicPage() {
     queryFn: async () => {
       const { count, error } = await supabase
         .from("news_rss_items")
-        .select("*", { count: "exact", head: true })
+        .select("*", { count: "estimated", head: true })
         .contains("themes", [topic]);
       if (error) throw error;
       return count ?? 0;
@@ -184,17 +184,24 @@ export default function NewsTopicPage() {
       for (let i = 0; i < newsIds.length; i += 100) {
         chunks.push(newsIds.slice(i, i + 100));
       }
-      const results: EntityLink[] = [];
-      for (const chunk of chunks) {
-        const { data } = await supabase
+
+      const chunkPromises = chunks.map(chunk =>
+        supabase
           .from("news_wiki_entities")
           .select(`
             news_item_id,
             wiki_entity:wiki_entities(id, name, name_en, entity_type, image_url, slug)
           `)
-          .in("news_item_id", chunk);
-        if (data) results.push(...(data as unknown as EntityLink[]));
+          .in("news_item_id", chunk)
+      );
+
+      const chunkResults = await Promise.all(chunkPromises);
+      const results: EntityLink[] = [];
+
+      for (const res of chunkResults) {
+        if (res.data) results.push(...(res.data as unknown as EntityLink[]));
       }
+
       return results;
     },
     enabled: newsIds.length > 0,

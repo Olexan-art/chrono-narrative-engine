@@ -2,6 +2,15 @@
 <html lang="en">
 
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-W5NC0Z1DQJ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-W5NC0Z1DQJ');
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -95,26 +104,7 @@
       }
     </script>
 
-  <!-- Google Analytics - deferred to reduce unused JS on initial load -->
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
-    function loadGA() {
-      if (window._gaLoaded) return;
-      window._gaLoaded = true;
-      gtag('js', new Date());
-      gtag('config', 'G-C05XF9ZX6B');
-      var s = document.createElement('script');
-      s.src = 'https://www.googletagmanager.com/gtag/js?id=G-C05XF9ZX6B';
-      s.async = true;
-      document.head.appendChild(s);
-    }
-    // Load GA after first user interaction or after 3s idle
-    ['scroll', 'click', 'keydown', 'touchstart'].forEach(function (e) {
-      window.addEventListener(e, loadGA, { once: true, passive: true });
-    });
-    setTimeout(loadGA, 3000);
-  </script>
+
 
   <!-- Unregister legacy service worker from vite-plugin-pwa -->
   <script>

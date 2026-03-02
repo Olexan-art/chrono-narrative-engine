@@ -61,23 +61,12 @@ export default function NewsTopicsCatalogPage() {
   const { data: allTimeTopicsData } = useQuery({
     queryKey: ["topics-all-time"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("news_rss_items")
-        .select("themes")
-        .not("themes", "is", null)
-        .limit(30000);
-      if (error) throw error;
-      const counts = new Map<string, number>();
-      for (const item of data || []) {
-        if (Array.isArray(item.themes)) {
-          for (const t of item.themes) {
-            if (t && typeof t === "string") counts.set(t, (counts.get(t) || 0) + 1);
-          }
-        }
+      const { data, error } = await supabase.rpc('get_trending_topics', { item_limit: 30000 });
+      if (error) {
+        console.error("RPC Error:", error);
+        return [];
       }
-      return Array.from(counts.entries())
-        .map(([topic, count]) => ({ topic, count }))
-        .sort((a, b) => b.count - a.count);
+      return (data || []) as TopicStat[];
     },
     staleTime: 1000 * 60 * 60 * 6, // 6 hours
     gcTime: 1000 * 60 * 60 * 12,
@@ -86,29 +75,12 @@ export default function NewsTopicsCatalogPage() {
   const { data: topicsData, isLoading } = useQuery({
     queryKey: ["topics-catalog"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("news_rss_items")
-        .select("themes")
-        .not("themes", "is", null)
-        .order("published_at", { ascending: false })
-        .limit(4000);
-
-      if (error) throw error;
-
-      const counts = new Map<string, number>();
-      for (const item of data || []) {
-        if (Array.isArray(item.themes)) {
-          for (const t of item.themes) {
-            if (t && typeof t === "string") {
-              counts.set(t, (counts.get(t) || 0) + 1);
-            }
-          }
-        }
+      const { data, error } = await supabase.rpc('get_trending_topics', { item_limit: 4000 });
+      if (error) {
+        console.error("RPC Error:", error);
+        return [];
       }
-      const sorted: TopicStat[] = Array.from(counts.entries())
-        .map(([topic, count]) => ({ topic, count }))
-        .sort((a, b) => b.count - a.count);
-      return sorted;
+      return (data || []) as TopicStat[];
     },
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,
@@ -264,7 +236,7 @@ export default function NewsTopicsCatalogPage() {
                     return (
                       <Link key={topic} to={topicPath(topic)}>
                         <div className="group flex items-center gap-3 px-4 py-2.5 border-b border-white/5 hover:bg-white/3 border-l-2 border-l-transparent hover:border-l-primary transition-all cursor-pointer" style={{ borderLeftColor: 'transparent' }} onMouseEnter={e => (e.currentTarget.style.borderLeftColor = 'hsl(var(--primary))')} onMouseLeave={e => (e.currentTarget.style.borderLeftColor = 'transparent')}>
-                          <span className="flex-shrink-0 w-9 font-mono text-[11px] text-primary/30 tabular-nums">[{String(rank).padStart(2,'0')}]</span>
+                          <span className="flex-shrink-0 w-9 font-mono text-[11px] text-primary/30 tabular-nums">[{String(rank).padStart(2, '0')}]</span>
                           <span className={`flex-shrink-0 w-5 h-5 flex items-center justify-center ${color} rounded-none`}>
                             {icon}
                           </span>

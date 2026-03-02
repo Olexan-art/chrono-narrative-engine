@@ -122,7 +122,7 @@ export function LocalRetellPanel({ password }: { password: string }) {
     refetchInterval: 10_000,
   });
 
-  const { data: newsForDate = [], isLoading: newsLoading } = useQuery({
+  const { data: newsForDate = [], isLoading: newsLoading, refetch: refetchNewsForDate } = useQuery({
     queryKey: ['local-dev-news-for-date', selectedCountry, selectedDate],
     queryFn: async () => {
       if (!selectedCountry || !selectedDate) return [];
@@ -133,7 +133,7 @@ export function LocalRetellPanel({ password }: { password: string }) {
       const endOfDay = `${selectedDate}T23:59:59`;
       const { data, error } = await supabase
         .from('news_rss_items')
-        .select('id, title, content, content_en, original_content, fetched_at, country_id')
+        .select('id, title, content_en, fetched_at, country_id')
         .eq('country_id', selectedCountry)
         .gte('fetched_at', startOfDay)
         .lte('fetched_at', endOfDay)
@@ -277,7 +277,9 @@ export function LocalRetellPanel({ password }: { password: string }) {
       try {
         if (abortRef.current) return;
         addLog(`[${index + 1}/${list.length}] Обробка: ${item.title?.slice(0, 50)}...`, 'info');
-        const userPrompt = `Title: ${item.title}\n\nOriginal content: ${item.original_content || item.content || ''}\n\nRespond with JSON only.`;
+        const { data: fullNews } = await supabase.from('news_rss_items').select('content, original_content').eq('id', item.id).single();
+        const contentForLLM = fullNews ? (fullNews.original_content || fullNews.content || '') : '';
+        const userPrompt = `Title: ${item.title}\n\nOriginal content: ${contentForLLM}\n\nRespond with JSON only.`;
         let text = '';
         const startTime = Date.now();
 
@@ -368,8 +370,10 @@ export function LocalRetellPanel({ password }: { password: string }) {
     addLog('--- Початок автотесту моделей ---', 'info');
 
     const testItem = newsForDate[0];
+    const { data: fullTestNews } = await supabase.from('news_rss_items').select('content, original_content').eq('id', testItem.id).single();
+    const contentForLLM = fullTestNews ? (fullTestNews.original_content || fullTestNews.content || '') : '';
     const systemPrompt = "Summarize this in one sentence.";
-    const userPrompt = `Title: ${testItem.title}\nContent: ${testItem.content?.slice(0, 300)}`;
+    const userPrompt = `Title: ${testItem.title}\nContent: ${contentForLLM.slice(0, 300)}`;
 
     const queue = [...models];
     let currentIndex = 0;
@@ -567,7 +571,9 @@ CRITICAL JSON RULES:
 If a value contains a quote, replace it with a single quote or remove it.
 Be factual. Do not speculate.`;
 
-          const userPrompt = `News Title: ${newsItem.title}\n\nNews Content: ${newsItem.original_content || newsItem.content || ''}\n\nRespond with ONLY valid JSON, nothing else.`;
+          const { data: fullNews } = await supabase.from('news_rss_items').select('content, original_content').eq('id', newsItem.id).single();
+          const contentForLLM = fullNews ? (fullNews.original_content || fullNews.content || '') : '';
+          const userPrompt = `News Title: ${newsItem.title}\n\nNews Content: ${contentForLLM}\n\nRespond with ONLY valid JSON, nothing else.`;
 
           const startTime = Date.now();
           let responseText = '';
@@ -907,8 +913,12 @@ Be factual. Do not speculate.`;
               <SelectContent>{[10, 50, 100, 500, 1000].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="flex items-end">
-            <Button variant="outline" className="w-full" onClick={fetchModels} disabled={isFetchingModels}>Оновити моделі</Button>
+          <div className="flex items-end gap-2">
+            <Button variant="outline" className="w-full flex-1 whitespace-nowrap" onClick={() => refetchNewsForDate()} disabled={newsLoading}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${newsLoading ? 'animate-spin' : ''}`} />
+              Список
+            </Button>
+            <Button variant="outline" className="w-full flex-1" onClick={fetchModels} disabled={isFetchingModels}>Моделі</Button>
           </div>
         </div>
 

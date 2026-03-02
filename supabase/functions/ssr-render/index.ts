@@ -226,6 +226,7 @@ Deno.serve(async (req) => {
     let image = `${BASE_URL}/favicon.svg`;
     let canonicalUrl = BASE_URL + path;
     let faqItems: { question: string; answer: string }[] = [];
+    let parsedKeyPoints: string[] = [];
 
     if (path === "/sitemap") {
       // HTML sitemap page (critical for crawlers like Screaming Frog)
@@ -398,6 +399,33 @@ Deno.serve(async (req) => {
 
       if (topicNewsError) console.error("[ssr-render] topics query error:", topicNewsError);
 
+      const newsIds = (topicNews || []).map((n: any) => n.id);
+      let entityLinks: any[] = [];
+      if (newsIds.length > 0) {
+        const { data } = await supabase
+          .from("news_wiki_entities")
+          .select(`
+            news_item_id,
+            wiki_entity:wiki_entities(id, name, name_en, entity_type, image_url, slug)
+          `)
+          .in("news_item_id", newsIds);
+        entityLinks = data || [];
+      }
+
+      // Extract unique entities and count them
+      const entityMap = new Map<string, { entity: any; count: number }>();
+      for (const link of entityLinks) {
+        if (!link.wiki_entity) continue;
+        const e = link.wiki_entity;
+        const existing = entityMap.get(e.id);
+        if (existing) {
+          existing.count++;
+        } else {
+          entityMap.set(e.id, { entity: e, count: 1 });
+        }
+      }
+      const entityStats = Array.from(entityMap.values()).sort((a, b) => b.count - a.count);
+
       // Description: prefer topic_meta, fallback to generic
       const metaDesc = lang === "en"
         ? (topicMeta?.description_en || topicMeta?.description)
@@ -420,7 +448,12 @@ Deno.serve(async (req) => {
         ? (topicMeta?.seo_text_en || topicMeta?.seo_text)
         : (topicMeta?.seo_text || topicMeta?.seo_text_en);
 
-      html = generateTopicPageHTML(topic, topicNews || [], lang, description, seoText || null);
+      const fullMetaObj = {
+        topicMeta,
+        totalNewsCount: newsIds.length > 0 ? topicNews.length : 0 // SSR simplification
+      };
+
+      html = generateTopicPageHTML(topic, topicNews || [], lang, description, seoText || null, entityStats, fullMetaObj);
     } else if (path === "/ink-abyss") {
       // Ink Abyss gallery page
       title = "The Ink Abyss | Satirical Art Gallery";
@@ -563,6 +596,18 @@ Deno.serve(async (req) => {
         description = (newsItem.content_en || newsItem.content || newsItem.description_en || newsItem.description)?.substring(0, 160) + "...";
         image = newsItem.image_url || image;
 
+        // Safely parse news_analysis in case it comes back as a string from REST
+        let parsedNewsAnalysis = newsItem.news_analysis;
+        if (typeof parsedNewsAnalysis === 'string') {
+          try {
+            parsedNewsAnalysis = JSON.parse(parsedNewsAnalysis);
+          } catch (e) {
+            console.error('Failed to parse news_analysis JSON:', e);
+            parsedNewsAnalysis = null;
+          }
+        }
+        newsItem.news_analysis = parsedNewsAnalysis;
+
         // Fetch "More from country" links (6 articles), and wiki entities
         const [{ data: moreFromCountry }, { data: wikiLinks }] = await Promise.all([
           supabase
@@ -641,15 +686,13 @@ Deno.serve(async (req) => {
         const otherCountriesResults = await Promise.all(otherCountriesNewsPromises);
         const otherCountriesNews = otherCountriesResults.flatMap(r => r.data || []);
 
-        // Generate FAQ items from key_points for FAQPage schema
+        // Get key points for ItemList schema
         const keyPoints = newsItem.key_points_en || newsItem.key_points || [];
-        const parsedKeyPoints = Array.isArray(keyPoints) ? keyPoints : (typeof keyPoints === 'string' ? JSON.parse(keyPoints) : []);
-        if (parsedKeyPoints.length > 0) {
-          const articleTitle = newsItem.title_en || newsItem.title;
-          faqItems = parsedKeyPoints.map((point: string, index: number) => ({
-            question: `What is key point ${index + 1} about "${articleTitle}"?`,
-            answer: point
-          }));
+        parsedKeyPoints = Array.isArray(keyPoints) ? keyPoints : (typeof keyPoints === 'string' ? JSON.parse(keyPoints) : []);
+
+        // Real FAQ items from analysis
+        if (newsItem.news_analysis?.faq && Array.isArray(newsItem.news_analysis.faq)) {
+          faqItems = newsItem.news_analysis.faq;
         }
 
         // Determine previous/next articles within same country by published_at
@@ -1165,6 +1208,7 @@ Deno.serve(async (req) => {
       content: html,
       path,
       faqItems,
+      keyPointsList: parsedKeyPoints,
     });
 
     // TTL per path type — matches TTL_RULES in cloudflare-worker.js
@@ -1267,10 +1311,10 @@ Deno.serve(async (req) => {
         ...(upsertError ? { "X-Cache-Error": upsertError.substring(0, 200) } : {}),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("SSR Error:", error);
     return new Response(
-      `<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Error loading content</h1></body></html>`,
+      `<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Error loading content</h1><pre>${String(error)}\n${error.stack || ''}</pre></body></html>`,
       { headers: { ...corsHeaders, "Content-Type": "text/html" }, status: 500 }
     );
   }
@@ -1409,8 +1453,9 @@ function generateFullDocument(opts: {
   content: string;
   path: string;
   faqItems?: { question: string; answer: string }[];
+  keyPointsList?: string[];
 }) {
-  const { title, description, image, canonicalUrl, lang, content, path, faqItems } = opts;
+  const { title, description, image, canonicalUrl, lang, content, path, faqItems, keyPointsList } = opts;
   const BASE_URL = "https://bravennow.com";
 
   const jsonLd = {
@@ -1433,7 +1478,6 @@ function generateFullDocument(opts: {
     },
   };
 
-  // Generate FAQPage JSON-LD if faqItems are provided
   const faqJsonLd = faqItems && faqItems.length > 0 ? {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -1444,6 +1488,18 @@ function generateFullDocument(opts: {
         "@type": "Answer",
         "text": item.answer
       }
+    }))
+  } : null;
+
+  const itemListJsonLd = keyPointsList && keyPointsList.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": lang === "en" ? "Key Takeaways" : lang === "pl" ? "Główne wnioski" : "Головні тези",
+    "description": "Summary of main points from the article",
+    "itemListElement": keyPointsList.map((point, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "name": point
     }))
   } : null;
 
@@ -1496,6 +1552,7 @@ function generateFullDocument(opts: {
   <!-- JSON-LD -->
   <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
   ${faqJsonLd ? `<script type="application/ld+json">${JSON.stringify(faqJsonLd)}</script>` : ""}
+  ${itemListJsonLd ? `<script type="application/ld+json">${JSON.stringify(itemListJsonLd)}</script>` : ""}
   
   <!-- Prebuilt Tailwind stylesheet -->
   <link rel="stylesheet" href="/tailwind.css">
@@ -1504,6 +1561,16 @@ function generateFullDocument(opts: {
   <noscript>
     <style>.js-redirect-notice { display: none; }</style>
   </noscript>
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-W5NC0Z1DQJ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-W5NC0Z1DQJ');
+  </script>
 </head>
 <body class="min-h-screen bg-background text-foreground antialiased font-sans">
   ${generateHeaderHTML(lang, BASE_URL)}
@@ -1825,6 +1892,40 @@ function generateNewsHTML(
         `}
       </section>
       
+      ${wikiEntities && wikiEntities.length > 0 ? `
+        <section style="margin-top:24px;padding:20px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--card));">
+          <h3 style="margin:0 0 16px 0;font-size:1.25rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+            <svg style="width:20px;height:20px;color:hsl(var(--primary));" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            Mentioned Entities
+          </h3>
+          <div style="display:grid;gap:12px;">
+            ${wikiEntities.map((e: any) => {
+    const eName = e.name_en || e.name;
+    const eDesc = e.description_en || e.description || e.extract_en?.substring(0, 100) || e.extract?.substring(0, 100) || '';
+    const eUrl = `${BASE_URL}/wiki/${e.slug || e.id}`;
+    return `
+                <a href="${eUrl}" style="display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid hsl(var(--border));border-radius:8px;text-decoration:none;background:hsl(var(--background));transition:all 0.2s;">
+                  ${e.image_url ? `<img src="${e.image_url}" alt="${escapeHtml(eName)}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;object-position:center;flex-shrink:0;">` : `
+                    <div style="width:48px;height:48px;border-radius:8px;background:hsl(var(--muted));display:flex;align-items:center;justify-content:center;flex-shrink:0;color:hsl(var(--muted-foreground));">
+                      <svg style="width:24px;height:24px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>
+                    </div>
+                  `}
+                  <div>
+                    <h4 style="margin:0 0 4px 0;font-size:1rem;font-weight:600;color:hsl(var(--foreground));">${escapeHtml(eName)}</h4>
+                    ${eDesc ? `<p style="margin:0;font-size:0.875rem;color:hsl(var(--muted-foreground));line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(eDesc)}</p>` : ''}
+                  </div>
+                </a>
+              `;
+  }).join("")}
+          </div>
+        </section>
+      ` : ""}
+      
       ${newsItem.news_analysis ? `
         <section style="margin-top:24px;padding:20px;border:1px solid hsl(var(--border));border-radius:12px;background:linear-gradient(to bottom right, hsl(var(--card)), hsl(var(--muted)/0.3));">
           <h3 style="margin:0 0 16px 0;font-size:1.25rem;font-weight:700;display:flex;align-items:center;gap:8px;">
@@ -1895,7 +1996,8 @@ function generateNewsHTML(
             </div>
           ` : ""}
         </section>
-      ` : ""}
+      ` : ""
+    }
       
       ${newsItem.original_content && newsItem.original_content.length > 100 ? `
         <section style="margin-top:24px;padding:16px;border:1px dashed hsl(var(--border));border-radius:8px;background:hsl(var(--muted)/0.3);">
@@ -1922,7 +2024,8 @@ function generateNewsHTML(
             ` : ''}
           </details>
         </section>
-      ` : ""}
+      ` : ""
+    }
       
       ${sourceHost ? `
         <section style="margin-top:24px;padding:16px;border:1px solid hsl(var(--border));border-radius:8px;background:hsl(var(--card));">
@@ -1996,10 +2099,10 @@ function generateNewsHTML(
       <section>
         <h3>News from Other Countries</h3>
         ${Object.entries(otherByCountry).map(([code, items]) => {
-    const first = items[0];
-    const flag = first?.country?.flag || "";
-    const name = first?.country?.name_en || code;
-    return `
+      const first = items[0];
+      const flag = first?.country?.flag || "";
+      const name = first?.country?.name_en || code;
+      return `
             <h4>${escapeHtml(flag)} ${escapeHtml(name)}</h4>
             <ul>
               ${items.map(item => `
@@ -2007,7 +2110,7 @@ function generateNewsHTML(
               `).join("")}
             </ul>
           `;
-  }).join("")}
+    }).join("")}
       </section>
     ` : ""}
     
@@ -3011,18 +3114,49 @@ function generateTopicsCatalogHTML(topics: { topic: string; count: number }[], l
   `;
 }
 
-function generateTopicPageHTML(topic: string, newsItems: any[], lang: string, topicDescription: string | null = null, seoText: string | null = null) {
+function generateTopicPageHTML(
+  topic: string,
+  newsItems: any[],
+  lang: string,
+  topicDescription: string | null = null,
+  seoText: string | null = null,
+  entityStats: any[] = [],
+  fullMetaObj: any = {}
+) {
   const titleField = lang === "en" ? "title_en" : "title";
   const descField = lang === "en" ? "description_en" : "description";
   const countryNameField = lang === "en" ? "name_en" : "name";
+
+  const { topicMeta, totalNewsCount } = fullMetaObj;
 
   const descHtml = topicDescription
     ? `<p class="topic-desc">${escapeHtml(topicDescription)}</p>`
     : `<p>${lang === "en" ? "Latest news articles tagged with this topic." : "Останні новинні статті з цією темою."}</p>`;
 
-  const seoHtml = seoText
-    ? `<section class="topic-seo"><p>${escapeHtml(seoText)}</p></section>`
-    : "";
+  let seoHtml = "";
+  if (seoText) {
+    seoHtml = `<section class="topic-seo"><h2>${lang === "en" ? `About the topic: ${topic}` : `Про тему: ${topic}`}</h2><div>${escapeHtml(seoText).split("\\n\\n").map(p => `<p>${p}</p>`).join("")}</div></section>`;
+  } else {
+    // Default SEO text
+    const defaultSeo = lang === "en"
+      ? `<p>The topic <strong>"${escapeHtml(topic)}"</strong> aggregates ${totalNewsCount}+ news articles from various countries.</p>`
+      : `<p>Тема <strong>"${escapeHtml(topic)}"</strong> об'єднує ${totalNewsCount}+ новинних статей з різних країн.</p>`;
+
+    seoHtml = `<section class="topic-seo"><h2>${lang === "en" ? `About the topic: ${topic}` : `Про тему: ${topic}`}</h2><div>${defaultSeo}</div></section>`;
+  }
+
+  const entitiesHtml = entityStats.length > 0 ? `
+    <section class="topic-entities">
+      <h2>${lang === "en" ? "Key Entities" : "Ключові сутності"} (${entityStats.length})</h2>
+      <ul>
+        ${entityStats.slice(0, 30).map(({ entity, count }) => {
+    const name = lang === "en" && entity.name_en ? entity.name_en : entity.name;
+    const url = `${BASE_URL}/wiki/${entity.slug || entity.id}`;
+    return `<li><a href="${url}">${escapeHtml(name)}</a> (${count} ${lang === "en" ? "news" : "новин"})</li>`;
+  }).join("")}
+      </ul>
+    </section>
+  ` : "";
 
   return `
     <h1>#${escapeHtml(topic)}</h1>
@@ -3059,6 +3193,7 @@ function generateTopicPageHTML(topic: string, newsItems: any[], lang: string, to
       </ul>
     </section>
 
+    ${entitiesHtml}
     ${seoHtml}
 
     <nav>

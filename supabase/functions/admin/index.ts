@@ -220,7 +220,7 @@ serve(async (req: Request) => {
         const kebab = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         const shortId = crypto.randomUUID().split('-')[0];
         const slug = `${kebab}-${shortId}`;
-        const wikiId = `holiday-${kebab}-${date?.slice(0,4) || new Date().getFullYear()}`;
+        const wikiId = `holiday-${kebab}-${date?.slice(0, 4) || new Date().getFullYear()}`;
         const wikiUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(name.replace(/ /g, '_'))}`;
         const { error: insErr } = await supabase.from('wiki_entities').insert({
           wiki_id: wikiId,
@@ -558,7 +558,7 @@ serve(async (req: Request) => {
           const { data: stagedRows, error: stagedErr } = await stagedQuery;
           if (stagedErr) throw stagedErr;
           if (!stagedRows || stagedRows.length === 0) {
-            return new Response(JSON.stringify({ success: true, processed: 0, pushed: 0, skipped: 0 }), 
+            return new Response(JSON.stringify({ success: true, processed: 0, pushed: 0, skipped: 0 }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
           }
 
@@ -585,7 +585,7 @@ serve(async (req: Request) => {
             // Check if entity already has info_card_content
             const existingRawData = entity?.raw_data as Record<string, any> || {};
             const existingInfoCard = existingRawData?.info_card_content || '';
-            
+
             if (existingInfoCard && existingInfoCard.length > 100) {
               // already has info card — skip
               skipped++;
@@ -623,11 +623,11 @@ serve(async (req: Request) => {
             pushed++;
           }
 
-          return new Response(JSON.stringify({ success: true, processed, pushed, skipped }), 
+          return new Response(JSON.stringify({ success: true, processed, pushed, skipped }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         } catch (e) {
           console.error('pushOllamaWikiStagedToLive error:', e);
-          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }), 
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
       }
@@ -670,9 +670,9 @@ serve(async (req: Request) => {
         const { filter = 'recent', offset = 0, batchSize = 20 } = data || {};
         const actionMap: Record<string, string> = {
           recent: 'refresh-recent',
-          news:   'refresh-news',
-          wiki:   'refresh-wiki',
-          all:    'refresh-all',
+          news: 'refresh-news',
+          wiki: 'refresh-wiki',
+          all: 'refresh-all',
         };
         const cacheAction = actionMap[filter] || 'refresh-recent';
         try {
@@ -1777,10 +1777,10 @@ serve(async (req: Request) => {
         // Get bot visits for specified time range
         const now = new Date();
         const { timeRange = '24h' } = body || {};
-        
+
         let pastDate: Date;
         let groupByDay = false;
-        
+
         switch (timeRange) {
           case '7d':
             pastDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -1816,7 +1816,7 @@ serve(async (req: Request) => {
         (allBots || []).forEach((v: any) => {
           let period: string;
           let timeLabel: string;
-          
+
           if (groupByDay) {
             // Use Kyiv timezone for date grouping
             const d = new Date(v.created_at);
@@ -1830,19 +1830,19 @@ serve(async (req: Request) => {
             period = `${kyivDate}T${String(kyivHour).padStart(2, '0')}`; // unique key per local hour
             timeLabel = `${String(kyivHour % 24).padStart(2, '0')}:00`;
           }
-          
+
           if (!periodMap.has(period)) {
-            periodMap.set(period, { 
+            periodMap.set(period, {
               time: timeLabel,
-              googlebot: 0, 
-              bingbot: 0, 
-              ai_bots: 0, 
-              other_bots: 0 
+              googlebot: 0,
+              bingbot: 0,
+              ai_bots: 0,
+              other_bots: 0
             });
           }
           const entry = periodMap.get(period)!;
           const botType = v.bot_type.toLowerCase();
-          
+
           let botCategory = 'other_bots';
           if (botType.includes('google')) {
             entry.googlebot++;
@@ -1867,9 +1867,9 @@ serve(async (req: Request) => {
 
         // Calculate average response times
         const avgResponseTimes = Object.entries(responseTimesByBot).map(([bot, times]) => ({
-          bot: bot === 'googlebot' ? 'Google Bot' : 
-               bot === 'bingbot' ? 'Bing Bot' :
-               bot === 'ai_bots' ? 'AI Боти' : 'Інші',
+          bot: bot === 'googlebot' ? 'Google Bot' :
+            bot === 'bingbot' ? 'Bing Bot' :
+              bot === 'ai_bots' ? 'AI Боти' : 'Інші',
           avgTime: times.length > 0 ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : 0,
           count: times.length
         })).filter(x => x.count > 0);
@@ -1880,8 +1880,8 @@ serve(async (req: Request) => {
         const successRate = totalRequests > 0 ? Math.round((successfulRequests / totalRequests) * 100) : 100;
 
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             stats: {
               history,
               totalRequests,
@@ -1926,8 +1926,8 @@ serve(async (req: Request) => {
           .gte('first_seen', past7d.toISOString());
 
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             stats: {
               news: {
                 h24: newsCount24h || 0,
@@ -1961,12 +1961,12 @@ serve(async (req: Request) => {
             .select('entity_type, first_seen')
             .gte('first_seen', past24h.toISOString())
             .order('first_seen', { ascending: true });
-          
+
           if (!visitorError && visitorViews) {
             // Map view_visitors to same format
-            views = visitorViews.map((v: any) => ({ 
-              entity_type: v.entity_type, 
-              created_at: v.first_seen 
+            views = visitorViews.map((v: any) => ({
+              entity_type: v.entity_type,
+              created_at: v.first_seen
             }));
           }
         }
@@ -1980,9 +1980,9 @@ serve(async (req: Request) => {
         (views || []).forEach((v: any) => {
           const hour = new Date(v.created_at).toISOString().substring(0, 13) + ':00:00.000Z';
           if (!hourlyMap.has(hour)) {
-            hourlyMap.set(hour, { 
+            hourlyMap.set(hour, {
               time: new Date(hour).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
-              news: 0, 
+              news: 0,
               wiki: 0,
               total: 0
             });
@@ -1996,8 +1996,8 @@ serve(async (req: Request) => {
         const history = Array.from(hourlyMap.values());
 
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             stats: {
               history,
               total24h: views?.length || 0
@@ -2045,8 +2045,8 @@ serve(async (req: Request) => {
         history.sort((a, b) => a.time.localeCompare(b.time));
 
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             stats: {
               history,
               total24h: new Set(visitors?.map((v: any) => v.visitor_id)).size || 0
@@ -2080,8 +2080,8 @@ serve(async (req: Request) => {
           .slice(0, 10);
 
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             stats: {
               countries: topCountries,
               total: botByCountry?.length || 0
@@ -2598,8 +2598,8 @@ serve(async (req: Request) => {
 
         if (!CF_ACCOUNT_ID || !CF_API_TOKEN || !CF_ZONE_ID) {
           return new Response(
-            JSON.stringify({ 
-              success: false, 
+            JSON.stringify({
+              success: false,
               error: 'Cloudflare credentials not configured',
               stats: null
             }),
@@ -2613,7 +2613,7 @@ serve(async (req: Request) => {
           const past24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
           const analyticsUrl = `https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/analytics/dashboard?since=${past24h.toISOString()}&until=${now.toISOString()}`;
-          
+
           const response = await fetch(analyticsUrl, {
             headers: {
               'Authorization': `Bearer ${CF_API_TOKEN}`,
@@ -2628,8 +2628,8 @@ serve(async (req: Request) => {
           const cfData = await response.json();
 
           return new Response(
-            JSON.stringify({ 
-              success: true, 
+            JSON.stringify({
+              success: true,
               stats: {
                 requests: cfData.result?.totals?.requests?.all || 0,
                 bandwidth: cfData.result?.totals?.bandwidth?.all || 0,
@@ -2644,8 +2644,8 @@ serve(async (req: Request) => {
         } catch (error) {
           console.error('Cloudflare Analytics error:', error);
           return new Response(
-            JSON.stringify({ 
-              success: false, 
+            JSON.stringify({
+              success: false,
               error: error instanceof Error ? error.message : 'Unknown error',
               stats: null
             }),
@@ -2671,7 +2671,7 @@ serve(async (req: Request) => {
           .single();
 
         const apiKey = settings?.zai_api_key || settings?.openai_api_key;
-        const model  = settings?.llm_text_model || 'GLM-4-Flash';
+        const model = settings?.llm_text_model || 'GLM-4-Flash';
 
         const systemPrompt = `Ти — аналітик зворотнього зв'язку. Проаналізуй звернення користувача і надай:
 1. Короткий підсумок (1-2 речення)
@@ -2699,7 +2699,7 @@ serve(async (req: Request) => {
               model: llmModel,
               messages: [
                 { role: 'system', content: systemPrompt },
-                { role: 'user',   content: userPrompt },
+                { role: 'user', content: userPrompt },
               ],
               max_tokens: 400,
               temperature: 0.3,
@@ -2729,10 +2729,19 @@ serve(async (req: Request) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Admin error:', error);
+
+    // Check if it's a Supabase error response
+    if (error && typeof error === 'object' && 'message' in error) {
+      return new Response(
+        JSON.stringify({ error: error.message, details: error }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
