@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
-import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages, Share2, Trash2, Download, BrainCircuit } from "lucide-react";
+import { ArrowLeft, ExternalLink, Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, Twitter, Flame, Languages, Share2, Trash2, Download, BrainCircuit, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -122,6 +122,7 @@ export default function NewsArticlePage() {
 
   const [selectedModel, setSelectedModel] = useState(ZAI_MODELS[0]?.value || '');
   const [selectedTweetModel, setSelectedTweetModel] = useState(ZAI_MODELS[0]?.value || '');
+  const [selectedScoreModel, setSelectedScoreModel] = useState(ZAI_MODELS[0]?.value || '');
 
   // Toggle to hide optional blocks on the news article page (useful for quick UI changes)
   const HIDE_KEY_BLOCKS = true;
@@ -558,6 +559,31 @@ export default function NewsArticlePage() {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Error scraping article');
+    }
+  });
+
+  // Score news source mutation - Admin only
+  const scoreNewsSourceMutation = useMutation({
+    mutationFn: async () => {
+      if (!article) throw new Error('No article');
+
+      const result = await callEdgeFunction<{ success: boolean; data: any; error?: string }>(
+        'score-news-source',
+        { newsId: article.id, model: selectedScoreModel }
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to score source');
+      }
+
+      return result.data;
+    },
+    onSuccess: () => {
+      toast.success(language === 'en' ? 'Source scored successfully' : language === 'pl' ? 'Źródło ocenione pomyślnie' : 'Джерело успішно оцінено');
+      queryClient.invalidateQueries({ queryKey: ['news-article', country, slug] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Error scoring source');
     }
   });
 
@@ -1273,6 +1299,11 @@ export default function NewsArticlePage() {
                           toast.info(language === 'en' ? 'Starting full retelling...' : language === 'pl' ? 'Rozpoczynam pełny przekaz...' : 'Запускаю повний переказ...');
                           // Run retell first
                           await retellNewsMutation.mutateAsync();
+
+                          // Run source scoring automatically after retelling
+                          toast.info(language === 'en' ? 'Scoring source reliability...' : language === 'pl' ? 'Oceniam wiarygodność źródła...' : 'Оцінюю надійність джерела...');
+                          await scoreNewsSourceMutation.mutateAsync();
+
                           // Social content disabled (no tweets/dialogue)
 
                           toast.success(language === 'en' ? 'Full retelling complete!' : language === 'pl' ? 'Pełny przekaz zakończony!' : 'Повний переказ завершено!');
@@ -1474,6 +1505,34 @@ export default function NewsArticlePage() {
                         <RefreshCw className="w-3 h-3" />
                         {language === 'en' ? 'Refresh' : language === 'pl' ? 'Odśwież' : 'Оновити'}
                       </Button>
+                      <Select value={selectedScoreModel} onValueChange={setSelectedScoreModel}>
+                        <SelectTrigger className="w-[140px] h-7 text-xs">
+                          <SelectValue placeholder="Select Model" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableModels.map(m => (
+                            <SelectItem key={m.value} value={m.value} className="text-xs">
+                              {m.provider && m.provider !== 'lovable' ? `[${m.provider.toUpperCase()}] ` : ''}{m.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs h-7"
+                        onClick={async () => {
+                          scoreNewsSourceMutation.mutate();
+                        }}
+                        disabled={scoreNewsSourceMutation.isPending}
+                      >
+                        {scoreNewsSourceMutation.isPending ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Activity className="w-3 h-3" />
+                        )}
+                        {language === 'en' ? 'Score' : language === 'pl' ? 'Ocena' : 'Оцінити'}
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -1507,6 +1566,13 @@ export default function NewsArticlePage() {
                         {language === 'en' ? 'Delete' : language === 'pl' ? 'Usuń' : 'Видалити'}
                       </Button>
                     </div>
+                  </div>
+                )}
+
+                {/* News Source Scoring Widget */}
+                {(article as any)?.source_scoring && (article as any)?.source_scoring?.html && (
+                  <div className="mt-4 pt-4 border-t border-border w-full overflow-x-auto">
+                    <div dangerouslySetInnerHTML={{ __html: (article as any).source_scoring.html }} />
                   </div>
                 )}
               </CardContent>
