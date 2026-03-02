@@ -65,7 +65,7 @@ async function callLLM(
     else if (provider === 'gemini') {
       const apiKey = settings.gemini_api_key;
       if (!apiKey) throw new Error('Gemini API key not configured');
-      model = settings.llm_text_model || 'gemini-2.0-flash';
+      model = settings.llm_text_model || 'gemini-2.5-flash';
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',

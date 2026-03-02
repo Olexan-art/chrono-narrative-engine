@@ -41,7 +41,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    const { newsId, newsTitle, newsContent, model = 'gemini-2.0-flash-exp' }: AnalysisRequest = await req.json();
+    const { newsId, newsTitle, newsContent, model = 'gemini-2.5-flash' }: AnalysisRequest = await req.json();
 
     if (!newsId || !newsTitle || !newsContent) {
       throw new Error('Missing required fields: newsId, newsTitle, newsContent');
@@ -196,10 +196,10 @@ Provide comprehensive analysis in JSON format as specified.`;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
     console.error('Error stack:', errorStack);
-    
+
     return new Response(
-      JSON.stringify({ 
-        success: false, 
+      JSON.stringify({
+        success: false,
         error: errorMessage,
         details: errorStack?.split('\n').slice(0, 3).join('\n') // First 3 lines of stack
       }),
@@ -217,11 +217,11 @@ async function callLLM(
   overrideModel?: string
 ): Promise<string> {
   const model = overrideModel || settings.llm_text_model || 'GLM-4.7'; // Default to ZAI (always available)
-  
+
   // Auto-detect provider from model prefix
   let provider = 'zai'; // Default provider
   let apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
-  
+
   if (model.startsWith('gemini-') || model.startsWith('google/')) {
     provider = 'gemini';
     apiKey = settings.gemini_v22_api_key || Deno.env.get('GEMINI_V22_API_KEY');

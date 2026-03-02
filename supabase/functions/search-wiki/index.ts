@@ -81,18 +81,18 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
   if (overrideModel) {
     if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
       if (settings.gemini_api_key || Deno.env.get('GEMINI_API_KEY')) {
-         provider = 'gemini';
+        provider = 'gemini';
       } else {
-         provider = 'lovable';
+        provider = 'lovable';
       }
     }
     else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) {
-       // Check if we have direct OpenAI key
-       if (settings.openai_api_key || Deno.env.get('OPENAI_API_KEY')) {
-         provider = 'openai';
-       } else {
-         provider = 'lovable'; 
-       }
+      // Check if we have direct OpenAI key
+      if (settings.openai_api_key || Deno.env.get('OPENAI_API_KEY')) {
+        provider = 'openai';
+      } else {
+        provider = 'lovable';
+      }
     }
     else if (overrideModel.startsWith('mistral-') || overrideModel.startsWith('codestral')) provider = 'mistral';
     else if (overrideModel.startsWith('GLM-') || overrideModel.startsWith('glm-')) provider = 'zai';
@@ -103,8 +103,8 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
   if (!model) {
     if (provider === 'zai') model = 'GLM-4.7';
     else if (provider === 'openai') model = 'gpt-4o';
-    else if (provider === 'gemini') model = 'gemini-2.0-flash';
-    else if (provider === 'lovable') model = 'google/gemini-2.0-flash-exp';
+    else if (provider === 'gemini') model = 'gemini-2.5-flash';
+    else if (provider === 'lovable') model = 'google/gemini-2.5-flash-exp';
     else if (provider === 'mistral') model = 'mistral-large-latest';
     else model = 'gpt-4o'; // Fallback
   }
@@ -155,7 +155,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
   if (provider === 'gemini') {
     const apiKey = settings.gemini_api_key || Deno.env.get('GEMINI_API_KEY');
     if (!apiKey) throw new Error('Gemini API key not configured');
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }] }),
