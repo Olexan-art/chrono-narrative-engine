@@ -64,9 +64,9 @@ async function callLLM(
   // Auto-detect provider from model prefix to prevent mismatches
   if (overrideModel) {
     if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
-      provider = settings.gemini_api_key ? 'gemini' : 'lovable'; // Use native if available, else Lovable
+      provider = 'gemini';
     } else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) {
-      provider = settings.openai_api_key ? 'openai' : 'lovable'; // Use native if available, else Lovable
+      provider = 'openai';
     } else if (overrideModel.startsWith('mistral-') || overrideModel.startsWith('codestral')) {
       provider = 'mistral';
     } else if (overrideModel.startsWith('GLM-') || overrideModel.startsWith('glm-')) {

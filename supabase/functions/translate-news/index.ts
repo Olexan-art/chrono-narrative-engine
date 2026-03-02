@@ -30,11 +30,6 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
-    }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -180,8 +175,8 @@ ${JSON.stringify(themes)}`;
     // Log success
     await logLlmUsage({
       supabase,
-      provider: 'lovable',
-      model: 'google/gemini-3-flash-preview',
+      provider: 'gemini',
+      model: 'gemini-2.5-flash',
       operation: 'translate-news',
       duration_ms: Date.now() - startTime,
       success: true,
@@ -203,8 +198,8 @@ ${JSON.stringify(themes)}`;
 
       await logLlmUsage({
         supabase,
-        provider: 'lovable',
-        model: 'google/gemini-3-flash-preview',
+        provider: 'gemini',
+        model: 'gemini-2.5-flash',
         operation: 'translate-news',
         duration_ms: Date.now() - startTime,
         success: false,

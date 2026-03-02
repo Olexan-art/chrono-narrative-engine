@@ -82,7 +82,7 @@ async function callLLM(settings: LLMSettings, systemPrompt: string, userPrompt: 
     }
   }
 
-  const provider = settings.llm_text_provider || settings.llm_provider || 'lovable';
+  const provider = settings.llm_text_provider || settings.llm_provider || 'openai';
 
   // Z.AI provider - OpenAI-compatible API
   if (provider === 'zai') {
@@ -344,7 +344,7 @@ serve(async (req) => {
       .single();
 
     const llmSettings: LLMSettings = {
-      llm_provider: settingsData?.llm_provider || 'lovable',
+      llm_provider: settingsData?.llm_provider || 'openai',
       llm_text_provider: settingsData?.llm_text_provider || null,
       llm_text_model: model || settingsData?.llm_text_model || 'google/gemini-3-flash-preview',
       openai_api_key: settingsData?.openai_api_key || null,
