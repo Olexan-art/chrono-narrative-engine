@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { fetchNews, generateStory, generateImage, adminAction } from "@/lib/api";
@@ -35,7 +35,7 @@ const MODEL_OPTIONS = [
   { label: 'GPT-4 Turbo', value: 'openai|gpt-4-turbo', provider: 'openai' },
   { label: 'Gemini 2.5 Flash', value: 'geminiV22|gemini-2.5-flash', provider: 'geminiV22' },
   { label: 'Gemini 2.5 Pro', value: 'geminiV22|gemini-2.5-pro', provider: 'geminiV22' },
-  { label: 'Gemini 2.0 Flash', value: 'gemini|gemini-2.0-flash', provider: 'gemini' },
+  { label: 'Gemini 2.5 Flash', value: 'gemini|gemini-2.5-flash', provider: 'gemini' },
   { label: 'Gemini 1.5 Pro', value: 'gemini|gemini-1.5-pro', provider: 'gemini' },
   { label: 'Claude 3.5 Sonnet', value: 'anthropic|claude-3-5-sonnet-20241022', provider: 'anthropic' },
   { label: 'Claude 3 Haiku', value: 'anthropic|claude-3-haiku-20240307', provider: 'anthropic' },
@@ -114,14 +114,14 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
   const generateForDate = async (dateStr: string, storyNumber: number): Promise<boolean> => {
     try {
       const date = new Date(dateStr);
-      
+
       // Step 0: Get settings for narrative options
       const { data: settings } = await supabase
         .from('settings')
         .select('narrative_source, narrative_structure, narrative_purpose, narrative_plot, narrative_special, bradbury_weight, clarke_weight, gaiman_weight')
         .limit(1)
         .single();
-      
+
       // Step 1: Fetch news
       addLog(`[${format(date, 'd MMM', { locale: uk })} #${storyNumber}] Завантаження новин...`);
       const newsResult = await fetchNews(dateStr);
@@ -159,7 +159,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
       // Step 3: Find or create volume
       const year = getYear(date);
       const month = getMonth(date) + 1;
-      
+
       // Calculate week of month based on which week in the month's calendar view
       const firstOfMonth = new Date(year, month - 1, 1);
       const firstMonday = new Date(firstOfMonth);
@@ -217,7 +217,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
         .from('parts')
         .select('*', { count: 'exact', head: true })
         .eq('date', dateStr);
-      
+
       const partNumber = (count || 0) + 1;
 
       // Step 6: Create part with multilingual content and narrative settings
@@ -279,16 +279,16 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
     setIsGenerating(true);
     setLogs([]);
     setProgress({ current: 0, total: 0 });
-    
+
     try {
       const start = parseISO(startDate);
       const end = parseISO(endDate);
       const days = eachDayOfInterval({ start, end });
-      
+
       const totalGenerations = days.length * storiesPerDay;
       setProgress({ current: 0, total: totalGenerations });
       addLog(`=== ПАКЕТНА ГЕНЕРАЦІЯ: ${days.length} днів × ${storiesPerDay} оповідань = ${totalGenerations} всього ===`, 'info');
-      
+
       let successCount = 0;
       let failCount = 0;
       let completedCount = 0;
@@ -296,7 +296,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
       for (const day of days) {
         const dateStr = format(day, 'yyyy-MM-dd');
         addLog(`--- ${format(day, 'd MMMM yyyy', { locale: uk })} ---`, 'info');
-        
+
         for (let i = 1; i <= storiesPerDay; i++) {
           const success = await generateForDate(dateStr, i);
           completedCount++;
@@ -310,7 +310,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
       }
 
       addLog(`=== ЗАВЕРШЕНО: ${successCount} успішно, ${failCount} помилок ===`, 'info');
-      
+
       toast({
         title: "Генерацію завершено!",
         description: `Створено ${successCount} оповідань${failCount > 0 ? `, ${failCount} помилок` : ''}`
@@ -320,7 +320,7 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
       queryClient.invalidateQueries({ queryKey: ['admin-parts'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       queryClient.invalidateQueries({ queryKey: ['latest-parts'] });
-      
+
     } catch (error) {
       updateLastLog('error');
       addLog(`Помилка: ${error instanceof Error ? error.message : 'Невідома помилка'}`);
@@ -405,16 +405,16 @@ export function GenerationPanel({ password }: GenerationPanelProps) {
               <SelectContent>
                 <SelectItem value="__default__" className="text-muted-foreground italic">З налаштувань</SelectItem>
                 {['zai', 'openai', 'geminiV22', 'gemini', 'anthropic', 'mistral'].map(prov => (
-                  <div key={prov}>
-                    <div className="px-2 py-1 text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider border-t first:border-t-0">
+                  <SelectGroup key={prov}>
+                    <SelectLabel className="px-2 py-1 text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider border-t first:border-t-0">
                       {prov === 'geminiV22' ? 'Gemini v2.5' : prov === 'openai' ? 'OpenAI' : prov === 'zai' ? 'Z.AI' : prov === 'anthropic' ? 'Anthropic' : prov === 'gemini' ? 'Gemini' : 'Mistral'}
-                    </div>
+                    </SelectLabel>
                     {MODEL_OPTIONS.filter(o => o.provider === prov).map(opt => (
                       <SelectItem key={opt.value} value={opt.value} className="font-mono text-xs pl-4">
                         {opt.label}
                       </SelectItem>
                     ))}
-                  </div>
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>

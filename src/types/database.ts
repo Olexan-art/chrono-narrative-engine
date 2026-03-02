@@ -79,7 +79,7 @@ export const LLM_MODELS = {
     text: [
       { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (V22)' },
       { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (V22)' },
-      { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (V22)' },
+      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (V22)' },
     ],
     image: [
       { value: 'imagen-3', label: 'Imagen 3' },

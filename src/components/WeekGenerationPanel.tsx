@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { adminAction, generateImage } from "@/lib/api";
@@ -34,7 +34,7 @@ const MODEL_OPTIONS = [
   { label: 'GPT-4 Turbo', value: 'openai|gpt-4-turbo', provider: 'openai' },
   { label: 'Gemini 2.5 Flash', value: 'geminiV22|gemini-2.5-flash', provider: 'geminiV22' },
   { label: 'Gemini 2.5 Pro', value: 'geminiV22|gemini-2.5-pro', provider: 'geminiV22' },
-  { label: 'Gemini 2.0 Flash', value: 'gemini|gemini-2.0-flash', provider: 'gemini' },
+  { label: 'Gemini 2.5 Flash', value: 'gemini|gemini-2.5-flash', provider: 'gemini' },
   { label: 'Gemini 1.5 Pro', value: 'gemini|gemini-1.5-pro', provider: 'gemini' },
   { label: 'Claude 3.5 Sonnet', value: 'anthropic|claude-3-5-sonnet-20241022', provider: 'anthropic' },
   { label: 'Claude 3 Haiku', value: 'anthropic|claude-3-haiku-20240307', provider: 'anthropic' },
@@ -92,11 +92,11 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
     queryFn: async () => {
       const year = getYear(currentMonth);
       const month = getMonth(currentMonth) + 1;
-      
+
       // Get all parts for this month
       const startDate = format(startOfWeek(new Date(year, month - 1, 1), { weekStartsOn: 1 }), 'yyyy-MM-dd');
       const endDate = format(endOfWeek(new Date(year, month - 1, 28), { weekStartsOn: 1 }), 'yyyy-MM-dd');
-      
+
       const { data: parts } = await supabase
         .from('parts')
         .select('*')
@@ -115,12 +115,12 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
       // Build weeks array
       const weeks: WeekData[] = [];
       let weekStart = startOfWeek(new Date(year, month - 1, 1), { weekStartsOn: 1 });
-      
+
       for (let i = 0; i < 5; i++) {
         const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
         // Use sequential week number (i + 1) consistently
         const weekOfMonth = i + 1;
-        
+
         const weekParts = (parts || []).filter((p: Part) => {
           const partDate = new Date(p.date);
           return partDate >= weekStart && partDate <= weekEnd;
@@ -171,13 +171,13 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
 
     setIsGenerating(true);
     setLogs([]);
-    
+
     try {
       const weekStart = selectedWeek.start;
       const year = getYear(weekStart);
       const month = getMonth(weekStart) + 1;
       // Find which week index this is in the current view
-      const weekIndex = weeksData.findIndex(w => 
+      const weekIndex = weeksData.findIndex(w =>
         w.start.getTime() === selectedWeek.start.getTime()
       );
       const weekOfMonth = weekIndex !== -1 ? weekIndex + 1 : 1;
@@ -190,14 +190,14 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
       addLog('Збір всіх новин тижня...');
       const allNews: Array<{ title: string; url: string }> = [];
       const allContent: string[] = [];
-      
+
       for (const part of selectedWeek.parts) {
         if (part.news_sources && Array.isArray(part.news_sources)) {
           allNews.push(...(part.news_sources as Array<{ title: string; url: string }>));
         }
         allContent.push(`[${part.date}] ${part.title}\n${part.content}`);
       }
-      
+
       updateLastLog('success');
       addLog(`Зібрано ${allNews.length} новин з ${selectedWeek.parts.length} частин`);
       updateLastLog('success');
@@ -257,7 +257,7 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
       addLog('Генерація першої частини синтезу (~1000 слів)...');
 
       const [overrideProvider, overrideModel] = (selectedModel && selectedModel !== '__default__') ? selectedModel.split('|') : [undefined, undefined];
-      
+
       const part1Response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-week`, {
         method: 'POST',
         headers: {
@@ -265,11 +265,11 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          weekParts: selectedWeek.parts.map(p => ({ 
-            date: p.date, 
-            title: p.title, 
+          weekParts: selectedWeek.parts.map(p => ({
+            date: p.date,
+            title: p.title,
             content: p.content,
-            news_sources: p.news_sources 
+            news_sources: p.news_sources
           })),
           weekStart: format(selectedWeek.start, 'yyyy-MM-dd'),
           weekEnd: format(selectedWeek.end, 'yyyy-MM-dd'),
@@ -279,12 +279,12 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
           ...(overrideModel && { overrideModel }),
         }),
       });
-      
+
       if (!part1Response.ok) {
         const errorData = await part1Response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Помилка генерації частини 1');
       }
-      
+
       const part1Data = await part1Response.json();
       updateLastLog('success');
       addLog(`✓ Частина 1 згенерована: ${part1Data.story?.wordCount || '~1000'} слів`);
@@ -293,7 +293,7 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
       // Part 2
       addLog('=== ГЕНЕРАЦІЯ ТЕКСТУ (частина 2/3) ===', 'info');
       addLog('Генерація другої частини синтезу (~1000 слів)...');
-      
+
       const part2Response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-week`, {
         method: 'POST',
         headers: {
@@ -301,11 +301,11 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          weekParts: selectedWeek.parts.map(p => ({ 
-            date: p.date, 
-            title: p.title, 
+          weekParts: selectedWeek.parts.map(p => ({
+            date: p.date,
+            title: p.title,
             content: p.content,
-            news_sources: p.news_sources 
+            news_sources: p.news_sources
           })),
           previousContent: part1Data.story?.content,
           weekStart: format(selectedWeek.start, 'yyyy-MM-dd'),
@@ -316,12 +316,12 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
           ...(overrideModel && { overrideModel }),
         }),
       });
-      
+
       if (!part2Response.ok) {
         const errorData = await part2Response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Помилка генерації частини 2');
       }
-      
+
       const part2Data = await part2Response.json();
       updateLastLog('success');
       addLog(`✓ Частина 2 згенерована: ${part2Data.story?.wordCount || '~1000'} слів`);
@@ -330,7 +330,7 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
       // Part 3 - finale with monologue and commentary
       addLog('=== ГЕНЕРАЦІЯ ТЕКСТУ (частина 3/3) ===', 'info');
       addLog('Генерація фіналу + Монолог Незнайомця + Коментар Наратора...');
-      
+
       const part3Response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-week`, {
         method: 'POST',
         headers: {
@@ -338,11 +338,11 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          weekParts: selectedWeek.parts.map(p => ({ 
-            date: p.date, 
-            title: p.title, 
+          weekParts: selectedWeek.parts.map(p => ({
+            date: p.date,
+            title: p.title,
             content: p.content,
-            news_sources: p.news_sources 
+            news_sources: p.news_sources
           })),
           previousContent: part1Data.story?.content + '\n\n' + part2Data.story?.content,
           weekStart: format(selectedWeek.start, 'yyyy-MM-dd'),
@@ -355,12 +355,12 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
           ...(overrideModel && { overrideModel }),
         }),
       });
-      
+
       if (!part3Response.ok) {
         const errorData = await part3Response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Помилка генерації частини 3');
       }
-      
+
       const part3Data = await part3Response.json();
       updateLastLog('success');
       addLog(`✓ Частина 3 згенерована з Монологом та Коментарем`);
@@ -428,7 +428,7 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
               imageIndex: imgData.index
             }),
           });
-          
+
           if (imageResponse.ok) {
             updateLastLog('success');
           } else {
@@ -447,9 +447,9 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
       addLog(`✓ Глава "${part3Data.story?.title || 'Тиждень'}" готова!`);
       updateLastLog('success');
 
-      const totalWords = (part1Data.story?.wordCount || 1000) + 
-                         (part2Data.story?.wordCount || 1000) + 
-                         (part3Data.story?.wordCount || 1000);
+      const totalWords = (part1Data.story?.wordCount || 1000) +
+        (part2Data.story?.wordCount || 1000) +
+        (part3Data.story?.wordCount || 1000);
       addLog(`Всього: ~${totalWords} слів`);
       updateLastLog('success');
 
@@ -460,7 +460,7 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
 
       queryClient.invalidateQueries({ queryKey: ['weeks-data'] });
       queryClient.invalidateQueries({ queryKey: ['chapters'] });
-      
+
     } catch (error) {
       updateLastLog('error');
       addLog(`ПОМИЛКА: ${error instanceof Error ? error.message : 'Невідома помилка'}`);
@@ -489,8 +489,8 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
       <CardContent className="space-y-6">
         {/* Month navigation */}
         <div className="flex items-center justify-between">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => setCurrentMonth(prev => subWeeks(prev, 4))}
           >
@@ -499,8 +499,8 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
           <h3 className="font-mono text-lg">
             {format(currentMonth, 'LLLL yyyy', { locale: uk })}
           </h3>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => setCurrentMonth(prev => addWeeks(prev, 4))}
           >
@@ -521,8 +521,8 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
                 onClick={() => setSelectedWeek(week)}
                 className={`
                   p-4 border rounded-lg cursor-pointer transition-all
-                  ${selectedWeek?.start.getTime() === week.start.getTime() 
-                    ? 'border-primary bg-primary/10' 
+                  ${selectedWeek?.start.getTime() === week.start.getTime()
+                    ? 'border-primary bg-primary/10'
                     : 'border-border hover:border-primary/50'}
                 `}
               >
@@ -540,7 +540,7 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
                       {week.partsCount} оповід.
                     </Badge>
                     {week.hasChapter && week.chapter && (
-                      <Link 
+                      <Link
                         to={`/chapter/${week.chapter.number}`}
                         onClick={(e) => e.stopPropagation()}
                         className="inline-flex"
@@ -582,16 +582,16 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
                     <SelectContent>
                       <SelectItem value="__default__" className="text-muted-foreground italic text-xs">З налаштувань</SelectItem>
                       {['zai', 'openai', 'geminiV22', 'gemini', 'anthropic', 'mistral'].map(prov => (
-                        <div key={prov}>
-                          <div className="px-2 py-1 text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider border-t first:border-t-0">
+                        <SelectGroup key={prov}>
+                          <SelectLabel className="px-2 py-1 text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider border-t first:border-t-0">
                             {prov === 'geminiV22' ? 'Gemini v2.5' : prov === 'openai' ? 'OpenAI' : prov === 'zai' ? 'Z.AI' : prov === 'anthropic' ? 'Anthropic' : prov === 'gemini' ? 'Gemini' : 'Mistral'}
-                          </div>
+                          </SelectLabel>
                           {MODEL_OPTIONS.filter(o => o.provider === prov).map(opt => (
                             <SelectItem key={opt.value} value={opt.value} className="font-mono text-xs pl-4">
                               {opt.label}
                             </SelectItem>
                           ))}
-                        </div>
+                        </SelectGroup>
                       ))}
                     </SelectContent>
                   </Select>
@@ -611,7 +611,7 @@ export function WeekGenerationPanel({ password }: WeekGenerationPanelProps) {
                 </Button>
               </div>
             </div>
-            
+
             {selectedWeek.partsCount === 0 && (
               <p className="text-sm text-destructive">
                 ⚠️ Спочатку згенеруйте оповідання на дні цього тижня
