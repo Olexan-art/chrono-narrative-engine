@@ -24,8 +24,12 @@ interface NewsEvidenceBlockProps {
     className?: string;
 }
 
-export const NewsEvidenceBlock: React.FC<NewsEvidenceBlockProps> = ({ scoring, className }) => {
+export const NewsEvidenceBlock: React.FC<NewsEvidenceBlockProps> = ({ scoring: rawScoring, className }) => {
     const { language } = useLanguage();
+
+    const scoring = (rawScoring as any)?.json
+        ? (rawScoring as any).json as ExtendedSourceScoring
+        : rawScoring as ExtendedSourceScoring;
 
     if (!scoring || !scoring.scores) {
         return null; // Return nothing if no scoring data exists

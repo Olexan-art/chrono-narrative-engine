@@ -15,7 +15,7 @@ BEGIN
             (
                 SELECT COALESCE(json_agg(news_item), '[]'::json)
                 FROM (
-                    SELECT id, title, title_en, description, description_en, content_en, image_url, published_at, slug, category
+                    SELECT id, title, title_en, description, description_en, content_en, image_url, published_at, slug, category, source_scoring
                     FROM news_rss_items n
                     WHERE n.country_id = c.id
                       AND n.slug IS NOT NULL

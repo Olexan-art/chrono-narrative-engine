@@ -18,7 +18,11 @@ interface NewsScoreBadgeProps {
     className?: string;
 }
 
-export const NewsScoreBadge: React.FC<NewsScoreBadgeProps> = ({ scoring, className }) => {
+export const NewsScoreBadge: React.FC<NewsScoreBadgeProps> = ({ scoring: rawScoring, className }) => {
+    const scoring = rawScoring && typeof rawScoring === 'object' && 'json' in rawScoring
+        ? rawScoring.json as SourceScoring
+        : rawScoring as SourceScoring;
+
     if (!scoring || typeof scoring !== 'object' || !scoring.scores?.overall) return null;
 
     const score = scoring.scores.overall;
