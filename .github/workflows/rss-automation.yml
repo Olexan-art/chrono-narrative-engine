@@ -1,0 +1,105 @@
+name: RSS News Automation
+
+on:
+  schedule:
+    # Збір новин для США кожні 30 хвилин 
+    - cron: '*/30 * * * *'
+    # Обробка pending новин кожні 15 хвилин  
+    - cron: '*/15 * * * *'
+    # Збір новин для України кожні 45 хвилин
+    - cron: '*/45 * * * *'
+  # Дозволити ручний запуск
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'RSS Action to run'
+        required: true
+        default: 'process_pending'
+        type: choice
+        options:
+          - process_pending
+          - fetch_us_country  
+          - fetch_ua_country
+          - get_cron_stats
+          - get_pending_stats
+
+jobs:
+  rss-automation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Run RSS Collection
+      env:
+        SUPABASE_URL: https://xvhlqxzudqmpsqrvzxfm.supabase.co
+        SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2aGxxeHp1ZHFtcHNxcnZ6eGZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDkzMDU5MTgsImV4cCI6MjAyNDg4MTkxOH0.SzPLgG3e8z3_xjxMvU6a8owU6zLhXj0L_lVYXwXbXl8
+      run: |
+        # Визначити яку дію запустити на основі розкладу
+        CURRENT_MINUTE=$(date +%M)
+        
+        # Кожні 15 хвилин - process_pending
+        if [[ $((CURRENT_MINUTE % 15)) == 0 ]]; then
+          echo "🔄 Запуск process_pending..."
+          curl -X POST "$SUPABASE_URL/functions/v1/fetch-rss" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -d '{"action": "process_pending"}' \
+            --max-time 30 || echo "❌ process_pending failed"
+        fi
+        
+        # Кожні 30 хвилин для США (00, 30)  
+        if [[ $((CURRENT_MINUTE % 30)) == 0 ]]; then
+          echo "🇺🇸 Збір новин для США..."
+          curl -X POST "$SUPABASE_URL/functions/v1/fetch-rss" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -d '{"action": "fetch_country", "country_id": "1f57c11e-ab27-4e4e-b289-ca31dc80e895"}' \
+            --max-time 60 || echo "❌ US RSS failed"
+        fi
+        
+        # Кожні 45 хвилин для України (00, 45) 
+        if [[ $((CURRENT_MINUTE % 45)) == 0 ]]; then
+          echo "🇺🇦 Збір новин для України..."
+          curl -X POST "$SUPABASE_URL/functions/v1/fetch-rss" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -d '{"action": "fetch_country", "country_id": "d5db2e45-9d9c-4593-a0ee-8ba6c1f44b11"}' \
+            --max-time 60 || echo "❌ Ukraine RSS failed"
+        fi
+        
+        # Якщо ручний запуск з параметром
+        if [ "${{ github.event.inputs.action }}" ]; then
+          echo "⚙️ Ручний запуск: ${{ github.event.inputs.action }}"
+          case "${{ github.event.inputs.action }}" in
+            "fetch_us_country")
+              curl -X POST "$SUPABASE_URL/functions/v1/fetch-rss" \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+                -d '{"action": "fetch_country", "country_id": "1f57c11e-ab27-4e4e-b289-ca31dc80e895"}'
+              ;;
+            "fetch_ua_country")
+              curl -X POST "$SUPABASE_URL/functions/v1/fetch-rss" \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+                -d '{"action": "fetch_country", "country_id": "d5db2e45-9d9c-4593-a0ee-8ba6c1f44b11"}'
+              ;;
+            *)
+              curl -X POST "$SUPABASE_URL/functions/v1/fetch-rss" \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+                -d "{\"action\": \"${{ github.event.inputs.action }}\"}"
+              ;;
+          esac
+        fi
+        
+    - name: Log Results
+      run: |
+        echo "✅ RSS автоматизація виконана о $(date)"
+        echo "📊 Статус: Успішно"
