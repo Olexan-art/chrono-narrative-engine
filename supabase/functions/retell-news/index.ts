@@ -60,6 +60,11 @@ async function callLLM(
   const model = cleanModel;
   const startTime = Date.now();
 
+  console.log(`\n[callLLM START] 🎯🎯🎯 ENTERED FUNCTION 🎯🎯🎯`);
+  console.log(`[callLLM] INPUTS: overrideModel="${overrideModel}", model="${model}"`);
+  console.log(`[callLLM] model.toLowerCase() = "${model.toLowerCase()}"`);
+  console.log(`[callLLM] model.toLowerCase().includes('deepseek') = ${model.toLowerCase().includes('deepseek')}`);
+
   // ============ PROVIDER DETECTION: IGNORE SETTINGS, USE ONLY MODEL ============
   // This is the ONLY source of truth for provider
   const modelLower = model.toLowerCase().trim();
@@ -67,6 +72,7 @@ async function callLLM(
   
   if (modelLower.includes('deepseek')) {
     provider = 'deepseek';
+    console.log(`[callLLM] ✅✅✅ DETECTED DEEPSEEK! provider SET TO 'deepseek'`);
   } else if (modelLower.startsWith('glm-') || modelLower === 'glm-4.7') {
     provider = 'zai';
   } else if (modelLower.includes('gpt') || modelLower.startsWith('gpt-')) {
@@ -79,10 +85,8 @@ async function callLLM(
     provider = 'anthropic';
   }
   
-  console.log(`[callLLM] 🎯 PROVIDER DETECTION (MODEL-ONLY):`);
-  console.log(`  model="${model}"`);
-  console.log(`  modelLower="${modelLower}"`);
-  console.log(`  → provider="${provider}"`);
+  console.log(`[callLLM] 🎯 FINAL PROVIDER: provider="${provider}"`);
+  console.log(`[callLLM] 🎯🎯🎯 NOW PROCEEDING WITH provider="${provider}" MODEL="${model}" 🎯🎯🎯\n`);
   // ============ END PROVIDER DETECTION ============
 
   try {
