@@ -60,96 +60,30 @@ async function callLLM(
   const model = cleanModel;
   const startTime = Date.now();
 
-  // Determine provider from model name if override model is passed
-  let provider = settings.llm_text_provider || settings.llm_provider || 'zai';
-
-  // Log for debugging
-  console.log(`[callLLM] ВХОДЯЩИЕ: model="${model}", overrideModel="${overrideModel}", initialProvider="${provider}"`);
-  console.log(`[callLLM] overrideModel type: ${typeof overrideModel}, value exists: ${!!overrideModel}`);
-  console.log(`[callLLM] Settings check: llm_text_provider="${settings.llm_text_provider}", llm_provider="${settings.llm_provider}"`);
-
-  // ============ AGGRESSIVE DEEPSEEK DETECTION ============
-  // Check model for deepseek FIRST, before anything else
+  // ============ PROVIDER DETECTION: IGNORE SETTINGS, USE ONLY MODEL ============
+  // This is the ONLY source of truth for provider
   const modelLower = model.toLowerCase().trim();
-  console.log(`[callLLM] 🔍 AGGRESSIVE DETECTION CHECK:`);
-  console.log(`  - model="${model}" (length: ${model.length})`);
-  console.log(`  - modelLower="${modelLower}" (length: ${modelLower.length})`);
-  console.log(`  - includes('deepseek'): ${modelLower.includes('deepseek')}`);
-  console.log(`  - current provider before correction: "${provider}"`);
+  let provider = 'zai'; // Safe default
   
   if (modelLower.includes('deepseek')) {
     provider = 'deepseek';
-    console.log(`[callLLM] 🔥 AGGRESSIVE DETECTION: Detected 'deepseek' in model="${model}" → provider='deepseek'`);
-  } else {
-    console.log(`[callLLM] ⚠️ No 'deepseek' detected in modelLower="${modelLower}"`);
-  }
-  console.log(`  - provider after correction: "${provider}"`);
-  // ============ END AGGRESSIVE DETECTION ============
-
-  // Auto-detect provider from model prefix to prevent mismatches
-  if (overrideModel) {
-    console.log(`[callLLM] Начинаем детекцию провайдера для overrideModel="${overrideModel}"`);
-    // Direct model name matching - check DeepSeek models explicitly
-    if (overrideModel === 'deepseek-chat' || overrideModel === 'deepseek-reasoner' || overrideModel.toLowerCase().includes('deepseek')) {
-      provider = 'deepseek';
-      console.log(`[callLLM] ✓ Детектирован DeepSeek model: ${overrideModel}`);
-    } else if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
-      provider = 'gemini';
-    } else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) {
-      provider = 'openai';
-    } else if (overrideModel.startsWith('mistral-') || overrideModel.startsWith('codestral')) {
-      provider = 'mistral';
-    } else if (overrideModel.startsWith('GLM-') || overrideModel.startsWith('glm-')) {
-      provider = 'zai';
-    } else if (overrideModel.startsWith('claude')) {
-      provider = 'anthropic';
-    } else {
-      console.log(`[callLLM] ⚠ Не удалось детектировать провайдер для: ${overrideModel}`);
-    }
-  } else {
-    console.log(`[callLLM] ⚠ overrideModel не передан, использую дефолт provider`);
-  }
-
-  console.log(`[callLLM] Final provider="${provider}" for model="${model}"`);
-
-  // Safety check: if model doesn't match provider, try to re-detect
-  if (provider === 'zai' && model && !model.startsWith('GLM-') && !model.startsWith('glm-')) {
-    console.warn(`[callLLM] SAFETY: Model "${model}" doesn't match Z.AI provider, attempting re-detection`);
-    
-    if (model.includes('deepseek')) {
-      provider = 'deepseek';
-      console.log(`[callLLM] SAFETY re-detected as DeepSeek`);
-    } else if (model.includes('gpt') || model.startsWith('openai')) {
-      provider = 'openai';
-      console.log(`[callLLM] SAFETY re-detected as OpenAI`);
-    } else if (model.includes('mistral')) {
-      provider = 'mistral';
-      console.log(`[callLLM] SAFETY re-detected as Mistral`);
-    } else if (model.includes('gemini')) {
-      provider = 'gemini';
-      console.log(`[callLLM] SAFETY re-detected as Gemini`);
-    } else if (model.includes('claude')) {
-      provider = 'anthropic';
-      console.log(`[callLLM] SAFETY re-detected as Anthropic`);
-    }
-  }
-
-  console.log(`[callLLM] After safety check: provider="${provider}" for model="${model}"`);
-
-  // FINAL SAFETY CHECK: Re-check provider matches model BEFORE API calls
-  // This is the last chance to correct provider mismatches
-  if (model?.includes('deepseek') && provider !== 'deepseek') {
-    console.warn(`[callLLM] ⚠⚠⚠ CRITICAL: model="${model}" is DeepSeek but provider="${provider}"! CORRECTING to 'deepseek' NOW!`);
-    provider = 'deepseek';
-  } else if (model?.startsWith('GLM-') && provider === 'deepseek') {
-    console.warn(`[callLLM] ⚠ model="${model}" is Z.AI/GLM but provider is 'deepseek'. Correcting to 'zai'`);
+  } else if (modelLower.startsWith('glm-') || modelLower === 'glm-4.7') {
     provider = 'zai';
-  } else if (model?.includes('gpt') && provider === 'deepseek') {
-    console.warn(`[callLLM] ⚠ model="${model}" is OpenAI/GPT but provider is 'deepseek'. Correcting to 'openai'`);
+  } else if (modelLower.includes('gpt') || modelLower.startsWith('gpt-')) {
     provider = 'openai';
+  } else if (modelLower.includes('mistral')) {
+    provider = 'mistral';
+  } else if (modelLower.includes('gemini')) {
+    provider = 'gemini';
+  } else if (modelLower.includes('claude')) {
+    provider = 'anthropic';
   }
-
-  console.log(`[callLLM] AFTER FINAL SAFETY CHECK: provider="${provider}" for model="${model}"`);
+  
+  console.log(`[callLLM] 🎯 PROVIDER DETECTION (MODEL-ONLY):`);
+  console.log(`  model="${model}"`);
+  console.log(`  modelLower="${modelLower}"`);
+  console.log(`  → provider="${provider}"`);
+  // ============ END PROVIDER DETECTION ============
 
   try {
     let result = '';
