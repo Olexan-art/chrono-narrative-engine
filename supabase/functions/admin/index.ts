@@ -454,6 +454,73 @@ serve(async (req: Request) => {
         }
       }
 
+      case 'ensureZaiCron': {
+        try {
+          const { default: postgres } = await import('npm:postgres');
+          const dbUrl = Deno.env.get('SUPABASE_DB_URL');
+          if (!dbUrl) throw new Error('SUPABASE_DB_URL not configured');
+
+          const sql = postgres(dbUrl);
+
+          // 1. Schedule the cron job if it doesn't exist (parallel with DeepSeek)
+          await sql`
+            SELECT cron.unschedule('invoke_bulk_retell_news_zai_15m');
+          `.catch(() => { }); // Ignore error if not scheduled
+
+          await sql`
+            SELECT cron.schedule(
+              'invoke_bulk_retell_news_zai_15m',
+              '*/15 * * * *',
+              ${`
+                select net.http_post(
+                  url:='${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-retell-news-zai',
+                  headers:=jsonb_build_object(
+                    'Content-Type', 'application/json',
+                    'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key')
+                  ),
+                  body:=jsonb_build_object(
+                    'country_code', 'ALL',
+                    'time_range', 'last_1h',
+                    'llm_model', 'GLM-4.7-Flash',
+                    'job_name', 'bulk_retell_all_zai',
+                    'trigger', 'cron'
+                  )
+                );
+              `}
+            );
+          `;
+
+          // 2. Insert into cron_job_configs for UI visibility
+          await sql`
+            INSERT INTO cron_job_configs (job_name, frequency_minutes, enabled, processing_options)
+            VALUES (
+              'bulk_retell_all_zai', 
+              15, 
+              true, 
+              ${JSON.stringify({
+            country_code: 'ALL',
+            time_range: 'last_1h',
+            llm_model: 'GLM-4.7-Flash',
+            llm_provider: 'zai'
+          })}::jsonb
+            )
+            ON CONFLICT (job_name) DO UPDATE SET 
+              frequency_minutes = EXCLUDED.frequency_minutes, 
+              enabled = EXCLUDED.enabled,
+              processing_options = COALESCE(cron_job_configs.processing_options, EXCLUDED.processing_options);
+          `;
+
+          await sql.end();
+
+          return new Response(JSON.stringify({ success: true, message: 'Z.AI cron job initialized and scheduled' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('ensureZaiCron error:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
       case 'saveOllamaStaged': {
         // data: { retells: Array<{ newsId, model, language, content, key_points?, themes?, keywords? }> }
         if (!data || !data.retells) {
@@ -1119,6 +1186,12 @@ serve(async (req: Request) => {
                 cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/retell-news', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "process_queue"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName === 'news_retelling_zai') {
                 cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/bulk-retell-news-zai', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"country_code": "us", "time_range": "last_24h", "job_name": "${jobName}", "trigger": "cron"}'::jsonb, timeout:=60000) as request_id;`;
+              } else if (jobName === 'bulk_retell_all_deepseek') {
+                const opts = updatedConfig.processing_options || { country_code: 'ALL', time_range: 'last_1h', llm_model: 'deepseek-chat', llm_provider: 'deepseek' };
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/bulk-retell-news-deepseek', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"country_code": "${opts.country_code}", "time_range": "${opts.time_range}", "llm_model": "${opts.llm_model}", "job_name": "${jobName}", "trigger": "cron"}'::jsonb, timeout:=60000) as request_id;`;
+              } else if (jobName === 'bulk_retell_all_zai') {
+                const opts = updatedConfig.processing_options || { country_code: 'ALL', time_range: 'last_1h', llm_model: 'GLM-4.7-Flash', llm_provider: 'zai' };
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/bulk-retell-news-zai', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"country_code": "${opts.country_code}", "time_range": "${opts.time_range}", "llm_model": "${opts.llm_model}", "job_name": "${jobName}", "trigger": "cron"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName === 'cache_refresh') {
                 cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/cache-pages', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "refresh-all"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName.startsWith('bulk_retell_')) {

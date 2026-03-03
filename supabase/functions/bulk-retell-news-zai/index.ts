@@ -6,8 +6,6 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const ZAI_API_URL = 'https://api.z.ai/v1/retell'; // Приклад, замініть на актуальний endpoint
-
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
         return new Response(null, { headers: corsHeaders });
@@ -39,13 +37,13 @@ serve(async (req) => {
                 job_name: job_name || null,
                 event_type: 'run_started',
                 origin,
-                details: { country_code, time_range, llm_model, job_name, force_all }
+                details: { provider: 'zai', country_code, time_range, llm_model, job_name, force_all }
             });
         } catch (e) {
             console.error('Failed to write cron_job_events (run_started):', e);
         }
 
-        console.log(`[bulk-retell-news-zai] CPU-Intensive mode starting for: ${country_code}, time_range: ${time_range || 'all'}`);
+        console.log(`[bulk-retell-news-zai] Starting for: ${country_code}, time_range: ${time_range || 'all'}`);
 
         const { data: country, error: countryError } = await supabase
             .from('news_countries')
@@ -64,9 +62,6 @@ serve(async (req) => {
             .is('key_points', null);
 
         // --- ПАРАЛЕЛЬНА ОБРОБКА: Z.AI бере тільки парні ID ---
-        // Використовуємо .filter() з сирим SQL-подібним виразом або post-filtering
-        // Для спрощення у Edge Function робимо post-filtering на fetched data
-
 
         if (!force_all) {
             const now = Date.now();
@@ -81,177 +76,109 @@ serve(async (req) => {
 
         query = query.order('fetched_at', { ascending: false });
 
+        const { data: newsItems, error: newsError } = await query.limit(200);
+
+        if (newsError) {
+            throw new Error(`Failed to fetch news: ${newsError.message}`);
+        }
+
+        // Filter only even IDs for Z.AI parallel processing
+        const queue = (newsItems || []).filter((i: any) => i.id % 2 === 0);
+
+        if (queue.length === 0) {
+            console.log(`[bulk-retell-news-zai] Queue empty for ${country_code}`);
+            const summary = { success: true, processed: 0, message: 'Queue empty (or all odd IDs handled by DeepSeek)' };
+            if (job_name) {
+                await supabase.from('cron_job_configs').update({
+                    last_run_at: new Date().toISOString(),
+                    last_run_status: 'success',
+                    last_run_details: summary
+                }).eq('job_name', job_name);
+            }
+            return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
         const concurrency = 20;
         let successCount = 0;
         let errorCount = 0;
         const errors: any[] = [];
-        const processedIds = new Set<number>();
 
         const processItem = async (newsItem: any) => {
             try {
-                if (processedIds.has(newsItem.id)) return;
-                // Check parallel processing assignment (Z.AI handles even IDs)
-                if (newsItem.id % 2 === 1) {
-                    console.log(`[bulk-retell-news-zai] Skipping ${newsItem.id} (handled by Deepseek)`);
-                    return;
-                }
-                processedIds.add(newsItem.id);
+                const zaiKey = Deno.env.get('ZAI_API_KEY');
+                if (!zaiKey) throw new Error('ZAI_API_KEY not configured');
 
-                // Виклик Z.AI API
-                const ZAI_API_KEY = Deno.env.get('ZAI_API_KEY');
-                if (!ZAI_API_KEY) throw new Error('ZAI_API_KEY not configured');
-                const zaiResponse = await fetch(ZAI_API_URL, {
+                const systemPrompt = `You are a professional journalist. Summarize news into 3-5 key points.`;
+
+                const userPrompt = `Title: ${newsItem.title}\n\nContent:\n${newsItem.content || newsItem.title}\n\nProvide 3-5 key points.`;
+
+                const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${ZAI_API_KEY}`,
+                        'Authorization': `Bearer ${zaiKey}`,
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        text: newsItem.content || newsItem.title,
-                        newsId: newsItem.id,
-                        model: llm_model || undefined,
+                        model: llm_model || 'GLM-4.7-Flash',
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userPrompt }
+                        ],
+                        temperature: 0.3
                     }),
                 });
 
-                if (!zaiResponse.ok) throw new Error(`Status ${zaiResponse.status}`);
-                const result = await zaiResponse.json();
-                if (result.success) {
-                    // Оновити новину у базі (наприклад, записати key_points)
+                if (!response.ok) throw new Error(`Z.AI API Error: ${response.status}`);
+                const result = await response.json();
+                const content = result.choices?.[0]?.message?.content;
+
+                if (content) {
                     await supabase.from('news_rss_items').update({
-                        key_points: result.key_points || result.summary || null
+                        key_points: content
                     }).eq('id', newsItem.id);
 
-                    // Примусово оновити кеш сторінки новини
+                    // Refresh cache
                     const adminPass = Deno.env.get('ADMIN_PASSWORD');
                     const cacheUrl = `${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(`/news/${country.code}/${newsItem.slug}`)}&password=${adminPass}`;
                     try {
                         await fetch(cacheUrl, { headers: { 'Authorization': `Bearer ${supabaseKey}` } });
-                    } catch (_) { /* non-fatal */ }
-
-                    // Automatically trigger Deep Analysis
-                    try {
-                        console.log('Triggering generate-news-analysis for newsId:', newsItem.id);
-                        fetch(`${supabaseUrl}/functions/v1/generate-news-analysis`, {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${supabaseKey}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                newsId: newsItem.id,
-                                newsTitle: newsItem.title,
-                                newsContent: result.key_points || result.summary || null,
-                                model: llm_model || undefined
-                            })
-                        }).catch(e => console.error('Error triggering generate-news-analysis asynchronously:', e));
-                    } catch (analysisErr) {
-                        console.error('Error triggering generate-news-analysis:', analysisErr);
-                    }
+                    } catch (_) { }
 
                     successCount++;
                 } else {
-                    errorCount++;
-                    errors.push({ slug: newsItem.slug, error: result.error });
+                    throw new Error('Empty response from Z.AI');
                 }
             } catch (error) {
                 errorCount++;
-                errors.push({ slug: newsItem.slug, error: error instanceof Error ? error.message : String(error) });
+                errors.push({ id: newsItem.id, error: error instanceof Error ? error.message : String(error) });
+                console.error(`[bulk-retell-news-zai] Error processing ${newsItem.id}:`, error);
             }
         };
 
-        let totalProcessed = 0;
-        if (!force_all && time_range === 'last_1h') {
-            const windows = [15, 15, 20];
-            let cumulativeOffset = 0;
-
-            for (const minutes of windows) {
-                const windowEnd = new Date(Date.now() - cumulativeOffset * 60 * 1000);
-                const windowStart = new Date(windowEnd.getTime() - minutes * 60 * 1000);
-
-                const { data: windowItems, error: windowError } = await supabase
-                    .from('news_rss_items')
-                    .select('id, title, slug, fetched_at, content')
-                    .eq('country_id', country.id)
-                    .is('key_points', null)
-                    .gte('fetched_at', windowStart.toISOString())
-                    .lt('fetched_at', windowEnd.toISOString())
-                    .order('fetched_at', { ascending: false })
-                    .limit(100);
-
-                if (windowError) {
-                    throw new Error(`Failed to fetch news (window ${minutes}m): ${windowError.message}`);
-                }
-
-                if (!windowItems || windowItems.length === 0) {
-                    cumulativeOffset += minutes;
-                    continue;
-                }
-
-                console.log(`[bulk-retell-news-zai] Processing ${windowItems.length} items for ${country_code} (window ${minutes}m)`);
-
-                const queue = windowItems.filter((i: any) => i.id % 2 === 0); // Only process even IDs
-                const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
-                    while (queue.length > 0) {
-                        const item = queue.shift();
-                        if (item) await processItem(item);
-                    }
-                });
-                await Promise.all(workers);
-
-                totalProcessed += windowItems.length;
-                cumulativeOffset += minutes;
+        const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
+            while (queue.length > 0) {
+                const item = queue.shift();
+                if (item) await processItem(item);
             }
-        } else {
-            const { data: newsItems, error: newsError } = await query.limit(200);
+        });
 
-            if (newsError) {
-                throw new Error(`Failed to fetch news: ${newsError.message}`);
-            }
+        await Promise.all(workers);
 
-            if (!newsItems || newsItems.length === 0) {
-                console.log(`[bulk-retell-news-zai] Queue empty for ${country_code}`);
-                const summary = { success: true, processed: 0, message: 'Queue empty' };
-                if (job_name) {
-                    await supabase.from('cron_job_configs').update({
-                        last_run_at: new Date().toISOString(),
-                        last_run_status: 'success',
-                        last_run_details: summary
-                    }).eq('job_name', job_name);
-                }
-                return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-            }
-
-            const queue = newsItems.filter((i: any) => i.id % 2 === 0); // Only process even IDs
-
-            console.log(`[bulk-retell-news-zai] Processing backlog of ${queue.length} items with concurrency ${concurrency}`);
-
-            const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
-                while (queue.length > 0) {
-                    const item = queue.shift();
-                    if (item) await processItem(item);
-                }
-            });
-
-            await Promise.all(workers);
-
-            totalProcessed = newsItems.length;
-        }
-
-        const summary = {
+        const finalSummary = {
             success: true,
-            processed: totalProcessed,
+            processed: (newsItems || []).length,
             success_count: successCount,
             error_count: errorCount,
             errors: errors.slice(0, 5),
             country_code,
-            mode: force_all ? 'catch-up' : (time_range === 'last_1h' ? 'progressive' : 'normal')
+            provider: 'zai'
         };
 
         if (job_name) {
             await supabase.from('cron_job_configs').update({
                 last_run_at: new Date().toISOString(),
                 last_run_status: errorCount === 0 ? 'success' : 'warning',
-                last_run_details: summary
+                last_run_details: finalSummary
             }).eq('job_name', job_name);
         }
 
@@ -261,23 +188,18 @@ serve(async (req) => {
                 event_type: 'run_finished',
                 origin: trigger === 'cron' ? 'automatic' : 'manual',
                 status: errorCount === 0 ? 'success' : 'warning',
-                details: summary
+                details: finalSummary
             });
         } catch (e) {
             console.error('Failed to write cron_job_events (run_finished):', e);
         }
 
-        return new Response(JSON.stringify(summary), {
+        return new Response(JSON.stringify(finalSummary), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
 
     } catch (error) {
         console.error('[bulk-retell-news-zai] Fatal Error:', error);
-        try {
-            const origin = (await (async () => { try { const body = await req.json(); return body.trigger || 'manual'; } catch { return 'manual'; } })()) || 'manual';
-            await createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!).from('cron_job_events').insert({ job_name: jobNameForUpdate || null, event_type: 'run_failed', origin, details: { error: error instanceof Error ? error.message : String(error) } });
-        } catch (e) { console.error('Failed to write cron_job_events (run_failed):', e); }
-
         return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown' }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
