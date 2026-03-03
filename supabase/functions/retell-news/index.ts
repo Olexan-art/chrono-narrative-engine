@@ -71,10 +71,19 @@ async function callLLM(
   // ============ AGGRESSIVE DEEPSEEK DETECTION ============
   // Check model for deepseek FIRST, before anything else
   const modelLower = model.toLowerCase().trim();
+  console.log(`[callLLM] 🔍 AGGRESSIVE DETECTION CHECK:`);
+  console.log(`  - model="${model}" (length: ${model.length})`);
+  console.log(`  - modelLower="${modelLower}" (length: ${modelLower.length})`);
+  console.log(`  - includes('deepseek'): ${modelLower.includes('deepseek')}`);
+  console.log(`  - current provider before correction: "${provider}"`);
+  
   if (modelLower.includes('deepseek')) {
     provider = 'deepseek';
     console.log(`[callLLM] 🔥 AGGRESSIVE DETECTION: Detected 'deepseek' in model="${model}" → provider='deepseek'`);
+  } else {
+    console.log(`[callLLM] ⚠️ No 'deepseek' detected in modelLower="${modelLower}"`);
   }
+  console.log(`  - provider after correction: "${provider}"`);
   // ============ END AGGRESSIVE DETECTION ============
 
   // Auto-detect provider from model prefix to prevent mismatches
