@@ -73,6 +73,8 @@ async function callLLM(
       provider = 'zai';
     } else if (overrideModel.startsWith('claude')) {
       provider = 'anthropic';
+    } else if (overrideModel.startsWith('deepseek')) {
+      provider = 'deepseek';
     }
   }
 
@@ -222,6 +224,37 @@ async function callLLM(
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Mistral error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      result = data.choices?.[0]?.message?.content || '';
+    }
+
+    else if (provider === 'deepseek') {
+      const apiKey = Deno.env.get('DEEPSEEK_API_KEY');
+      if (!apiKey) throw new Error('DeepSeek API key not configured');
+
+      const modelName = model || 'deepseek-chat';
+      console.log('Using DeepSeek with model:', modelName);
+
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`DeepSeek error: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
