@@ -347,6 +347,8 @@ serve(async (req) => {
 
   try {
     const { newsId, model } = await req.json();
+    console.log(`[serve] 📥 ПОЛУЧЕН ЗАПРОС: newsId="${newsId}", model="${model}" (type: ${typeof model})`);
+    console.log(`[serve] 📥 model === undefined: ${model === undefined}, model === null: ${model === null}, model length: ${model?.length}`);
 
     if (!newsId) {
       return new Response(JSON.stringify({ error: 'newsId is required' }), {
