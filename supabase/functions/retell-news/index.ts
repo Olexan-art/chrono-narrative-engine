@@ -55,7 +55,9 @@ async function callLLM(
   overrideModel?: string,
   metadata: any = {}
 ): Promise<string> {
-  const model = overrideModel || settings.llm_text_model || 'google/gemini-3-flash-preview';
+  // CRITICAL: Force clean model value
+  const cleanModel = String(overrideModel || settings.llm_text_model || 'google/gemini-3-flash-preview').trim();
+  const model = cleanModel;
   const startTime = Date.now();
 
   // Determine provider from model name if override model is passed
@@ -66,18 +68,22 @@ async function callLLM(
   console.log(`[callLLM] overrideModel type: ${typeof overrideModel}, value exists: ${!!overrideModel}`);
   console.log(`[callLLM] Settings check: llm_text_provider="${settings.llm_text_provider}", llm_provider="${settings.llm_provider}"`);
 
+  // ============ AGGRESSIVE DEEPSEEK DETECTION ============
+  // Check model for deepseek FIRST, before anything else
+  const modelLower = model.toLowerCase().trim();
+  if (modelLower.includes('deepseek')) {
+    provider = 'deepseek';
+    console.log(`[callLLM] 🔥 AGGRESSIVE DETECTION: Detected 'deepseek' in model="${model}" → provider='deepseek'`);
+  }
+  // ============ END AGGRESSIVE DETECTION ============
+
   // Auto-detect provider from model prefix to prevent mismatches
   if (overrideModel) {
     console.log(`[callLLM] Начинаем детекцию провайдера для overrideModel="${overrideModel}"`);
-    console.log(`[callLLM] overrideModel JSON check: ${JSON.stringify(overrideModel)}`);
-    console.log(`[callLLM] overrideModel exact chars: ${Array.from(overrideModel).map((c, i) => `${i}:'${c}'`).join(',')}`);
     // Direct model name matching - check DeepSeek models explicitly
-    if (overrideModel === 'deepseek-chat' || overrideModel === 'deepseek-reasoner') {
+    if (overrideModel === 'deepseek-chat' || overrideModel === 'deepseek-reasoner' || overrideModel.toLowerCase().includes('deepseek')) {
       provider = 'deepseek';
       console.log(`[callLLM] ✓ Детектирован DeepSeek model: ${overrideModel}`);
-    } else if (overrideModel.toLowerCase().includes('deepseek')) {
-      provider = 'deepseek';
-      console.log(`[callLLM] ✓ Детектирован DeepSeek via includes: ${overrideModel}`);
     } else if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
       provider = 'gemini';
     } else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) {
