@@ -1,4 +1,4 @@
-name = "bravennow-proxy"
+name = "chrono-narrative-engine-echo2"
 compatibility_date = "2026-02-25"
 type = "javascript"
 main = "cloudflare-worker.js"
