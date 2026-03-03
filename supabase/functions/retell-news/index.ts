@@ -66,7 +66,12 @@ async function callLLM(
 
   // Auto-detect provider from model prefix to prevent mismatches
   if (overrideModel) {
-    if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
+    // Direct model name matching
+    const modelLower = overrideModel.toLowerCase();
+    
+    if (modelLower.includes('deepseek')) {
+      provider = 'deepseek';
+    } else if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
       provider = 'gemini';
     } else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) {
       provider = 'openai';
@@ -76,8 +81,6 @@ async function callLLM(
       provider = 'zai';
     } else if (overrideModel.startsWith('claude')) {
       provider = 'anthropic';
-    } else if (overrideModel.startsWith('deepseek')) {
-      provider = 'deepseek';
     }
   }
 
