@@ -1,4 +1,4 @@
-name: Complete RSS + Retell + Translate Automation
+name: Complete RSS + Retell + Translate Automation v2
 
 on:
   workflow_dispatch:
