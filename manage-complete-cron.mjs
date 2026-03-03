@@ -53,6 +53,15 @@ const COMPLETE_CRON_JOBS = {
   },
   
   // === ПЕРЕКАЗ НОВИН ===
+  'retell_recent_usa': {
+    name: '📝 Переказ новин США (ZAI + DeepSeek)',
+    schedule: '5 */1 * * *', // кожну годину, 5 хвилин після rss
+    action: 'retell',
+    endpoint: 'retell-news',
+    payload: { batch: true, country: 'usa', limit: 20, model: 'GLM-4.7-Flash', provider: 'zai' },
+    priority: 'high',
+    depends_on: ['fetch_usa']
+  },
   'retell_recent_usa_zai': {
     name: '📝 Переказ новин США (ZAI)',
     schedule: '5 */1 * * *', // кожну годину, 5 хвилин після рss
@@ -198,6 +207,69 @@ async function callEdgeFunction(endpoint, payload) {
   }
 }
 
+// Агрегувати останні cron події і показати статистику по retell
+async function fetchAndShowRecentRetellStats() {
+  console.log('\n🔎 Отримую останні події cron (run_finished) через admin.getCronEvents...');
+  const resp = await callEdgeFunction('admin', { action: 'getCronEvents', password: '1nuendo19071', data: { limit: 500 } });
+  if (!resp.success) {
+    console.log('   ❌ Не вдалося отримати події:', resp.status, resp.error || resp.data?.substring(0,200));
+    return;
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(resp.data);
+  } catch (e) {
+    console.log('   ❌ Невірний формат відповіді admin.getCronEvents');
+    return;
+  }
+
+  const events = (payload.events || []).filter(e => e.event_type === 'run_finished');
+  const now = Date.now();
+  const windows = { '10m': 10 * 60 * 1000, '20m': 20 * 60 * 1000, '30m': 30 * 60 * 1000 };
+
+  const rowsMap = new Map();
+
+  for (const ev of events) {
+    const created = new Date(ev.created_at).getTime();
+    const jobName = ev.job_name || (ev.details && ev.details.job_name) || 'unknown';
+    const details = ev.details || {};
+
+    // determine provider/model
+    let provider = details.provider || 'unknown';
+    let model = details.llm_model || details.model || (COMPLETE_CRON_JOBS[jobName] && COMPLETE_CRON_JOBS[jobName].payload && COMPLETE_CRON_JOBS[jobName].payload.model) || 'unknown';
+    if (provider === 'unknown') {
+      if (jobName && jobName.toLowerCase().includes('deepseek')) provider = 'deepseek';
+      else if (jobName && jobName.toLowerCase().includes('zai')) provider = 'zai';
+      else if (String(model).toLowerCase().includes('glm') || String(model).toLowerCase().includes('zai')) provider = 'zai';
+    }
+
+    const processed = Number(details.success_count || details.processed || details.success || 0) || 0;
+
+    const key = `${provider}||${model}||${jobName}`;
+    if (!rowsMap.has(key)) {
+      rowsMap.set(key, { provider, model, job: jobName, '10m': 0, '20m': 0, '30m': 0, last_run_total: 0 });
+    }
+
+    const row = rowsMap.get(key);
+    // add to appropriate windows
+    for (const [label, ms] of Object.entries(windows)) {
+      if (created >= now - ms) row[label] += processed;
+    }
+    row.last_run_total = Math.max(row.last_run_total, processed);
+  }
+
+  const rows = Array.from(rowsMap.values()).sort((a,b) => (b['30m'] - a['30m']));
+
+  if (rows.length === 0) {
+    console.log('   ℹ️ За останні 30 хвилин немає завершених retell подій.');
+    return;
+  }
+
+  console.log('\n📋 Статистика переказів по LLM / провайдеру / джобу (останні 10/20/30 хвилин):\n');
+  console.table(rows, ['provider','model','job','10m','20m','30m','last_run_total']);
+}
+
 async function runCronJob(jobId) {
   const job = COMPLETE_CRON_JOBS[jobId];
   if (!job) {
@@ -216,7 +288,7 @@ async function runCronJob(jobId) {
   
   // Спеціальна логіка для різних типів джобів
   if (job.action === 'retell' && job.payload.batch) {
-    return await runRetellBatch(job);
+    return await runRetellBatch(job, jobId);
   } else if (job.action === 'translate' && job.payload.batch) {
     return await runTranslateBatch(job);  
   } else if (job.action === 'rss') {
@@ -252,26 +324,61 @@ async function runRSSJob(job) {
   return result.success;
 }
 
-async function runRetellBatch(job) {
+async function runRetellBatch(job, jobId) {
   console.log(`   📝 Batch переказ...`);
-  
-  // В реальному batch переказі треба:
-  // 1. Знайти новини без переказу для країни/глобально
-  // 2. Викликати retell-news для кожної новини
-  // 3. Відслідковувати прогрес
-  
-  // Для демонстрації - симуляція batch обробки
+
   if (job.payload.country) {
     console.log(`      🌍 Країна: ${job.payload.country}`);
     console.log(`      📊 Ліміт: ${job.payload.limit} новин`);
     console.log(`      🧠 Модель: ${job.payload.model}`);
     console.log(`      🔧 Провайдер: ${job.payload.provider}`);
+
+    // Спеціальна логіка для retell_recent_usa - запускаємо обидва джоби
+    if (jobId === 'retell_recent_usa') {
+      console.log(`      🎯 Запуск паралельних джобів: ZAI + DeepSeek`);
+
+      const results = [];
+      results.push(await runCronJob('retell_recent_usa_zai'));
+      results.push(await runCronJob('retell_recent_usa_deepseek'));
+
+      const successCount = results.filter(Boolean).length;
+      console.log(`   📊 Результат: ${successCount}/2 джобів успішно`);
+      return successCount > 0;
+    }
+
+    // Викликаємо відповідну bulk-retell функцію
+    const functionName = job.payload.provider === 'zai' ? 'bulk-retell-news-zai' : 'bulk-retell-news-deepseek';
+    console.log(`      🎯 Виклик функції: ${functionName}`);
+
+    const result = await callEdgeFunction(functionName, {
+      country_code: job.payload.country,
+      time_range: 'recent',
+      llm_model: job.payload.model,
+      job_name: jobId,
+      trigger: 'cron'
+    });
     
-    // TODO: Реалізувати пошук новин без переказу та batch обробку
-    console.log(`      ⏳ Очікується реалізація batch retell...`);
+    if (result.success) {
+      console.log(`   ✅ Batch retell успішно: ${result.status}`);
+      try {
+        const data = JSON.parse(result.data);
+        if (data.success_count !== undefined) {
+          console.log(`      📊 Оброблено: ${data.success_count} новин`);
+        }
+        if (data.error_count !== undefined) {
+          console.log(`      ⚠️ Помилки: ${data.error_count}`);
+        }
+      } catch (e) {
+        console.log(`      📄 Відповідь: ${result.data.substring(0, 200)}...`);
+      }
+    } else {
+      console.log(`   ❌ Batch retell помилка: ${result.status} ${result.error}`);
+      if (result.data) console.log(`      🔍 Деталі: ${result.data.substring(0, 150)}`);
+    }
+
+    return result.success;
   }
-  
-  // Наразі повертаємо симульований успіх
+
   console.log(`   ✅ Batch retell завершено (симуляція)`);
   return true;
 }
@@ -463,6 +570,10 @@ async function main() {
       
     case 'monitor':
       await runJobsByType('monitor');
+      break;
+
+    case 'events':
+      await fetchAndShowRecentRetellStats();
       break;
       
     case 'status':
