@@ -53,32 +53,58 @@ const COMPLETE_CRON_JOBS = {
   },
   
   // === ПЕРЕКАЗ НОВИН ===
-  'retell_recent_usa': {
-    name: '📝 Переказ новин США',
+  'retell_recent_usa_zai': {
+    name: '📝 Переказ новин США (ZAI)',
     schedule: '5 */1 * * *', // кожну годину, 5 хвилин після рss
     action: 'retell',
     endpoint: 'retell-news',
-    payload: { batch: true, country: 'usa', limit: 10, model: 'gemini-2.5-flash' },
+    payload: { batch: true, country: 'usa', limit: 20, model: 'GLM-4.7-Flash', provider: 'zai' },
     priority: 'high',
     depends_on: ['fetch_usa']
   },
-  'retell_recent_ukraine': {
-    name: '📝 Переказ новин України',
-    schedule: '10 */1 * * *', // кожну годину, 10 хвилин після rss
-    action: 'retell',
-    endpoint: 'retell-news',  
-    payload: { batch: true, country: 'ukraine', limit: 8, model: 'gemini-2.5-flash' },
-    priority: 'high',
-    depends_on: ['fetch_ukraine']
-  },
-  'retell_recent_global': {
-    name: '📝 Переказ глобальних новин',
-    schedule: '30 */2 * * *', // кожні 2 години
+  'retell_recent_usa_deepseek': {
+    name: '📝 Переказ новин США (DeepSeek)',
+    schedule: '35 */1 * * *', // кожну годину, 35 хвилин після рss
     action: 'retell',
     endpoint: 'retell-news',
-    payload: { batch: true, global: true, limit: 15, model: 'gemini-3-flash-preview' },
-    priority: 'medium'
+    payload: { batch: true, country: 'usa', limit: 20, model: 'deepseek-chat', provider: 'deepseek' },
+    priority: 'high',
+    depends_on: ['fetch_usa']
   },
+  // 'retell_recent_ukraine_zai': {
+  //   name: '📝 Переказ новин України (ZAI)',
+  //   schedule: '10 */1 * * *', // кожну годину, 10 хвилин після rss
+  //   action: 'retell',
+  //   endpoint: 'retell-news',  
+  //   payload: { batch: true, country: 'ukraine', limit: 10, model: 'GLM-4.7-Flash', provider: 'zai' },
+  //   priority: 'high',
+  //   depends_on: ['fetch_ukraine']
+  // },
+  // 'retell_recent_ukraine_deepseek': {
+  //   name: '📝 Переказ новин України (DeepSeek)',
+  //   schedule: '40 */1 * * *', // кожну годину, 40 хвилин після rss
+  //   action: 'retell',
+  //   endpoint: 'retell-news',  
+  //   payload: { batch: true, country: 'ukraine', limit: 10, model: 'deepseek-chat', provider: 'deepseek' },
+  //   priority: 'high',
+  //   depends_on: ['fetch_ukraine']
+  // },
+  // 'retell_recent_global_zai': {
+  //   name: '📝 Переказ глобальних новин (ZAI)',
+  //   schedule: '30 */2 * * *', // кожні 2 години
+  //   action: 'retell',
+  //   endpoint: 'retell-news',
+  //   payload: { batch: true, global: true, limit: 15, model: 'GLM-4.7-Flash', provider: 'zai' },
+  //   priority: 'medium'
+  // },
+  // 'retell_recent_global_deepseek': {
+  //   name: '📝 Переказ глобальних новин (DeepSeek)',
+  //   schedule: '0 1,3,5,7,9,11,13,15,17,19,21,23 * * *', // кожні 2 години зі зсувом
+  //   action: 'retell',
+  //   endpoint: 'retell-news',
+  //   payload: { batch: true, global: true, limit: 15, model: 'deepseek-chat', provider: 'deepseek' },
+  //   priority: 'medium'
+  // },
   
   // === ПЕРЕКЛАД НОВИН ===
   // 'translate_ukraine_to_english': {
@@ -239,6 +265,7 @@ async function runRetellBatch(job) {
     console.log(`      🌍 Країна: ${job.payload.country}`);
     console.log(`      📊 Ліміт: ${job.payload.limit} новин`);
     console.log(`      🧠 Модель: ${job.payload.model}`);
+    console.log(`      🔧 Провайдер: ${job.payload.provider}`);
     
     // TODO: Реалізувати пошук новин без переказу та batch обробку
     console.log(`      ⏳ Очікується реалізація batch retell...`);
