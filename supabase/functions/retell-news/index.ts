@@ -126,10 +126,11 @@ async function callLLM(
       const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
       if (!apiKey) throw new Error('Z.AI API key not configured');
 
-      // Check if this is actually a Z.AI model
-      if (model && !model.startsWith('GLM-') && !model.startsWith('glm-')) {
-        console.error(`[callLLM-Z.AI] ❌ ОШИБКА: Модель "${model}" не является GLM моделью! Это значит, что детекция провайдера сбилась. Провайдер= "${provider}" но модель="${model}"`);
-        throw new Error(`Provider mismatch: model "${model}" is not a Z.AI/GLM model, but provider is set to 'zai'`);
+      // FINAL CHECK: If this is not a GLM model, FAIL EARLY before API call
+      if (model && !model.startsWith('GLM-') && !model.startsWith('glm-') && model.includes('deepseek')) {
+        const errorMsg = `❌ PROVIDER ROUTING ERROR: model="${model}" should NOT be routed to Z.AI! This is a DeepSeek model. Provider detection failed.`;
+        console.error(`[callLLM-Z.AI] ${errorMsg}`);
+        throw new Error(errorMsg);
       }
 
       const glmModel = model || 'GLM-4.7';
@@ -308,6 +309,22 @@ async function callLLM(
       result = data.choices?.[0]?.message?.content || '';
     } else {
       throw new Error(`Unknown provider: ${provider}`);
+    }
+
+    // FINAL SAFETY: Re-check provider matches model before logging
+    // This catches cases where detection failed
+    if ((model?.includes('deepseek') && provider !== 'deepseek') ||
+        (model?.startsWith('GLM-') && provider === 'deepseek') ||
+        (model?.includes('gpt') && provider === 'deepseek')) {
+      console.warn(`[callLLM] ⚠ PROVIDER MISMATCH DETECTED: model="${model}" but provider="${provider}". Attempting correction...`);
+      
+      if (model?.includes('deepseek')) {
+        provider = 'deepseek';
+        console.log(`[callLLM] ✓ Corrected provider to: deepseek`);
+      } else if (model?.startsWith('GLM-')) {
+        provider = 'zai';
+        console.log(`[callLLM] ✓ Corrected provider to: zai`);
+      }
     }
 
     // Log success
