@@ -55,38 +55,107 @@ async function callLLM(
   overrideModel?: string,
   metadata: any = {}
 ): Promise<string> {
-  // CRITICAL: Force clean model value
-  const cleanModel = String(overrideModel || settings.llm_text_model || 'google/gemini-3-flash-preview').trim();
+  console.log(`\n\n`);
+  console.log(`╔══════════════════════════════════════════════════════════════════════════════╗`);
+  console.log(`║ 🔴🔴🔴 callLLM FUNCTION STARTED - TRACE EXECUTION FLOW 🔴🔴🔴              ║`);
+  console.log(`╚══════════════════════════════════════════════════════════════════════════════╝`);
+  
+  // Log every step of parameter processing
+  console.log(`[callLLM] STEP 1: Check input parameters`);
+  console.log(`[callLLM] ├─ overrideModel RAW: ${overrideModel}`);
+  console.log(`[callLLM] ├─ typeof overrideModel: ${typeof overrideModel}`);
+  console.log(`[callLLM] ├─ overrideModel === undefined: ${overrideModel === undefined}`);
+  console.log(`[callLLM] ├─ overrideModel === null: ${overrideModel === null}`);
+  console.log(`[callLLM] ├─ overrideModel === '': ${overrideModel === ''}`);
+  console.log(`[callLLM] └─ overrideModel.length: ${overrideModel?.length}`);
+  
+  console.log(`[callLLM] STEP 2: Check settings fallback`);
+  console.log(`[callLLM] ├─ settings.llm_text_model: ${settings.llm_text_model}`);
+  console.log(`[callLLM] ├─ settings.llm_provider: ${settings.llm_provider}`);
+  console.log(`[callLLM] └─ settings.llm_text_provider: ${settings.llm_text_provider}`);
+  
+  // CRITICAL: Force clean model value STEP BY STEP
+  console.log(`[callLLM] STEP 3: Process model value`);
+  const step1 = overrideModel || settings.llm_text_model || 'google/gemini-3-flash-preview';
+  console.log(`[callLLM] ├─ After || chain: "${step1}"`);
+  
+  const step2 = String(step1);
+  console.log(`[callLLM] ├─ After String(): "${step2}" (type: ${typeof step2})`);
+  
+  const step3 = step2.trim();
+  console.log(`[callLLM] ├─ After .trim(): "${step3}"`);
+  
+  const cleanModel = step3;
+  console.log(`[callLLM] └─ FINAL cleanModel: "${cleanModel}"`);
+  
   const model = cleanModel;
+  console.log(`[callLLM] STEP 4: Assign to model variable: "${model}"`);
+  
   const startTime = Date.now();
-
-  console.log(`\n[callLLM START] 🎯🎯🎯 ENTERED FUNCTION 🎯🎯🎯`);
-  console.log(`[callLLM] INPUTS: overrideModel="${overrideModel}", model="${model}"`);
-  console.log(`[callLLM] model.toLowerCase() = "${model.toLowerCase()}"`);
-  console.log(`[callLLM] model.toLowerCase().includes('deepseek') = ${model.toLowerCase().includes('deepseek')}`);
 
   // ============ PROVIDER DETECTION: IGNORE SETTINGS, USE ONLY MODEL ============
   // This is the ONLY source of truth for provider
-  const modelLower = model.toLowerCase().trim();
-  let provider = 'zai'; // Safe default
+  console.log(`[callLLM] STEP 5: PROVIDER DETECTION - CHECK EACH CONDITION`);
   
-  if (modelLower.includes('deepseek')) {
+  const modelLower = model.toLowerCase().trim();
+  console.log(`[callLLM] ├─ modelLower = model.toLowerCase().trim() = "${modelLower}"`);
+  console.log(`[callLLM] ├─ modelLower.length: ${modelLower.length}`);
+  console.log(`[callLLM] ├─ Character codes: ${[...modelLower].map(c => c.charCodeAt(0)).join(', ')}`);
+  
+  let provider = 'zai'; // Safe default
+  console.log(`[callLLM] ├─ Initialize provider = 'zai' (default)`);
+  
+  // Check DEEPSEEK
+  const checksDeepseek = modelLower.includes('deepseek');
+  console.log(`[callLLM] ├─ Check 1: modelLower.includes('deepseek') = ${checksDeepseek}`);
+  console.log(`[callLLM] │  └─ 'deepseek' in "${modelLower}" = ${checksDeepseek}`);
+  if (checksDeepseek) {
     provider = 'deepseek';
-    console.log(`[callLLM] ✅✅✅ DETECTED DEEPSEEK! provider SET TO 'deepseek'`);
-  } else if (modelLower.startsWith('glm-') || modelLower === 'glm-4.7') {
-    provider = 'zai';
-  } else if (modelLower.includes('gpt') || modelLower.startsWith('gpt-')) {
-    provider = 'openai';
-  } else if (modelLower.includes('mistral')) {
-    provider = 'mistral';
-  } else if (modelLower.includes('gemini')) {
-    provider = 'gemini';
-  } else if (modelLower.includes('claude')) {
-    provider = 'anthropic';
+    console.log(`[callLLM] │  └─ ✅✅✅ DETECTED DEEPSEEK! SETTING provider = 'deepseek' ✅✅✅`);
   }
   
-  console.log(`[callLLM] 🎯 FINAL PROVIDER: provider="${provider}"`);
-  console.log(`[callLLM] 🎯🎯🎯 NOW PROCEEDING WITH provider="${provider}" MODEL="${model}" 🎯🎯🎯\n`);
+  // Check GLM
+  const checksGLM = modelLower.startsWith('glm-') || modelLower === 'glm-4.7';
+  console.log(`[callLLM] ├─ Check 2: (startsWith('glm-') OR === 'glm-4.7') = ${checksGLM}`);
+  if (checksGLM && provider === 'zai') {
+    console.log(`[callLLM] │  └─ GLM detected (already provider='zai')`);
+  }
+  
+  // Check GPT
+  const checksGPT = modelLower.includes('gpt') || modelLower.startsWith('gpt-');
+  console.log(`[callLLM] ├─ Check 3: (includes('gpt') OR startsWith('gpt-')) = ${checksGPT}`);
+  if (checksGPT && provider === 'zai') {
+    provider = 'openai';
+    console.log(`[callLLM] │  └─ ✅ OpenAI detected! SETTING provider = 'openai'`);
+  }
+  
+  // Check Mistral
+  const checksMistral = modelLower.includes('mistral');
+  console.log(`[callLLM] ├─ Check 4: includes('mistral') = ${checksMistral}`);
+  if (checksMistral && provider === 'zai') {
+    provider = 'mistral';
+    console.log(`[callLLM] │  └─ ✅ Mistral detected! SETTING provider = 'mistral'`);
+  }
+  
+  // Check Gemini
+  const checksGemini = modelLower.includes('gemini');
+  console.log(`[callLLM] ├─ Check 5: includes('gemini') = ${checksGemini}`);
+  if (checksGemini && provider === 'zai') {
+    provider = 'gemini';
+    console.log(`[callLLM] │  └─ ✅ Gemini detected! SETTING provider = 'gemini'`);
+  }
+  
+  // Check Claude
+  const checksClaude = modelLower.includes('claude');
+  console.log(`[callLLM] ├─ Check 6: includes('claude') = ${checksClaude}`);
+  if (checksClaude && provider === 'zai') {
+    provider = 'anthropic';
+    console.log(`[callLLM] │  └─ ✅ Claude detected! SETTING provider = 'anthropic'`);
+  }
+  
+  console.log(`[callLLM] └─ FINAL PROVIDER DETECTION RESULT: provider = "${provider}"`);
+  console.log(`[callLLM] └─ SEQUENCE: (${checksDeepseek ? 'DEEPSEEK' : '-'} > ${checksGLM ? 'GLM' : '-'} > ${checksGPT ? 'GPT' : '-'} > ${checksMistral ? 'MISTRAL' : '-'} > ${checksGemini ? 'GEMINI' : '-'} > ${checksClaude ? 'CLAUDE' : '-'})`);
+  console.log(`[callLLM] └─ DECISION: Using provider="${provider}" for model="${model}"\n`);
   // ============ END PROVIDER DETECTION ============
 
   try {
@@ -331,11 +400,22 @@ serve(async (req) => {
   try {
     const requestBody = await req.json();
     const newsId = requestBody.newsId;
+    
+    // 🔥 CRITICAL: Trace model parameter from request body
+    console.log(`\n[serve] 🚀🚀🚀 NEW REQUEST RECEIVED 🚀🚀🚀`);
+    console.log(`[serve] ✅ requestBody keys: ${Object.keys(requestBody).join(', ')}`);
+    console.log(`[serve] ✅ requestBody.model RAW: ${requestBody.model}`);
+    console.log(`[serve] ✅ typeof requestBody.model: ${typeof requestBody.model}`);
+    console.log(`[serve] ✅ requestBody.model === undefined: ${requestBody.model === undefined}`);
+    console.log(`[serve] ✅ Full requestBody: ${JSON.stringify(requestBody)}`);
+    
     const model = requestBody.model ? String(requestBody.model).trim() : undefined;
     
-    console.log(`[serve] 📥 ПОЛУЧЕН ЗАПРОС: newsId="${newsId}", model="${model}" (type: ${typeof model})`);
-    console.log(`[serve] requestBody: ${JSON.stringify(requestBody)}`);
-    console.log(`[serve] 📥 model === undefined: ${model === undefined}, model === null: ${model === null}, model length: ${model?.length}`);
+    console.log(`[serve] 📥 AFTER PROCESSING: model="${model}" (type: ${typeof model})`);
+    console.log(`[serve] ✅ model === undefined: ${model === undefined}`);
+    console.log(`[serve] ✅ model length: ${model?.length}`);
+    console.log(`[serve] newsId="${newsId}", model="${model}"`);
+    console.log(`[serve]\n`);
 
     if (!newsId) {
       return new Response(JSON.stringify({ error: 'newsId is required' }), {
@@ -639,8 +719,22 @@ Category: ${news.category || 'general'}`;
 
     const newsCountryCode = getCountryCode();
     console.log(`Tracking usage for country: ${newsCountryCode}`);
-    console.log(`[Main Handler] About to call callLLM with model="${model}" (type: ${typeof model})`);
-    console.log(`[Main Handler] Settings: llm_text_provider="${settings.llm_text_provider}", llm_provider="${settings.llm_provider}"`);
+    
+    // 🔥 ABSOLUTE CRITICAL: Ensure model is passed correctly
+    console.log(`\n[Main Handler] 🎯🎯🎯 ABOUT TO CALL callLLM 🎯🎯🎯`);
+    console.log(`[Main Handler] model="${model}" (from requestBody, type: ${typeof model})`);
+    console.log(`[Main Handler] model === undefined: ${model === undefined}`);
+    console.log(`[Main Handler] Settings: llm_text_provider="${settings.llm_text_provider}", llm_provider="${settings.llm_provider}", llm_text_model="${settings.llm_text_model}"`);
+    
+    // 🔥 GUARANTEES: If model is undefined but we detected a provider, use a placeholder to trigger detection
+    let modelToPass = model;
+    if (!model && settings.llm_text_provider === 'deepseek') {
+      console.error(`WARNING: model is undefined but llm_text_provider is 'deepseek'!`);
+      console.error(`FALLBACK: Will use settings.llm_text_model="${settings.llm_text_model}"`);
+    }
+    
+    console.log(`[Main Handler] modelToPass="${modelToPass}"`);
+    console.log(`[Main Handler] 🎯🎯🎯 END CALLLLM SETUP 🎯🎯🎯\n`);
 
     const rawResponse = await callLLM(supabase, settings as LLMSettings, prompt.system, userPrompt, model, {
       newsId,
