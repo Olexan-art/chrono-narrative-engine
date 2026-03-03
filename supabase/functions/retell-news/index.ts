@@ -64,6 +64,7 @@ async function callLLM(
   // Log for debugging
   console.log(`[callLLM] ВХОДЯЩИЕ: model="${model}", overrideModel="${overrideModel}", initialProvider="${provider}"`);
   console.log(`[callLLM] overrideModel type: ${typeof overrideModel}, value exists: ${!!overrideModel}`);
+  console.log(`[callLLM] Settings check: llm_text_provider="${settings.llm_text_provider}", llm_provider="${settings.llm_provider}"`);
 
   // Auto-detect provider from model prefix to prevent mismatches
   if (overrideModel) {
@@ -645,6 +646,7 @@ Category: ${news.category || 'general'}`;
     const newsCountryCode = getCountryCode();
     console.log(`Tracking usage for country: ${newsCountryCode}`);
     console.log(`[Main Handler] About to call callLLM with model="${model}" (type: ${typeof model})`);
+    console.log(`[Main Handler] Settings: llm_text_provider="${settings.llm_text_provider}", llm_provider="${settings.llm_provider}"`);
 
     const rawResponse = await callLLM(supabase, settings as LLMSettings, prompt.system, userPrompt, model, {
       newsId,
