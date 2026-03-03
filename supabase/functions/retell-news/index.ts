@@ -69,6 +69,8 @@ async function callLLM(
   // Auto-detect provider from model prefix to prevent mismatches
   if (overrideModel) {
     console.log(`[callLLM] Начинаем детекцию провайдера для overrideModel="${overrideModel}"`);
+    console.log(`[callLLM] overrideModel JSON check: ${JSON.stringify(overrideModel)}`);
+    console.log(`[callLLM] overrideModel exact chars: ${Array.from(overrideModel).map((c, i) => `${i}:'${c}'`).join(',')}`);
     // Direct model name matching - check DeepSeek models explicitly
     if (overrideModel === 'deepseek-chat' || overrideModel === 'deepseek-reasoner') {
       provider = 'deepseek';
