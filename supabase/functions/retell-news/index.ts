@@ -62,17 +62,19 @@ async function callLLM(
   let provider = settings.llm_text_provider || settings.llm_provider || 'zai';
 
   // Log for debugging
-  console.log(`[callLLM] model="${model}", overrideModel="${overrideModel}", initialProvider="${provider}"`);
+  console.log(`[callLLM] ВХОДЯЩИЕ: model="${model}", overrideModel="${overrideModel}", initialProvider="${provider}"`);
+  console.log(`[callLLM] overrideModel type: ${typeof overrideModel}, value exists: ${!!overrideModel}`);
 
   // Auto-detect provider from model prefix to prevent mismatches
   if (overrideModel) {
+    console.log(`[callLLM] Начинаем детекцию провайдера для overrideModel="${overrideModel}"`);
     // Direct model name matching - check DeepSeek models explicitly
     if (overrideModel === 'deepseek-chat' || overrideModel === 'deepseek-reasoner') {
       provider = 'deepseek';
-      console.log(`[callLLM] Detected DeepSeek model: ${overrideModel}`);
+      console.log(`[callLLM] ✓ Детектирован DeepSeek model: ${overrideModel}`);
     } else if (overrideModel.toLowerCase().includes('deepseek')) {
       provider = 'deepseek';
-      console.log(`[callLLM] Detected DeepSeek via includes: ${overrideModel}`);
+      console.log(`[callLLM] ✓ Детектирован DeepSeek via includes: ${overrideModel}`);
     } else if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
       provider = 'gemini';
     } else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) {
@@ -83,7 +85,11 @@ async function callLLM(
       provider = 'zai';
     } else if (overrideModel.startsWith('claude')) {
       provider = 'anthropic';
+    } else {
+      console.log(`[callLLM] ⚠ Не удалось детектировать провайдер для: ${overrideModel}`);
     }
+  } else {
+    console.log(`[callLLM] ⚠ overrideModel не передан, использую дефолт provider`);
   }
 
   console.log(`[callLLM] Final provider="${provider}" for model="${model}"`);
@@ -120,9 +126,14 @@ async function callLLM(
       const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
       if (!apiKey) throw new Error('Z.AI API key not configured');
 
-      // Ensure we never send non-GLM models to Z.AI
-      const glmModel = (model && (model.startsWith('GLM-') || model.startsWith('glm-'))) ? model : 'GLM-4.7';
-      console.log(`[callLLM-Z.AI] Using Z.AI with model: "${glmModel}" (requested: "${model}")`);
+      // Check if this is actually a Z.AI model
+      if (model && !model.startsWith('GLM-') && !model.startsWith('glm-')) {
+        console.error(`[callLLM-Z.AI] ❌ ОШИБКА: Модель "${model}" не является GLM моделью! Это значит, что детекция провайдера сбилась. Провайдер= "${provider}" но модель="${model}"`);
+        throw new Error(`Provider mismatch: model "${model}" is not a Z.AI/GLM model, but provider is set to 'zai'`);
+      }
+
+      const glmModel = model || 'GLM-4.7';
+      console.log(`[callLLM-Z.AI] ✓ Using Z.AI with model: "${glmModel}"`);
 
       const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
         method: 'POST',
@@ -614,6 +625,7 @@ Category: ${news.category || 'general'}`;
 
     const newsCountryCode = getCountryCode();
     console.log(`Tracking usage for country: ${newsCountryCode}`);
+    console.log(`[Main Handler] About to call callLLM with model="${model}" (type: ${typeof model})`);
 
     const rawResponse = await callLLM(supabase, settings as LLMSettings, prompt.system, userPrompt, model, {
       newsId,
