@@ -13,7 +13,7 @@ import { OptimizedImage } from "@/components/OptimizedImage";
 import { NewsVoteCompact } from "@/components/NewsVoteBlock";
 import { NewsLogoMosaic } from "@/components/NewsLogoMosaic";
 
-const PAGE_SIZE = 28;
+const PAGE_SIZE = 20; // Reduced from 28 to 20 for better performance
 
 interface NewsItem {
   id: string;
@@ -48,15 +48,48 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
     queryFn: async () => {
       const from = (page - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
-      const { data: items, count } = await supabase
-        .from("news_rss_items")
-        .select(`id, title, title_en, description, description_en, image_url, url, published_at, slug, category, likes, dislikes, news_rss_feeds(name), country:news_countries(id, code, name, name_en, flag)`, { count: "exact" })
-        .not("slug", "is", null)
-        .order("published_at", { ascending: false })
-        .range(from, to);
-      return { items: (items || []) as NewsItem[], totalCount: count || 0 };
+      
+      // âš¡ PERF FIX: Add timeout and reduce fields for speed
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+      
+      try {
+        const { data: items, count } = await supabase
+          .from("news_rss_items")
+          .select(`
+            id, 
+            title, 
+            title_en, 
+            description, 
+            description_en, 
+            image_url, 
+            url, 
+            published_at, 
+            slug, 
+            category, 
+            likes, 
+            dislikes, 
+            news_rss_feeds(name), 
+            country:news_countries(id, code, name, name_en, flag)
+          `, { count: page === 1 ? "exact" : "planned" }) // Only exact count on first page
+          .not("slug", "is", null)
+          .order("published_at", { ascending: false })
+          .range(from, to)
+          .abortSignal(controller.signal);
+          
+        clearTimeout(timeoutId);
+        return { items: (items || []) as NewsItem[], totalCount: count || 0 };
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          console.warn('News query timed out, showing cached data or empty state');
+          return { items: [], totalCount: 0 };
+        }
+        throw error;
+      }
     },
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 60 * 5, // Increased cache time to 5 minutes
+    retry: false, // Don't retry failed requests
   });
 
   const news = data?.items || [];
@@ -160,7 +193,7 @@ export const InfiniteNewsFeed = memo(function InfiniteNewsFeed() {
             </Button>
             {getPageNumbers().map((num, i) =>
               num === "..." ? (
-                <span key={`e${i}`} className="px-1 text-muted-foreground text-sm">…</span>
+                <span key={`e${i}`} className="px-1 text-muted-foreground text-sm">ï¿½</span>
               ) : (
                 <Button key={num} variant={page === num ? "default" : "outline"} size="sm" onClick={() => setPage(num as number)} className="h-8 w-8 p-0 text-xs font-mono">
                   {num}

@@ -67,7 +67,7 @@ const CATEGORIES = [
   { value: 'world', label: { uk: 'Світ', en: 'World', pl: 'Świat' } },
 ];
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 20; // Reduced from 30 to 20 for better performance
 
 export default function CountryNewsPage() {
   const { countryCode } = useParams<{ countryCode: string }>();
@@ -118,33 +118,49 @@ export default function CountryNewsPage() {
     queryFn: async ({ pageParam = 0 }) => {
       if (!country?.id) return { items: [], nextPage: null };
 
-      let query = supabase
-        .from('news_rss_items')
-        .select(`
-          id, title, title_en, description, description_en, 
-          content, content_en, content_hi, content_ta, content_te, content_bn,
-          url, slug, image_url, category, published_at, chat_dialogue, tweets,
-          themes, themes_en, source_scoring,
-          news_rss_feeds!inner(name)
-        `)
-        .eq('country_id', country.id)
-        .eq('is_archived', false)
-        .not('slug', 'is', null)
-        .order('published_at', { ascending: false })
-        .range(pageParam, pageParam + PAGE_SIZE - 1);
+      // ⚡ PERF FIX: Add timeout for country news queries
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      if (selectedCategory !== 'all') {
-        query = query.eq('category', selectedCategory);
+      try {
+        let query = supabase
+          .from('news_rss_items')
+          .select(`
+            id, title, title_en, description, description_en, 
+            content, content_en, content_hi, content_ta, content_te, content_bn,
+            url, slug, image_url, category, published_at, chat_dialogue, tweets,
+            themes, themes_en, source_scoring,
+            news_rss_feeds!inner(name)
+          `)
+          .eq('country_id', country.id)
+          .eq('is_archived', false)
+          .not('slug', 'is', null)
+          .order('published_at', { ascending: false })
+          .range(pageParam, pageParam + PAGE_SIZE - 1)
+          .abortSignal(controller.signal);
+
+        if (selectedCategory !== 'all') {
+          query = query.eq('category', selectedCategory);
+        }
+
+        const { data, error } = await query;
+        clearTimeout(timeoutId);
+        
+        if (error) throw error;
+
+        const items = data as unknown as NewsItem[];
+        return {
+          items,
+          nextPage: items.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null
+        };
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          console.warn('Country news query timed out');
+          return { items: [], nextPage: null };
+        }
+        throw error;
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      const items = data as unknown as NewsItem[];
-      return {
-        items,
-        nextPage: items.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null
-      };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 0,

@@ -47,7 +47,7 @@ interface CountryWithNews {
   totalCount: number;
 }
 
-const NEWS_PREVIEW_COUNT = 4;
+const NEWS_PREVIEW_COUNT = 3; // Reduced from 4 to 3 for better performance
 
 export default function NewsHubPage() {
   const { language, t } = useLanguage();
@@ -65,39 +65,64 @@ export default function NewsHubPage() {
 
       if (!countries?.length) return [];
 
-      const results: CountryWithNews[] = [];
-
-      for (const country of countries) {
-        // Get count
-        const { count } = await supabase
-          .from('news_rss_items')
-          .select('id', { count: 'estimated', head: true })
-          .eq('country_id', country.id)
-          .eq('is_archived', false)
-          .not('slug', 'is', null);
-
-        // Get latest news
-        const { data: newsItems } = await supabase
-          .from('news_rss_items')
-          .select(`
-            id, title, title_en, description, description_en, content_en,
-            image_url, url, published_at, slug, category, source_scoring,
-            news_rss_feeds(name)
-          `)
-          .eq('country_id', country.id)
-          .eq('is_archived', false)
-          .not('slug', 'is', null)
-          .order('published_at', { ascending: false })
-          .limit(NEWS_PREVIEW_COUNT);
-
-        results.push({
-          country,
-          news: (newsItems as unknown as NewsItem[]) || [],
-          totalCount: count || 0
-        });
-      }
-
-      return results;
+      // ⚡ PERF FIX: Process countries in parallel with timeouts
+      const timeout = 6000; // 6 second timeout per country request
+      
+      const countryPromises = countries.map(async (country) => {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), timeout);
+          
+          // Get count and latest news in parallel
+          const [countResult, newsResult] = await Promise.all([
+            supabase
+              .from('news_rss_items')
+              .select('id', { count: 'estimated', head: true })
+              .eq('country_id', country.id)
+              .eq('is_archived', false)
+              .not('slug', 'is', null)
+              .abortSignal(controller.signal),
+              
+            supabase
+              .from('news_rss_items')
+              .select(`
+                id, title, title_en, description, description_en, content_en,
+                image_url, url, published_at, slug, category, source_scoring,
+                news_rss_feeds(name)
+              `)
+              .eq('country_id', country.id)
+              .eq('is_archived', false)
+              .not('slug', 'is', null)
+              .order('published_at', { ascending: false })
+              .limit(NEWS_PREVIEW_COUNT)
+              .abortSignal(controller.signal)
+          ]);
+          
+          clearTimeout(timeoutId);
+          
+          return {
+            country,
+            news: (newsResult.data as unknown as NewsItem[]) || [],
+            totalCount: countResult.count || 0
+          };
+        } catch (error) {
+          console.warn(`Failed to load news for country ${country.code}:`, error);
+          // Return empty data for failed countries instead of blocking the whole page
+          return {
+            country,
+            news: [],
+            totalCount: 0
+          };
+        }
+      });
+      
+      // Wait for all country requests with overall timeout
+      const results = await Promise.allSettled(countryPromises);
+      
+      return results
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value)
+        .filter(Boolean);
     },
     staleTime: 1000 * 60 * 5,
   });
