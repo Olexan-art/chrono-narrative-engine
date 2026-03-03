@@ -380,8 +380,12 @@ serve(async (req) => {
   }
 
   try {
-    const { newsId, model } = await req.json();
+    const requestBody = await req.json();
+    const newsId = requestBody.newsId;
+    const model = requestBody.model ? String(requestBody.model).trim() : undefined;
+    
     console.log(`[serve] 📥 ПОЛУЧЕН ЗАПРОС: newsId="${newsId}", model="${model}" (type: ${typeof model})`);
+    console.log(`[serve] requestBody: ${JSON.stringify(requestBody)}`);
     console.log(`[serve] 📥 model === undefined: ${model === undefined}, model === null: ${model === null}, model length: ${model?.length}`);
 
     if (!newsId) {
