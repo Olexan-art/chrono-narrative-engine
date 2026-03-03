@@ -1,0 +1,33 @@
+name: Test Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_type:
+        description: 'Тип джобів для запуску'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - specific
+      specific_job:
+        description: 'Конкретний джоб (якщо вибрано specific)'
+        required: false
+        type: string
+
+jobs:
+  test-job:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Simple Test
+      run: |
+        echo "🚀 ПРОСТИЙ ТЕСТ WORKFLOW"
+        echo "Job type: ${{ github.event.inputs.job_type }}"
+        echo "Specific job: ${{ github.event.inputs.specific_job }}"
+        echo "✅ Крок виконано успішно"
+        date
