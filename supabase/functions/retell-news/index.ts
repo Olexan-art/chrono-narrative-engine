@@ -66,11 +66,13 @@ async function callLLM(
 
   // Auto-detect provider from model prefix to prevent mismatches
   if (overrideModel) {
-    // Direct model name matching
-    const modelLower = overrideModel.toLowerCase();
-    
-    if (modelLower.includes('deepseek')) {
+    // Direct model name matching - check DeepSeek models explicitly
+    if (overrideModel === 'deepseek-chat' || overrideModel === 'deepseek-reasoner') {
       provider = 'deepseek';
+      console.log(`[callLLM] Detected DeepSeek model: ${overrideModel}`);
+    } else if (overrideModel.toLowerCase().includes('deepseek')) {
+      provider = 'deepseek';
+      console.log(`[callLLM] Detected DeepSeek via includes: ${overrideModel}`);
     } else if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
       provider = 'gemini';
     } else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) {
@@ -86,6 +88,30 @@ async function callLLM(
 
   console.log(`[callLLM] Final provider="${provider}" for model="${model}"`);
 
+  // Safety check: if model doesn't match provider, try to re-detect
+  if (provider === 'zai' && model && !model.startsWith('GLM-') && !model.startsWith('glm-')) {
+    console.warn(`[callLLM] SAFETY: Model "${model}" doesn't match Z.AI provider, attempting re-detection`);
+    
+    if (model.includes('deepseek')) {
+      provider = 'deepseek';
+      console.log(`[callLLM] SAFETY re-detected as DeepSeek`);
+    } else if (model.includes('gpt') || model.startsWith('openai')) {
+      provider = 'openai';
+      console.log(`[callLLM] SAFETY re-detected as OpenAI`);
+    } else if (model.includes('mistral')) {
+      provider = 'mistral';
+      console.log(`[callLLM] SAFETY re-detected as Mistral`);
+    } else if (model.includes('gemini')) {
+      provider = 'gemini';
+      console.log(`[callLLM] SAFETY re-detected as Gemini`);
+    } else if (model.includes('claude')) {
+      provider = 'anthropic';
+      console.log(`[callLLM] SAFETY re-detected as Anthropic`);
+    }
+  }
+
+  console.log(`[callLLM] After safety check: provider="${provider}" for model="${model}"`);
+
   try {
     let result = '';
 
@@ -94,7 +120,9 @@ async function callLLM(
       const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
       if (!apiKey) throw new Error('Z.AI API key not configured');
 
-      console.log(`[callLLM-Z.AI] Using Z.AI with model: "${model}"`);
+      // Ensure we never send non-GLM models to Z.AI
+      const glmModel = (model && (model.startsWith('GLM-') || model.startsWith('glm-'))) ? model : 'GLM-4.7';
+      console.log(`[callLLM-Z.AI] Using Z.AI with model: "${glmModel}" (requested: "${model}")`);
 
       const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
         method: 'POST',
@@ -103,7 +131,7 @@ async function callLLM(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: model || 'GLM-4.7',
+          model: glmModel,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
