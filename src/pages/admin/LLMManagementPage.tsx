@@ -61,6 +61,7 @@ export default function LLMManagementPage() {
                     hasAnthropic: boolean;
                     hasZai: boolean;
                     hasMistral: boolean;
+                    hasDeepseek: boolean;
                     hasLovable?: boolean;
                 };
             }>('getLLMAvailability', adminPassword);
@@ -153,6 +154,7 @@ export default function LLMManagementPage() {
         { name: 'geminiV22', label: 'Gemini V2.2', keyField: 'gemini_v22_api_key', available: availability?.hasGeminiV22, color: 'bg-purple-600' },
         { name: 'mistral', label: 'Mistral', keyField: 'mistral_api_key', available: availability?.hasMistral, color: 'bg-orange-500' },
         { name: 'anthropic', label: 'Anthropic', keyField: 'anthropic_api_key', available: availability?.hasAnthropic, color: 'bg-red-500' },
+        { name: 'deepseek', label: 'DeepSeek', keyField: 'deepseek_api_key', available: availability?.hasDeepseek, color: 'bg-indigo-500' },
         { name: 'lovable', label: 'Lovable AI', keyField: null, available: true, color: 'bg-pink-500' },
     ];
 
