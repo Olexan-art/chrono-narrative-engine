@@ -102,6 +102,10 @@ export default function NewsArticlePage() {
     // ZAI models are always available (ZAI_API_KEY is set as Edge Function secret)
     ZAI_MODELS.forEach(m => models.push({ ...m, provider: 'zai' }));
 
+    // DeepSeek as fallback/default if API key is configured
+    if (settings?.hasDeepseek) {
+      LLM_MODELS.deepseek.text.forEach(m => models.push({ ...m, provider: 'deepseek' }));
+    }
 
     if (settings?.hasMistral) {
       LLM_MODELS.mistral.text.forEach(m => models.push({ ...m, provider: 'mistral' }));
@@ -117,9 +121,6 @@ export default function NewsArticlePage() {
     }
     if (settings?.hasAnthropic) {
       LLM_MODELS.anthropic.text.forEach(m => models.push({ ...m, provider: 'anthropic' }));
-    }
-    if (settings?.hasDeepseek) {
-      LLM_MODELS.deepseek.text.forEach(m => models.push({ ...m, provider: 'deepseek' }));
     }
 
     return models;

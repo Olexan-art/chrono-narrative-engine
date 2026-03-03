@@ -413,7 +413,7 @@ serve(async (req: Request) => {
                   ),
                   body:=jsonb_build_object(
                     'country_code', 'ALL',
-                    'time_range', 'last_1h',
+                    'time_range', 'last_3h',
                     'llm_model', 'deepseek-chat',
                     'job_name', 'bulk_retell_all_deepseek',
                     'trigger', 'cron'
@@ -432,7 +432,7 @@ serve(async (req: Request) => {
               true, 
               ${JSON.stringify({
             country_code: 'ALL',
-            time_range: 'last_1h',
+            time_range: 'last_3h',
             llm_model: 'deepseek-chat',
             llm_provider: 'deepseek'
           })}::jsonb
@@ -480,7 +480,7 @@ serve(async (req: Request) => {
                   ),
                   body:=jsonb_build_object(
                     'country_code', 'ALL',
-                    'time_range', 'last_1h',
+                    'time_range', 'last_3h',
                     'llm_model', 'GLM-4.7-Flash',
                     'job_name', 'bulk_retell_all_zai',
                     'trigger', 'cron'
@@ -499,7 +499,7 @@ serve(async (req: Request) => {
               true, 
               ${JSON.stringify({
             country_code: 'ALL',
-            time_range: 'last_1h',
+            time_range: 'last_3h',
             llm_model: 'GLM-4.7-Flash',
             llm_provider: 'zai'
           })}::jsonb
@@ -1187,10 +1187,10 @@ serve(async (req: Request) => {
               } else if (jobName === 'news_retelling_zai') {
                 cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/bulk-retell-news-zai', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"country_code": "us", "time_range": "last_24h", "job_name": "${jobName}", "trigger": "cron"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName === 'bulk_retell_all_deepseek') {
-                const opts = updatedConfig.processing_options || { country_code: 'ALL', time_range: 'last_1h', llm_model: 'deepseek-chat', llm_provider: 'deepseek' };
+                const opts = updatedConfig.processing_options || { country_code: 'ALL', time_range: 'last_3h', llm_model: 'deepseek-chat', llm_provider: 'deepseek' };
                 cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/bulk-retell-news-deepseek', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"country_code": "${opts.country_code}", "time_range": "${opts.time_range}", "llm_model": "${opts.llm_model}", "job_name": "${jobName}", "trigger": "cron"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName === 'bulk_retell_all_zai') {
-                const opts = updatedConfig.processing_options || { country_code: 'ALL', time_range: 'last_1h', llm_model: 'GLM-4.7-Flash', llm_provider: 'zai' };
+                const opts = updatedConfig.processing_options || { country_code: 'ALL', time_range: 'last_3h', llm_model: 'GLM-4.7-Flash', llm_provider: 'zai' };
                 cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/bulk-retell-news-zai', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"country_code": "${opts.country_code}", "time_range": "${opts.time_range}", "llm_model": "${opts.llm_model}", "job_name": "${jobName}", "trigger": "cron"}'::jsonb, timeout:=60000) as request_id;`;
               } else if (jobName === 'cache_refresh') {
                 cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/cache-pages', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "refresh-all"}'::jsonb, timeout:=60000) as request_id;`;
@@ -3035,6 +3035,54 @@ serve(async (req: Request) => {
           JSON.stringify({ success: true, analysis }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      case 'clearRetellQueue': {
+        try {
+          // Delete all retelling data older than 3 hours
+          const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+          
+          // Count how many records we'll delete
+          const { data: countData } = await supabase
+            .from('news_rss_items')
+            .select('id', { count: 'exact' })
+            .not('key_points', 'is', null)
+            .lt('updated_at', threeHoursAgo);
+
+          const recordCount = countData?.length || 0;
+
+          // Delete retelling data (key_points, themes, keywords) for items fetched before 3 hours ago
+          const { error } = await supabase
+            .from('news_rss_items')
+            .update({
+              key_points: null,
+              themes: null,
+              keywords: null
+            })
+            .not('key_points', 'is', null)
+            .lt('fetched_at', threeHoursAgo);
+
+          if (error) throw error;
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: `Видалено ${recordCount} старих переказів (раніше ніж 3 години)`,
+              cleared_count: recordCount,
+              cutoff_time: threeHoursAgo
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (e) {
+          console.error('clearRetellQueue error:', e);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: e instanceof Error ? e.message : String(e) 
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
 
       default:

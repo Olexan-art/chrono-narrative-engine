@@ -70,6 +70,9 @@ serve(async (req) => {
             if (time_range === 'last_1h') {
                 const oneHourAgo = new Date(now - 60 * 60 * 1000).toISOString();
                 query = query.gte('fetched_at', oneHourAgo);
+            } else if (time_range === 'last_3h') {
+                const threeHoursAgo = new Date(now - 3 * 60 * 60 * 1000).toISOString();
+                query = query.gte('fetched_at', threeHoursAgo);
             } else if (time_range === 'last_24h') {
                 const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();
                 query = query.gte('fetched_at', twentyFourHoursAgo);
