@@ -92,6 +92,17 @@ async function callLLM(
   try {
     let result = '';
 
+    // ============ ABSOLUTE PROVIDER FIX BEFORE ANY API CALLS ============
+    // This is a workaround because detection might fail
+    // If model contains deepseek but provider is zai, FORCE provider change
+    if (model.includes('deepseek') && provider === 'zai') {
+      console.error(`\n❌❌❌ CRITICAL BUG DETECTED ❌❌❌`);
+      console.error(`Model is "${model}" but provider is "${provider}"`);
+      console.error(`FORCING provider change to 'deepseek'\n`);
+      provider = 'deepseek';
+    }
+    // ============ END ABSOLUTE FIX ============
+
     // Z.AI provider - OpenAI-compatible API
     if (provider === 'zai') {
       const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
