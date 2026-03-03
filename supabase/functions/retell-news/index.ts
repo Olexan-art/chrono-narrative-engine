@@ -61,6 +61,9 @@ async function callLLM(
   // Determine provider from model name if override model is passed
   let provider = settings.llm_text_provider || settings.llm_provider || 'zai';
 
+  // Log for debugging
+  console.log(`[callLLM] model="${model}", overrideModel="${overrideModel}", initialProvider="${provider}"`);
+
   // Auto-detect provider from model prefix to prevent mismatches
   if (overrideModel) {
     if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
@@ -78,6 +81,8 @@ async function callLLM(
     }
   }
 
+  console.log(`[callLLM] Final provider="${provider}" for model="${model}"`);
+
   try {
     let result = '';
 
@@ -86,7 +91,7 @@ async function callLLM(
       const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
       if (!apiKey) throw new Error('Z.AI API key not configured');
 
-      console.log('Using Z.AI with model:', model || 'GLM-4.7');
+      console.log(`[callLLM-Z.AI] Using Z.AI with model: "${model}"`);
 
       const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
         method: 'POST',
