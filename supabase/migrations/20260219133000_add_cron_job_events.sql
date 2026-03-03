@@ -15,8 +15,10 @@ CREATE INDEX IF NOT EXISTS idx_cron_job_events_event_type ON cron_job_events(eve
 -- Enable RLS and create a conservative policy similar to other cron tables
 ALTER TABLE cron_job_events ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admin can insert cron events" ON cron_job_events;
 CREATE POLICY "Admin can insert cron events" ON cron_job_events
-  FOR INSERT USING (auth.jwt() ->> 'role' = 'authenticated');
+  FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Admin can select cron events" ON cron_job_events;
 CREATE POLICY "Admin can select cron events" ON cron_job_events
   FOR SELECT USING (auth.jwt() ->> 'role' = 'authenticated');

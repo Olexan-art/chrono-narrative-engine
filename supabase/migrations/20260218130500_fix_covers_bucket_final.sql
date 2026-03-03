@@ -12,20 +12,19 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- 2. Clear old policies to ensure a clean state
 DROP POLICY IF EXISTS "Public can read covers" ON storage.objects;
-DROP POLICY IF EXISTS "Service can manage covers" ON storage.objects;
 DROP POLICY IF EXISTS "Anon can manage covers" ON storage.objects;
-DROP POLICY IF EXISTS "Anyone can manage covers" ON storage.objects;
 DROP POLICY IF EXISTS "Covers full access" ON storage.objects;
 
 -- 3. Create a truly global policy for the 'covers' bucket
 -- This is necessary because the admin panel uses the 'anon' key (not Supabase Auth)
+DROP POLICY IF EXISTS "Anyone can manage covers" ON storage.objects;
 CREATE POLICY "Anyone can manage covers"
 ON storage.objects FOR ALL
 USING (bucket_id = 'covers')
 WITH CHECK (bucket_id = 'covers');
 
--- 4. Enable RLS on storage.objects (it should be on, but just in case)
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- 4. Enable RLS on storage.objects (managed by Supabase, skip)
+-- ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
 -- 5. Final verification query (this will show in the "Results" tab)
 SELECT id, name, public FROM storage.buckets WHERE id = 'covers';

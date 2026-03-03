@@ -6,14 +6,17 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'outrage_ink' AND schemaname = 'public' AND policyname = 'Anyone can insert outrage ink') THEN
+        DROP POLICY IF EXISTS "Anyone can insert outrage ink" ON public.outrage_ink;
         CREATE POLICY "Anyone can insert outrage ink" ON public.outrage_ink FOR INSERT WITH CHECK (true);
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'outrage_ink' AND schemaname = 'public' AND policyname = 'Anyone can update outrage ink') THEN
+        DROP POLICY IF EXISTS "Anyone can update outrage ink" ON public.outrage_ink;
         CREATE POLICY "Anyone can update outrage ink" ON public.outrage_ink FOR UPDATE USING (true);
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'outrage_ink' AND schemaname = 'public' AND policyname = 'Anyone can delete outrage ink') THEN
+        DROP POLICY IF EXISTS "Anyone can delete outrage ink" ON public.outrage_ink;
         CREATE POLICY "Anyone can delete outrage ink" ON public.outrage_ink FOR DELETE USING (true);
     END IF;
 END $$;

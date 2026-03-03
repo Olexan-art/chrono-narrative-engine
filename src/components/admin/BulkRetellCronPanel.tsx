@@ -49,7 +49,7 @@ function BulkRetellStats({ countryCode, password }: { countryCode: string; passw
         hour.setHours(hour.getHours() - (23 - i));
         const hourKey = hour.getHours().toString().padStart(2, '0') + ':00';
         const hourlyStats = statsData.hourly?.[i] || { processed: 0, success: 0, failed: 0 };
-        
+
         return {
             time: hourKey,
             processed: hourlyStats.processed || 0,
@@ -59,7 +59,7 @@ function BulkRetellStats({ countryCode, password }: { countryCode: string; passw
         };
     });
 
-    const successRate = statsData.all_time > 0 
+    const successRate = statsData.all_time > 0
         ? Math.round(((statsData.all_time - (statsData.failed || 0)) / statsData.all_time) * 100)
         : 0;
 
@@ -112,14 +112,14 @@ function BulkRetellStats({ countryCode, password }: { countryCode: string; passw
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={chartData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                        <XAxis 
-                                            dataKey="time" 
+                                        <XAxis
+                                            dataKey="time"
                                             stroke="#666"
                                             fontSize={11}
                                             interval={Math.floor(chartData.length / 6)}
                                         />
                                         <YAxis stroke="#666" fontSize={11} />
-                                        <Tooltip 
+                                        <Tooltip
                                             contentStyle={{
                                                 backgroundColor: 'rgba(0,0,0,0.9)',
                                                 border: '1px solid rgba(255,255,255,0.1)',
@@ -149,14 +149,14 @@ function BulkRetellStats({ countryCode, password }: { countryCode: string; passw
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={chartData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                        <XAxis 
-                                            dataKey="time" 
+                                        <XAxis
+                                            dataKey="time"
                                             stroke="#666"
                                             fontSize={11}
                                             interval={Math.floor(chartData.length / 6)}
                                         />
                                         <YAxis stroke="#666" fontSize={11} domain={[0, 100]} />
-                                        <Tooltip 
+                                        <Tooltip
                                             contentStyle={{
                                                 backgroundColor: 'rgba(0,0,0,0.9)',
                                                 border: '1px solid rgba(255,255,255,0.1)',
@@ -165,10 +165,10 @@ function BulkRetellStats({ countryCode, password }: { countryCode: string; passw
                                             }}
                                             formatter={(value) => `${value}%`}
                                         />
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="successRate" 
-                                            stroke="#a855f7" 
+                                        <Line
+                                            type="monotone"
+                                            dataKey="successRate"
+                                            stroke="#a855f7"
                                             dot={false}
                                             strokeWidth={2}
                                             name="Success %"
@@ -314,6 +314,7 @@ function BulkRetellForm({ onSuccess, password }: { onSuccess: () => void; passwo
                             const config = providerConfig as { text?: Array<{ value: string }> };
                             if (config.text?.some(m => m.value === val)) {
                                 foundProvider = providerKey;
+                                if (val.startsWith('deepseek')) foundProvider = 'deepseek';
                                 break;
                             }
                         }
@@ -325,6 +326,7 @@ function BulkRetellForm({ onSuccess, password }: { onSuccess: () => void; passwo
                     </SelectTrigger>
                     <SelectContent>
                         {[
+                            ...(LLM_MODELS.deepseek?.text || []),
                             ...(LLM_MODELS.gemini?.text || []),
                             ...(LLM_MODELS.geminiV22?.text || []),
                             ...(LLM_MODELS.openai?.text || []),
@@ -471,66 +473,65 @@ export function BulkRetellCronPanel({ password }: { password: string }) {
                         return (
                             <div key={cron.id} className="p-4 border rounded-lg space-y-3 bg-muted/20">
                                 <div className="flex items-center justify-between flex-wrap gap-4">
-<div className="flex items-center gap-3 flex-1">
-                                            <div className={`flex items-center justify-center w-12 h-12 rounded-full text-lg font-bold relative ${
-                                                cron.enabled 
-                                                    ? 'bg-green-500/20 border border-green-500/40 text-green-400' 
-                                                    : 'bg-muted/50 border border-muted-foreground/20 text-muted-foreground'
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <div className={`flex items-center justify-center w-12 h-12 rounded-full text-lg font-bold relative ${cron.enabled
+                                            ? 'bg-green-500/20 border border-green-500/40 text-green-400'
+                                            : 'bg-muted/50 border border-muted-foreground/20 text-muted-foreground'
                                             }`}>
-                                                {countryCode.toUpperCase()}
-                                                {cron.enabled && (
-                                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                                                )}
+                                            {countryCode.toUpperCase()}
+                                            {cron.enabled && (
+                                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="font-medium flex items-center gap-2">
+                                                {country?.label || countryCode.toUpperCase()}
+                                                <Badge
+                                                    variant={cron.enabled ? 'default' : 'secondary'}
+                                                    className={`text-xs ${cron.enabled ? 'bg-green-500/30 text-green-400' : ''}`}
+                                                >
+                                                    {cron.enabled ? '● Active' : '○ Paused'}
+                                                </Badge>
                                             </div>
-                                            <div className="flex-1">
-                                                <div className="font-medium flex items-center gap-2">
-                                                    {country?.label || countryCode.toUpperCase()}
-                                                    <Badge 
-                                                        variant={cron.enabled ? 'default' : 'secondary'} 
-                                                        className={`text-xs ${cron.enabled ? 'bg-green-500/30 text-green-400' : ''}`}
-                                                    >
-                                                        {cron.enabled ? '● Active' : '○ Paused'}
-                                                    </Badge>
+                                            <div className="text-sm text-muted-foreground space-y-1 mt-1">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="flex items-center gap-1">
+                                                        <Clock className="w-3 h-3" />
+                                                        Every {cron.frequency_minutes}m
+                                                    </span>
+                                                    {cron.enabled && (() => {
+                                                        const nextRun = getNextRunInfo(cron.last_run_at, cron.frequency_minutes);
+                                                        return (
+                                                            <>
+                                                                <span className="text-border">●</span>
+                                                                <span className={`font-medium ${nextRun.isOverdue ? 'text-orange-500 animate-pulse' : 'text-cyan-400'}`}>
+                                                                    {nextRun.isOverdue ? '⚠️' : '⏱️'} Next: {nextRun.text}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
-                                                <div className="text-sm text-muted-foreground space-y-1 mt-1">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="flex items-center gap-1">
-                                                            <Clock className="w-3 h-3" />
-                                                            Every {cron.frequency_minutes}m
-                                                        </span>
-                                                        {cron.enabled && (() => {
-                                                            const nextRun = getNextRunInfo(cron.last_run_at, cron.frequency_minutes);
-                                                            return (
-                                                                <>
-                                                                    <span className="text-border">●</span>
-                                                                    <span className={`font-medium ${nextRun.isOverdue ? 'text-orange-500 animate-pulse' : 'text-cyan-400'}`}>
-                                                                        {nextRun.isOverdue ? '⚠️' : '⏱️'} Next: {nextRun.text}
-                                                                    </span>
-                                                                </>
-                                                            );
-                                                        })()}
-                                                    </div>
-                                                    <div className="text-xs">
-                                                        📋 Scope: {cron.processing_options?.time_range === 'all' ? 'All unprocessed' : cron.processing_options?.time_range || 'default'}
-                                                    </div>
-                                                    <div className="text-xs">
-                                                        🤖 Model: {cron.processing_options?.llm_model}
-                                                    </div>
+                                                <div className="text-xs">
+                                                    📋 Scope: {cron.processing_options?.time_range === 'all' ? 'All unprocessed' : cron.processing_options?.time_range || 'default'}
                                                 </div>
-                                                {cron.last_run_at && (
-                                                    <div className="text-xs mt-2 flex flex-wrap items-center gap-2">
-                                                        <span className="text-muted-foreground">Last: {new Date(cron.last_run_at).toLocaleTimeString()}</span>
-                                                        {cron.last_run_status === 'success' ? (
-                                                            <CheckCircle2 className="w-3 h-3 text-green-500" />
-                                                        ) : cron.last_run_status === 'running' ? (
-                                                            <Activity className="w-3 h-3 text-blue-500 animate-spin" />
-                                                        ) : (
-                                                            <XCircle className="w-3 h-3 text-red-500" />
-                                                        )}
-                                                        {cron.last_run_details?.processed !== undefined && (
-                                                            <Badge variant="outline" className="text-xs">
-                                                                {cron.last_run_details.processed} items
-                                                            </Badge>
+                                                <div className="text-xs">
+                                                    🤖 Model: {cron.processing_options?.llm_model}
+                                                </div>
+                                            </div>
+                                            {cron.last_run_at && (
+                                                <div className="text-xs mt-2 flex flex-wrap items-center gap-2">
+                                                    <span className="text-muted-foreground">Last: {new Date(cron.last_run_at).toLocaleTimeString()}</span>
+                                                    {cron.last_run_status === 'success' ? (
+                                                        <CheckCircle2 className="w-3 h-3 text-green-500" />
+                                                    ) : cron.last_run_status === 'running' ? (
+                                                        <Activity className="w-3 h-3 text-blue-500 animate-spin" />
+                                                    ) : (
+                                                        <XCircle className="w-3 h-3 text-red-500" />
+                                                    )}
+                                                    {cron.last_run_details?.processed !== undefined && (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {cron.last_run_details.processed} items
+                                                        </Badge>
                                                     )}
                                                 </div>
                                             )}

@@ -1,6 +1,6 @@
 
 -- Table to track merged/grouped news articles
-CREATE TABLE public.news_merged_groups (
+CREATE TABLE IF NOT EXISTS public.news_merged_groups (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL,
   title_en TEXT,
@@ -13,7 +13,7 @@ CREATE TABLE public.news_merged_groups (
 );
 
 -- Junction table: which news items belong to which merged group
-CREATE TABLE public.news_merged_items (
+CREATE TABLE IF NOT EXISTS public.news_merged_items (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   group_id UUID NOT NULL REFERENCES public.news_merged_groups(id) ON DELETE CASCADE,
   news_item_id UUID NOT NULL REFERENCES public.news_rss_items(id) ON DELETE CASCADE,
@@ -27,18 +27,23 @@ ALTER TABLE public.news_merged_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.news_merged_items ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Anyone can read merged groups" ON public.news_merged_groups;
 CREATE POLICY "Anyone can read merged groups" ON public.news_merged_groups FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service can manage merged groups" ON public.news_merged_groups;
 CREATE POLICY "Service can manage merged groups" ON public.news_merged_groups FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Anyone can read merged items" ON public.news_merged_items;
 CREATE POLICY "Anyone can read merged items" ON public.news_merged_items FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service can manage merged items" ON public.news_merged_items;
 CREATE POLICY "Service can manage merged items" ON public.news_merged_items FOR ALL USING (true);
 
 -- Index for lookups
-CREATE INDEX idx_news_merged_items_news ON public.news_merged_items(news_item_id);
-CREATE INDEX idx_news_merged_items_group ON public.news_merged_items(group_id);
-CREATE INDEX idx_news_merged_groups_primary ON public.news_merged_groups(primary_news_id);
+CREATE INDEX IF NOT EXISTS idx_news_merged_items_news ON public.news_merged_items(news_item_id);
+CREATE INDEX IF NOT EXISTS idx_news_merged_items_group ON public.news_merged_items(group_id);
+CREATE INDEX IF NOT EXISTS idx_news_merged_groups_primary ON public.news_merged_groups(primary_news_id);
 
 -- Trigger for updated_at
+DROP TRIGGER IF EXISTS update_news_merged_groups_updated_at ON public.news_merged_groups;
 CREATE TRIGGER update_news_merged_groups_updated_at
   BEFORE UPDATE ON public.news_merged_groups
   FOR EACH ROW

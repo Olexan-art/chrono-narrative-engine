@@ -10,8 +10,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Zap, History, ExternalLink, Clock, RefreshCw, StopCircle, CheckCircle2, AlertCircle, Terminal, Play, Trash2, Sparkles, Loader2 } from 'lucide-react';
+import { LLM_MODELS } from '@/types/database';
 
-type Provider = 'ollama' | 'lmstudio';
+type Provider = 'ollama' | 'lmstudio' | 'deepseek';
 type ConnectionStatus = 'unknown' | 'checking' | 'connected' | 'error';
 
 export function LocalNewsPanel({ password }: { password: string }) {
@@ -225,6 +226,12 @@ export function LocalNewsPanel({ password }: { password: string }) {
         const names = rawList.map((t: any) => typeof t === 'string' ? t : (t.name || t.model || t.tag || JSON.stringify(t)));
         setModels(names);
         setStatus(names.length > 0 ? 'connected' : 'error');
+        if (names.length > 0) setSelectedModel(prev => prev || names[0]);
+        return names;
+      } else if (provider === 'deepseek') {
+        const names = LLM_MODELS.deepseek.text.map(m => m.value);
+        setModels(names);
+        setStatus('connected');
         if (names.length > 0) setSelectedModel(prev => prev || names[0]);
         return names;
       } else {
@@ -619,6 +626,21 @@ overall = round(reliability*0.45 + importance*0.30 + corroboration*0.15 + scope_
             if (!resp.ok) throw new Error(`Ollama Error ${resp.status}: ${await resp.text()}`);
             const body = await resp.json();
             responseText = body?.message?.content || JSON.stringify(body);
+          } else if (provider === 'deepseek') {
+            const res = await callEdgeFunction('retell-news', {
+              action: 'chat',
+              password,
+              data: {
+                model: selectedModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userPrompt }
+                ],
+                provider: 'deepseek'
+              }
+            }) as any;
+            if (!res?.success) throw new Error(`DeepSeek Error: ${res?.error}`);
+            responseText = res.data?.choices?.[0]?.message?.content || res.data?.content || '';
           } else {
             const resp = await fetch(`${lmStudioUrl}/chat/completions`, {
               method: 'POST',
@@ -913,6 +935,21 @@ Be factual. Do not speculate.`;
             if (!resp.ok) throw new Error(`Ollama Error ${resp.status}: ${await resp.text()}`);
             const body = await resp.json();
             responseText = body?.message?.content || JSON.stringify(body);
+          } else if (provider === 'deepseek') {
+            const res = await callEdgeFunction('retell-news', {
+              action: 'chat',
+              password,
+              data: {
+                model: selectedModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userPrompt }
+                ],
+                provider: 'deepseek'
+              }
+            }) as any;
+            if (!res?.success) throw new Error(`DeepSeek Error: ${res?.error}`);
+            responseText = res.data?.choices?.[0]?.message?.content || res.data?.content || '';
           } else {
             // LM Studio / OpenAI compat
             const requestBody: any = {
@@ -1173,14 +1210,31 @@ Be factual. Do not speculate.`;
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4 rounded-lg bg-muted/30 p-4 border border-border">
-          <RadioGroup value={provider} onValueChange={(v: any) => setProvider(v)} className="flex gap-6">
+          <RadioGroup
+            value={provider}
+            onValueChange={(v: Provider) => setProvider(v)}
+            className="flex items-center gap-4 py-1"
+          >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="ollama" id="ollama" />
-              <Label htmlFor="ollama" className="cursor-pointer font-bold">Ollama</Label>
+              <Label htmlFor="ollama" className="text-xs flex items-center gap-1 cursor-pointer">
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                Ollama
+              </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="lmstudio" id="lmstudio" />
-              <Label htmlFor="lmstudio" className="cursor-pointer font-bold">LM Studio</Label>
+              <Label htmlFor="lmstudio" className="text-xs flex items-center gap-1 cursor-pointer">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                LM Studio
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="deepseek" id="deepseek" />
+              <Label htmlFor="deepseek" className="text-xs flex items-center gap-1 cursor-pointer">
+                <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                DeepSeek
+              </Label>
             </div>
           </RadioGroup>
 
@@ -1188,9 +1242,10 @@ Be factual. Do not speculate.`;
             <div>
               <Label className="text-xs uppercase text-muted-foreground">Endpoint URL</Label>
               <Input
-                value={provider === 'ollama' ? ollamaUrl : lmStudioUrl}
-                onChange={e => provider === 'ollama' ? setOllamaUrl(e.target.value) : setLmStudioUrl(e.target.value)}
+                value={provider === 'ollama' ? ollamaUrl : (provider === 'lmstudio' ? lmStudioUrl : 'https://api.deepseek.com/v1')}
+                onChange={e => provider === 'ollama' ? setOllamaUrl(e.target.value) : (provider === 'lmstudio' ? setLmStudioUrl(e.target.value) : null)}
                 className="font-mono text-xs"
+                disabled={provider === 'deepseek'}
               />
             </div>
             <div>

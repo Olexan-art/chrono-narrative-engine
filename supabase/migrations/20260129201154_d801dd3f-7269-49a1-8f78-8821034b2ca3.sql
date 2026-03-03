@@ -1,5 +1,5 @@
 -- Create wiki_entities table for storing Wikipedia cards
-CREATE TABLE public.wiki_entities (
+CREATE TABLE IF NOT EXISTS public.wiki_entities (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   wiki_id text NOT NULL UNIQUE,
   entity_type text NOT NULL DEFAULT 'unknown', -- 'person', 'company', 'organization', 'other'
@@ -20,7 +20,7 @@ CREATE TABLE public.wiki_entities (
 );
 
 -- Create junction table for news-entity relationships
-CREATE TABLE public.news_wiki_entities (
+CREATE TABLE IF NOT EXISTS public.news_wiki_entities (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   news_item_id uuid NOT NULL REFERENCES public.news_rss_items(id) ON DELETE CASCADE,
   wiki_entity_id uuid NOT NULL REFERENCES public.wiki_entities(id) ON DELETE CASCADE,
@@ -36,35 +36,40 @@ ALTER TABLE public.wiki_entities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.news_wiki_entities ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies for wiki_entities
+DROP POLICY IF EXISTS "Anyone can read wiki entities" ON public.wiki_entities;
 CREATE POLICY "Anyone can read wiki entities" 
 ON public.wiki_entities 
 FOR SELECT 
 USING (true);
 
+DROP POLICY IF EXISTS "Service can manage wiki entities" ON public.wiki_entities;
 CREATE POLICY "Service can manage wiki entities" 
 ON public.wiki_entities 
 FOR ALL 
 USING (true);
 
 -- RLS policies for news_wiki_entities
+DROP POLICY IF EXISTS "Anyone can read news wiki entities" ON public.news_wiki_entities;
 CREATE POLICY "Anyone can read news wiki entities" 
 ON public.news_wiki_entities 
 FOR SELECT 
 USING (true);
 
+DROP POLICY IF EXISTS "Service can manage news wiki entities" ON public.news_wiki_entities;
 CREATE POLICY "Service can manage news wiki entities" 
 ON public.news_wiki_entities 
 FOR ALL 
 USING (true);
 
 -- Create indexes for better performance
-CREATE INDEX idx_wiki_entities_wiki_id ON public.wiki_entities(wiki_id);
-CREATE INDEX idx_wiki_entities_name ON public.wiki_entities(name);
-CREATE INDEX idx_wiki_entities_type ON public.wiki_entities(entity_type);
-CREATE INDEX idx_news_wiki_entities_news ON public.news_wiki_entities(news_item_id);
-CREATE INDEX idx_news_wiki_entities_entity ON public.news_wiki_entities(wiki_entity_id);
+CREATE INDEX IF NOT EXISTS idx_wiki_entities_wiki_id ON public.wiki_entities(wiki_id);
+CREATE INDEX IF NOT EXISTS idx_wiki_entities_name ON public.wiki_entities(name);
+CREATE INDEX IF NOT EXISTS idx_wiki_entities_type ON public.wiki_entities(entity_type);
+CREATE INDEX IF NOT EXISTS idx_news_wiki_entities_news ON public.news_wiki_entities(news_item_id);
+CREATE INDEX IF NOT EXISTS idx_news_wiki_entities_entity ON public.news_wiki_entities(wiki_entity_id);
 
 -- Trigger for updated_at
+DROP TRIGGER IF EXISTS update_wiki_entities_updated_at ON public.wiki_entities;
 CREATE TRIGGER update_wiki_entities_updated_at
 BEFORE UPDATE ON public.wiki_entities
 FOR EACH ROW

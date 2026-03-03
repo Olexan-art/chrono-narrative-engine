@@ -50,7 +50,7 @@ CREATE TYPE public.story_status AS ENUM (
 );
 
 -- Налаштування системи
-CREATE TABLE public.settings (
+CREATE TABLE IF NOT EXISTS public.settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   auto_generation_enabled BOOLEAN DEFAULT true,
   generation_interval_hours INTEGER DEFAULT 6,
@@ -71,7 +71,7 @@ CREATE TABLE public.settings (
 INSERT INTO public.settings (id) VALUES (gen_random_uuid());
 
 -- Томи (місяці)
-CREATE TABLE public.volumes (
+CREATE TABLE IF NOT EXISTS public.volumes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   number INTEGER NOT NULL,
   title TEXT NOT NULL,
@@ -87,7 +87,7 @@ CREATE TABLE public.volumes (
 );
 
 -- Глави (тижні)
-CREATE TABLE public.chapters (
+CREATE TABLE IF NOT EXISTS public.chapters (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   volume_id UUID REFERENCES public.volumes(id) ON DELETE CASCADE NOT NULL,
   number INTEGER NOT NULL,
@@ -103,7 +103,7 @@ CREATE TABLE public.chapters (
 );
 
 -- Частини (дні)
-CREATE TABLE public.parts (
+CREATE TABLE IF NOT EXISTS public.parts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   chapter_id UUID REFERENCES public.chapters(id) ON DELETE CASCADE NOT NULL,
   number INTEGER NOT NULL,
@@ -128,7 +128,7 @@ CREATE TABLE public.parts (
 );
 
 -- Новини
-CREATE TABLE public.news_items (
+CREATE TABLE IF NOT EXISTS public.news_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   part_id UUID REFERENCES public.parts(id) ON DELETE CASCADE,
   external_id TEXT,
@@ -146,7 +146,7 @@ CREATE TABLE public.news_items (
 );
 
 -- Генерації (історія генерацій)
-CREATE TABLE public.generations (
+CREATE TABLE IF NOT EXISTS public.generations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   part_id UUID REFERENCES public.parts(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('story', 'image', 'summary')),
@@ -169,18 +169,22 @@ END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
 -- Тригери для updated_at
+DROP TRIGGER IF EXISTS update_settings_updated_at ON public.settings;
 CREATE TRIGGER update_settings_updated_at
   BEFORE UPDATE ON public.settings
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_volumes_updated_at ON public.volumes;
 CREATE TRIGGER update_volumes_updated_at
   BEFORE UPDATE ON public.volumes
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_chapters_updated_at ON public.chapters;
 CREATE TRIGGER update_chapters_updated_at
   BEFORE UPDATE ON public.chapters
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_parts_updated_at ON public.parts;
 CREATE TRIGGER update_parts_updated_at
   BEFORE UPDATE ON public.parts
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -232,8 +236,8 @@ CREATE POLICY "Service can manage generations"
   ON public.generations FOR ALL USING (true);
 
 -- Індекси для швидкості
-CREATE INDEX idx_parts_date ON public.parts(date);
-CREATE INDEX idx_parts_status ON public.parts(status);
-CREATE INDEX idx_chapters_volume ON public.chapters(volume_id);
-CREATE INDEX idx_news_part ON public.news_items(part_id);
-CREATE INDEX idx_generations_part ON public.generations(part_id);
+CREATE INDEX IF NOT EXISTS idx_parts_date ON public.parts(date);
+CREATE INDEX IF NOT EXISTS idx_parts_status ON public.parts(status);
+CREATE INDEX IF NOT EXISTS idx_chapters_volume ON public.chapters(volume_id);
+CREATE INDEX IF NOT EXISTS idx_news_part ON public.news_items(part_id);
+CREATE INDEX IF NOT EXISTS idx_generations_part ON public.generations(part_id);

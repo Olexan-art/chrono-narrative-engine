@@ -1,5 +1,5 @@
 -- Create view_counts table for analytics
-CREATE TABLE public.view_counts (
+CREATE TABLE IF NOT EXISTS public.view_counts (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   entity_type TEXT NOT NULL CHECK (entity_type IN ('part', 'chapter', 'volume')),
   entity_id UUID NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE public.view_counts (
 );
 
 -- Create daily_views for detailed analytics
-CREATE TABLE public.daily_views (
+CREATE TABLE IF NOT EXISTS public.daily_views (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   entity_type TEXT NOT NULL CHECK (entity_type IN ('part', 'chapter', 'volume')),
   entity_id UUID NOT NULL,
@@ -35,25 +35,30 @@ ALTER TABLE public.view_counts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_views ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can read view counts
+DROP POLICY IF EXISTS "Anyone can read view counts" ON public.view_counts;
 CREATE POLICY "Anyone can read view counts" ON public.view_counts
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Anyone can read daily views" ON public.daily_views;
 CREATE POLICY "Anyone can read daily views" ON public.daily_views
   FOR SELECT USING (true);
 
 -- Service can manage view counts
+DROP POLICY IF EXISTS "Service can manage view counts" ON public.view_counts;
 CREATE POLICY "Service can manage view counts" ON public.view_counts
   FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Service can manage daily views" ON public.daily_views;
 CREATE POLICY "Service can manage daily views" ON public.daily_views
   FOR ALL USING (true);
 
 -- Create indexes for better performance
-CREATE INDEX idx_view_counts_entity ON public.view_counts(entity_type, entity_id);
-CREATE INDEX idx_daily_views_entity_date ON public.daily_views(entity_type, entity_id, view_date);
-CREATE INDEX idx_daily_views_date ON public.daily_views(view_date);
+CREATE INDEX IF NOT EXISTS idx_view_counts_entity ON public.view_counts(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_daily_views_entity_date ON public.daily_views(entity_type, entity_id, view_date);
+CREATE INDEX IF NOT EXISTS idx_daily_views_date ON public.daily_views(view_date);
 
 -- Add trigger for updated_at
+DROP TRIGGER IF EXISTS update_view_counts_updated_at ON public.view_counts;
 CREATE TRIGGER update_view_counts_updated_at
   BEFORE UPDATE ON public.view_counts
   FOR EACH ROW

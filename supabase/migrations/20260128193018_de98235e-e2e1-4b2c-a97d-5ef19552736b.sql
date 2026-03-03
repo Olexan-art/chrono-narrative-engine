@@ -1,5 +1,5 @@
 -- Table for cached pre-rendered HTML pages
-CREATE TABLE public.cached_pages (
+CREATE TABLE IF NOT EXISTS public.cached_pages (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   path TEXT NOT NULL UNIQUE,
   html TEXT NOT NULL,
@@ -14,19 +14,21 @@ CREATE TABLE public.cached_pages (
 );
 
 -- Index for fast path lookup
-CREATE INDEX idx_cached_pages_path ON public.cached_pages(path);
-CREATE INDEX idx_cached_pages_expires ON public.cached_pages(expires_at);
+CREATE INDEX IF NOT EXISTS idx_cached_pages_path ON public.cached_pages(path);
+CREATE INDEX IF NOT EXISTS idx_cached_pages_expires ON public.cached_pages(expires_at);
 
 -- Enable RLS but allow public read for bots
 ALTER TABLE public.cached_pages ENABLE ROW LEVEL SECURITY;
 
 -- Public read access (for edge functions and bots)
+DROP POLICY IF EXISTS "Cached pages are publicly readable" ON public.cached_pages;
 CREATE POLICY "Cached pages are publicly readable"
   ON public.cached_pages
   FOR SELECT
   USING (true);
 
 -- Only allow insert/update/delete via service role (edge functions)
+DROP POLICY IF EXISTS "Service role can manage cached pages" ON public.cached_pages;
 CREATE POLICY "Service role can manage cached pages"
   ON public.cached_pages
   FOR ALL
@@ -34,6 +36,7 @@ CREATE POLICY "Service role can manage cached pages"
   WITH CHECK (true);
 
 -- Auto-update updated_at trigger
+DROP TRIGGER IF EXISTS update_cached_pages_updated_at ON public.cached_pages;
 CREATE TRIGGER update_cached_pages_updated_at
   BEFORE UPDATE ON public.cached_pages
   FOR EACH ROW

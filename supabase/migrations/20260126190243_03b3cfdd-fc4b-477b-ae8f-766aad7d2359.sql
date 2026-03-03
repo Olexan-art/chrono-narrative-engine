@@ -1,6 +1,7 @@
 -- Create a function to execute SQL for cron job management
 -- This allows the edge function to query and manage cron jobs
 
+DROP FUNCTION IF EXISTS public.exec_sql(text);
 CREATE OR REPLACE FUNCTION public.exec_sql(sql text)
 RETURNS json
 LANGUAGE plpgsql

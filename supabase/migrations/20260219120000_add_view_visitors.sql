@@ -16,13 +16,15 @@ CREATE INDEX IF NOT EXISTS idx_view_visitors_visitor ON public.view_visitors(vis
 ALTER TABLE public.view_visitors ENABLE ROW LEVEL SECURITY;
 
 -- Service policy
-CREATE POLICY IF NOT EXISTS "Service can manage view_visitors"
+DROP POLICY IF EXISTS "Service can manage view_visitors" ON public.view_visitors;
+CREATE POLICY "Service can manage view_visitors"
 ON public.view_visitors
 FOR ALL
 USING (true);
 
 -- Read policy for admin panel
-CREATE POLICY IF NOT EXISTS "Anyone can read view_visitors"
+DROP POLICY IF EXISTS "Anyone can read view_visitors" ON public.view_visitors;
+CREATE POLICY "Anyone can read view_visitors"
 ON public.view_visitors
 FOR SELECT
 USING (true);

@@ -52,7 +52,7 @@ function BulkRetellStatsEnhanced({ countryCode, password }: { countryCode: strin
         hour.setHours(hour.getHours() - (23 - i));
         const hourKey = hour.getHours().toString().padStart(2, '0') + ':00';
         const hourlyStats = statsData.hourly?.[i] || { processed: 0, success: 0, failed: 0 };
-        
+
         return {
             time: hourKey,
             processed: hourlyStats.processed || 0,
@@ -62,7 +62,7 @@ function BulkRetellStatsEnhanced({ countryCode, password }: { countryCode: strin
         };
     });
 
-    const successRate = statsData.all_time > 0 
+    const successRate = statsData.all_time > 0
         ? Math.round(((statsData.all_time - (statsData.failed || 0)) / statsData.all_time) * 100)
         : 0;
 
@@ -115,14 +115,14 @@ function BulkRetellStatsEnhanced({ countryCode, password }: { countryCode: strin
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={chartData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                        <XAxis 
-                                            dataKey="time" 
+                                        <XAxis
+                                            dataKey="time"
                                             stroke="#666"
                                             fontSize={11}
                                             interval={Math.floor(chartData.length / 6)}
                                         />
                                         <YAxis stroke="#666" fontSize={11} />
-                                        <Tooltip 
+                                        <Tooltip
                                             contentStyle={{
                                                 backgroundColor: 'rgba(0,0,0,0.9)',
                                                 border: '1px solid rgba(255,255,255,0.1)',
@@ -152,14 +152,14 @@ function BulkRetellStatsEnhanced({ countryCode, password }: { countryCode: strin
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={chartData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                        <XAxis 
-                                            dataKey="time" 
+                                        <XAxis
+                                            dataKey="time"
                                             stroke="#666"
                                             fontSize={11}
                                             interval={Math.floor(chartData.length / 6)}
                                         />
                                         <YAxis stroke="#666" fontSize={11} domain={[0, 100]} />
-                                        <Tooltip 
+                                        <Tooltip
                                             contentStyle={{
                                                 backgroundColor: 'rgba(0,0,0,0.9)',
                                                 border: '1px solid rgba(255,255,255,0.1)',
@@ -168,10 +168,10 @@ function BulkRetellStatsEnhanced({ countryCode, password }: { countryCode: strin
                                             }}
                                             formatter={(value) => `${value}%`}
                                         />
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="successRate" 
-                                            stroke="#a855f7" 
+                                        <Line
+                                            type="monotone"
+                                            dataKey="successRate"
+                                            stroke="#a855f7"
                                             dot={false}
                                             strokeWidth={2}
                                             name="Success %"
@@ -196,10 +196,10 @@ function getNextRunTime(lastRunAt: string | null, frequencyMinutes: number): str
     const lastRun = new Date(lastRunAt).getTime();
     const frequencyMs = frequencyMinutes * 60 * 1000;
     const nextRun = new Date(lastRun + frequencyMs);
-    
+
     const hours = String(nextRun.getHours()).padStart(2, '0');
     const minutes = String(nextRun.getMinutes()).padStart(2, '0');
-    
+
     return `${hours}:${minutes}`;
 }
 
@@ -330,6 +330,7 @@ function BulkRetellFormEnhanced({ onSuccess, password }: { onSuccess: () => void
                             const config = providerConfig as { text?: Array<{ value: string }> };
                             if (config.text?.some(m => m.value === val)) {
                                 foundProvider = providerKey;
+                                if (val.startsWith('deepseek')) foundProvider = 'deepseek';
                                 break;
                             }
                         }
@@ -341,6 +342,7 @@ function BulkRetellFormEnhanced({ onSuccess, password }: { onSuccess: () => void
                     </SelectTrigger>
                     <SelectContent>
                         {[
+                            ...(LLM_MODELS.deepseek?.text || []),
                             ...(LLM_MODELS.gemini?.text || []),
                             ...(LLM_MODELS.geminiV22?.text || []),
                             ...(LLM_MODELS.openai?.text || []),
@@ -514,11 +516,10 @@ export function BulkRetellCronPanelEnhanced({ password }: { password: string }) 
                                     {/* Header */}
                                     <div className="flex items-start justify-between gap-4 flex-wrap">
                                         <div className="flex items-start gap-3 flex-1">
-                                            <div className={`flex items-center justify-center w-14 h-14 rounded-full text-lg font-bold relative flex-shrink-0 ${
-                                                cron.enabled 
-                                                    ? 'bg-green-500/30 border-2 border-green-500/60 text-green-300' 
-                                                    : 'bg-muted/50 border border-muted-foreground/20 text-muted-foreground'
-                                            }`}>
+                                            <div className={`flex items-center justify-center w-14 h-14 rounded-full text-lg font-bold relative flex-shrink-0 ${cron.enabled
+                                                ? 'bg-green-500/30 border-2 border-green-500/60 text-green-300'
+                                                : 'bg-muted/50 border border-muted-foreground/20 text-muted-foreground'
+                                                }`}>
                                                 {countryCode.toUpperCase()}
                                                 {cron.enabled && (
                                                     <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse border-2 border-background" />
@@ -527,8 +528,8 @@ export function BulkRetellCronPanelEnhanced({ password }: { password: string }) 
                                             <div className="flex-1">
                                                 <div className="font-semibold text-base flex items-center gap-2">
                                                     {country?.label || countryCode.toUpperCase()}
-                                                    <Badge 
-                                                        variant={cron.enabled ? 'default' : 'secondary'} 
+                                                    <Badge
+                                                        variant={cron.enabled ? 'default' : 'secondary'}
                                                         className={`text-xs font-medium ${cron.enabled ? 'bg-green-600 text-white' : ''}`}
                                                     >
                                                         {cron.enabled ? '🟢 Active' : '⚪ Paused'}
@@ -548,11 +549,10 @@ export function BulkRetellCronPanelEnhanced({ password }: { password: string }) 
                                                         {cron.enabled && (() => {
                                                             const nextRun = getNextRunInfo(cron.last_run_at, cron.frequency_minutes);
                                                             return (
-                                                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                                                                    nextRun.isOverdue 
-                                                                        ? 'bg-orange-500/20 text-orange-400 animate-pulse' 
-                                                                        : 'bg-blue-500/20 text-blue-400'
-                                                                }`}>
+                                                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${nextRun.isOverdue
+                                                                    ? 'bg-orange-500/20 text-orange-400 animate-pulse'
+                                                                    : 'bg-blue-500/20 text-blue-400'
+                                                                    }`}>
                                                                     {nextRun.isOverdue ? '⚠️' : '⏱️'} {nextRun.text}
                                                                 </span>
                                                             );
@@ -616,7 +616,7 @@ export function BulkRetellCronPanelEnhanced({ password }: { password: string }) 
                                                 <Play className="w-4 h-4 mr-1" />
                                                 Run
                                             </Button>
-                                            
+
                                             <Button
                                                 size="sm"
                                                 variant="outline"

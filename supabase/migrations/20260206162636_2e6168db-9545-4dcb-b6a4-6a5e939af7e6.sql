@@ -19,19 +19,23 @@ CREATE TABLE IF NOT EXISTS public.news_votes (
 ALTER TABLE public.news_votes ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies for news_votes
+DROP POLICY IF EXISTS "Anyone can vote on news" ON public.news_votes;
 CREATE POLICY "Anyone can vote on news" ON public.news_votes
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Users can only see their own votes" ON public.news_votes;
 CREATE POLICY "Users can only see their own votes" ON public.news_votes
   FOR SELECT USING (
     visitor_id = ((current_setting('request.headers'::text, true))::json ->> 'x-visitor-id')
     OR visitor_id IS NULL
   );
 
+DROP POLICY IF EXISTS "Users can update their own votes" ON public.news_votes;
 CREATE POLICY "Users can update their own votes" ON public.news_votes
   FOR UPDATE USING (true);
 
 -- Create view for aggregated vote counts (SECURITY DEFINER to hide individual votes)
+DROP TABLE IF EXISTS public.news_vote_counts CASCADE;
 CREATE OR REPLACE VIEW public.news_vote_counts AS
 SELECT 
   news_item_id,

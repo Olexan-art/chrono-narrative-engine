@@ -63,11 +63,6 @@ serve(async (req) => {
             .eq('country_id', country.id)
             .is('key_points', null);
 
-        // --- ПАРАЛЕЛЬНА ОБРОБКА: Z.AI бере тільки парні ID ---
-        // Використовуємо .filter() з сирим SQL-подібним виразом або post-filtering
-        // Для спрощення у Edge Function робимо post-filtering на fetched data
-
-
         if (!force_all) {
             const now = Date.now();
             if (time_range === 'last_1h') {
@@ -90,11 +85,6 @@ serve(async (req) => {
         const processItem = async (newsItem: any) => {
             try {
                 if (processedIds.has(newsItem.id)) return;
-                // Check parallel processing assignment (Z.AI handles even IDs)
-                if (newsItem.id % 2 === 1) {
-                    console.log(`[bulk-retell-news-zai] Skipping ${newsItem.id} (handled by Deepseek)`);
-                    return;
-                }
                 processedIds.add(newsItem.id);
 
                 // Виклик Z.AI API
@@ -189,7 +179,7 @@ serve(async (req) => {
 
                 console.log(`[bulk-retell-news-zai] Processing ${windowItems.length} items for ${country_code} (window ${minutes}m)`);
 
-                const queue = windowItems.filter((i: any) => i.id % 2 === 0); // Only process even IDs
+                const queue = [...windowItems];
                 const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
                     while (queue.length > 0) {
                         const item = queue.shift();
@@ -221,10 +211,9 @@ serve(async (req) => {
                 return new Response(JSON.stringify(summary), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
             }
 
-            const queue = newsItems.filter((i: any) => i.id % 2 === 0); // Only process even IDs
+            console.log(`[bulk-retell-news-zai] Processing backlog of ${newsItems.length} items with concurrency ${concurrency}`);
 
-            console.log(`[bulk-retell-news-zai] Processing backlog of ${queue.length} items with concurrency ${concurrency}`);
-
+            const queue = [...newsItems];
             const workers = Array(Math.min(concurrency, queue.length)).fill(null).map(async () => {
                 while (queue.length > 0) {
                     const item = queue.shift();

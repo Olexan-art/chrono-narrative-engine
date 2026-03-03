@@ -1,5 +1,5 @@
 -- Create table to store sitemap metadata
-CREATE TABLE public.sitemap_metadata (
+CREATE TABLE IF NOT EXISTS public.sitemap_metadata (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   sitemap_type text NOT NULL, -- 'main', 'news-us', 'news-ua', 'news-pl', 'news-in'
   country_code text, -- null for main sitemap
@@ -16,17 +16,19 @@ CREATE TABLE public.sitemap_metadata (
 ALTER TABLE public.sitemap_metadata ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can read sitemap metadata
+DROP POLICY IF EXISTS "Anyone can read sitemap metadata" ON public.sitemap_metadata;
 CREATE POLICY "Anyone can read sitemap metadata" 
 ON public.sitemap_metadata 
 FOR SELECT 
 USING (true);
 
 -- Service can manage sitemap metadata
+DROP POLICY IF EXISTS "Service can manage sitemap metadata" ON public.sitemap_metadata;
 CREATE POLICY "Service can manage sitemap metadata" 
 ON public.sitemap_metadata 
 FOR ALL 
 USING (true);
 
 -- Create index for faster lookups
-CREATE INDEX idx_sitemap_metadata_type ON public.sitemap_metadata(sitemap_type);
-CREATE INDEX idx_sitemap_metadata_country ON public.sitemap_metadata(country_code);
+CREATE INDEX IF NOT EXISTS idx_sitemap_metadata_type ON public.sitemap_metadata(sitemap_type);
+CREATE INDEX IF NOT EXISTS idx_sitemap_metadata_country ON public.sitemap_metadata(country_code);

@@ -1,5 +1,5 @@
 -- Create table for news countries/regions
-CREATE TABLE public.news_countries (
+CREATE TABLE IF NOT EXISTS public.news_countries (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   code TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE public.news_countries (
 );
 
 -- Create table for RSS feeds
-CREATE TABLE public.news_rss_feeds (
+CREATE TABLE IF NOT EXISTS public.news_rss_feeds (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   country_id UUID NOT NULL REFERENCES public.news_countries(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -27,7 +27,7 @@ CREATE TABLE public.news_rss_feeds (
 );
 
 -- Create table for RSS news items
-CREATE TABLE public.news_rss_items (
+CREATE TABLE IF NOT EXISTS public.news_rss_items (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   feed_id UUID NOT NULL REFERENCES public.news_rss_feeds(id) ON DELETE CASCADE,
   country_id UUID NOT NULL REFERENCES public.news_countries(id) ON DELETE CASCADE,
@@ -45,10 +45,10 @@ CREATE TABLE public.news_rss_items (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_news_rss_items_country_id ON public.news_rss_items(country_id);
-CREATE INDEX idx_news_rss_items_published_at ON public.news_rss_items(published_at DESC);
-CREATE INDEX idx_news_rss_items_category ON public.news_rss_items(category);
-CREATE INDEX idx_news_rss_feeds_country_id ON public.news_rss_feeds(country_id);
+CREATE INDEX IF NOT EXISTS idx_news_rss_items_country_id ON public.news_rss_items(country_id);
+CREATE INDEX IF NOT EXISTS idx_news_rss_items_published_at ON public.news_rss_items(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_news_rss_items_category ON public.news_rss_items(category);
+CREATE INDEX IF NOT EXISTS idx_news_rss_feeds_country_id ON public.news_rss_feeds(country_id);
 
 -- Enable RLS
 ALTER TABLE public.news_countries ENABLE ROW LEVEL SECURITY;
@@ -56,23 +56,31 @@ ALTER TABLE public.news_rss_feeds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.news_rss_items ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies for news_countries
+DROP POLICY IF EXISTS "Anyone can read news countries" ON public.news_countries;
 CREATE POLICY "Anyone can read news countries" ON public.news_countries FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service can manage news countries" ON public.news_countries;
 CREATE POLICY "Service can manage news countries" ON public.news_countries FOR ALL USING (true);
 
 -- RLS policies for news_rss_feeds
+DROP POLICY IF EXISTS "Anyone can read active RSS feeds" ON public.news_rss_feeds;
 CREATE POLICY "Anyone can read active RSS feeds" ON public.news_rss_feeds FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service can manage RSS feeds" ON public.news_rss_feeds;
 CREATE POLICY "Service can manage RSS feeds" ON public.news_rss_feeds FOR ALL USING (true);
 
 -- RLS policies for news_rss_items
+DROP POLICY IF EXISTS "Anyone can read RSS items" ON public.news_rss_items;
 CREATE POLICY "Anyone can read RSS items" ON public.news_rss_items FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Service can manage RSS items" ON public.news_rss_items;
 CREATE POLICY "Service can manage RSS items" ON public.news_rss_items FOR ALL USING (true);
 
 -- Add trigger for updated_at
+DROP TRIGGER IF EXISTS update_news_countries_updated_at ON public.news_countries;
 CREATE TRIGGER update_news_countries_updated_at
   BEFORE UPDATE ON public.news_countries
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_news_rss_feeds_updated_at ON public.news_rss_feeds;
 CREATE TRIGGER update_news_rss_feeds_updated_at
   BEFORE UPDATE ON public.news_rss_feeds
   FOR EACH ROW
@@ -83,4 +91,5 @@ INSERT INTO public.news_countries (code, name, name_en, name_pl, flag, sort_orde
   ('UA', 'Україна', 'Ukraine', 'Ukraina', '🇺🇦', 1),
   ('US', 'США', 'USA', 'USA', '🇺🇸', 2),
   ('PL', 'Польща', 'Poland', 'Polska', '🇵🇱', 3),
-  ('IN', 'Індія', 'India', 'Indie', '🇮🇳', 4);
+  ('IN', 'Індія', 'India', 'Indie', '🇮🇳', 4)
+ON CONFLICT (code) DO NOTHING;

@@ -14,11 +14,13 @@ create table if not exists public.topic_meta (
 alter table public.topic_meta enable row level security;
 
 -- Public read
+drop policy if exists "topic_meta_public_read" on public.topic_meta;
 create policy "topic_meta_public_read"
   on public.topic_meta for select
   using (true);
 
 -- Authenticated write (admin)
+drop policy if exists "topic_meta_service_write" on public.topic_meta;
 create policy "topic_meta_service_write"
   on public.topic_meta for all
   using (true)

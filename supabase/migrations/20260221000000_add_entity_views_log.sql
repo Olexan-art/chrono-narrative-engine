@@ -17,7 +17,6 @@ ALTER TABLE public.entity_views ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist
 DROP POLICY IF EXISTS "Service can manage entity_views" ON public.entity_views;
-DROP POLICY IF EXISTS "Anyone can read entity_views" ON public.entity_views;
 
 -- Service policy
 CREATE POLICY "Service can manage entity_views"
@@ -26,6 +25,7 @@ FOR ALL
 USING (true);
 
 -- Read policy for analytics
+DROP POLICY IF EXISTS "Anyone can read entity_views" ON public.entity_views;
 CREATE POLICY "Anyone can read entity_views"
 ON public.entity_views
 FOR SELECT

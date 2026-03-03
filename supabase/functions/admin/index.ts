@@ -68,7 +68,7 @@ serve(async (req: Request) => {
       case 'getLLMAvailability': {
         const { data: settings, error } = await supabase
           .from('settings')
-          .select('openai_api_key, gemini_api_key, gemini_v22_api_key, anthropic_api_key, zai_api_key, mistral_api_key')
+          .select('openai_api_key, gemini_api_key, gemini_v22_api_key, anthropic_api_key, zai_api_key, mistral_api_key, deepseek_api_key')
           .limit(1)
           .single();
 
@@ -81,6 +81,7 @@ serve(async (req: Request) => {
           hasAnthropic: !!settings?.anthropic_api_key || !!Deno.env.get('ANTHROPIC_API_KEY'),
           hasZai: !!settings?.zai_api_key || !!Deno.env.get('ZAI_API_KEY'),
           hasMistral: !!settings?.mistral_api_key || !!Deno.env.get('MISTRAL_API_KEY'),
+          hasDeepseek: !!settings?.deepseek_api_key || !!Deno.env.get('DEEPSEEK_API_KEY'),
         };
 
         return new Response(
@@ -142,6 +143,7 @@ serve(async (req: Request) => {
         if (data.anthropic_api_key !== undefined) updates.anthropic_api_key = data.anthropic_api_key;
         if (data.zai_api_key !== undefined) updates.zai_api_key = data.zai_api_key;
         if (data.mistral_api_key !== undefined) updates.mistral_api_key = data.mistral_api_key;
+        if (data.deepseek_api_key !== undefined) updates.deepseek_api_key = data.deepseek_api_key;
 
         const { error } = await supabase
           .from('settings')
@@ -378,6 +380,75 @@ serve(async (req: Request) => {
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         } catch (e) {
           console.error('ensureOllamaTable error:', e);
+          return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+      }
+
+      case 'ensureDeepseekCron': {
+        try {
+          const { default: postgres } = await import('npm:postgres');
+          const dbUrl = Deno.env.get('SUPABASE_DB_URL');
+          if (!dbUrl) throw new Error('SUPABASE_DB_URL not configured');
+
+          const sql = postgres(dbUrl);
+
+          // 1. Schedule the cron job if it doesn't exist
+          // NOTE: We use DO $$ ... $$ to make it idempotent in a more robust way if needed, 
+          // but unschedule + schedule is usually fine for maintenance tasks.
+          await sql`
+            SELECT cron.unschedule('invoke_bulk_retell_news_deepseek_15m');
+          `.catch(() => { }); // Ignore error if not scheduled
+
+          await sql`
+            SELECT cron.schedule(
+              'invoke_bulk_retell_news_deepseek_15m',
+              '*/15 * * * *',
+              ${`
+                select net.http_post(
+                  url:='${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-retell-news-deepseek',
+                  headers:=jsonb_build_object(
+                    'Content-Type', 'application/json',
+                    'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key')
+                  ),
+                  body:=jsonb_build_object(
+                    'country_code', 'ALL',
+                    'time_range', 'last_1h',
+                    'llm_model', 'deepseek-chat',
+                    'job_name', 'bulk_retell_all_deepseek',
+                    'trigger', 'cron'
+                  )
+                );
+              `}
+            );
+          `;
+
+          // 2. Insert into cron_job_configs for UI visibility
+          await sql`
+            INSERT INTO cron_job_configs (job_name, frequency_minutes, enabled, processing_options)
+            VALUES (
+              'bulk_retell_all_deepseek', 
+              15, 
+              true, 
+              ${JSON.stringify({
+            country_code: 'ALL',
+            time_range: 'last_1h',
+            llm_model: 'deepseek-chat',
+            llm_provider: 'deepseek'
+          })}::jsonb
+            )
+            ON CONFLICT (job_name) DO UPDATE SET 
+              frequency_minutes = EXCLUDED.frequency_minutes, 
+              enabled = EXCLUDED.enabled,
+              processing_options = COALESCE(cron_job_configs.processing_options, EXCLUDED.processing_options);
+          `;
+
+          await sql.end();
+
+          return new Response(JSON.stringify({ success: true, message: 'DeepSeek cron job initialized and scheduled' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (e) {
+          console.error('ensureDeepseekCron error:', e);
           return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }

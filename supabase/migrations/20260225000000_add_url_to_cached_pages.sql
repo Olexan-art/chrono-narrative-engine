@@ -8,7 +8,7 @@ BEGIN
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'cached_pages' AND column_name = 'url'
   ) THEN
-    ALTER TABLE public.cached_pages ADD COLUMN url TEXT;
+    ALTER TABLE public.cached_pages ADD COLUMN IF NOT EXISTS url TEXT;
     -- Fill existing rows with the full URL derived from path
     UPDATE public.cached_pages SET url = 'https://bravennow.com' || path WHERE url IS NULL;
     -- Add NOT NULL constraint after filling

@@ -1,5 +1,5 @@
 -- Create characters table
-CREATE TABLE public.characters (
+CREATE TABLE IF NOT EXISTS public.characters (
     id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
     character_id text NOT NULL UNIQUE,
     name text NOT NULL,
@@ -15,17 +15,20 @@ CREATE TABLE public.characters (
 ALTER TABLE public.characters ENABLE ROW LEVEL SECURITY;
 
 -- Create policies
+DROP POLICY IF EXISTS "Anyone can read characters" ON public.characters;
 CREATE POLICY "Anyone can read characters" 
 ON public.characters 
 FOR SELECT 
 USING (true);
 
+DROP POLICY IF EXISTS "Service can manage characters" ON public.characters;
 CREATE POLICY "Service can manage characters" 
 ON public.characters 
 FOR ALL 
 USING (true);
 
 -- Create trigger for updated_at
+DROP TRIGGER IF EXISTS update_characters_updated_at ON public.characters;
 CREATE TRIGGER update_characters_updated_at
 BEFORE UPDATE ON public.characters
 FOR EACH ROW
@@ -39,4 +42,5 @@ INSERT INTO public.characters (character_id, name, avatar, style, description) V
 ('geralt', 'Геральт із Рівії', '🐺', 'Цинічний реаліст. Говорить "Хм" та використовує прості, але влучні фрази. Згадує монстрів та контракти.', 'Відьмак, мисливець на монстрів'),
 ('jon_snow', 'Джон Сноу', '🐺', 'Благородний та похмурий. Говорить про честь, обов''язок та зиму. Часто не знає, що відповісти.', 'Лорд-командувач Нічної Варти, Король Півночі'),
 ('cartman', 'Ерік Картман', '🧢', 'Егоїстичний та маніпулятивний. Перебільшує все, скаржиться, використовує дитячий сленг. Любить їжу.', 'Школяр з South Park з великими амбіціями'),
-('scorpion', 'Скорпіон', '🦂', 'Говорить про помсту та честь бійця. Часто каже "Get over here!" та інші бойові фрази. Серйозний.', 'Ніндзя-примара з пекла, Ханзо Хасаші');
+('scorpion', 'Скорпіон', '🦂', 'Говорить про помсту та честь бійця. Часто каже "Get over here!" та інші бойові фрази. Серйозний.', 'Ніндзя-примара з пекла, Ханзо Хасаші')
+ON CONFLICT (character_id) DO NOTHING;

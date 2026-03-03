@@ -12,9 +12,15 @@ CREATE TABLE IF NOT EXISTS cron_stats (
 );
 
 -- Create index for faster queries by cron_name and executed_at
-CREATE INDEX IF NOT EXISTS idx_cron_stats_cron_name ON cron_stats(cron_name);
-CREATE INDEX IF NOT EXISTS idx_cron_stats_executed_at ON cron_stats(executed_at DESC);
-CREATE INDEX IF NOT EXISTS idx_cron_stats_cron_name_executed_at ON cron_stats(cron_name, executed_at DESC);
+DO $$ BEGIN
+  CREATE INDEX IF NOT EXISTS idx_cron_stats_cron_name ON cron_stats(cron_name);
+EXCEPTION WHEN undefined_column THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE INDEX IF NOT EXISTS idx_cron_stats_executed_at ON cron_stats(executed_at DESC);
+EXCEPTION WHEN undefined_column THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE INDEX IF NOT EXISTS idx_cron_stats_cron_name_executed_at ON cron_stats(cron_name, executed_at DESC);
+EXCEPTION WHEN undefined_column THEN NULL; END $$;
 
 -- Enable RLS
 ALTER TABLE cron_stats ENABLE ROW LEVEL SECURITY;

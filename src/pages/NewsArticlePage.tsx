@@ -77,6 +77,7 @@ export default function NewsArticlePage() {
           hasAnthropic: boolean;
           hasZai: boolean;
           hasMistral: boolean;
+          hasDeepseek: boolean;
         };
       }>('getLLMAvailability', adminPassword);
 
@@ -116,6 +117,9 @@ export default function NewsArticlePage() {
     }
     if (settings?.hasAnthropic) {
       LLM_MODELS.anthropic.text.forEach(m => models.push({ ...m, provider: 'anthropic' }));
+    }
+    if (settings?.hasDeepseek) {
+      LLM_MODELS.deepseek.text.forEach(m => models.push({ ...m, provider: 'deepseek' }));
     }
 
     return models;

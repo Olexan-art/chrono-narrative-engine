@@ -1,5 +1,5 @@
 -- Add character relationships table
-CREATE TABLE public.character_relationships (
+CREATE TABLE IF NOT EXISTS public.character_relationships (
     id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
     character_id uuid NOT NULL REFERENCES public.characters(id) ON DELETE CASCADE,
     related_character_id uuid NOT NULL REFERENCES public.characters(id) ON DELETE CASCADE,
@@ -15,17 +15,20 @@ CREATE TABLE public.character_relationships (
 ALTER TABLE public.character_relationships ENABLE ROW LEVEL SECURITY;
 
 -- Create policies
+DROP POLICY IF EXISTS "Anyone can read character relationships" ON public.character_relationships;
 CREATE POLICY "Anyone can read character relationships" 
 ON public.character_relationships 
 FOR SELECT 
 USING (true);
 
+DROP POLICY IF EXISTS "Service can manage character relationships" ON public.character_relationships;
 CREATE POLICY "Service can manage character relationships" 
 ON public.character_relationships 
 FOR ALL 
 USING (true);
 
 -- Create trigger for updated_at
+DROP TRIGGER IF EXISTS update_character_relationships_updated_at ON public.character_relationships;
 CREATE TRIGGER update_character_relationships_updated_at
 BEFORE UPDATE ON public.character_relationships
 FOR EACH ROW
@@ -33,6 +36,6 @@ EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Add dialogue statistics columns to characters table
 ALTER TABLE public.characters 
-ADD COLUMN dialogue_count integer NOT NULL DEFAULT 0,
-ADD COLUMN total_likes integer NOT NULL DEFAULT 0,
-ADD COLUMN last_dialogue_at timestamp with time zone;
+ADD COLUMN IF NOT EXISTS dialogue_count integer NOT NULL DEFAULT 0,
+ADD COLUMN IF NOT EXISTS total_likes integer NOT NULL DEFAULT 0,
+ADD COLUMN IF NOT EXISTS last_dialogue_at timestamp with time zone;

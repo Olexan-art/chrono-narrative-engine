@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, memo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  Play, Square, Loader2, CheckCircle2, XCircle, 
+import {
+  Play, Square, Loader2, CheckCircle2, XCircle,
   Calendar, Globe, RefreshCw, BarChart3, Clock,
   AlertTriangle, FileText, MessageSquare
 } from "lucide-react";
@@ -26,10 +26,11 @@ const AI_MODELS = [
   { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (точний)' },
   { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini' },
-  { value: 'openai/gpt-5', label: 'GPT-5 (потужний)' },
   { value: 'GLM-4.7', label: 'Z.AI GLM-4.7 (найпотужніший)', provider: 'zai' },
   { value: 'GLM-4.7-Flash', label: 'Z.AI GLM-4.7-Flash (швидкий)', provider: 'zai' },
   { value: 'GLM-4.5-Air', label: 'Z.AI GLM-4.5-Air (легкий)', provider: 'zai' },
+  { value: 'deepseek-chat', label: 'DeepSeek-V3 (швидкий)', provider: 'deepseek' },
+  { value: 'deepseek-reasoner', label: 'DeepSeek-R1 (міркування)', provider: 'deepseek' },
 ];
 
 interface LogEntry {
@@ -109,10 +110,10 @@ function BatchRetellPanelComponent() {
     queryKey: ['news-for-date', selectedCountry, selectedDate],
     queryFn: async () => {
       if (!selectedCountry || !selectedDate) return [];
-      
+
       const startOfDay = `${selectedDate}T00:00:00`;
       const endOfDay = `${selectedDate}T23:59:59`;
-      
+
       const { data } = await supabase
         .from('news_rss_items')
         .select('id, title, content, content_en, content_hi, content_ta, content_te, content_bn, chat_dialogue, fetched_at, country_id')
@@ -120,7 +121,7 @@ function BatchRetellPanelComponent() {
         .gte('fetched_at', startOfDay)
         .lte('fetched_at', endOfDay)
         .order('fetched_at', { ascending: true });
-      
+
       return (data || []) as NewsItem[];
     },
     enabled: !!selectedCountry && !!selectedDate
@@ -162,10 +163,10 @@ function BatchRetellPanelComponent() {
     abortControllerRef.current = new AbortController();
 
     // Filter news based on mode - use config for proper field checking
-    let newsToProcess = onlyWithoutRetell 
+    let newsToProcess = onlyWithoutRetell
       ? newsForDate.filter(n => !isNewsRetold(n, selectedCountryCode))
       : [...newsForDate]; // All news (including already retold for re-processing)
-    
+
     if (retellMode === 'every2nd') {
       newsToProcess = newsToProcess.filter((_, idx) => idx % 2 === 0);
     }
@@ -199,7 +200,7 @@ function BatchRetellPanelComponent() {
       }
 
       const news = newsToProcess[i];
-      
+
       // Step 1: Retell
       addLog('info', `[${i + 1}/${newsToProcess.length}] Переказую: ${news.title.slice(0, 60)}...`, news.id, news.title);
 
@@ -225,7 +226,7 @@ function BatchRetellPanelComponent() {
             }
             return { ...prev, processed: newProcessed, success: newSuccess };
           });
-          
+
           // Step 2: Generate dialogue if enabled
           if (generateDialogues && !abortControllerRef.current?.signal.aborted) {
             addLog('info', `💬 Генерую діалог для: ${news.title.slice(0, 50)}...`, news.id, news.title);
@@ -234,7 +235,7 @@ function BatchRetellPanelComponent() {
                 'generate-dialogue',
                 { newsId: news.id, model: selectedModel }
               );
-              
+
               if (dialogueResult.success && dialogueResult.dialogue) {
                 await supabase
                   .from('news_rss_items')
@@ -318,10 +319,10 @@ function BatchRetellPanelComponent() {
     abortControllerRef.current = new AbortController();
 
     // Filter news that are retold but don't have dialogues
-    let newsToProcess = newsForDate.filter(n => 
+    let newsToProcess = newsForDate.filter(n =>
       isNewsRetold(n, selectedCountryCode) && !hasNewsDialogue(n)
     );
-    
+
     if (retellMode === 'every2nd') {
       newsToProcess = newsToProcess.filter((_, idx) => idx % 2 === 0);
     }
@@ -429,7 +430,7 @@ function BatchRetellPanelComponent() {
     const seconds = Math.floor(ms / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
-    
+
     if (hours > 0) {
       return `${hours}г ${minutes % 60}хв`;
     } else if (minutes > 0) {
@@ -452,10 +453,10 @@ function BatchRetellPanelComponent() {
   const notRetoldCount = newsForDate.filter(n => !isNewsRetold(n, selectedCountryCode)).length;
   const retoldCount = newsForDate.filter(n => isNewsRetold(n, selectedCountryCode)).length;
   const dialogueCount = newsForDate.filter(n => hasNewsDialogue(n)).length;
-  const retoldNoDialogue = newsForDate.filter(n => 
+  const retoldNoDialogue = newsForDate.filter(n =>
     isNewsRetold(n, selectedCountryCode) && !hasNewsDialogue(n)
   ).length;
-  
+
   // Calculate actual count to process for retell
   const getRetellProcessCount = () => {
     // If onlyWithoutRetell is off, count all news; otherwise only not retold
@@ -639,7 +640,7 @@ function BatchRetellPanelComponent() {
                     🔄 Тільки новини без переказу
                   </Label>
                 </div>
-                
+
                 {/* Checkbox for generating dialogues */}
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -661,13 +662,13 @@ function BatchRetellPanelComponent() {
                     <span className="text-lg">💡</span>
                     <div className="space-y-1">
                       <p className="font-medium">
-                        {onlyWithoutRetell 
+                        {onlyWithoutRetell
                           ? `Буде оброблено: ${retellProcessCount} новин без переказу`
                           : `Буде оброблено: ${retellProcessCount} новин (включно з уже переказаними — буде оновлено)`
                         }
                       </p>
                       <p className="text-muted-foreground">
-                        {onlyWithoutRetell 
+                        {onlyWithoutRetell
                           ? `Пропущено: ${retoldCount} вже переказаних`
                           : `⚠️ Увага: переказ буде перезаписано для всіх вибраних новин!`
                         }
@@ -758,7 +759,7 @@ function BatchRetellPanelComponent() {
               </span>
             </div>
             <Progress value={stats.total > 0 ? (stats.processed / stats.total) * 100 : 0} />
-            
+
             {/* Time estimation */}
             {isRunning && stats.processed > 0 && avgTimePerItem > 0 && (
               <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-2">
@@ -776,7 +777,7 @@ function BatchRetellPanelComponent() {
                 </span>
               </div>
             )}
-            
+
             {!isRunning && stats.processed > 0 && startTime && (
               <div className="text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-2">
                 ✅ Виконано за {formatDuration(Date.now() - startTime)}
@@ -802,9 +803,9 @@ function BatchRetellPanelComponent() {
                     {getLogIcon(log.type)}
                     <span className={
                       log.type === 'error' ? 'text-destructive' :
-                      log.type === 'success' ? 'text-green-500' :
-                      log.type === 'warning' ? 'text-amber-500' :
-                      'text-foreground'
+                        log.type === 'success' ? 'text-green-500' :
+                          log.type === 'warning' ? 'text-amber-500' :
+                            'text-foreground'
                     }>
                       {log.message}
                     </span>

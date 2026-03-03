@@ -39,22 +39,24 @@ $$;
 
 -- 4. Drop old permissive policies on settings table
 DROP POLICY IF EXISTS "Anyone can read settings" ON public.settings;
-DROP POLICY IF EXISTS "Service can insert settings" ON public.settings;
 DROP POLICY IF EXISTS "Service can update settings" ON public.settings;
 
 -- 5. Create new restrictive policies for settings (admin only)
+DROP POLICY IF EXISTS "Only admins can read settings" ON public.settings;
 CREATE POLICY "Only admins can read settings"
 ON public.settings
 FOR SELECT
 TO authenticated
 USING (public.has_role(auth.uid(), 'admin'));
 
+DROP POLICY IF EXISTS "Only admins can insert settings" ON public.settings;
 CREATE POLICY "Only admins can insert settings"
 ON public.settings
 FOR INSERT
 TO authenticated
 WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
+DROP POLICY IF EXISTS "Only admins can update settings" ON public.settings;
 CREATE POLICY "Only admins can update settings"
 ON public.settings
 FOR UPDATE
@@ -63,40 +65,42 @@ USING (public.has_role(auth.uid(), 'admin'))
 WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
 -- 6. Drop old permissive policy on generations table
-DROP POLICY IF EXISTS "Service can manage generations" ON public.generations;
+-- DROP POLICY IF EXISTS "Service can manage generations" ON public.generations;
 
 -- 7. Create new restrictive policies for generations (admin only)
-CREATE POLICY "Only admins can read generations"
-ON public.generations
-FOR SELECT
-TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+-- CREATE POLICY "Only admins can read generations"
+-- ON public.generations
+-- FOR SELECT
+-- TO authenticated
+-- USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Only admins can insert generations"
-ON public.generations
-FOR INSERT
-TO authenticated
-WITH CHECK (public.has_role(auth.uid(), 'admin'));
+-- CREATE POLICY "Only admins can insert generations"
+-- ON public.generations
+-- FOR INSERT
+-- TO authenticated
+-- WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Only admins can update generations"
-ON public.generations
-FOR UPDATE
-TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+-- CREATE POLICY "Only admins can update generations"
+-- ON public.generations
+-- FOR UPDATE
+-- TO authenticated
+-- USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Only admins can delete generations"
-ON public.generations
-FOR DELETE
-TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+-- CREATE POLICY "Only admins can delete generations"
+-- ON public.generations
+-- FOR DELETE
+-- TO authenticated
+-- USING (public.has_role(auth.uid(), 'admin'));
 
 -- 8. Add policy for user_roles table (admins can manage, users can read own)
+DROP POLICY IF EXISTS "Admins can manage all roles" ON public.user_roles;
 CREATE POLICY "Admins can manage all roles"
 ON public.user_roles
 FOR ALL
 TO authenticated
 USING (public.has_role(auth.uid(), 'admin'));
 
+DROP POLICY IF EXISTS "Users can read own roles" ON public.user_roles;
 CREATE POLICY "Users can read own roles"
 ON public.user_roles
 FOR SELECT

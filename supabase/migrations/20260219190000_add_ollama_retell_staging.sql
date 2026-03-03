@@ -21,5 +21,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_ollama_retell_staging_news_model ON public.
 -- RLS: allow all (dev-only table used from anon/authenticated client)
 ALTER TABLE public.ollama_retell_staging ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "ollama_staging_allow_all" ON public.ollama_retell_staging;
 CREATE POLICY "ollama_staging_allow_all" ON public.ollama_retell_staging
   FOR ALL USING (true) WITH CHECK (true);

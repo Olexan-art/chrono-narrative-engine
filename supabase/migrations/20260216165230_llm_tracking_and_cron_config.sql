@@ -44,8 +44,10 @@ ALTER TABLE llm_usage_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cron_job_configs ENABLE ROW LEVEL SECURITY;
 
 -- Create policies (admin only)
+DROP POLICY IF EXISTS "Admin can view LLM usage logs" ON llm_usage_logs;
 CREATE POLICY "Admin can view LLM usage logs" ON llm_usage_logs
   FOR SELECT USING (auth.jwt() ->> 'role' = 'authenticated');
 
+DROP POLICY IF EXISTS "Admin can manage cron configs" ON cron_job_configs;
 CREATE POLICY "Admin can manage cron configs" ON cron_job_configs
   FOR ALL USING (auth.jwt() ->> 'role' = 'authenticated');

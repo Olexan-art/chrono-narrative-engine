@@ -21,16 +21,19 @@ DO $$
 BEGIN
     -- Policies for 'covers'
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND schemaname = 'storage' AND policyname = 'Anyone can manage covers') THEN
+        DROP POLICY IF EXISTS "Anyone can manage covers" ON storage.objects;
         CREATE POLICY "Anyone can manage covers" ON storage.objects FOR ALL USING (bucket_id = 'covers') WITH CHECK (bucket_id = 'covers');
     END IF;
 
     -- Policies for 'outrage-ink'
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND schemaname = 'storage' AND policyname = 'Anyone can manage outrage-ink') THEN
+        DROP POLICY IF EXISTS "Anyone can manage outrage-ink" ON storage.objects;
         CREATE POLICY "Anyone can manage outrage-ink" ON storage.objects FOR ALL USING (bucket_id = 'outrage-ink') WITH CHECK (bucket_id = 'outrage-ink');
     END IF;
 
     -- Public read for all buckets (if not already there)
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND schemaname = 'storage' AND policyname = 'Public read access') THEN
+        DROP POLICY IF EXISTS "Public read access" ON storage.objects;
         CREATE POLICY "Public read access" ON storage.objects FOR SELECT USING (true);
     END IF;
 END

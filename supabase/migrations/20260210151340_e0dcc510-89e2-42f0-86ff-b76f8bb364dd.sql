@@ -1,6 +1,6 @@
 
 -- Table to store narrative analysis results per entity/month
-CREATE TABLE public.narrative_analyses (
+CREATE TABLE IF NOT EXISTS public.narrative_analyses (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   entity_id UUID NOT NULL REFERENCES public.wiki_entities(id) ON DELETE CASCADE,
   year_month TEXT NOT NULL,
@@ -24,4 +24,4 @@ CREATE POLICY "Service can manage narrative analyses"
 ON public.narrative_analyses FOR ALL USING (true);
 
 -- Index for fast lookups
-CREATE INDEX idx_narrative_analyses_entity ON public.narrative_analyses(entity_id, year_month);
+CREATE INDEX IF NOT EXISTS idx_narrative_analyses_entity ON public.narrative_analyses(entity_id, year_month);

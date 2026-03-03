@@ -6,7 +6,7 @@ export type NarrativeSpecial = 'conspiratorial' | 'transmedia' | 'personal' | 'c
 export type StoryStatus = 'draft' | 'scheduled' | 'published';
 export type PartCategory = 'story' | 'just_business';
 
-export type LLMProvider = 'zai' | 'openai' | 'gemini' | 'geminiV22' | 'anthropic' | 'mistral' | 'lovable';
+export type LLMProvider = 'zai' | 'openai' | 'gemini' | 'geminiV22' | 'anthropic' | 'mistral' | 'lovable' | 'deepseek';
 
 export interface Settings {
   id: string;
@@ -33,6 +33,7 @@ export interface Settings {
   anthropic_api_key: string | null;
   zai_api_key: string | null;
   mistral_api_key: string | null;
+  deepseek_api_key: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -110,6 +111,13 @@ export const LLM_MODELS = {
       { value: 'mistral-medium-latest', label: 'Mistral Medium' },
       { value: 'mistral-small-latest', label: 'Mistral Small (швидкий)' },
       { value: 'codestral-latest', label: 'Codestral (код)' },
+    ],
+    image: []
+  },
+  deepseek: {
+    text: [
+      { value: 'deepseek-chat', label: 'DeepSeek-V3 (швидкий)' },
+      { value: 'deepseek-reasoner', label: 'DeepSeek-R1 (міркування)' },
     ],
     image: []
   }

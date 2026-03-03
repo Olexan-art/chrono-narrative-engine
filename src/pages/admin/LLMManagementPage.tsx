@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { adminAction } from '@/lib/api';
 import { useAdminStore } from '@/stores/adminStore';
-import { Activity, CheckCircle2, XCircle, TrendingUp, Clock, Key, Server, CalendarClock, Save, RotateCcw, Eye, EyeOff, Play } from 'lucide-react';
+import { Activity, CheckCircle2, XCircle, TrendingUp, Clock, Key, Server, CalendarClock, Save, RotateCcw, Eye, EyeOff, Play, RefreshCw } from 'lucide-react';
 import { LLM_MODELS, LLMProvider } from '@/types/database';
 
 interface LLMStat {
@@ -147,6 +147,25 @@ export default function LLMManagementPage() {
         }
     });
 
+    // Mutation to ensure Deepseek cron
+    const ensureDeepseekCronMutation = useMutation({
+        mutationFn: async () => {
+            if (!adminPassword) throw new Error('Admin password required');
+            return await adminAction('ensureDeepseekCron', adminPassword);
+        },
+        onSuccess: (data: any) => {
+            if (data?.success) {
+                toast.success(data.message || 'Cron job synchronized');
+                queryClient.invalidateQueries({ queryKey: ['cron-configs'] });
+            } else {
+                toast.error(data?.error || 'Synchronization failed');
+            }
+        },
+        onError: (error) => {
+            toast.error(`Sync failed: ${error}`);
+        }
+    });
+
     const providers = [
         { name: 'zai', label: 'Z.AI (GLM)', keyField: 'zai_api_key', available: availability?.hasZai, color: 'bg-blue-500' },
         { name: 'openai', label: 'OpenAI', keyField: 'openai_api_key', available: availability?.hasOpenai, color: 'bg-green-500' },
@@ -207,6 +226,7 @@ export default function LLMManagementPage() {
         else if (model.startsWith('gemini')) provider = 'gemini';
         else if (model.startsWith('claude')) provider = 'anthropic';
         else if (model.startsWith('mistral')) provider = 'mistral';
+        else if (model.startsWith('deepseek')) provider = 'deepseek';
 
         // Find existing config or create new structure
         const currentConfig = cronConfigs?.find(c => c.job_name === jobName);
@@ -516,10 +536,27 @@ export default function LLMManagementPage() {
                 <TabsContent value="cron" className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Cron Job LLM Configuration</CardTitle>
-                            <CardDescription>
-                                Configure which LLM model is used for specific automated tasks. These settings override global defaults.
-                            </CardDescription>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle>Cron Job LLM Configuration</CardTitle>
+                                    <CardDescription>
+                                        Configure which LLM model is used for specific automated tasks. These settings override global defaults.
+                                    </CardDescription>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => ensureDeepseekCronMutation.mutate()}
+                                    disabled={ensureDeepseekCronMutation.isPending}
+                                >
+                                    {ensureDeepseekCronMutation.isPending ? (
+                                        <RotateCcw className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <RefreshCw className="mr-2 h-4 w-4" />
+                                    )}
+                                    Sync Cron Jobs
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <div className="rounded-md border">

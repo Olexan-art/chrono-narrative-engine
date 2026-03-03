@@ -80,9 +80,11 @@ function htmlCacheKey(url) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request, event));
-});
+export default {
+  async fetch(request, env, ctx) {
+    return handleRequest(request, ctx);
+  }
+};
 
 // Fire-and-forget: async warm a path via ssr-render (called from waitUntil)
 async function asyncWarmPath(pathname) {
@@ -124,7 +126,7 @@ async function logBotFallback(pathname, cacheStatus, userAgent) {
   } catch (_) { /* non-critical */ }
 }
 
-async function handleRequest(request, event) {
+async function handleRequest(request, ctx) {
   const url = new URL(request.url);
   const pathname = url.pathname;
   const userAgent = request.headers.get('user-agent') || '';
@@ -303,7 +305,7 @@ async function handleRequest(request, event) {
       if (cpResp.ok) {
         const rows = await cpResp.json();
         if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
-          event.waitUntil(asyncWarmPath(pathname));
+          ctx.waitUntil(asyncWarmPath(pathname));
           let cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
           return new Response(cleaned, {
             status: 200,
@@ -370,7 +372,7 @@ async function handleRequest(request, event) {
             if (cpResp.ok) {
               const rows = await cpResp.json();
               if (rows && rows[0]?.html && rows[0].html.length >= 10000) {
-                event.waitUntil(asyncWarmPath(pathname));
+                ctx.waitUntil(asyncWarmPath(pathname));
                 let cleaned = rows[0].html.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
                 return new Response(cleaned, {
                   status: 200,
@@ -399,7 +401,7 @@ async function handleRequest(request, event) {
             if (freshResp.ok) {
               const freshHtml = await freshResp.text();
               if (freshHtml.length >= 10000) {
-                event.waitUntil(asyncWarmPath(pathname));
+                ctx.waitUntil(asyncWarmPath(pathname));
                 const stripped = freshHtml.replace(/<script(?:\s[^>]*)?>(?:(?!<\/script>)[\s\S])*?window\.location\.replace(?:(?!<\/script>)[\s\S])*?<\/script>/gi, '');
                 return new Response(stripped, {
                   status: 200,
@@ -414,7 +416,7 @@ async function handleRequest(request, event) {
               }
             }
           } catch (_) { /* ignore, fall through to SPA */ }
-          event.waitUntil(logBotFallback(pathname, 'SSR-TOO-SMALL', userAgent));
+          ctx.waitUntil(logBotFallback(pathname, 'SSR-TOO-SMALL', userAgent));
           const fb = await fetch(request);
           const r = new Response(fb.body, fb);
           r.headers.set('X-Cache', 'SSR-TOO-SMALL');
@@ -438,8 +440,8 @@ async function handleRequest(request, event) {
         });
       }
     } catch (e) {
-      event.waitUntil(logBotFallback(pathname, 'SSR-ERROR', userAgent));
-      event.waitUntil(asyncWarmPath(pathname));
+      ctx.waitUntil(logBotFallback(pathname, 'SSR-ERROR', userAgent));
+      ctx.waitUntil(asyncWarmPath(pathname));
     }
     const fallback = await fetch(request);
     const fb = new Response(fallback.body, fallback);

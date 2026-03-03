@@ -1,6 +1,6 @@
 
 -- Create wiki_entity_aliases table for alternative names
-CREATE TABLE public.wiki_entity_aliases (
+CREATE TABLE IF NOT EXISTS public.wiki_entity_aliases (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   entity_id UUID NOT NULL REFERENCES public.wiki_entities(id) ON DELETE CASCADE,
   alias TEXT NOT NULL,
@@ -9,11 +9,11 @@ CREATE TABLE public.wiki_entity_aliases (
 );
 
 -- Index for fast lookups
-CREATE INDEX idx_wiki_entity_aliases_alias ON public.wiki_entity_aliases (lower(alias));
-CREATE INDEX idx_wiki_entity_aliases_entity_id ON public.wiki_entity_aliases (entity_id);
+CREATE INDEX IF NOT EXISTS idx_wiki_entity_aliases_alias ON public.wiki_entity_aliases (lower(alias));
+CREATE INDEX IF NOT EXISTS idx_wiki_entity_aliases_entity_id ON public.wiki_entity_aliases (entity_id);
 
 -- Unique constraint to prevent duplicate aliases
-CREATE UNIQUE INDEX idx_wiki_entity_aliases_unique ON public.wiki_entity_aliases (entity_id, lower(alias));
+CREATE UNIQUE INDEX IF NOT EXISTS idx_wiki_entity_aliases_unique ON public.wiki_entity_aliases (entity_id, lower(alias));
 
 -- Enable RLS
 ALTER TABLE public.wiki_entity_aliases ENABLE ROW LEVEL SECURITY;

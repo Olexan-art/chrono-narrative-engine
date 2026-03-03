@@ -4,11 +4,13 @@ VALUES ('covers', 'covers', true, 10485760, ARRAY['image/jpeg', 'image/png', 'im
 ON CONFLICT (id) DO NOTHING;
 
 -- Allow public read access
+DROP POLICY IF EXISTS "Public can read covers" ON storage.objects;
 CREATE POLICY "Public can read covers"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'covers');
 
 -- Allow service role to manage covers
+DROP POLICY IF EXISTS "Service can manage covers" ON storage.objects;
 CREATE POLICY "Service can manage covers"
 ON storage.objects FOR ALL
 USING (bucket_id = 'covers');

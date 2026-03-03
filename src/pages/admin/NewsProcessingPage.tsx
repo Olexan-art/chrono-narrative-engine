@@ -505,6 +505,7 @@ function BulkRetellForm({ onSuccess, password }: { onSuccess: () => void; passwo
                         else if (model.startsWith('gemini')) provider = 'gemini';
                         else if (model.startsWith('claude')) provider = 'anthropic';
                         else if (model.startsWith('mistral')) provider = 'mistral';
+                        else if (model.startsWith('deepseek')) provider = 'deepseek';
                         else if (model.startsWith('GLM')) provider = 'zai';
                         setLlmProvider(provider);
                     }}
@@ -514,11 +515,13 @@ function BulkRetellForm({ onSuccess, password }: { onSuccess: () => void; passwo
                     </SelectTrigger>
                     <SelectContent>
                         {[
+                            ...(LLM_MODELS.deepseek?.text || []),
                             ...(LLM_MODELS.openai?.text || []),
                             ...(LLM_MODELS.gemini?.text || []),
                             ...(LLM_MODELS.anthropic?.text || []),
                             ...(LLM_MODELS.zai?.text || []),
                             ...(LLM_MODELS.mistral?.text || []),
+                            ...(LLM_MODELS.lovable?.text || []),
                         ].map((m: any) => (
                             <SelectItem key={m.value} value={m.value}>
                                 {m.label}
@@ -1185,6 +1188,7 @@ export default function NewsProcessingPage({ password: propPassword }: { passwor
                                     else if (model.startsWith('gemini')) provider = 'gemini';
                                     else if (model.startsWith('claude')) provider = 'anthropic';
                                     else if (model.startsWith('mistral')) provider = 'mistral';
+                                    else if (model.startsWith('deepseek')) provider = 'deepseek';
                                     else if (model.startsWith('GLM')) provider = 'zai';
                                     else provider = 'zai'; // Fallback
                                 }
@@ -1214,6 +1218,7 @@ export default function NewsProcessingPage({ password: propPassword }: { passwor
                                     ...(LLM_MODELS.geminiV22?.text || []),
                                     ...(LLM_MODELS.anthropic?.text || []),
                                     ...(LLM_MODELS.zai?.text || []),
+                                    ...(LLM_MODELS.deepseek?.text || []),
                                     ...(LLM_MODELS.mistral?.text || []),
                                     ...(LLM_MODELS.lovable?.text || []),
                                 ].map((m: any) => (
