@@ -121,6 +121,21 @@ async function callLLM(
 
   console.log(`[callLLM] After safety check: provider="${provider}" for model="${model}"`);
 
+  // FINAL SAFETY CHECK: Re-check provider matches model BEFORE API calls
+  // This is the last chance to correct provider mismatches
+  if (model?.includes('deepseek') && provider !== 'deepseek') {
+    console.warn(`[callLLM] ⚠⚠⚠ CRITICAL: model="${model}" is DeepSeek but provider="${provider}"! CORRECTING to 'deepseek' NOW!`);
+    provider = 'deepseek';
+  } else if (model?.startsWith('GLM-') && provider === 'deepseek') {
+    console.warn(`[callLLM] ⚠ model="${model}" is Z.AI/GLM but provider is 'deepseek'. Correcting to 'zai'`);
+    provider = 'zai';
+  } else if (model?.includes('gpt') && provider === 'deepseek') {
+    console.warn(`[callLLM] ⚠ model="${model}" is OpenAI/GPT but provider is 'deepseek'. Correcting to 'openai'`);
+    provider = 'openai';
+  }
+
+  console.log(`[callLLM] AFTER FINAL SAFETY CHECK: provider="${provider}" for model="${model}"`);
+
   try {
     let result = '';
 
@@ -312,22 +327,6 @@ async function callLLM(
       result = data.choices?.[0]?.message?.content || '';
     } else {
       throw new Error(`Unknown provider: ${provider}`);
-    }
-
-    // FINAL SAFETY: Re-check provider matches model before logging
-    // This catches cases where detection failed
-    if ((model?.includes('deepseek') && provider !== 'deepseek') ||
-        (model?.startsWith('GLM-') && provider === 'deepseek') ||
-        (model?.includes('gpt') && provider === 'deepseek')) {
-      console.warn(`[callLLM] ⚠ PROVIDER MISMATCH DETECTED: model="${model}" but provider="${provider}". Attempting correction...`);
-      
-      if (model?.includes('deepseek')) {
-        provider = 'deepseek';
-        console.log(`[callLLM] ✓ Corrected provider to: deepseek`);
-      } else if (model?.startsWith('GLM-')) {
-        provider = 'zai';
-        console.log(`[callLLM] ✓ Corrected provider to: zai`);
-      }
     }
 
     // Log success
