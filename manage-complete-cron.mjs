@@ -180,7 +180,11 @@ const COMPLETE_CRON_JOBS = {
 
 async function callEdgeFunction(endpoint, payload) {
   try {
-    const response = await fetch(`${supabaseUrl}/functions/v1/${endpoint}`, {
+    const url = `${supabaseUrl}/functions/v1/${endpoint}`;
+    console.log(`   📡 Calling: ${url}`);
+    
+    // Explicitly use global fetch
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -198,6 +202,7 @@ async function callEdgeFunction(endpoint, payload) {
       endpoint: endpoint
     };
   } catch (error) {
+    console.error(`   ❌ Fetch Error for ${endpoint}:`, error);
     return {
       status: 0,
       success: false,
