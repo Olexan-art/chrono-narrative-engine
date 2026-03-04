@@ -996,7 +996,7 @@ serve(async (req: Request) => {
       from cron_job_events
       where event_type='run_finished'
         and created_at >= now() - interval '${hours} hour'
-        and job_name like 'retell_%'
+        and (job_name like 'retell_%' or job_name like 'bulk_retell_%')
       group by job_name, provider, model
       order by job_name
     `;
@@ -3280,8 +3280,8 @@ serve(async (req: Request) => {
               const respData = await resp.json();
               results.zai = {
                 processed: respData.processed || 0,
-                success: respData.success || respData.processed || 0,
-                failed: respData.failed || 0,
+                success: respData.success_count || respData.success || 0,
+                failed: respData.error_count || respData.failed || 0,
                 error: resp.ok ? null : (respData.error || 'HTTP ' + resp.status)
               };
             } catch (e) {
@@ -3325,8 +3325,8 @@ serve(async (req: Request) => {
               const respData = await resp.json();
               results.deepseek = {
                 processed: respData.processed || 0,
-                success: respData.success || respData.processed || 0,
-                failed: respData.failed || 0,
+                success: respData.success_count || respData.success || 0,
+                failed: respData.error_count || respData.failed || 0,
                 error: resp.ok ? null : (respData.error || 'HTTP ' + resp.status)
               };
             } catch (e) {

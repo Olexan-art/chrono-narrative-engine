@@ -43,6 +43,7 @@ import { ContactSubmissionsPanel } from "@/components/admin/ContactSubmissionsPa
 import { CacheSettingsPanel } from "@/components/admin/CacheSettingsPanel";
 import LLMManagementPage from "@/pages/admin/LLMManagementPage";
 import NewsProcessingPage from "@/pages/admin/NewsProcessingPage";
+import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
 import { useToast } from "@/hooks/use-toast";
 import { adminAction } from "@/lib/api";
 import { useAdminStore } from "@/stores/adminStore";
@@ -783,6 +784,10 @@ export default function AdminPage() {
               <BarChart3 className="w-4 h-4" />
               Дашборд
             </TabsTrigger>
+            <TabsTrigger value="quick-dashboard" className="gap-2">
+              <Activity className="w-4 h-4 text-emerald-500" />
+              Швидкий дашборд
+            </TabsTrigger>
 
 
 
@@ -925,6 +930,27 @@ export default function AdminPage() {
 
           <TabsContent value="dashboard" className="mt-6">
             <DashboardPanel password={password} />
+          </TabsContent>
+
+          <TabsContent value="quick-dashboard" className="mt-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">Швидкий дашборд</h3>
+                  <p className="text-sm text-muted-foreground">Оптимізований огляд ключових показників</p>
+                </div>
+                <Button asChild variant="outline" size="sm" className="gap-2">
+                  <Link to="/admin/dashboard">
+                    <Activity className="w-4 h-4" />
+                    Повний дашборд
+                  </Link>
+                </Button>
+              </div>
+              
+              <div className="border rounded-lg p-4 bg-card">
+                <AdminDashboardPage />
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="llm" className="mt-6">

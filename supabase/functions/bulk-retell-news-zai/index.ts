@@ -45,21 +45,35 @@ serve(async (req) => {
 
         console.log(`[bulk-retell-news-zai] Starting for: ${country_code}, time_range: ${time_range || 'all'}`);
 
-        const { data: country, error: countryError } = await supabase
-            .from('news_countries')
-            .select('id, code')
-            .eq('code', country_code.toUpperCase())
-            .single();
+        let queryFilter;
+        let countryCode = country_code;
 
-        if (countryError || !country) {
-            throw new Error(`Country ${country_code} not found`);
+        if (country_code.toUpperCase() === 'ALL') {
+            // Process all countries
+            queryFilter = supabase
+                .from('news_rss_items')
+                .select('id, title, slug, fetched_at, content, country:news_countries(code)')
+                .is('key_points', null);
+        } else {
+            // Process specific country
+            const { data: country, error: countryError } = await supabase
+                .from('news_countries')
+                .select('id, code')
+                .eq('code', country_code.toUpperCase())
+                .single();
+
+            if (countryError || !country) {
+                throw new Error(`Country ${country_code} not found`);
+            }
+
+            queryFilter = supabase
+                .from('news_rss_items')
+                .select('id, title, slug, fetched_at, content, country:news_countries(code)')
+                .eq('country_id', country.id)
+                .is('key_points', null);
         }
 
-        let query = supabase
-            .from('news_rss_items')
-            .select('id, title, slug, fetched_at, content')
-            .eq('country_id', country.id)
-            .is('key_points', null);
+        let query = queryFilter;
 
         // --- ПАРАЛЕЛЬНА ОБРОБКА: Z.AI бере тільки парні ID ---
 
@@ -88,12 +102,12 @@ serve(async (req) => {
             throw new Error(`Failed to fetch news: ${newsError.message}`);
         }
 
-        // Filter only even IDs for Z.AI parallel processing
-        const queue = (newsItems || []).filter((i: any) => i.id % 2 === 0);
+        // Filter for Z.AI parallel processing: items where ID hash mod 2 === 0
+        const queue = (newsItems || []).filter((i: any) => parseInt(i.id.slice(-1), 16) % 2 === 0);
 
         if (queue.length === 0) {
             console.log(`[bulk-retell-news-zai] Queue empty for ${country_code}`);
-            const summary = { success: true, processed: 0, message: 'Queue empty (or all odd IDs handled by DeepSeek)' };
+            const summary = { success: true, processed: 0, message: 'Queue empty (or all handled by DeepSeek)' };
             if (job_name) {
                 await supabase.from('cron_job_configs').update({
                     last_run_at: new Date().toISOString(),
@@ -143,9 +157,10 @@ serve(async (req) => {
                         key_points: content
                     }).eq('id', newsItem.id);
 
-                    // Refresh cache
+                    // Refresh cache - get country code from news item
+                    const itemCountryCode = newsItem.country?.code || countryCode?.toLowerCase() || 'us';
                     const adminPass = Deno.env.get('ADMIN_PASSWORD');
-                    const cacheUrl = `${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(`/news/${country.code}/${newsItem.slug}`)}&password=${adminPass}`;
+                    const cacheUrl = `${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(`/news/${itemCountryCode.toLowerCase()}/${newsItem.slug}`)}&password=${adminPass}`;
                     try {
                         await fetch(cacheUrl, { headers: { 'Authorization': `Bearer ${supabaseKey}` } });
                     } catch (_) { }

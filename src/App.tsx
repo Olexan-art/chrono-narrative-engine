@@ -46,6 +46,7 @@ const NewsTopicPage = lazy(() => import("./pages/NewsTopicPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const LocalNewsPage = lazy(() => import("./pages/admin/LocalNewsPage"));
+const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
 
 import { AdminGuard } from "@/components/AdminGuard";
 
@@ -94,6 +95,7 @@ const App = () => (
                   <Route path="/chapter-legacy/:id" element={<ChapterRedirect />} />
                   <Route element={<AdminGuard />}>
                     <Route path="/admin" element={<AdminPage />} />
+                    <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
                     <Route path="/admin/part/:id" element={<EditPartPage />} />
                     <Route path="/admin/chapter/:id" element={<EditChapterPage />} />
                     <Route path="/admin/llm" element={<LLMManagementPage />} />
