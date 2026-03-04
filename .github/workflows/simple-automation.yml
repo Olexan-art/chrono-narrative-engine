@@ -34,6 +34,8 @@ jobs:
       env:
         JOB_TYPE: ${{ github.event.inputs.job_type }}
         SPECIFIC_JOB: ${{ github.event.inputs.specific_job }}
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://xvhlqxzudqmpsqrvzxfm.supabase.co' }}
+        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2aGxxeHp1ZHFtcHNxcnZ6eGZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDkzMDU5MTgsImV4cCI6MjAyNDg4MTkxOH0.SzPLgG3e8z3_xjxMvU6a8owU6zLhXj0L_lVYXwXbXl8' }}
       run: |
         echo "🚀 ПРОСТИЙ ТЕСТ АВТОМАТИЗАЦІЇ"
         echo "Job type: $JOB_TYPE"
