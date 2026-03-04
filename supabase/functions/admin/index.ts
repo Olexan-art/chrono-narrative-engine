@@ -1146,17 +1146,21 @@ serve(async (req: Request) => {
           );
         }
 
-        // 1. Update the database table
-        const updateData: any = { updated_at: new Date().toISOString() };
-        if (config.processing_options !== undefined) updateData.processing_options = config.processing_options;
-        if (config.frequency_minutes !== undefined) updateData.frequency_minutes = config.frequency_minutes;
-        if (config.enabled !== undefined) updateData.enabled = config.enabled;
-        if (config.countries !== undefined) updateData.countries = config.countries;
+        // 1. Prepare the update/insert data
+        const now = new Date().toISOString();
+        const upsertData: any = { 
+          job_name: jobName,
+          updated_at: now
+        };
+        if (config.processing_options !== undefined) upsertData.processing_options = config.processing_options;
+        if (config.frequency_minutes !== undefined) upsertData.frequency_minutes = config.frequency_minutes;
+        if (config.enabled !== undefined) upsertData.enabled = config.enabled;
+        if (config.countries !== undefined) upsertData.countries = config.countries;
 
+        // Use upsert to handle both insert and update
         const { error } = await supabase
           .from('cron_job_configs')
-          .update(updateData)
-          .eq('job_name', jobName);
+          .upsert(upsertData, { onConflict: 'job_name' });
 
         if (error) throw error;
 
