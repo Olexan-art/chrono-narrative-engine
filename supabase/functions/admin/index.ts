@@ -972,6 +972,39 @@ serve(async (req: Request) => {
         }
       }
 
+      // provide aggregated retell statistics broken down by provider/model for a recent window
+      case 'getRetellStats': {
+        try {
+          const hours = (data && typeof data.hours === 'number') ? data.hours : 5;
+          const sql = `
+      select job_name,
+             coalesce(details->>'provider','<unknown>') as provider,
+             coalesce(details->>'llm_model', details->>'model','') as model,
+             sum(
+               coalesce(
+                 nullif(details->>'success_count','')::int,
+                 nullif(details->>'processed','')::int,
+                 0
+               )
+             ) as news_retold,
+             min(created_at) as first_run,
+             max(created_at) as last_run
+      from cron_job_events
+      where event_type='run_finished'
+        and created_at >= now() - interval '${hours} hour'
+        and job_name like 'retell_%'
+      group by job_name, provider, model
+      order by job_name;
+    `;
+          const { data: rows, error } = await supabase.rpc('exec_sql', { sql });
+          if (error) throw error;
+          return new Response(JSON.stringify({ success: true, rows }), { headers:{...corsHeaders,'Content-Type':'application/json'} });
+        } catch (e) {
+          console.error('getRetellStats failed:', e);
+          return new Response(JSON.stringify({ success:false, error: e instanceof Error ? e.message : String(e)}), { status:500, headers:{...corsHeaders,'Content-Type':'application/json'} });
+        }
+      }
+
       // Directly invoke the cache-pages function (for manual cache warm from Dashboard)
       case 'triggerCacheRefresh': {
         // filter values: 'recent' (last 24h), 'news' (7d), 'wiki', 'all'

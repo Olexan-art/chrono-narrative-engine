@@ -410,6 +410,71 @@ function BulkRetellStats({ countryCode, password }: { countryCode: string; passw
     );
 }
 
+// Manual refresh report of retell jobs broken down by LLM provider/model
+function RetellProviderReport({ password }: { password: string }) {
+    const [rows, setRows] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    const load = async () => {
+        setLoading(true);
+        try {
+            const resp = await callEdgeFunction('admin', {
+                action: 'getRetellStats',
+                password,
+                data: { hours: 5 }
+            }) as { success: boolean; rows?: any[]; error?: string };
+
+            if (!resp.success) throw new Error(resp.error);
+            setRows(resp.rows || []);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : String(err));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Card className="mt-4">
+            <CardHeader className="flex justify-between items-center">
+                <CardTitle>Retell stats (last 5 h)</CardTitle>
+                <Button size="sm" onClick={load} disabled={loading}>
+                    {loading ? 'Loading…' : 'Refresh'}
+                </Button>
+            </CardHeader>
+            <CardContent>
+                {rows.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No data yet. Click refresh.</div>
+                ) : (
+                    <table className="w-full text-xs">
+                        <thead>
+                            <tr>
+                                <th className="text-left">Job</th>
+                                <th className="text-left">Provider</th>
+                                <th className="text-left">Model</th>
+                                <th className="text-right">Count</th>
+                                <th className="text-right">First</th>
+                                <th className="text-right">Last</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.map((r, i) => (
+                                <tr key={i} className="border-t">
+                                    <td>{r.job_name}</td>
+                                    <td>{r.provider}</td>
+                                    <td>{r.model}</td>
+                                    <td className="text-right">{r.news_retold}</td>
+                                    <td className="text-right">{new Date(r.first_run).toLocaleTimeString()}</td>
+                                    <td className="text-right">{new Date(r.last_run).toLocaleTimeString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
 // Helper component for creating new bulk retell crons
 function BulkRetellForm({ onSuccess, password }: { onSuccess: () => void; password: string }) {
     const [countryCode, setCountryCode] = useState('');
@@ -1332,6 +1397,9 @@ export default function NewsProcessingPage({ password: propPassword }: { passwor
 
             {/* Bulk News Retelling - Use Enhanced Component */}
             <BulkRetellCronPanelEnhanced password={password || ''} />
+
+            {/* Retell provider breakdown report (manual refresh) */}
+            <RetellProviderReport password={password || ''} />
 
             {/* Diagnostics Section */}
             <DiagnosticInfo password={password} />
