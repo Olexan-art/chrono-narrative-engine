@@ -45,7 +45,27 @@ serve(async (req) => {
 
         console.log(`[bulk-retell-news-zai] Starting for: ${country_code}, time_range: ${time_range || 'all'}`);
 
-        let queryFilter;
+        // Get Z.AI API key from settings or env
+        const { data: settings } = await supabase
+            .from('settings')
+            .select('zai_api_key')
+            .single();
+        
+        const zaiApiKey = settings?.zai_api_key || Deno.env.get('ZAI_API_KEY');
+        if (!zaiApiKey) {
+            const errorMsg = 'ZAI_API_KEY not configured in settings or environment variables';
+            console.error(errorMsg);
+            return new Response(JSON.stringify({ 
+                error: errorMsg,
+                processed: 0,
+                success: 0,
+                errors: 1,
+                details: ['Z.AI API key missing']
+            }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+        }
         let countryCode = country_code;
 
         if (country_code.toUpperCase() === 'ALL') {
@@ -125,9 +145,6 @@ serve(async (req) => {
 
         const processItem = async (newsItem: any) => {
             try {
-                const zaiKey = Deno.env.get('ZAI_API_KEY');
-                if (!zaiKey) throw new Error('ZAI_API_KEY not configured');
-
                 const systemPrompt = `You are a professional journalist. Summarize news into 3-5 key points.`;
 
                 const userPrompt = `Title: ${newsItem.title}\n\nContent:\n${newsItem.content || newsItem.title}\n\nProvide 3-5 key points.`;
@@ -135,7 +152,7 @@ serve(async (req) => {
                 const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${zaiKey}`,
+                        'Authorization': `Bearer ${zaiApiKey}`,
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
