@@ -3421,12 +3421,11 @@ serve(async (req: Request) => {
               .gte('created_at', ranges.h24.toISOString())
           ]);
 
-          // Get current total queue size
+          // Get current total queue size (all items without key_points)
           const { count: currentQueueSize } = await supabase
             .from('news_rss_items')
-            .select('id', { count: 'exact' })
-            .is('key_points', null)
-            .gte('fetched_at', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString());
+            .select('id', { count: 'exact', head: true })
+            .is('key_points', null);
 
           // Queue processing events from last 24h
           const { data: queueEvents } = await supabase

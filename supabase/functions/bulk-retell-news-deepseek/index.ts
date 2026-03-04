@@ -148,7 +148,11 @@ serve(async (req) => {
         }
 
         // For parallel processing with Z.AI: DeepSeek handles items where ID hash mod 2 === 1
-        const filteredItems = newsItems.filter((item) => parseInt(item.id.slice(-1), 16) % 2 === 1);
+        const filteredItems = (newsItems || []).filter((item) => {
+            const lastChar = item.id.slice(-1);
+            const val = parseInt(lastChar, 16);
+            return isNaN(val) ? false : val % 2 === 1;
+        });
         console.log(`Processing ${filteredItems.length} news items (ID-based odd split) out of ${newsItems.length} total`);
 
         let successCount = 0;

@@ -97,9 +97,7 @@ serve(async (req) => {
 
         // --- ПАРАЛЕЛЬНА ОБРОБКА: Z.AI бере тільки парні ID ---
 
-        if (!force_all) {
-            const now = Date.now();
-        if (!force_all) {
+        if (!force_all && time_range && time_range !== 'all') {
             const now = Date.now();
             if (time_range === 'last_1h') {
                 const oneHourAgo = new Date(now - 60 * 60 * 1000).toISOString();
@@ -112,7 +110,6 @@ serve(async (req) => {
                 query = query.gte('fetched_at', twentyFourHoursAgo);
             }
         }
-        }
 
         query = query.order('fetched_at', { ascending: false });
 
@@ -123,7 +120,13 @@ serve(async (req) => {
         }
 
         // Filter for Z.AI parallel processing: items where ID hash mod 2 === 0
-        const queue = (newsItems || []).filter((i: any) => parseInt(i.id.slice(-1), 16) % 2 === 0);
+        const queue = (newsItems || []).filter((i: any) => {
+            // Take last decimal digit of ID (UUID usually ends with hex, but if it ends with non-hex... unlikely)
+            // Fallback to index-based if something is weird, but let's try a more robust string hash
+            const lastChar = i.id.slice(-1);
+            const val = parseInt(lastChar, 16);
+            return isNaN(val) ? true : val % 2 === 0;
+        });
 
         if (queue.length === 0) {
             console.log(`[bulk-retell-news-zai] Queue empty for ${country_code}`);
@@ -207,6 +210,8 @@ serve(async (req) => {
             processed: (newsItems || []).length,
             success_count: successCount,
             error_count: errorCount,
+            failed: errorCount,
+            total: (newsItems || []).length,
             errors: errors.slice(0, 5),
             country_code,
             provider: 'zai'
