@@ -422,11 +422,18 @@ function RetellProviderReport({ password }: { password: string }) {
                 action: 'getRetellStats',
                 password,
                 data: { hours: 5 }
-            }) as { success: boolean; rows?: any[]; error?: string };
+            }) as { success: boolean; rows?: any[]; error?: any };
 
-            if (!resp.success) throw new Error(resp.error);
+            console.log('getRetellStats response:', resp);
+            
+            if (!resp.success) {
+                const errorMsg = typeof resp.error === 'string' ? resp.error : JSON.stringify(resp.error);
+                throw new Error(errorMsg);
+            }
             setRows(resp.rows || []);
+            toast.success(`Завантажено ${resp.rows?.length || 0} рядків`);
         } catch (err) {
+            console.error('getRetellStats error:', err);
             toast.error(err instanceof Error ? err.message : String(err));
         } finally {
             setLoading(false);

@@ -996,12 +996,15 @@ serve(async (req: Request) => {
       group by job_name, provider, model
       order by job_name;
     `;
+          console.log('Executing SQL:', sql);
           const { data: rows, error } = await supabase.rpc('exec_sql', { sql });
+          console.log('exec_sql result - rows:', rows, 'error:', error);
           if (error) throw error;
-          return new Response(JSON.stringify({ success: true, rows }), { headers:{...corsHeaders,'Content-Type':'application/json'} });
+          return new Response(JSON.stringify({ success: true, rows: rows || [] }), { headers:{...corsHeaders,'Content-Type':'application/json'} });
         } catch (e) {
           console.error('getRetellStats failed:', e);
-          return new Response(JSON.stringify({ success:false, error: e instanceof Error ? e.message : String(e)}), { status:500, headers:{...corsHeaders,'Content-Type':'application/json'} });
+          const errorMsg = e instanceof Error ? e.message : String(e);
+          return new Response(JSON.stringify({ success:false, error: errorMsg}), { status:500, headers:{...corsHeaders,'Content-Type':'application/json'} });
         }
       }
 
