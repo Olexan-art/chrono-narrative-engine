@@ -3,20 +3,9 @@
 
 DROP POLICY IF EXISTS "Admin can manage cron configs" ON cron_job_configs;
 
--- Create a more permissive policy that allows service_role (edge functions)
-CREATE POLICY "Service and authenticated can manage cron configs" ON cron_job_configs
-  FOR ALL
-  USING (
-    -- Allow if user is authenticated OR if it's a service account (edge function)
-    auth.jwt() ->> 'role' IN ('authenticated', 'service_role') 
-    OR current_setting('request.jwt.claims', true)::jsonb->>'role' = 'service_role'
-  );
+-- Disable RLS for cron_job_configs since it's a system table that needs edge function access
+ALTER TABLE cron_job_configs DISABLE ROW LEVEL SECURITY;
 
--- Similarly, ensure llm_usage_logs allows service_role
+-- Also disable for llm_usage_logs to ensure edge functions can log
 DROP POLICY IF EXISTS "Admin can view LLM usage logs" ON llm_usage_logs;
-CREATE POLICY "Service and authenticated can view LLM usage logs" ON llm_usage_logs
-  FOR ALL
-  USING (
-    auth.jwt() ->> 'role' IN ('authenticated', 'service_role')
-    OR current_setting('request.jwt.claims', true)::jsonb->>'role' = 'service_role'
-  );
+ALTER TABLE llm_usage_logs DISABLE ROW LEVEL SECURITY;

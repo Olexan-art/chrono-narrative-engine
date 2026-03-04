@@ -1161,43 +1161,11 @@ serve(async (req: Request) => {
           processing_options: config.processing_options || null
         };
 
-        // Use SQL directly to bypass RLS issues
-        const insertSql = `
-          INSERT INTO cron_job_configs (job_name, enabled, frequency_minutes, countries, processing_options, created_at, updated_at)
-          VALUES ('${jobName}', ${updateData.enabled}, ${updateData.frequency_minutes}, ${updateData.countries ? `'${JSON.stringify(updateData.countries)}'::jsonb` : 'null'}, ${updateData.processing_options ? `'${JSON.stringify(updateData.processing_options)}'::jsonb` : 'null'}, '${new Date().toISOString()}', '${now}')
-          ON CONFLICT (job_name) DO UPDATE SET
-            enabled = ${updateData.enabled},
-            frequency_minutes = ${updateData.frequency_minutes},
-            countries = ${updateData.countries ? `'${JSON.stringify(updateData.countries)}'::jsonb` : 'null'},
-            processing_options = ${updateData.processing_options ? `'${JSON.stringify(updateData.processing_options)}'::jsonb` : 'null'},
-            updated_at = '${now}'
-          RETURNING *;
-        `;
-        
-        console.log('Executing SQL:', insertSql);
-        let upsertedData: any[] = [];
-        let error: any = null;
-        
-        try {
-          // Try using the exec_sql RPC if available
-          const rpcResult = await supabase.rpc('exec_sql', { sql: insertSql });
-          if (rpcResult.error) {
-            console.error('exec_sql RPC error:', rpcResult.error);
-            error = rpcResult.error;
-          } else {
-            console.log('exec_sql RPC success:', rpcResult.data);
-            upsertedData = rpcResult.data || [];
-          }
-        } catch (rpcErr) {
-          console.log('exec_sql RPC not available, trying upsert:', rpcErr);
-          // Fallback to upsert if exec_sql is not available
-          const upsertResult = await supabase
-            .from('cron_job_configs')
-            .upsert([updateData]);
-          
-          error = upsertResult.error;
-          upsertedData = upsertResult.data || [];
-        }
+        // Use upsert to handle both insert and update
+        console.log('Upserting cron config:', JSON.stringify(updateData));
+        const { error, data: upsertedData } = await supabase
+          .from('cron_job_configs')
+          .upsert([updateData]);
 
         console.log(`Upsert result:`, {
           error: error ? { message: error.message, code: error.code } : null,
