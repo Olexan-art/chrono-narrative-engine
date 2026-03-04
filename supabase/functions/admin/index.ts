@@ -40,6 +40,10 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
+    console.log(`Admin request received`);
+    console.log(`SUPABASE_URL: ${Deno.env.get('SUPABASE_URL') ? 'set' : 'NOT SET'}`);
+    console.log(`SUPABASE_SERVICE_ROLE_KEY: ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? 'set' : 'NOT SET'}`);
+
     console.log(`Admin action: ${action}`);
 
     switch (action) {
@@ -1159,17 +1163,23 @@ serve(async (req: Request) => {
 
         // Use upsert to handle both insert and update
         // The upsert will insert if not exists, update if exists
-        console.log('Upserting cron config:', updateData);
-        const { error, data: upsertedData } = await supabase
+        console.log('Upserting cron config:', JSON.stringify(updateData));
+        const upsertResult = await supabase
           .from('cron_job_configs')
           .upsert([updateData]);
+        
+        const { error, data: upsertedData } = upsertResult;
+
+        console.log(`Upsert result:`, {
+          error: error ? { message: error.message, code: error.code, details: error.details } : null,
+          dataLength: upsertedData ? upsertedData.length : 0
+        });
 
         if (error) {
-          console.error('Upsert error:', error);
+          console.error('Upsert failed:', error.message);
           throw error;
         }
-        
-        console.log('Upserted data:', upsertedData);
+
 
         // 2. Sync with pg_cron
         // Only if enabled/frequency changes, or if we want to ensure it's always in sync
