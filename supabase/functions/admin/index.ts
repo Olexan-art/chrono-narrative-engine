@@ -994,7 +994,7 @@ serve(async (req: Request) => {
         and created_at >= now() - interval '${hours} hour'
         and job_name like 'retell_%'
       group by job_name, provider, model
-      order by job_name;
+      order by job_name
     `;
           console.log('Executing SQL:', sql);
           const { data: rows, error } = await supabase.rpc('exec_sql', { sql });
