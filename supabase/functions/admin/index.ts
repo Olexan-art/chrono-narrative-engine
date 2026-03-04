@@ -1146,23 +1146,30 @@ serve(async (req: Request) => {
           );
         }
 
-        // 1. Prepare the update/insert data
+        // 1. Prepare the data
         const now = new Date().toISOString();
-        const upsertData: any = { 
+        const updateData: any = { 
           job_name: jobName,
-          updated_at: now
+          updated_at: now,
+          enabled: config.enabled !== undefined ? config.enabled : true,
+          frequency_minutes: config.frequency_minutes || 60,
+          countries: config.countries || null,
+          processing_options: config.processing_options || null
         };
-        if (config.processing_options !== undefined) upsertData.processing_options = config.processing_options;
-        if (config.frequency_minutes !== undefined) upsertData.frequency_minutes = config.frequency_minutes;
-        if (config.enabled !== undefined) upsertData.enabled = config.enabled;
-        if (config.countries !== undefined) upsertData.countries = config.countries;
 
         // Use upsert to handle both insert and update
-        const { error } = await supabase
+        // The upsert will insert if not exists, update if exists
+        console.log('Upserting cron config:', updateData);
+        const { error, data: upsertedData } = await supabase
           .from('cron_job_configs')
-          .upsert(upsertData, { onConflict: 'job_name' });
+          .upsert([updateData]);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Upsert error:', error);
+          throw error;
+        }
+        
+        console.log('Upserted data:', upsertedData);
 
         // 2. Sync with pg_cron
         // Only if enabled/frequency changes, or if we want to ensure it's always in sync
