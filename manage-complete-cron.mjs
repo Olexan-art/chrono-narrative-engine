@@ -7,7 +7,8 @@
 
 const supabaseUrl = 'https://xvhlqxzudqmpsqrvzxfm.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2aGxxeHp1ZHFtcHNxcnZ6eGZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDkzMDU5MTgsImV4cCI6MjAyNDg4MTkxOH0.SzPLgG3e8z3_xjxMvU6a8owU6zLhXj0L_lVYXwXbXl8';
-
+// Fallback IP for Supabase to bypass DNS issues if needed
+const supabaseIp = '104.21.2.65'; // Cloudflare IP for this host if known, but let's try ping first
 // РОЗШИРЕНА КОНФІГУРАЦІЯ: RSS + RETELL + TRANSLATE CRON ДЖОБИ  
 const COMPLETE_CRON_JOBS = {
   // === RSS ЗБІР НОВИН ===

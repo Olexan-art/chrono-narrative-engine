@@ -40,6 +40,12 @@ jobs:
         echo "🚀 ПРОСТИЙ ТЕСТ АВТОМАТИЗАЦІЇ"
         echo "Job type: $JOB_TYPE"
         echo "Specific job: $SPECIFIC_JOB"
+        
+        echo "🌐 Перевірка з'єднання..."
+        ping -c 3 xvhlqxzudqmpsqrvzxfm.supabase.co || echo "❌ Ping failed"
+        nslookup xvhlqxzudqmpsqrvzxfm.supabase.co || echo "❌ DNS lookup failed"
+        curl -v https://xvhlqxzudqmpsqrvzxfm.supabase.co/rest/v1/ --max-time 10 || echo "❌ Curl failed"
+        
         echo "✅ Крок виконано"
 
         if [ "$JOB_TYPE" = "specific" ] && [ "$SPECIFIC_JOB" ]; then

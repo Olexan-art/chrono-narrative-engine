@@ -1,0 +1,233 @@
+name: Complete RSS + Retell + Translate Automation
+
+on:
+  schedule:
+    # CRITICAL джоби (кожні 15-20 хвилин)
+    - cron: '*/15 * * * *'  # process_pending
+    - cron: '*/20 * * * *'  # translate_flash_urgent
+
+    # HIGH джоби (кожні 30-60 хвилин)
+    - cron: '*/30 * * * *'  # fetch_usa + retell
+    - cron: '*/45 * * * *'  # fetch_ukraine + retell 
+
+    # MEDIUM джоби (кожні 2-4 години)
+    - cron: '0 */2 * * *'   # fetch_uk, retell_global, translate_ua_en
+    - cron: '0 */4 * * *'   # translate_indian_languages
+
+    # LOW джоби (кожні 6+ годин)
+    - cron: '0 */6 * * *'   # stats_check
+    - cron: '0 2 * * *'     # cache_cleanup (щодня о 2:00)
+
+  # Ручній запуск з вибором типу джобів
+  workflow_dispatch:
+    inputs:
+      job_type:
+        description: 'Тип джобів для запуску'
+        required: true
+        type: string
+        default: 'specific'
+      specific_job:
+        description: 'Конкретний джоб (якщо вибрано specific)'
+        required: false
+        type: string
+        default: 'retell_recent_usa'
+
+jobs:
+  rss-retell-translate-automation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Determine Job Type from Schedule
+      id: job_scheduler
+      run: |
+        CURRENT_MINUTE=$(date +%M)
+        CURRENT_HOUR=$(date +%H)
+        
+        # Визначити тип джобу на основі поточного часу
+        echo "🕐 Поточний час: $CURRENT_HOUR:$CURRENT_MINUTE"
+        
+        # CRITICAL джоби (кожні 15-20 хв)
+        if [[ $((CURRENT_MINUTE % 15)) == 0 ]]; then
+          echo "job_type=critical" >> $GITHUB_OUTPUT
+          echo "🔴 Запуск CRITICAL джобів (every 15 min)"
+        elif [[ $((CURRENT_MINUTE % 20)) == 0 ]]; then
+          echo "job_type=critical" >> $GITHUB_OUTPUT  
+          echo "🔴 Запуск CRITICAL джобів (every 20 min)"
+        
+        # HIGH джоби (кожні 30-60 хв)
+        elif [[ $((CURRENT_MINUTE % 30)) == 0 ]]; then
+          echo "job_type=high" >> $GITHUB_OUTPUT
+          echo "🟠 Запуск HIGH джобів (every 30 min)"
+        elif [[ $((CURRENT_MINUTE % 45)) == 0 ]]; then
+          echo "job_type=high" >> $GITHUB_OUTPUT
+          echo "🟠 Запуск HIGH джобів (every 45 min)"
+        
+        # MEDIUM джоби (кожні 2-4 години)
+        elif [[ $((CURRENT_HOUR % 2)) == 0 && $CURRENT_MINUTE == 0 ]]; then
+          echo "job_type=medium" >> $GITHUB_OUTPUT
+          echo "🟡 Запуск MEDIUM джобів (every 2 hours)"
+        elif [[ $((CURRENT_HOUR % 4)) == 0 && $CURRENT_MINUTE == 0 ]]; then
+          echo "job_type=medium" >> $GITHUB_OUTPUT
+          echo "🟡 Запуск MEDIUM джобів (every 4 hours)"
+          
+        # LOW джоби (рідко)
+        elif [[ $((CURRENT_HOUR % 6)) == 0 && $CURRENT_MINUTE == 0 ]]; then
+          echo "job_type=low" >> $GITHUB_OUTPUT
+          echo "🟢 Запуск LOW джобів (every 6 hours)"
+        elif [[ $CURRENT_HOUR == 2 && $CURRENT_MINUTE == 0 ]]; then
+          echo "job_type=low" >> $GITHUB_OUTPUT
+          echo "🟢 Запуск LOW джобів (daily cleanup)"
+          
+        else
+          echo "job_type=none" >> $GITHUB_OUTPUT
+          echo "⏱️ Не час для scheduled джобів"
+        fi
+        
+    - name: Run RSS + Retell + Translate Automation  
+      env:
+        SUPABASE_URL: https://xvhlqxzudqmpsqrvzxfm.supabase.co
+        SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2aGxxeHp1ZHFtcHNxcnZ6eGZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDkzMDU5MTgsImV4cCI6MjAyNDg4MTkxOH0.SzPLgG3e8z3_xjxMvU6a8owU6zLhXj0L_lVYXwXbXl8
+        JOB_TYPE: ${{ github.event.inputs.job_type }}
+        SPECIFIC_JOB: ${{ github.event.inputs.specific_job }}
+        SCHEDULED_JOB_TYPE: ${{ steps.job_scheduler.outputs.job_type }}
+      run: |
+        echo "🚀 RSS + RETELL + TRANSLATE АВТОМАТИЗАЦІЯ"
+        echo "▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂"
+        
+        # Визначити яку команду запустити
+        if [ "$JOB_TYPE" ]; then
+          # Ручний запуск
+          echo "🎯 Ручний запуск: $JOB_TYPE"
+          
+          if [ "$JOB_TYPE" = "specific" ] && [ "$SPECIFIC_JOB" ]; then
+            echo "🔍 Запуск конкретного джобу: $SPECIFIC_JOB"
+            node manage-complete-cron.mjs run "$SPECIFIC_JOB"
+          elif [ "$JOB_TYPE" = "all" ]; then
+            echo "🌐 Запуск усіх джобів"
+            node manage-complete-cron.mjs run
+          else
+            echo "📋 Запуск джобів типу: $JOB_TYPE"
+            node manage-complete-cron.mjs "$JOB_TYPE"
+          fi
+          
+        else
+          # Scheduled запуск
+          JOB_TYPE="$SCHEDULED_JOB_TYPE"
+          echo "⏰ Scheduled запуск: $JOB_TYPE"
+          
+          case "$JOB_TYPE" in
+            "critical")
+              echo "🔴 CRITICAL джоби: process_pending, translate_flash_urgent"
+              
+              # process_pending (кожні 15 хв)
+              if [[ $(($(date +%M) % 15)) == 0 ]]; then
+                echo "📥 Процесінг pending новин..."
+                node manage-complete-cron.mjs run process_pending
+              fi
+              
+              # translate_flash_urgent (кожні 20 хв) 
+              if [[ $(($(date +%M) % 20)) == 0 ]]; then
+                echo "⚡ Термінові переклади..."
+                node manage-complete-cron.mjs run translate_flash_urgent
+              fi
+              ;;
+              
+            "high")
+              echo "🟠 HIGH джоби: RSS збір США/України + переказ"
+              CURRENT_MINUTE=$(date +%M)
+              
+              # США: RSS кожні 30 хв, ретел через 5 хв
+              if [[ $((CURRENT_MINUTE % 30)) == 0 ]]; then
+                echo "🇺🇸 RSS збір США..."
+                node manage-complete-cron.mjs run fetch_usa
+                
+                # Ретел через 5 хвилин після RSS
+                echo "⏳ Через 5 хвилин - переказ новин США..."
+                sleep 300
+                node manage-complete-cron.mjs run retell_recent_usa
+              fi
+              
+              # Україна: RSS кожні 45 хв, ретелл через 10 хв
+              if [[ $((CURRENT_MINUTE % 45)) == 0 ]]; then
+                echo "🇺🇦 RSS збір України..."
+                node manage-complete-cron.mjs run fetch_ukraine
+                
+                echo "⏳ Через 10 хвилин - переказ новин України..."
+                sleep 600
+                node manage-complete-cron.mjs run retell_recent_ukraine
+              fi
+              ;;
+              
+            "medium")
+              echo "🟡 MEDIUM джоби: RSS інших країн, глобальні переклади"
+              
+              # Різні MEDIUM таски залежно від часу
+              CURRENT_HOUR=$(date +%H)
+              if [[ $((CURRENT_HOUR % 2)) == 0 ]]; then
+                echo "🇬🇧 RSS збір Британії..."
+                node manage-complete-cron.mjs run fetch_uk
+                
+                echo "📝 Глобальний переказ новин..."
+                node manage-complete-cron.mjs run retell_recent_global
+              fi
+              
+              # Відключено: RSS Індії та переклади
+              # if [[ $((CURRENT_HOUR % 4)) == 0 ]]; then
+              #   echo "🇮🇳 RSS збір Індії..."
+              #   node manage-complete-cron.mjs run fetch_india
+              #   
+              #   echo "🇮🇳 Переклад індійських мов..."
+              #   node manage-complete-cron.mjs run translate_indian_languages
+              # fi
+              ;;
+              
+            "low")
+              echo "🟢 LOW джоби: моніторинг, очистка, статистики"
+              
+              # Статистики кожні 6 годин
+              if [[ $(($(date +%H) % 6)) == 0 ]]; then
+                echo "📊 Перевірка статистик..."
+                node manage-complete-cron.mjs run stats_check
+                
+                echo "🤖 Моніторинг LLM..."
+                node manage-complete-cron.mjs run llm_usage_monitor
+              fi
+              
+              # Очистка кешу щодня о 2:00
+              if [[ $(date +%H) == 2 ]]; then
+                echo "🧹 Очистка кешу..."
+                node manage-complete-cron.mjs run cache_cleanup
+              fi
+              ;;
+              
+            "none")
+              echo "⏸️ Немає scheduled джобів на цей час"
+              exit 0
+              ;;
+              
+            *)
+              echo "❓ Невизначений тип джобу: $JOB_TYPE"
+              exit 1
+              ;;
+          esac
+        fi
+        
+    - name: Log Completion
+      run: |
+        echo "✅ RSS + RETELL + TRANSLATE автоматизація завершена"
+        echo "📅 Час: $(date)"
+        echo "🖥️ Runner: $(hostname)"
+        echo "📊 Статус: Успішно"
+        
+        # Показати короткий статус системи
+        echo ""
+        echo "📋 Швидкий статус системи:"
+        node manage-complete-cron.mjs priority | head -20
