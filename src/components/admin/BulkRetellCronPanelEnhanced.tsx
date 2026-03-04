@@ -436,7 +436,7 @@ export function BulkRetellCronPanelEnhanced({ password }: { password: string }) 
         );
     }
 
-    const bulkCrons = configsData?.configs?.filter((c: CronConfig) => c.job_name.startsWith('bulk_retell_')) || [];
+    const bulkCrons = configsData?.configs?.filter((c: CronConfig) => c.job_name.includes('retell')) || [];
 
     return (
         <div className="space-y-6">
