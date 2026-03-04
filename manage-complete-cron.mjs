@@ -180,36 +180,46 @@ const COMPLETE_CRON_JOBS = {
 };
 
 async function callEdgeFunction(endpoint, payload) {
-  try {
-    const url = `${supabaseUrl}/functions/v1/${endpoint}`;
-    console.log(`   📡 Calling: ${url}`);
-    
-    // Explicitly use global fetch
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseKey}`
-      },
-      body: JSON.stringify(payload)
-    });
+  const maxRetries = 2;
+  let attempt = 0;
+  
+  while (attempt <= maxRetries) {
+    try {
+      const url = `${supabaseUrl}/functions/v1/${endpoint}`;
+      console.log(`   📡 Calling: ${url} (Attempt ${attempt + 1})`);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`
+        },
+        body: JSON.stringify(payload)
+      });
 
-    const result = await response.text();
-    
-    return {
-      status: response.status,
-      success: response.ok,
-      data: result,
-      endpoint: endpoint
-    };
-  } catch (error) {
-    console.error(`   ❌ Fetch Error for ${endpoint}:`, error);
-    return {
-      status: 0,
-      success: false,
-      error: error.message,
-      endpoint: endpoint
-    };
+      const result = await response.text();
+      
+      return {
+        status: response.status,
+        success: response.ok,
+        data: result,
+        endpoint: endpoint
+      };
+    } catch (error) {
+      console.error(`   ❌ Fetch Error for ${endpoint}:`, error.message);
+      attempt++;
+      if (attempt <= maxRetries) {
+        console.log(`   ⏳ Retrying in 2 seconds...`);
+        await new Promise(r => setTimeout(r, 2000));
+      } else {
+        return {
+          status: 0,
+          success: false,
+          error: error.message,
+          endpoint: endpoint
+        };
+      }
+    }
   }
 }
 
