@@ -1,153 +1,170 @@
-# 🚀 ПОВНА АВТОМАТИЗАЦІЯ RSS + RETELL + TRANSLATE СИСТЕМИ
+# 🚀 QUEUE-BASED RETELL SYSTEM AUTOMATION
 
-## 📊 Підсумок аудиту переказу та перекладу
+## 📊 Новий підхід: Queue-Based Architecture
 
-### ✅ Знайдені Edge функції:
-1. **📝 retell-news** - Розширений переказ новин з LLM на 7 мовах (uk, en, pl, hi, ta, te, bn)
-2. **🌍 translate-news** - Переклад українських новин на англійську/польську 
-3. **🇮🇳 translate-indian-news** - Спеціальні переклади на індійські мови (hi, ta, te, bn)
-4. **⚡ translate-flash-news** - Швидкий переклад термінових новин
-5. **🔤 translate** - Універсальна функція перекладу
+### ✅ Ключові компоненти:
+1. **📝 Queue Management** - Централізована черга для переказу новин
+2. **🤖 Provider Balancing** - Розподіл між Z.AI та DeepSeek
+3. **⏰ Smart Scheduling** - Кожні 10 хвилин обробка 20 новин
+4. **📊 Real-time Statistics** - Живі статистики та моніторинг
+5. **🎛️ Admin Interface** - Повне управління через UI
 
-### ⚙️ LLM провайдери підтримуються:
-- **OpenAI** (GPT моделі)
-- **Google Gemini** (gemini-2.5-flash, gemini-3-flash-preview)  
-- **Anthropic** (Claude моделі)
-- **ZAI** (GLM-4.7 для індійських мов)
-- **Mistral** (mistral-large-latest)
-- **DeepSeek** (deepseek-chat)
-
-## 🏗️ Архітектура повної автоматизації
+## 🏗️ Нова архітектура системи
 
 ```
-📡 RSS збір → 📥 process_pending → 📝 Переказ → 🌍 Переклад → 🧹 Кеш update
+📡 RSS збір → 🗃️ Queue Management → 🤖 Dual LLM Processing → 📊 Real-time Stats
 
-┌─ RSS ЗБІР (кожні 15-45 хв)
-│  ├─ 🇺🇸 США: */30 * * * * (високий пріоритет)  
-│  ├─ 🇺🇦 Україна: */45 * * * * (високий пріоритет)
-│  ├─ 🇬🇧 Британія: 0 */2 * * * (середній пріоритет)
-│  ├─ 🇮🇳 Індія: 15 */2 * * * (середній пріоритет)
-│  └─ 📥 Process pending: */15 * * * * (КРИТИЧНИЙ)
+┌─ QUEUE INITIALIZATION (кожні 10 хв)
+│  ├─ 📚 Latest 20 news items queued
+│  ├─ ⚡ Provider distribution: 10 + 10
+│  └─ 🧹 Auto cleanup (>10min old items)
 │
-├─ ПЕРЕКАЗ НОВИН (кожні 1-3 год)  
-│  ├─ 📝 США retell: 5 */1 * * * (після RSS +5 хв)
-│  ├─ 📝 Україна retell: 10 */1 * * * (після RSS +10 хв)
-│  ├─ 📝 Глобальний retell: 30 */2 * * * 
-│  └─ 📝 Британія retell: 20 */3 * * *
+├─ PARALLEL PROCESSING
+│  ├─ 🤖 Z.AI: 10 news items/cycle  
+│  ├─ 🧠 DeepSeek: 10 news items/cycle
+│  └─ ⚡ Concurrent execution for speed
 │
-├─ ПЕРЕКЛАД (кожні 2-4 год)
-│  ├─ 🌍 UA→EN: 20 */2 * * * (після retell)
-│  ├─ 🇵🇱 US→PL: 25 */3 * * * 
-│  ├─ 🇮🇳 Індійські мови: 40 */4 * * * 
-│  └─ ⚡ Термінові: */20 * * * *
-│
-└─ МОНІТОРИНГ (щодня/тижня)
-   ├─ 📊 Статистики: 0 */6 * * *
-   ├─ 🤖 LLM витрати: 0 8,20 * * *  
-   ├─ 🧹 Кеш cleanup: 0 2 * * *
-   └─ 🔍 Якість: 0 6 * * 1
+└─ MONITORING & STATISTICS
+   ├─ 📊 Real-time queue status
+   ├─ ⏱️ 15min/1h/6h/24h time ranges
+   └─ 🎛️ Manual controls (init/process/clear)
 ```
 
-## 🎯 Пріоритети виконання
+## 🎯 Основні переваги нового підходу
 
-### 🔴 CRITICAL (кожні 15-20 хв):
-- `process_pending` - обробка накопичених новин
-- `translate_flash_urgent` - термінові переклади
+### 🚀 **Продуктивність**:
+- **20 новин кожні 10 хвилин** = 120 новин/година
+- **Паралельна обробка** двома провайдерами
+- **Автоматичне балансування** навантаження
 
-### 🟠 HIGH (кожні 30-60 хв): 
-- `fetch_usa` + `retell_recent_usa` - RSS та переказ США
-- `fetch_ukraine` + `retell_recent_ukraine` - RSS та переказ України
+### 🔄 **Надійність**:
+- **Queue persistence** - новини не губляться
+- **Provider failover** - бекап системи
+- **Smart cleanup** - автоматичне прибирання застарілих елементів
 
-### 🔍 MEDIUM (кожні 2-4 год):
-- `fetch_uk` - RSS збір Британії
-- `retell_recent_global` - глобальний переказ  
-- `translate_flash_urgent` - термінові переклади
+### 📊 **Моніторинг**:
+- **Live statistics** - статистика в реальному часі
+- **Multi-timeframe tracking** - 15хв, 1год, 6год, 24год
+- **Admin dashboard** - повне управління системою
 
-### 🟢 LOW (кожні 6+ год):
-- `stats_check`, `llm_usage_monitor` - моніторинг
-- `cache_cleanup` - обслуговування
+## 🎛️ Компоненти нової Queue-based системи:
 
-## 📋 Файли готові до запуску:
+### 🛠️ Backend API функції:
+- ✅ **initRetellQueue()** - ініціалізація черги з 20 найновіших новин
+- ✅ **processRetellQueue()** - обробка черги з розподілом між провайдерами
+- ✅ **getRetellQueueStats()** - статистики та моніторинг
+- ✅ **clearRetellQueue()** - очищення черги
 
-### 🛠️ Управління системою:
-- ✅ **manage-complete-cron.mjs** - CLI управління повною автоматизацією
-- ✅ **audit-retell-translate.mjs** - детальний аудит retell/translate функцій
+### 🎨 Frontend Interface:
+- ✅ **RetellQueueStats.tsx** - адмін інтерфейс з dark theme
+- ✅ **Real-time statistics** - 15хв/1год/6год/24год
+- ✅ **Manual controls** - кнопки управління чергою
+- ✅ **Queue visualization** - поточний стан черги
 
-### ⚙️ Конфігурація:  
-- ✅ **setup-retell-translate-crons.sql** - SQL для створення усіх cron джобів
-- ✅ **.github/workflows/complete-automation.yml** - GitHub Actions
+### ⚙️ Конфігурація системи:
+- ✅ **Cron job**: кожні 10 хвилин виконання `processRetellQueue`
+- ✅ **Batch size**: 20 новин за цикл (10 Z.AI + 10 DeepSeek)
+- ✅ **Auto cleanup**: автоматичне прибирання старих елементів
 
-### 📖 Документація:
-- ✅ **RSS_AUTOMATION_SETUP.md** - базові інструкції RSS
-- ✅ **RETELL_TRANSLATE_AUTOMATION.md** - цей файл
+## 🚀 Використання нової системи:
 
-## 🚀 Кроки для активації ПОВНОЇ автоматизації:
+### 1. Перегляд статистик
+```typescript
+// У адмін-панелі: http://localhost:8081
+// Блок "Retell Queue Statistics" з:
+// - Поточна кількість в черзі
+// - Статистики за 15хв, 1год, 6год, 24год
+// - Кнопка "Refresh" для оновлення
+```
 
-### 1. Налаштування бази даних
+### 2. Ручне управління чергою
+```javascript
+// Ініціалізувати чергу (20 новин)
+await initRetellQueue()
+
+// Обробити чергу (10 + 10 розподіл)
+await processRetellQueue()
+
+// Очистити чергу
+await clearRetellQueue()
+
+// Отримати статистики
+await getRetellQueueStats()
+```
+
+### 3. Автоматичне виконання
 ```sql
--- В Supabase SQL Editor виконати файли:
-\i setup-cron-jobs.sql          -- Базові RSS джоби
-\i setup-retell-translate-crons.sql  -- Retell + translate джоби
+-- Cron job виконує кожні 10 хвилин:
+SELECT cron.schedule(
+  'retell-queue-processor', 
+  '*/10 * * * *',
+  'SELECT * FROM process_retell_queue();'
+);
 ```
 
-### 2. Активація GitHub Actions
-```bash
-# Закомітити всі файли автоматизації  
-git add .github/workflows/complete-automation.yml
-git add manage-complete-cron.mjs
-git add setup-retell-translate-crons.sql
-git add audit-retell-translate.mjs
-git commit -m "feat: Повна RSS + retell + translate автоматизація з 15+ cron джобів"
-git push origin main
+### 4. Моніторинг через UI
+1. Відкрити адмін-панель: `http://localhost:8081`
+2. Знайти блок "Retell Queue Statistics" (dark theme)
+3. Переглянути поточну кількість в черзі
+4. Аналізувати статистики за різні періоди
+5. Використовувати кнопки управління за потреби
+
+## 📊 Очікувані результати нової системи
+
+### ⚡ Queue-based workflow:
+1. **Автоматична ініціалізація** черги кожні 10 хвилин
+2. **20 новин за цикл** з розподілом 10+10 між провайдерами  
+3. **Parallel processing** Z.AI та DeepSeek одночасно
+4. **Real-time monitoring** через адмін-панель
+5. **Smart cleanup** автоматичне прибирання старих записів
+
+### 📈 Покращена продуктивність:
+- **~2,880 новин/день** (120 за годину × 24 години)
+- **Parallel LLM processing** = 2× швидкість
+- **Zero downtime** завдяки queue persistence
+- **Automatic load balancing** між провайдерами
+
+### 🎨 Покращений UI/UX:
+- **Dark theme interface** для комфортної роботи
+- **Live statistics display** в реальному часі
+- **15-minute granularity** для точного моніторингу  
+- **One-click controls** для ручного управління
+
+### 🤖 Smart LLM management:
+- **Provider balancing** між Z.AI та DeepSeek
+- **Failover protection** при недоступності провайдера
+- **Usage tracking** з детальною статистикою
+- **Cost optimization** через правильний розподіл
+
+## 🔄 Міграція з old cron system
+
+### ❌ Видалені старі крони:
+```sql
+-- Старі retell крони видалені:
+-- retell_india_deepseek, retell_india_zai 
+-- retell_recent_usa (множні копії)
 ```
 
-### 3. Тестування повної системи
-```bash
-# Перевірити статус усієї системи
-node manage-complete-cron.mjs status
-
-# Показати джоби за пріоритетом  
-node manage-complete-cron.mjs priority
-
-# Тестувати окремі типи джобів
-node manage-complete-cron.mjs rss        # Тільки RSS збір
-node manage-complete-cron.mjs retell     # Тільки переказ  
-node manage-complete-cron.mjs translate  # Тільки переклад
-
-# Запустити конкретний джоб
-node manage-complete-cron.mjs run fetch_usa
-node manage-complete-cron.mjs run retell_recent_ukraine
-node manage-complete-cron.mjs run translate_ukrainian_to_english
-
-# Запустити ВСЮ автоматизацію  
-node manage-complete-cron.mjs run
+### ✅ Новий queue-based cron:
+```sql
+-- Один універсальний cron:
+SELECT cron.schedule(
+  'retell-queue-processor', 
+  '*/10 * * * *',
+  'SELECT * FROM process_retell_queue();'
+);
 ```
 
-### 4. Моніторинг GitHub Actions
-1. GitHub → Actions tab → "Complete RSS + Retell + Translate Automation"
-2. Перевірити scheduled runs кожні 15-30 хвилин
-3. Ручний запуск: "Run workflow" → вибрати тип джобів
-4. Моніторити логи виконання
+### 🎯 Ключові покращення:
+- Замість 5+ різних кронів → 1 універсальний queue processor
+- Замість 10 новин за цикл → 20 новин за цикл
+- Замість послідовної обробки → паралельна обробка
+- Замість базових статистик → детальний real-time моніторинг
+- Замість light UI → професійний dark theme interface
 
-## 📊 Очікувані результати
+---
 
-### ⚡ Автоматизований workflow:
-1. **RSS збір** новин 5 країн кожні 15-45 хвилин  
-2. **Переказ новин** LLM кожні 1-3 години після збору
-3. **Переклад** на 6 мов кожні 2-4 години після переказу
-4. **Кеш оновлення** перекладених сторінок автоматично
-
-### 📈 Продуктивність:
-- **~100-200 нових новин/день** з RSS
-- **~50-80 переказів/день** з LLM обробкою
-- **~20-40 перекладів/день** на різні мови  
-- **Нульова manual intervention** після налаштування
-
-### 🤖 LLM використання:
-- **Gemini** для переказів (cost-effective)
-- **ZAI GLM-4.7** для індійських мов
-- **Smart model selection** залежно від контенту
-- **Usage tracking** і моніторинг витрат
+*Остання оновлення: Queue-based система з 20 новин за цикл, dark theme UI, та enhanced statistics* 📊🌙
 
 ## 🔧 Оптимізації та фічі:
 

@@ -12,6 +12,7 @@ import { Play, Pause, Settings, Activity, Clock, CheckCircle2, XCircle, RefreshC
 import { LLM_MODELS } from '@/types/database';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { BulkRetellCronPanelEnhanced } from '@/components/admin/BulkRetellCronPanelEnhanced';
+import RetellQueueStats from '@/components/admin/RetellQueueStats';
 import { useAdminStore } from '@/stores/adminStore';
 
 interface CronConfig {
@@ -1434,6 +1435,9 @@ export default function NewsProcessingPage({ password: propPassword }: { passwor
 
             {/* Bulk News Retelling - Use Enhanced Component */}
             <BulkRetellCronPanelEnhanced password={password || ''} />
+
+            {/* Retell Queue Stats - New queue-based system */}
+            <RetellQueueStats password={password || ''} />
 
             {/* Retell provider breakdown report (manual refresh) */}
             <RetellProviderReport password={password || ''} />

@@ -1165,7 +1165,10 @@ serve(async (req: Request) => {
         console.log('Upserting cron config:', JSON.stringify(updateData));
         const { error, data: upsertedData } = await supabase
           .from('cron_job_configs')
-          .upsert([updateData]);
+          .upsert([updateData], { 
+            onConflict: 'job_name',
+            ignoreDuplicates: false 
+          });
 
         console.log(`Upsert result:`, {
           error: error ? { message: error.message, code: error.code } : null,
@@ -1254,6 +1257,23 @@ serve(async (req: Request) => {
               } else if (jobName.startsWith('bulk_retell_')) {
                 const opts = updatedConfig.processing_options || {};
                 cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/bulk-retell-news', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"country_code": "${opts.country_code}", "time_range": "${opts.time_range}", "llm_model": "${opts.llm_model}", "llm_provider": "${opts.llm_provider}", "job_name": "${jobName}", "trigger": "cron"}'::jsonb, timeout:=60000) as request_id;`;
+              } else if (jobName.includes('retell') && !jobName.includes('zai')) {
+                // Universal retell jobs handler - covers retell_recent_usa, USA News Retell, etc.
+                const countries = updatedConfig.countries || 'us';
+                const timeRange = '3'; // 3 hours default
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/bulk-retell-news', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"country_code": "${countries.split(',')[0].toUpperCase()}", "time_range": "${timeRange}", "job_name": "${jobName}", "trigger": "cron"}'::jsonb, timeout:=60000) as request_id;`;
+              } else if (jobName.includes('RSS') || jobName.includes('Collection')) {
+                // RSS collection jobs
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/fetch-rss', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "fetch_all", "job_name": "${jobName}"}'::jsonb, timeout:=60000) as request_id;`;
+              } else if (jobName.includes('Translation')) {
+                // Translation jobs
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/translate-news', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "translate_flash", "job_name": "${jobName}"}'::jsonb, timeout:=60000) as request_id;`;
+              } else if (jobName.includes('Monitor') || jobName.includes('Stats')) {
+                // Monitoring jobs
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/admin', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "monitorUsage", "job_name": "${jobName}", "password": "1nuendo19071"}'::jsonb, timeout:=60000) as request_id;`;
+              } else if (jobName.includes('Cleanup')) {
+                // Cleanup jobs
+                cronCommand = `SELECT net.http_post(url:='${supabaseUrl}/functions/v1/admin', headers:='{"Content-Type": "application/json", "Authorization": "Bearer ${serviceKey}"}'::jsonb, body:='{"action": "cleanup", "job_name": "${jobName}", "password": "1nuendo19071"}'::jsonb, timeout:=60000) as request_id;`;
               }
 
               if (cronCommand) {
@@ -3132,6 +3152,344 @@ serve(async (req: Request) => {
           );
         } catch (e) {
           console.error('clearRetellQueue error:', e);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: e instanceof Error ? e.message : String(e) 
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      case 'initRetellQueue': {
+        try {
+          const { provider = 'both' } = data || {};
+          
+          // Get latest 20 news items that need retelling
+          const query = supabase
+            .from('news_rss_items')
+            .select('id, title_en, slug, fetched_at, url')
+            .is('key_points', null)
+            .gte('fetched_at', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()) // last 6 hours
+            .order('fetched_at', { ascending: false });
+
+          if (provider === 'zai') {
+            query.limit(10);
+          } else if (provider === 'deepseek') {
+            query.limit(10);
+          } else {
+            query.limit(20); // both providers - 10 each
+          }
+
+          const { data: newsItems, error } = await query;
+          if (error) throw error;
+
+          if (!newsItems || newsItems.length === 0) {
+            return new Response(
+              JSON.stringify({
+                success: true,
+                message: 'Немає новин для переказу в черзі',
+                queue_items: [],
+                providers: {
+                  zai: { items: [] },
+                  deepseek: { items: [] }
+                }
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // Split items between providers
+          const midpoint = Math.ceil(newsItems.length / 2);
+          const providers = {
+            zai: {
+              items: provider === 'zai' ? newsItems : newsItems.slice(0, midpoint),
+              reserved_at: new Date().toISOString()
+            },
+            deepseek: {
+              items: provider === 'deepseek' ? newsItems : newsItems.slice(midpoint),
+              reserved_at: new Date().toISOString()
+            }
+          };
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: `Зарезервовано ${newsItems.length} новин для переказу`,
+              queue_items: newsItems,
+              providers,
+              total_reserved: newsItems.length,
+              zai_count: providers.zai.items.length,
+              deepseek_count: providers.deepseek.items.length
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (e) {
+          console.error('initRetellQueue error:', e);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: e instanceof Error ? e.message : String(e) 
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      case 'processRetellQueue': {
+        try {
+          const { 
+            provider = 'both', 
+            batch_size = 20,
+            timeout_minutes = 10 
+          } = data || {};
+          
+          const timeoutMs = timeout_minutes * 60 * 1000;
+          const startTime = Date.now();
+          const zaiUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-retell-news-zai`;
+          const deepseekUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/bulk-retell-news-deepseek`;
+          const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+          
+          const results: any = {
+            zai: { processed: 0, success: 0, failed: 0, error: null },
+            deepseek: { processed: 0, success: 0, failed: 0, error: null },
+            total_time_ms: 0,
+            timeout_reached: false
+          };
+
+          // Process zai if requested
+          if (provider === 'zai' || provider === 'both') {
+            try {
+              const resp = await fetch(zaiUrl, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${serviceKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  country_code: 'ALL',
+                  time_range: 'last_6h',
+                  llm_model: 'GLM-4.7-Flash',
+                  max_items: provider === 'both' ? 10 : batch_size,
+                  job_name: 'retell_queue_zai',
+                  trigger: 'queue_admin'
+                })
+              });
+              
+              const respData = await resp.json();
+              results.zai = {
+                processed: respData.processed || 0,
+                success: respData.success || respData.processed || 0,
+                failed: respData.failed || 0,
+                error: resp.ok ? null : (respData.error || 'HTTP ' + resp.status)
+              };
+            } catch (e) {
+              results.zai.error = e instanceof Error ? e.message : String(e);
+            }
+          }
+
+          // Check timeout before processing deepseek
+          if (Date.now() - startTime > timeoutMs) {
+            results.timeout_reached = true;
+            results.total_time_ms = Date.now() - startTime;
+            return new Response(
+              JSON.stringify({
+                success: false,
+                message: 'Таймаут обробки черги (10 хвилин)',
+                results
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // Process deepseek if requested  
+          if (provider === 'deepseek' || provider === 'both') {
+            try {
+              const resp = await fetch(deepseekUrl, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${serviceKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  country_code: 'ALL',
+                  time_range: 'last_6h',
+                  llm_model: 'deepseek-chat',
+                  max_items: provider === 'both' ? 10 : batch_size,
+                  job_name: 'retell_queue_deepseek',
+                  trigger: 'queue_admin'
+                })
+              });
+              
+              const respData = await resp.json();
+              results.deepseek = {
+                processed: respData.processed || 0,
+                success: respData.success || respData.processed || 0,
+                failed: respData.failed || 0,
+                error: resp.ok ? null : (respData.error || 'HTTP ' + resp.status)
+              };
+            } catch (e) {
+              results.deepseek.error = e instanceof Error ? e.message : String(e);
+            }
+          }
+
+          results.total_time_ms = Date.now() - startTime;
+          const totalProcessed = results.zai.processed + results.deepseek.processed;
+          
+          // Log queue processing event
+          try {
+            await supabase.from('cron_job_events').insert({
+              job_name: 'retell_queue_process',
+              event_type: 'queue_batch',
+              origin: 'admin',
+              details: {
+                provider,
+                batch_size,
+                results,
+                total_processed: totalProcessed
+              }
+            });
+          } catch (logError) {
+            console.error('Failed to log queue processing event:', logError);
+          }
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: `Оброблено ${totalProcessed} новин в черзі`,
+              results,
+              total_processed: totalProcessed
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (e) {
+          console.error('processRetellQueue error:', e);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: e instanceof Error ? e.message : String(e) 
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      case 'getRetellQueueStats': {
+        try {
+          const now = new Date();
+          const ranges = {
+            m15: new Date(now.getTime() - 15 * 60 * 1000),
+            h1: new Date(now.getTime() - 60 * 60 * 1000),
+            h6: new Date(now.getTime() - 6 * 60 * 60 * 1000),
+            h24: new Date(now.getTime() - 24 * 60 * 60 * 1000)
+          };
+
+          // Count news pending retelling (by time range)
+          const pendingStats = await Promise.all([
+            supabase.from('news_rss_items')
+              .select('id', { count: 'exact' })
+              .is('key_points', null)
+              .gte('fetched_at', ranges.m15.toISOString()),
+            supabase.from('news_rss_items')
+              .select('id', { count: 'exact' })
+              .is('key_points', null)
+              .gte('fetched_at', ranges.h1.toISOString()),
+            supabase.from('news_rss_items')
+              .select('id', { count: 'exact' })
+              .is('key_points', null)
+              .gte('fetched_at', ranges.h6.toISOString()),
+            supabase.from('news_rss_items')
+              .select('id', { count: 'exact' })
+              .is('key_points', null)
+              .gte('fetched_at', ranges.h24.toISOString())
+          ]);
+
+          // Count retells completed by provider in last 24h
+          const [zaiStats, deepseekStats] = await Promise.all([
+            supabase.from('llm_usage_logs')
+              .select('id, metadata', { count: 'exact' })
+              .eq('operation', 'retell-news')
+              .eq('success', true)
+              .contains('metadata', { llm_provider: 'zai' })
+              .gte('created_at', ranges.h24.toISOString()),
+            supabase.from('llm_usage_logs')
+              .select('id, metadata', { count: 'exact' })
+              .eq('operation', 'retell-news')
+              .eq('success', true)
+              .contains('metadata', { llm_provider: 'deepseek' })
+              .gte('created_at', ranges.h24.toISOString())
+          ]);
+
+          // Get current total queue size
+          const { count: currentQueueSize } = await supabase
+            .from('news_rss_items')
+            .select('id', { count: 'exact' })
+            .is('key_points', null)
+            .gte('fetched_at', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString());
+
+          // Queue processing events from last 24h
+          const { data: queueEvents } = await supabase
+            .from('cron_job_events')
+            .select('created_at, details')
+            .eq('event_type', 'queue_batch')
+            .gte('created_at', ranges.h24.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+          // Hourly processing chart for last 24h
+          const hourlySlots = [];
+          for (let i = 23; i >= 0; i--) {
+            const start = new Date(now.getTime() - (i + 1) * 60 * 60 * 1000);
+            const end = new Date(now.getTime() - i * 60 * 60 * 1000);
+            
+            const [zaiHour, deepseekHour] = await Promise.all([
+              supabase.from('llm_usage_logs')
+                .select('id', { count: 'exact' })
+                .eq('operation', 'retell-news')
+                .contains('metadata', { llm_provider: 'zai' })
+                .gte('created_at', start.toISOString())
+                .lt('created_at', end.toISOString()),
+              supabase.from('llm_usage_logs')
+                .select('id', { count: 'exact' })
+                .eq('operation', 'retell-news')
+                .contains('metadata', { llm_provider: 'deepseek' })
+                .gte('created_at', start.toISOString())
+                .lt('created_at', end.toISOString())
+            ]);
+
+            hourlySlots.push({
+              time: start.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
+              zai: zaiHour.count || 0,
+              deepseek: deepseekHour.count || 0,
+              total: (zaiHour.count || 0) + (deepseekHour.count || 0)
+            });
+          }
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              stats: {
+                pending_queue: {
+                  m15: pendingStats[0].count || 0,
+                  h1: pendingStats[1].count || 0,
+                  h6: pendingStats[2].count || 0,
+                  h24: pendingStats[3].count || 0
+                },
+                current_queue_size: currentQueueSize || 0,
+                completed_h24: {
+                  zai: zaiStats.count || 0,
+                  deepseek: deepseekStats.count || 0,
+                  total: (zaiStats.count || 0) + (deepseekStats.count || 0)
+                },
+                recent_queue_events: queueEvents || [],
+                hourly_chart: hourlySlots
+              }
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (e) {
+          console.error('getRetellQueueStats error:', e);
           return new Response(
             JSON.stringify({ 
               success: false, 

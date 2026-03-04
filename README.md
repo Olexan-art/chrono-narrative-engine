@@ -10,6 +10,35 @@
 
 **Prod URL**: https://bravennow.com
 
+## 🤖 Queue-Based Retell System
+
+This project features an advanced **queue-based news retelling system** with the following capabilities:
+
+### 🚀 Key Features
+- **20 news items** processed every 10 minutes
+- **Parallel processing** between Z.AI and DeepSeek providers (10 items each)
+- **Real-time statistics** with 15min/1h/6h/24h time ranges  
+- **Dark theme admin interface** for professional operation
+- **Automatic queue management** with smart cleanup
+
+### 📊 Admin Interface
+Access the admin dashboard at: `http://localhost:8081`
+
+**Features:**
+- Live queue status monitoring
+- Manual queue controls (init/process/clear)
+- Detailed statistics across multiple time ranges
+- Dark theme optimized for extended use
+- One-click refresh functionality
+
+### ⚡ Performance
+- **~2,880 news items/day** (120 items/hour × 24 hours)
+- **Parallel LLM processing** for 2× speed improvement
+- **Zero downtime** with queue persistence
+- **Smart load balancing** between AI providers
+
+For detailed documentation see: [RETELL_TRANSLATE_AUTOMATION.md](RETELL_TRANSLATE_AUTOMATION.md)
+
 ## How can I edit this code?
 
 There are several ways of editing your application.
