@@ -30,7 +30,7 @@ export function NewsAnalysisBlock({ newsId, newsTitle, newsContent, className = 
   const { language } = useLanguage();
   const { isAuthenticated: isAdmin } = useAdminStore();
   const queryClient = useQueryClient();
-  const [selectedModel, setSelectedModel] = useState("GLM-4.7"); // Default to ZAI model (always available) 
+  const [selectedModel, setSelectedModel] = useState("deepseek-chat"); // Default to DeepSeek (reliable)
 
   // Fetch analysis from database (stored in news_analysis JSONB field)
   const { data: analysisData, isLoading } = useQuery({
@@ -57,6 +57,7 @@ export function NewsAnalysisBlock({ newsId, newsTitle, newsContent, className = 
           newsTitle,
           newsContent,
           model: selectedModel,
+          skipVerification: true,
         }
       );
 
