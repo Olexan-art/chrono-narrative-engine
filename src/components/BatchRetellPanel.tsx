@@ -22,13 +22,12 @@ import { uk } from "date-fns/locale";
 import { isNewsRetold, hasNewsDialogue, getCountryConfig } from "@/lib/countryContentConfig";
 
 const AI_MODELS = [
-  { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (швидкий)' },
-  { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-  { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (точний)' },
-  { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini' },
+  { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (швидкий)', provider: 'gemini' },
+  { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', provider: 'gemini' },
+  { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (точний)', provider: 'gemini' },
+  { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini', provider: 'openai' },
   { value: 'GLM-4.7', label: 'Z.AI GLM-4.7 (найпотужніший)', provider: 'zai' },
   { value: 'GLM-4.7-Flash', label: 'Z.AI GLM-4.7-Flash (швидкий)', provider: 'zai' },
-  { value: 'GLM-4.5-Air', label: 'Z.AI GLM-4.5-Air (легкий)', provider: 'zai' },
   { value: 'deepseek-chat', label: 'DeepSeek-V3 (швидкий)', provider: 'deepseek' },
   { value: 'deepseek-reasoner', label: 'DeepSeek-R1 (міркування)', provider: 'deepseek' },
 ];
@@ -205,9 +204,10 @@ function BatchRetellPanelComponent() {
       addLog('info', `[${i + 1}/${newsToProcess.length}] Переказую: ${news.title.slice(0, 60)}...`, news.id, news.title);
 
       try {
+        const selectedModelObj = AI_MODELS.find(m => m.value === selectedModel);
         const result = await callEdgeFunction<{ success: boolean; error?: string; content?: string }>(
           'retell-news',
-          { newsId: news.id, model: selectedModel }
+          { newsId: news.id, model: selectedModel, provider: selectedModelObj?.provider }
         );
 
         if (result.success) {

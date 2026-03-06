@@ -26,25 +26,22 @@ async function callLLM(
   systemPrompt: string,
   userPrompt: string,
   overrideModel?: string,
-  metadata: any = {}
+  metadata: any = {},
+  overrideProvider?: string
 ): Promise<string> {
   const model = overrideModel || settings.llm_text_model || 'google/gemini-3-flash-preview';
   const startTime = Date.now();
 
-  let provider = settings.llm_text_provider || settings.llm_provider || 'zai';
+  let provider = overrideProvider || settings.llm_text_provider || settings.llm_provider || 'zai';
 
-  if (overrideModel) {
-    if (overrideModel.startsWith('google/') || overrideModel.startsWith('gemini')) {
-      provider = 'gemini';
-    } else if (overrideModel.startsWith('openai/') || overrideModel.startsWith('gpt')) {
-      provider = 'openai';
-    } else if (overrideModel.startsWith('mistral-') || overrideModel.startsWith('codestral')) {
-      provider = 'mistral';
-    } else if (overrideModel.startsWith('GLM-') || overrideModel.startsWith('glm-')) {
-      provider = 'zai';
-    } else if (overrideModel.startsWith('claude')) {
-      provider = 'anthropic';
-    }
+  if (!overrideProvider && overrideModel) {
+    const m = overrideModel.toLowerCase();
+    if (m.includes('deepseek'))                                        provider = 'deepseek';
+    else if (m.startsWith('google/') || m.startsWith('gemini'))        provider = 'gemini';
+    else if (m.startsWith('openai/') || m.startsWith('gpt'))           provider = 'openai';
+    else if (m.startsWith('mistral-') || m.startsWith('codestral'))    provider = 'mistral';
+    else if (m.startsWith('glm-'))                                      provider = 'zai';
+    else if (m.startsWith('claude'))                                    provider = 'anthropic';
   }
 
   try {
@@ -154,6 +151,33 @@ async function callLLM(
       const data = await response.json();
       result = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
+    else if (provider === 'deepseek') {
+      const apiKey = Deno.env.get('DEEPSEEK_API_KEY');
+      if (!apiKey) throw new Error('DeepSeek API key not configured');
+
+      const response = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: model || 'deepseek-chat',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`DeepSeek error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      result = data.choices?.[0]?.message?.content || '';
+    }
     else if (provider === 'mistral') {
       const apiKey = settings.mistral_api_key;
       if (!apiKey) throw new Error('Mistral API key not configured');
@@ -218,7 +242,7 @@ serve(async (req) => {
   }
 
   try {
-    const { newsId, news_item_id, model } = await req.json();
+    const { newsId, news_item_id, model, provider: explicitProvider } = await req.json();
 
     const actualNewsId = newsId || news_item_id;
 
@@ -243,7 +267,7 @@ serve(async (req) => {
 
     const { data: newsItem, error: fetchError } = await supabase
       .from("news_rss_items")
-      .select("id, url, title, original_content, content, description")
+      .select("id, url, title, original_content, content, description, slug, country:news_countries(code)")
       .eq("id", actualNewsId)
       .single();
 
@@ -292,7 +316,8 @@ ${textToAnalyze ? textToAnalyze.substring(0, 10000) : "No content provided."}`;
       systemPrompt,
       userPrompt,
       model,
-      { newsId: actualNewsId, url: newsItem.url }
+      { newsId: actualNewsId, url: newsItem.url },
+      explicitProvider ? String(explicitProvider).trim() : undefined
     );
 
     let jsonResult: any = {};
@@ -336,6 +361,19 @@ ${textToAnalyze ? textToAnalyze.substring(0, 10000) : "No content provided."}`;
     if (updateError) {
       throw updateError;
     }
+
+    // Refresh cache for search bots
+    try {
+      const itemSlug = (newsItem as any).slug;
+      const itemCountry = ((newsItem as any).country?.code || 'us').toLowerCase();
+      if (itemSlug) {
+        const adminPass = Deno.env.get('ADMIN_PASSWORD');
+        await fetch(
+          `${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(`/news/${itemCountry}/${itemSlug}`)}&password=${adminPass}`,
+          { headers: { 'Authorization': `Bearer ${supabaseServiceKey}` } }
+        );
+      }
+    } catch (_) { /* non-critical */ }
 
     return new Response(JSON.stringify({ success: true, scoring: sourceScoring }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

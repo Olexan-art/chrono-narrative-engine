@@ -410,12 +410,10 @@ serve(async (req) => {
     console.log(`[serve] ✅ Full requestBody: ${JSON.stringify(requestBody)}`);
     
     const model = requestBody.model ? String(requestBody.model).trim() : undefined;
+    // explicit provider from client takes highest priority (avoids outdated cached routing)
+    const explicitProvider = requestBody.provider ? String(requestBody.provider).trim() : undefined;
     
-    console.log(`[serve] 📥 AFTER PROCESSING: model="${model}" (type: ${typeof model})`);
-    console.log(`[serve] ✅ model === undefined: ${model === undefined}`);
-    console.log(`[serve] ✅ model length: ${model?.length}`);
-    console.log(`[serve] newsId="${newsId}", model="${model}"`);
-    console.log(`[serve]\n`);
+    console.log(`[serve] 📥 model="${model}" provider="${explicitProvider}"`);
 
     if (!newsId) {
       return new Response(JSON.stringify({ error: 'newsId is required' }), {
@@ -438,32 +436,23 @@ serve(async (req) => {
       throw new Error('Settings not found');
     }
 
-    // ============ CRITICAL: Detect provider from model BEFORE calling callLLM ============
-    let overrideProvider: string | undefined;
-    if (model) {
+    // ============ Provider resolution: explicit > model-based detection > settings ============
+    let overrideProvider: string | undefined = explicitProvider;
+    if (!overrideProvider && model) {
       const modelLower = model.toLowerCase().trim();
-      console.log(`[serve] 🔍 Detecting provider for model="${model}" (lowercase: "${modelLower}")`);
-      
-      if (modelLower.includes('deepseek')) {
-        overrideProvider = 'deepseek';
-        console.log(`[serve] 🔥 DETECTED: DeepSeek model! Setting overrideProvider='deepseek'`);
-      } else if (modelLower.startsWith('glm-') || modelLower === 'glm-4.7') {
-        overrideProvider = 'zai';
-        console.log(`[serve] 🔵 DETECTED: Z.AI/GLM model! Setting overrideProvider='zai'`);
-      } else if (modelLower.includes('gpt')) {
-        overrideProvider = 'openai';
-        console.log(`[serve] 🟢 DETECTED: OpenAI model! Setting overrideProvider='openai'`);
-      }
+      if (modelLower.includes('deepseek'))                                       overrideProvider = 'deepseek';
+      else if (modelLower.startsWith('glm-') || modelLower === 'glm-4.7')       overrideProvider = 'zai';
+      else if (modelLower.includes('gemini') || modelLower.startsWith('google/')) overrideProvider = 'gemini';
+      else if (modelLower.includes('gpt') || modelLower.startsWith('openai/'))   overrideProvider = 'openai';
+      else if (modelLower.includes('claude'))  overrideProvider = 'anthropic';
+      else if (modelLower.includes('mistral')) overrideProvider = 'mistral';
     }
-    
-    // If we detected a provider override, temporarily modify settings
     if (overrideProvider) {
-      console.log(`[serve] Modifying settings: llm_provider="${settings.llm_provider}" → "${overrideProvider}"`);
       settings.llm_provider = overrideProvider;
       settings.llm_text_provider = overrideProvider;
-      console.log(`[serve] After modification: llm_provider="${settings.llm_provider}", llm_text_provider="${settings.llm_text_provider}"`);
+      console.log(`[serve] provider resolved → "${overrideProvider}" (model="${model}")`);
     }
-    // ============ END CRITICAL DETECTION ============
+    // ============ END provider resolution ============
     const { data: news, error: newsError } = await supabase
       .from('news_rss_items')
       .select('*, country:news_countries(code), original_content')

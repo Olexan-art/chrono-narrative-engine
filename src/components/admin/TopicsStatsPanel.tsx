@@ -1,16 +1,33 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { Tags, TrendingUp, Hash, Loader2, Pencil, Save, X, Check, ChevronRight, FileText, Search } from "lucide-react";
+import { Tags, TrendingUp, Hash, Loader2, Pencil, Save, X, Check, ChevronRight, FileText, Search, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/components/ui/use-toast";
+import { adminAction } from "@/lib/api";
+
+const AI_MODELS = [
+  { value: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (fast)', provider: 'gemini' },
+  { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', provider: 'gemini' },
+  { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (precise)', provider: 'gemini' },
+  { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini', provider: 'openai' },
+  { value: 'GLM-4.7', label: 'Z.AI GLM-4.7 (strongest)', provider: 'zai' },
+  { value: 'GLM-4.7-Flash', label: 'Z.AI GLM-4.7-Flash (fast)', provider: 'zai' },
+  { value: 'deepseek-chat', label: 'DeepSeek-V3 (fast)', provider: 'deepseek' },
+  { value: 'deepseek-reasoner', label: 'DeepSeek-R1 (reasoning)', provider: 'deepseek' },
+];
+
+const DEFAULT_AI_PROMPT = `Make a deep analysis of the latest news.
+Add quotes and interesting facts.
+Add charts made with special characters.
+Add a list of important URLs.
+Write in simple English.`;
 
 interface TopicStat {
   topic: string;
@@ -43,6 +60,9 @@ export function TopicsStatsPanel({ password }: { password: string }) {
   const [search, setSearch] = useState("");
   const [form, setForm] = useState<Omit<TopicMeta, "topic" | "updated_at">>(EMPTY_META);
   const [saved, setSaved] = useState(false);
+  const [aiModel, setAiModel] = useState('GLM-4.7-Flash');
+  const [aiPrompt, setAiPrompt] = useState(DEFAULT_AI_PROMPT);
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   // ── Fetch all topics stats ──────────────────────────────────────────────
   const { data: topicsData, isLoading } = useQuery({
@@ -113,17 +133,60 @@ export function TopicsStatsPanel({ password }: { password: string }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMeta]);
 
+  // ── AI Generate ──────────────────────────────────────────────────────────
+  const handleGenerate = async () => {
+    if (!selectedTopic) return;
+    const modelObj = AI_MODELS.find(m => m.value === aiModel);
+    if (!modelObj) return;
+    setAiGenerating(true);
+    try {
+      const result = await adminAction<{
+        success: boolean;
+        description_en: string;
+        seo_text_en: string;
+        seo_keywords_en: string;
+        error?: string;
+      }>('generateTopicMeta', password, {
+        topic: selectedTopic,
+        model: modelObj.value,
+        provider: modelObj.provider,
+        prompt: aiPrompt,
+      });
+      if (result.success) {
+        setForm(f => ({
+          ...f,
+          description_en: result.description_en || f.description_en,
+          seo_text_en: result.seo_text_en || f.seo_text_en,
+          seo_keywords_en: result.seo_keywords_en || f.seo_keywords_en,
+        }));
+        toast({ title: "Generated!", description: `AI analysis ready for "${selectedTopic}"` });
+      } else {
+        throw new Error(result.error || 'Generation failed');
+      }
+    } catch (err: any) {
+      toast({ title: "Generation error", description: err.message, variant: "destructive" });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   // ── Save mutation ────────────────────────────────────────────────────────
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!selectedTopic) throw new Error("No topic selected");
+      // EN is the source of truth; copy to all-language fields
       const { error } = await (supabase as any).from("topic_meta").upsert({
         topic: selectedTopic,
-        ...form,
+        description: form.description_en,
+        description_en: form.description_en,
+        seo_text: form.seo_text_en,
+        seo_text_en: form.seo_text_en,
+        seo_keywords: form.seo_keywords_en,
+        seo_keywords_en: form.seo_keywords_en,
         updated_at: new Date().toISOString(),
       }, { onConflict: "topic" });
       if (error) throw error;
-    },
+    },  
     onSuccess: () => {
       setSaved(true);
       queryClient.invalidateQueries({ queryKey: ["topic-meta-all"] });
@@ -149,7 +212,7 @@ export function TopicsStatsPanel({ password }: { password: string }) {
   };
 
   const filtered = topicsData
-    ? topicsData.top100.filter((t) => t.topic.toLowerCase().includes(search.toLowerCase()))
+    ? topicsData.all.filter((t) => t.topic.toLowerCase().includes(search.toLowerCase()))
     : [];
 
   // ── Loading / empty states ───────────────────────────────────────────────
@@ -218,7 +281,7 @@ export function TopicsStatsPanel({ password }: { password: string }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-primary" />
-              Топ 100 Topics
+              Всі Topics
             </CardTitle>
             <CardDescription>Клікніть на тему, щоб редагувати опис та SEO</CardDescription>
             <div className="relative mt-1">
@@ -320,75 +383,70 @@ export function TopicsStatsPanel({ password }: { password: string }) {
                 <Loader2 className="w-5 h-5 animate-spin" />
               </div>
             ) : (
-              <Tabs defaultValue="ua" className="space-y-4">
-                <TabsList className="w-full">
-                  <TabsTrigger value="ua" className="flex-1">🇺🇦 Українська</TabsTrigger>
-                  <TabsTrigger value="en" className="flex-1">🇬🇧 English</TabsTrigger>
-                </TabsList>
+              <div className="space-y-4">
+                {/* ── AI Generate section ── */}
+                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
+                  <p className="text-xs font-mono text-primary font-semibold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Generate with AI
+                  </p>
+                  <Select value={aiModel} onValueChange={setAiModel}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Select model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AI_MODELS.map(m => (
+                        <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    rows={5}
+                    className="text-xs font-mono resize-none"
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-primary/40 text-primary hover:bg-primary/10"
+                    onClick={handleGenerate}
+                    disabled={aiGenerating}
+                  >
+                    {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    {aiGenerating ? 'Generating...' : 'Generate'}
+                  </Button>
+                </div>
 
-                <TabsContent value="ua" className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-mono text-muted-foreground">Короткий опис (UA)</Label>
-                    <Textarea
-                      value={form.description ?? ""}
-                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                      placeholder="Короткий опис категорії для картки та мета-тегів..."
-                      rows={3}
-                      className="text-sm resize-none"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-mono text-muted-foreground">SEO текст (UA)</Label>
-                    <Textarea
-                      value={form.seo_text ?? ""}
-                      onChange={(e) => setForm((f) => ({ ...f, seo_text: e.target.value }))}
-                      placeholder="Розгорнутий SEO текст для нижньої частини сторінки..."
-                      rows={7}
-                      className="text-sm resize-none font-mono"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-mono text-muted-foreground">SEO ключові слова (UA, через кому)</Label>
-                    <Input
-                      value={form.seo_keywords ?? ""}
-                      onChange={(e) => setForm((f) => ({ ...f, seo_keywords: e.target.value }))}
-                      placeholder="слово1, слово2, слово3"
-                      className="text-sm font-mono"
-                    />
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="en" className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-mono text-muted-foreground">Short description (EN)</Label>
-                    <Textarea
-                      value={form.description_en ?? ""}
-                      onChange={(e) => setForm((f) => ({ ...f, description_en: e.target.value }))}
-                      placeholder="Short category description for the card and meta tags..."
-                      rows={3}
-                      className="text-sm resize-none"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-mono text-muted-foreground">SEO text (EN)</Label>
-                    <Textarea
-                      value={form.seo_text_en ?? ""}
-                      onChange={(e) => setForm((f) => ({ ...f, seo_text_en: e.target.value }))}
-                      placeholder="Extended SEO text for the bottom of the topic page..."
-                      rows={7}
-                      className="text-sm resize-none font-mono"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-mono text-muted-foreground">SEO keywords (EN, comma-separated)</Label>
-                    <Input
-                      value={form.seo_keywords_en ?? ""}
-                      onChange={(e) => setForm((f) => ({ ...f, seo_keywords_en: e.target.value }))}
-                      placeholder="keyword1, keyword2, keyword3"
-                      className="text-sm font-mono"
-                    />
-                  </div>
-                </TabsContent>
+                {/* ── English fields ── */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-mono text-muted-foreground">Short description (EN)</Label>
+                  <Textarea
+                    value={form.description_en ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, description_en: e.target.value }))}
+                    placeholder="Short category description for the card and meta tags..."
+                    rows={3}
+                    className="text-sm resize-none"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-mono text-muted-foreground">SEO text (EN)</Label>
+                  <Textarea
+                    value={form.seo_text_en ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, seo_text_en: e.target.value }))}
+                    placeholder="Extended SEO text for the bottom of the topic page..."
+                    rows={9}
+                    className="text-sm resize-none font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-mono text-muted-foreground">SEO keywords (EN, comma-separated)</Label>
+                  <Input
+                    value={form.seo_keywords_en ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, seo_keywords_en: e.target.value }))}
+                    placeholder="keyword1, keyword2, keyword3"
+                    className="text-sm font-mono"
+                  />
+                </div>
 
                 <Button
                   className="w-full gap-2"
@@ -402,9 +460,9 @@ export function TopicsStatsPanel({ password }: { password: string }) {
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
-                  {saved ? "Збережено!" : "Зберегти"}
+                  {saved ? "Saved!" : "Save"}
                 </Button>
-              </Tabs>
+              </div>
             )}
           </CardContent>
         </Card>

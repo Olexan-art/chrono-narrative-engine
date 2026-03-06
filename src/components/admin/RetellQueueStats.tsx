@@ -22,6 +22,27 @@ interface QueueStats {
   recent_queue_events: Array<{
     created_at: string;
     details: any;
+    event_type?: string;
+    job_name?: string;
+    status?: string;
+  }>;
+  cron_runs_30m: {
+    run_count: number;
+    processed: number;
+    zai_runs: number;
+    deepseek_runs: number;
+    last_run_at: string | null;
+  };
+  cron_runs_list: Array<{
+    created_at: string;
+    job_name: string;
+    provider: string;
+    llm_model: string;
+    taken: number;
+    success: number;
+    errors: number;
+    country_code: string;
+    status: string;
   }>;
   hourly_chart: Array<{
     time: string;
@@ -41,20 +62,49 @@ interface QueueProcessResult {
 export default function RetellQueueStats({ password }: { password: string }) {
   const [stats, setStats] = useState<QueueStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [lastResult, setLastResult] = useState<QueueProcessResult | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const fetchInFlightRef = React.useRef(false);
 
-  const fetchStats = async () => {
+  const fetchStats = async (silent = false) => {
+    // Prevent parallel fetches
+    if (fetchInFlightRef.current) return;
+    fetchInFlightRef.current = true;
+    if (!silent) setIsRefreshing(true);
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 15000);
     try {
-      const data = await adminAction<{ success: boolean; stats: QueueStats }>('getRetellQueueStats', password);
-      
+      const response = await fetch(
+        `${(import.meta.env.VITE_SUPABASE_URL || '').trim()}/functions/v1/admin`,
+        {
+          method: 'POST',
+          signal: abort.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${(import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim()}`,
+          },
+          body: JSON.stringify({ action: 'getRetellQueueStats', password }),
+        }
+      );
+      const data = await response.json().catch(() => ({ success: false }));
       if (data.success) {
         setStats(data.stats);
+        setFetchError(false);
+      } else {
+        setFetchError(true);
       }
-    } catch (error) {
-      console.error('Failed to fetch retell queue stats:', error);
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') {
+        console.error('Failed to fetch retell queue stats:', error);
+      }
+      setFetchError(true);
     } finally {
+      clearTimeout(timer);
+      fetchInFlightRef.current = false;
+      setIsRefreshing(false);
       setLoading(false);
     }
   };
@@ -101,8 +151,8 @@ export default function RetellQueueStats({ password }: { password: string }) {
     if (!autoRefresh) return;
 
     const interval = setInterval(() => {
-      fetchStats();
-    }, 30000); // 30 секунд
+      fetchStats(true); // silent background refresh — keeps old data visible
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [autoRefresh]);
@@ -123,11 +173,37 @@ export default function RetellQueueStats({ password }: { password: string }) {
     );
   }
 
+  if (!stats && fetchError) {
+    return (
+      <Card className="bg-gray-900 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-gray-100">Retell Queue Stats</CardTitle>
+        </CardHeader>
+        <CardContent className="bg-gray-900">
+          <div className="text-center py-8 space-y-3">
+            <div className="text-red-400 text-sm">Не вдалося завантажити дані</div>
+            <button onClick={fetchStats} className="text-xs text-blue-400 underline hover:text-blue-300">
+              Спробувати знову
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Card className="bg-gray-900 border-gray-700">
         <CardHeader className="flex flex-row items-center justify-between border-b border-gray-700">
-          <CardTitle className="text-gray-100">Retell Queue Stats</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-gray-100">Retell Queue Stats</CardTitle>
+            {isRefreshing && (
+              <Loader2 className="w-3 h-3 animate-spin text-gray-500" />
+            )}
+            {fetchError && !isRefreshing && (
+              <span className="text-xs text-red-400 font-normal">⚠ помилка оновлення</span>
+            )}
+          </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -140,10 +216,11 @@ export default function RetellQueueStats({ password }: { password: string }) {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={fetchStats}
+              onClick={() => fetchStats()}
+              disabled={isRefreshing}
               className="border-gray-600 text-gray-300 hover:bg-gray-800"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </CardHeader>
@@ -193,6 +270,73 @@ export default function RetellQueueStats({ password }: { password: string }) {
               <div className="text-xl font-bold text-purple-200">{stats?.completed_h24.deepseek || 0}</div>
               <div className="text-sm text-purple-400">переказів за 24г</div>
             </div>
+          </div>
+
+          {/* Last 2h cron runs table */}
+          <div>
+            <h3 className="font-semibold mb-2 text-gray-200">
+              Крони — останні 4 год
+              {stats?.cron_runs_30m && (
+                <span className="ml-2 text-xs font-normal text-gray-400">
+                  (30хв: {stats.cron_runs_30m.run_count} запусків, {stats.cron_runs_30m.processed} оброблено)
+                </span>
+              )}
+            </h3>
+            {!stats?.cron_runs_list || stats.cron_runs_list.length === 0 ? (
+              <div className="text-sm text-gray-500 bg-gray-800 p-3 rounded border border-gray-700">
+                Немає завершених кронів за останні 2 години
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-gray-500 border-b border-gray-700">
+                      <th className="text-left pb-1 pr-2">Час</th>
+                      <th className="text-left pb-1 pr-2">LLM</th>
+                      <th className="text-left pb-1 pr-2">Країна</th>
+                      <th className="text-right pb-1 pr-2">Взято</th>
+                      <th className="text-right pb-1 pr-2">Вдалих</th>
+                      <th className="text-right pb-1">Помилок</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800">
+                    {stats.cron_runs_list.map((run, i) => {
+                      const isZai = run.provider === 'zai' || run.job_name.includes('zai');
+                      const isDs = run.provider === 'deepseek' || run.job_name.includes('deepseek');
+                      return (
+                        <tr key={i} className="hover:bg-gray-800/50">
+                          <td className="py-1 pr-2 tabular-nums text-gray-400">
+                            {new Date(run.created_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </td>
+                          <td className="py-1 pr-2">
+                            <span className={`font-mono px-1 rounded text-[10px] ${
+                              isZai ? 'text-blue-400' : isDs ? 'text-purple-400' : 'text-gray-400'
+                            }`}>
+                              {isZai ? 'Z.AI' : isDs ? 'DeepSeek' : run.provider || '?'}
+                            </span>
+                            {run.llm_model && (
+                              <span className="ml-1 text-gray-600 font-mono">{run.llm_model}</span>
+                            )}
+                          </td>
+                          <td className="py-1 pr-2 text-gray-500 uppercase">{run.country_code || '—'}</td>
+                          <td className="py-1 pr-2 text-right text-gray-300 tabular-nums">{run.taken}</td>
+                          <td className="py-1 pr-2 text-right tabular-nums">
+                            <span className={run.success > 0 ? 'text-green-400' : 'text-gray-500'}>
+                              {run.success}
+                            </span>
+                          </td>
+                          <td className="py-1 text-right tabular-nums">
+                            <span className={run.errors > 0 ? 'text-red-400' : 'text-gray-600'}>
+                              {run.errors || '—'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Processing Controls */}
@@ -316,25 +460,102 @@ export default function RetellQueueStats({ password }: { password: string }) {
           )}
 
           {/* Recent Events */}
-          {stats?.recent_queue_events && stats.recent_queue_events.length > 0 && (
-            <div>
-              <h3 className="font-semibold mb-2 text-gray-200">Останні події черги</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {stats.recent_queue_events.slice(0, 5).map((event, index) => (
-                  <div key={index} className="text-xs bg-gray-800 p-2 rounded border border-gray-700">
-                    <div className="flex justify-between text-gray-300">
-                      <span className="text-gray-400">
-                        {new Date(event.created_at).toLocaleString('uk-UA')}
-                      </span>
-                      <span className="font-medium text-green-400">
-                        {event.details?.total_processed || 0} оброблено
-                      </span>
-                    </div>
-                  </div>
-                ))}
+          <div>
+            <h3 className="font-semibold mb-2 text-gray-200">Останні події черги (4 год)</h3>
+            {!stats?.recent_queue_events || stats.recent_queue_events.length === 0 ? (
+              <div className="text-sm text-gray-500 bg-gray-800 p-3 rounded border border-gray-700">
+                Немає подій за останні 2 години
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {stats.recent_queue_events.slice(0, 40).map((event, index) => {
+                  // Normalize details — sometimes nested, sometimes flat
+                  const d = event.details || {};
+                  const processed = d.success_count ?? d.processed ?? d.total_processed ?? 0;
+                  const rawProvider = d.provider || d.details?.provider || '';
+                  const provider = rawProvider
+                    || ((event.job_name || '').toLowerCase().includes('zai') ? 'zai'
+                    : (event.job_name || '').toLowerCase().includes('deepseek') ? 'deepseek' : '');
+                  const isStart = event.event_type === 'run_started';
+                  const isFailed = event.event_type === 'run_failed';
+                  const isDone = !isStart && !isFailed;
+                  const sampleItems: Array<{ slug: string; country: string; title: string }> = d.sample_items || [];
+                  const llmModel: string = d.llm_model || '';
+                  const countryCode: string = d.country_code || d.details?.country_code || '';
+                  const errorMsg: string = d.error || d.details?.error || '';
+                  const hasData = provider || llmModel || countryCode || processed > 0;
+                  return (
+                    <div key={index} className={`text-xs p-2 rounded border ${
+                      isFailed ? 'bg-red-950/50 border-red-800'
+                      : isStart ? 'bg-yellow-950/20 border-yellow-900/40'
+                      : 'bg-gray-800 border-gray-700'
+                    }`}>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="text-gray-400 tabular-nums shrink-0">
+                          {new Date(event.created_at).toLocaleTimeString('uk-UA')}
+                        </span>
+                        <span className={`px-1 rounded text-[10px] font-mono shrink-0 ${
+                          isFailed ? 'text-red-400' : isStart ? 'text-yellow-400' : 'text-green-500'
+                        }`}>
+                          {isFailed ? 'FAIL' : isStart ? 'START' : 'DONE'}
+                        </span>
+                        {provider ? (
+                          <span className={`font-mono px-1 rounded text-[10px] shrink-0 ${
+                            provider === 'zai' ? 'text-blue-400' : 'text-purple-400'
+                          }`}>
+                            {provider === 'zai' ? 'Z.AI' : 'DeepSeek'}
+                          </span>
+                        ) : !hasData && (
+                          <span className="text-[10px] text-gray-600 italic">{event.job_name || event.event_type}</span>
+                        )}
+                        {llmModel && (
+                          <span className="text-[10px] text-gray-500 font-mono shrink-0" title="LLM model">
+                            {llmModel}
+                          </span>
+                        )}
+                        {countryCode && (
+                          <span className="text-[10px] text-gray-500 uppercase shrink-0">{countryCode}</span>
+                        )}
+                        {isDone && (
+                          <span className={`font-medium ml-auto ${
+                            processed > 0 ? 'text-green-400' : 'text-gray-500'
+                          }`}>
+                            {processed} оброблено
+                          </span>
+                        )}
+                        {isStart && (
+                          <span className="text-yellow-600 ml-auto text-[10px]">очікування...</span>
+                        )}
+                        {isFailed && (
+                          <span className="font-medium text-red-400 ml-auto truncate max-w-[200px]" title={errorMsg}>
+                            {errorMsg ? errorMsg.slice(0, 60) : 'помилка'}
+                          </span>
+                        )}
+                        {isDone && (d.error_count ?? 0) > 0 && (
+                          <span className="text-red-400">{d.error_count} помилок</span>
+                        )}
+                      </div>
+                      {isDone && sampleItems.length > 0 && (
+                        <div className="mt-1 space-y-0.5">
+                          {sampleItems.map((item, i) => (
+                            <a
+                              key={i}
+                              href={`/news/${item.country}/${item.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block text-[10px] text-gray-400 hover:text-blue-400 truncate"
+                            >
+                              {item.title || item.slug}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

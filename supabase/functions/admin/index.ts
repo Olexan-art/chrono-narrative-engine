@@ -576,7 +576,7 @@ serve(async (req: Request) => {
         // data: { ids?: string[] } - if omitted, push all unpushed
         try {
           const ids: string[] | undefined = data?.ids;
-          let stagedQuery = supabase.from('ollama_retell_staging').select('*').order('created_at', { ascending: true });
+          let stagedQuery = supabase.from('ollama_retell_staging').select('*').order('created_at', { ascending: true }).limit(200);
           if (ids && Array.isArray(ids) && ids.length > 0) stagedQuery = stagedQuery.in('id', ids);
           else stagedQuery = stagedQuery.eq('pushed', false);
 
@@ -595,7 +595,7 @@ serve(async (req: Request) => {
             const targetField = lang === 'en' ? 'content_en' : (lang === 'hi' ? 'content_hi' : (lang === 'ta' ? 'content_ta' : (lang === 'te' ? 'content_te' : (lang === 'bn' ? 'content_bn' : 'content'))));
 
             // Check if the target field already has a retell (length > 100)
-            const { data: existing, error: existingErr } = await supabase.from('news_rss_items').select(`${targetField}`).eq('id', row.news_id).limit(1).single();
+            const { data: existing, error: existingErr } = await supabase.from('news_rss_items').select(`${targetField}, slug, country:news_countries(code)`).eq('id', row.news_id).limit(1).single();
             if (existingErr) {
               console.error('Failed to fetch news item for push:', existingErr);
               skipped++;
@@ -627,6 +627,21 @@ serve(async (req: Request) => {
             // mark staging row as pushed
             const { error: markErr } = await supabase.from('ollama_retell_staging').update({ pushed: true, pushed_at: new Date().toISOString() }).eq('id', row.id);
             if (markErr) console.error('Failed to mark staging row as pushed:', markErr);
+
+            // Refresh cache for search bots
+            try {
+              const itemSlug = (existing as any)?.slug;
+              const itemCountry = ((existing as any)?.country?.code || 'us').toLowerCase();
+              if (itemSlug) {
+                const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
+                const adminPassEnv = Deno.env.get('ADMIN_PASSWORD')!;
+                const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+                await fetch(
+                  `${supabaseUrlEnv}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(`/news/${itemCountry}/${itemSlug}`)}&password=${adminPassEnv}`,
+                  { headers: { 'Authorization': `Bearer ${supabaseKey}` } }
+                );
+              }
+            } catch (_) { /* non-critical */ }
 
             pushed++;
           }
@@ -693,7 +708,7 @@ serve(async (req: Request) => {
         // data: { ids?: string[] } - if omitted, push all unpushed
         try {
           const ids: string[] | undefined = data?.ids;
-          let stagedQuery = supabase.from('ollama_wiki_staging').select('*').order('created_at', { ascending: true });
+          let stagedQuery = supabase.from('ollama_wiki_staging').select('*').order('created_at', { ascending: true }).limit(200);
           if (ids && Array.isArray(ids) && ids.length > 0) stagedQuery = stagedQuery.in('id', ids);
           else stagedQuery = stagedQuery.eq('pushed', false);
 
@@ -869,7 +884,7 @@ serve(async (req: Request) => {
       case 'pushOllamaScoringStagedToLive': {
         try {
           const ids: string[] | undefined = data?.ids;
-          let stagedQuery = supabase.from('ollama_scoring_staging').select('*').order('created_at', { ascending: true });
+          let stagedQuery = supabase.from('ollama_scoring_staging').select('*').order('created_at', { ascending: true }).limit(200);
           if (ids && Array.isArray(ids) && ids.length > 0) stagedQuery = stagedQuery.in('id', ids);
           else stagedQuery = stagedQuery.eq('pushed', false);
 
@@ -890,7 +905,7 @@ serve(async (req: Request) => {
             // Check if entity already has source_scoring
             const { data: existing, error: existingErr } = await supabase
               .from('news_rss_items')
-              .select('source_scoring')
+              .select('source_scoring, slug, country:news_countries(code)')
               .eq('id', row.news_id)
               .single();
 
@@ -931,6 +946,21 @@ serve(async (req: Request) => {
               .eq('id', row.id);
 
             if (markErr) console.error('Failed to mark staging row as pushed:', markErr);
+
+            // Refresh cache for search bots
+            try {
+              const itemSlug = (existing as any)?.slug;
+              const itemCountry = ((existing as any)?.country?.code || 'us').toLowerCase();
+              if (itemSlug) {
+                const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
+                const adminPassEnv = Deno.env.get('ADMIN_PASSWORD')!;
+                const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+                await fetch(
+                  `${supabaseUrlEnv}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(`/news/${itemCountry}/${itemSlug}`)}&password=${adminPassEnv}`,
+                  { headers: { 'Authorization': `Bearer ${supabaseKey}` } }
+                );
+              }
+            } catch (_) { /* non-critical */ }
 
             pushed++;
           }
@@ -2068,7 +2098,8 @@ serve(async (req: Request) => {
         const { data: cronConfigs, error: cronError } = await supabase
           .from('cron_job_configs')
           .select('*')
-          .order('updated_at', { ascending: false });
+          .order('updated_at', { ascending: false })
+          .limit(50);
 
         // Enrich logs with news slug / path when possible
         let enrichedLogs = logs || [];
@@ -3378,91 +3409,99 @@ serve(async (req: Request) => {
       case 'getRetellQueueStats': {
         try {
           const now = new Date();
-          const ranges = {
-            m15: new Date(now.getTime() - 15 * 60 * 1000),
-            h1: new Date(now.getTime() - 60 * 60 * 1000),
-            h6: new Date(now.getTime() - 6 * 60 * 60 * 1000),
-            h24: new Date(now.getTime() - 24 * 60 * 60 * 1000)
+          const h24ago = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+          const h6ago  = new Date(now.getTime() -  6 * 60 * 60 * 1000).toISOString();
+          const h1ago  = new Date(now.getTime() -      60 * 60 * 1000).toISOString();
+          const m15ago = new Date(now.getTime() -      15 * 60 * 1000).toISOString();
+          const m30ago = new Date(now.getTime() -      30 * 60 * 1000).toISOString();
+          const h2ago  = new Date(now.getTime() -   2 * 60 * 60 * 1000).toISOString();
+          const h4ago  = new Date(now.getTime() -   4 * 60 * 60 * 1000).toISOString();
+
+          // Run independent queries in parallel; use allSettled so one failure doesn't break the whole response
+          const settled = await Promise.allSettled([
+            supabase.from('news_rss_items').select('id', { count: 'exact', head: true }).is('key_points', null).gte('fetched_at', m15ago),
+            supabase.from('news_rss_items').select('id', { count: 'exact', head: true }).is('key_points', null).gte('fetched_at', h1ago),
+            supabase.from('news_rss_items').select('id', { count: 'exact', head: true }).is('key_points', null).gte('fetched_at', h6ago),
+            supabase.from('news_rss_items').select('id', { count: 'exact', head: true }).is('key_points', null).gte('fetched_at', h24ago),
+            supabase.from('news_rss_items').select('id', { count: 'exact', head: true }).eq('llm_provider', 'zai').gte('llm_processed_at', h24ago),
+            supabase.from('news_rss_items').select('id', { count: 'exact', head: true }).in('llm_provider', ['deepseek', 'deepseek-fallback']).gte('llm_processed_at', h24ago),
+            supabase.from('news_rss_items').select('id', { count: 'exact', head: true }).is('key_points', null),
+            // Recent events — last 4 hours so we always see recent cron history even during low activity
+            supabase.from('cron_job_events')
+              .select('created_at, details, event_type, job_name, status')
+              .in('event_type', ['run_finished', 'run_started', 'run_completed', 'run_failed', 'queue_batch'])
+              .gte('created_at', h4ago)
+              .order('created_at', { ascending: false })
+              .limit(40),
+            // Cron runs in last 4 hours (per-run list)
+            supabase.from('cron_job_events')
+              .select('details, job_name, created_at, status')
+              .in('event_type', ['run_finished', 'run_completed'])
+              .gte('created_at', h4ago)
+              .order('created_at', { ascending: false })
+              .limit(80),
+            // Single RPC for hourly chart — may fail if function doesn't exist; handled below
+            (supabase as any).rpc('get_retell_hourly_stats', { p_hours: 24 })
+          ]);
+
+          // Helper: extract fulfilled value or null
+          const ok = <T>(r: PromiseSettledResult<T>): T | null => r.status === 'fulfilled' ? r.value : null;
+
+          const pendingM15    = ok(settled[0]) || { count: 0 };
+          const pendingH1     = ok(settled[1]) || { count: 0 };
+          const pendingH6     = ok(settled[2]) || { count: 0 };
+          const pendingH24    = ok(settled[3]) || { count: 0 };
+          const zaiStats      = ok(settled[4]) || { count: 0 };
+          const deepseekStats = ok(settled[5]) || { count: 0 };
+          const queueSizeRes  = ok(settled[6]) || { count: 0 };
+          const queueEvents   = ok(settled[7]) || { data: [] };
+          const cronRuns30m   = ok(settled[8]) || { data: [] };
+          const hourlyRows    = ok(settled[9]) || { data: [] };
+
+          // Aggregate cron_runs_30m: sum up success_count from each run
+          const allRuns2h = (cronRuns30m.data || []) as any[];
+          const m30agoTs = new Date(m30ago).getTime();
+          const runs30m = allRuns2h.filter((r: any) => new Date(r.created_at).getTime() >= m30agoTs);
+          const cron_runs_30m = {
+            run_count: runs30m.length,
+            processed: runs30m.reduce((s: number, r: any) => s + (r.details?.success_count ?? r.details?.processed ?? 0), 0),
+            zai_runs: runs30m.filter((r: any) => r.details?.provider === 'zai' || (r.job_name || '').includes('zai')).length,
+            deepseek_runs: runs30m.filter((r: any) => r.details?.provider === 'deepseek' || (r.job_name || '').includes('deepseek')).length,
+            last_run_at: runs30m[0]?.created_at || null,
           };
+          // Per-run list for table (2 hours)
+          const cron_runs_list = allRuns2h.map((r: any) => ({
+            created_at: r.created_at,
+            job_name: r.job_name || '',
+            provider: r.details?.provider || ((r.job_name || '').includes('zai') ? 'zai' : (r.job_name || '').includes('deepseek') ? 'deepseek' : ''),
+            llm_model: r.details?.llm_model || '',
+            taken: r.details?.processed ?? r.details?.total ?? 0,
+            success: r.details?.success_count ?? r.details?.success ?? 0,
+            errors: r.details?.error_count ?? r.details?.failed ?? 0,
+            country_code: r.details?.country_code || '',
+            status: r.status || 'success',
+          }));
 
-          // Count news pending retelling (by time range)
-          const pendingStats = await Promise.all([
-            supabase.from('news_rss_items')
-              .select('id', { count: 'exact' })
-              .is('key_points', null)
-              .gte('fetched_at', ranges.m15.toISOString()),
-            supabase.from('news_rss_items')
-              .select('id', { count: 'exact' })
-              .is('key_points', null)
-              .gte('fetched_at', ranges.h1.toISOString()),
-            supabase.from('news_rss_items')
-              .select('id', { count: 'exact' })
-              .is('key_points', null)
-              .gte('fetched_at', ranges.h6.toISOString()),
-            supabase.from('news_rss_items')
-              .select('id', { count: 'exact' })
-              .is('key_points', null)
-              .gte('fetched_at', ranges.h24.toISOString())
-          ]);
+          // Build 24-slot chart — MUST use hour-aligned keys to match date_trunc('hour',...) SQL output
+          const slotMap = new Map<string, { zai: number; deepseek: number }>();
+          if (hourlyRows.data) {
+            for (const row of hourlyRows.data) {
+              // date_trunc returns :00 minutes — format to match skeleton keys
+              const t = new Date(row.slot_start).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+              slotMap.set(t, { zai: Number(row.zai_count) || 0, deepseek: Number(row.deepseek_count) || 0 });
+            }
+          }
 
-          // Count retells completed by provider in last 24h
-          const [zaiStats, deepseekStats] = await Promise.all([
-            supabase.from('llm_usage_logs')
-              .select('id, metadata', { count: 'exact' })
-              .eq('operation', 'retell-news')
-              .eq('success', true)
-              .contains('metadata', { llm_provider: 'zai' })
-              .gte('created_at', ranges.h24.toISOString()),
-            supabase.from('llm_usage_logs')
-              .select('id, metadata', { count: 'exact' })
-              .eq('operation', 'retell-news')
-              .eq('success', true)
-              .contains('metadata', { llm_provider: 'deepseek' })
-              .gte('created_at', ranges.h24.toISOString())
-          ]);
-
-          // Get current total queue size (all items without key_points)
-          const { count: currentQueueSize } = await supabase
-            .from('news_rss_items')
-            .select('id', { count: 'exact', head: true })
-            .is('key_points', null);
-
-          // Queue processing events from last 24h
-          const { data: queueEvents } = await supabase
-            .from('cron_job_events')
-            .select('created_at, details')
-            .eq('event_type', 'queue_batch')
-            .gte('created_at', ranges.h24.toISOString())
-            .order('created_at', { ascending: false })
-            .limit(20);
-
-          // Hourly processing chart for last 24h
+          // Align `now` to the START of current hour so skeleton keys are "HH:00" and match SQL
+          const nowHour = new Date(now);
+          nowHour.setMinutes(0, 0, 0);
           const hourlySlots = [];
           for (let i = 23; i >= 0; i--) {
-            const start = new Date(now.getTime() - (i + 1) * 60 * 60 * 1000);
-            const end = new Date(now.getTime() - i * 60 * 60 * 1000);
-            
-            const [zaiHour, deepseekHour] = await Promise.all([
-              supabase.from('llm_usage_logs')
-                .select('id', { count: 'exact' })
-                .eq('operation', 'retell-news')
-                .contains('metadata', { llm_provider: 'zai' })
-                .gte('created_at', start.toISOString())
-                .lt('created_at', end.toISOString()),
-              supabase.from('llm_usage_logs')
-                .select('id', { count: 'exact' })
-                .eq('operation', 'retell-news')
-                .contains('metadata', { llm_provider: 'deepseek' })
-                .gte('created_at', start.toISOString())
-                .lt('created_at', end.toISOString())
-            ]);
-
-            hourlySlots.push({
-              time: start.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
-              zai: zaiHour.count || 0,
-              deepseek: deepseekHour.count || 0,
-              total: (zaiHour.count || 0) + (deepseekHour.count || 0)
-            });
+            // i=23 → 23 hours ago (oldest), i=0 → current hour (most recent)
+            const slot = new Date(nowHour.getTime() - i * 60 * 60 * 1000);
+            const key = slot.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+            const s = slotMap.get(key) || { zai: 0, deepseek: 0 };
+            hourlySlots.push({ time: key, zai: s.zai, deepseek: s.deepseek, total: s.zai + s.deepseek });
           }
 
           return new Response(
@@ -3470,18 +3509,20 @@ serve(async (req: Request) => {
               success: true,
               stats: {
                 pending_queue: {
-                  m15: pendingStats[0].count || 0,
-                  h1: pendingStats[1].count || 0,
-                  h6: pendingStats[2].count || 0,
-                  h24: pendingStats[3].count || 0
+                  m15: pendingM15.count || 0,
+                  h1:  pendingH1.count  || 0,
+                  h6:  pendingH6.count  || 0,
+                  h24: pendingH24.count || 0
                 },
-                current_queue_size: currentQueueSize || 0,
+                current_queue_size: queueSizeRes.count || 0,
                 completed_h24: {
-                  zai: zaiStats.count || 0,
+                  zai:      zaiStats.count      || 0,
                   deepseek: deepseekStats.count || 0,
-                  total: (zaiStats.count || 0) + (deepseekStats.count || 0)
+                  total:   (zaiStats.count || 0) + (deepseekStats.count || 0)
                 },
-                recent_queue_events: queueEvents || [],
+                recent_queue_events: queueEvents.data || [],
+                cron_runs_30m,
+                cron_runs_list,
                 hourly_chart: hourlySlots
               }
             }),
@@ -3494,6 +3535,156 @@ serve(async (req: Request) => {
               success: false, 
               error: e instanceof Error ? e.message : String(e) 
             }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      case 'generateTopicMeta': {
+        try {
+          const { topic, model, provider: reqProvider, prompt } = data || {} as any;
+          if (!topic || !model) {
+            return new Response(
+              JSON.stringify({ error: 'Missing topic or model' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // Fetch API keys from settings
+          const { data: settings } = await supabase
+            .from('settings')
+            .select('zai_api_key, openai_api_key, gemini_api_key, gemini_v22_api_key, anthropic_api_key, mistral_api_key, deepseek_api_key')
+            .limit(1)
+            .single();
+
+          // Fetch 30 most recent news for this topic
+          const { data: newsItems } = await supabase
+            .from('news_rss_items')
+            .select('title, link, published_at')
+            .contains('themes', [topic])
+            .order('published_at', { ascending: false })
+            .limit(30);
+
+          const newsContext = (newsItems || []).map((n: any, i: number) =>
+            `${i + 1}. ${n.title || '(no title)'}${n.link ? ` — ${n.link}` : ''}${n.published_at ? ` [${new Date(n.published_at).toLocaleDateString('en-US')}]` : ''}`
+          ).join('\n');
+
+          const systemPrompt = `You are an expert SEO content writer and news analyst. Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
+{"description_en":"Short 1-2 sentence summary of this topic (max 160 chars)","seo_text_en":"Full detailed analysis with charts using special characters (█▓▒░), quotes, interesting facts, and important URLs","seo_keywords_en":"keyword1, keyword2, keyword3, keyword4, keyword5"}`;
+
+          const userPrompt = `Topic: "${topic}"
+
+Recent news:\n${newsContext || '(no recent news found)'}
+
+Instruction:\n${prompt || 'Make a deep analysis of the latest news. Add quotes and interesting facts. Add charts made with special characters. Add a list of important URLs. Write in simple English.'}`;
+
+          // Detect provider from model name (override from request if provided)
+          const modelLower = model.toLowerCase();
+          let provider = reqProvider || 'zai';
+          if (!reqProvider) {
+            if (modelLower.includes('deepseek')) provider = 'deepseek';
+            else if (modelLower.includes('gpt') || modelLower.startsWith('openai/')) provider = 'openai';
+            else if (modelLower.includes('gemini') || modelLower.startsWith('google/')) provider = 'gemini';
+            else if (modelLower.includes('claude')) provider = 'anthropic';
+            else if (modelLower.includes('mistral')) provider = 'mistral';
+          }
+
+          // Call LLM
+          let rawText = '';
+          if (provider === 'zai') {
+            const apiKey = settings?.zai_api_key || Deno.env.get('ZAI_API_KEY');
+            if (!apiKey) throw new Error('Z.AI API key not configured');
+            const resp = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 3000 }),
+            });
+            if (!resp.ok) throw new Error(`Z.AI error: ${resp.status} ${await resp.text()}`);
+            rawText = (await resp.json()).choices?.[0]?.message?.content || '';
+
+          } else if (provider === 'deepseek') {
+            const apiKey = settings?.deepseek_api_key || Deno.env.get('DEEPSEEK_API_KEY');
+            if (!apiKey) throw new Error('DeepSeek API key not configured');
+            const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 3000 }),
+            });
+            if (!resp.ok) throw new Error(`DeepSeek error: ${resp.status} ${await resp.text()}`);
+            rawText = (await resp.json()).choices?.[0]?.message?.content || '';
+
+          } else if (provider === 'openai') {
+            const apiKey = settings?.openai_api_key || Deno.env.get('OPENAI_API_KEY');
+            if (!apiKey) throw new Error('OpenAI API key not configured');
+            const modelName = model.replace('openai/', '');
+            const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model: modelName, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 3000 }),
+            });
+            if (!resp.ok) throw new Error(`OpenAI error: ${resp.status} ${await resp.text()}`);
+            rawText = (await resp.json()).choices?.[0]?.message?.content || '';
+
+          } else if (provider === 'gemini') {
+            const apiKey = settings?.gemini_api_key || Deno.env.get('GEMINI_API_KEY');
+            if (!apiKey) throw new Error('Gemini API key not configured');
+            const modelName = model.replace('google/', '');
+            const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }] }),
+            });
+            if (!resp.ok) throw new Error(`Gemini error: ${resp.status} ${await resp.text()}`);
+            rawText = (await resp.json()).candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+          } else if (provider === 'anthropic') {
+            const apiKey = settings?.anthropic_api_key || Deno.env.get('ANTHROPIC_API_KEY');
+            if (!apiKey) throw new Error('Anthropic API key not configured');
+            const resp = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, max_tokens: 3000, system: systemPrompt, messages: [{ role: 'user', content: userPrompt }] }),
+            });
+            if (!resp.ok) throw new Error(`Anthropic error: ${resp.status} ${await resp.text()}`);
+            rawText = (await resp.json()).content?.[0]?.text || '';
+
+          } else if (provider === 'mistral') {
+            const apiKey = settings?.mistral_api_key || Deno.env.get('MISTRAL_API_KEY');
+            if (!apiKey) throw new Error('Mistral API key not configured');
+            const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 3000 }),
+            });
+            if (!resp.ok) throw new Error(`Mistral error: ${resp.status} ${await resp.text()}`);
+            rawText = (await resp.json()).choices?.[0]?.message?.content || '';
+          } else {
+            throw new Error(`Unknown provider: ${provider}`);
+          }
+
+          // Parse JSON from LLM response (strip markdown fences if any)
+          let parsed: any = {};
+          try {
+            const clean = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+            const jsonMatch = clean.match(/\{[\s\S]*\}/);
+            if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+          } catch {
+            parsed = { seo_text_en: rawText };
+          }
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              description_en: parsed.description_en || '',
+              seo_text_en: parsed.seo_text_en || rawText,
+              seo_keywords_en: parsed.seo_keywords_en || '',
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (e) {
+          console.error('generateTopicMeta error:', e);
+          return new Response(
+            JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }

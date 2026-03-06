@@ -11,6 +11,7 @@ interface AnalysisRequest {
   newsTitle: string;
   newsContent: string;
   model?: string;
+  skipVerification?: boolean;
 }
 
 interface NewsAnalysis {
@@ -41,7 +42,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    const { newsId, newsTitle, newsContent, model = 'gemini-2.5-flash' }: AnalysisRequest = await req.json();
+    const { newsId, newsTitle, newsContent, model = 'GLM-4.7-Flash', skipVerification = false }: AnalysisRequest = await req.json();
 
     if (!newsId || !newsTitle || !newsContent) {
       throw new Error('Missing required fields: newsId, newsTitle, newsContent');
@@ -124,7 +125,10 @@ Provide comprehensive analysis in JSON format as specified.`;
     };
 
     // --- Generate verification summary using separate LLM call ---
-    try {
+    if (skipVerification) {
+      console.log('Skipping verification (skipVerification=true)');
+    }
+    if (!skipVerification) try {
       const verificationSystem = `Role: Senior fact-checking lead for an AI news site.\n\nYou must produce JSON only.`;
 
       const verificationUser = `Given:\nA) Article text:\n${newsContent}\n\nB) Source list: Provide 2-6 independent sources if available (publisher + datetime + snippet)\n\nC) Site policy: automated checks only, no human editor unless flagged.\n\nDo:\n1) Return a concise card with: Status label (one of: Verified, Mostly Verified, Mixed, Unverified), Confidence (0-100), "Why this status" (1-2 sentences), "What we checked" (list), "Limitations" (list), "How to improve" (list).\n2) Also return a machine-friendly JSON object with fields: status, confidence, sources (publisher, datetime, snippet), last_checked (ISO), why, what_we_checked, limitations, suggestions.\n\nConstraints:\n- Never imply certainty when evidence is single-source.\n- Use timestamps where possible.\n\nRespond ONLY with valid JSON.`;
@@ -186,6 +190,27 @@ Provide comprehensive analysis in JSON format as specified.`;
 
     console.log(`Analysis generated and saved for newsId=${newsId}`);
 
+    // Refresh the page cache so search bots see the updated analysis
+    try {
+      const { data: itemData } = await supabase
+        .from('news_rss_items')
+        .select('slug, country:news_countries(code)')
+        .eq('id', newsId)
+        .single();
+
+      if (itemData?.slug && (itemData.country as any)?.code) {
+        const countryCode = (itemData.country as any).code.toLowerCase();
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+        const adminPass = Deno.env.get('ADMIN_PASSWORD');
+        const cacheUrl = `${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(`/news/${countryCode}/${itemData.slug}`)}&password=${adminPass}`;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+        await fetch(cacheUrl, { headers: { 'Authorization': `Bearer ${supabaseKey}` } });
+        console.log(`Cache refreshed for /news/${countryCode}/${itemData.slug}`);
+      }
+    } catch (cacheErr) {
+      console.warn('Cache refresh failed (non-fatal):', cacheErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true, analysis: analysisWithMeta }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -237,6 +262,9 @@ async function callLLM(
   } else if (model.startsWith('gpt-') || model.startsWith('o1-')) {
     provider = 'openai';
     apiKey = settings.openai_api_key || Deno.env.get('OPENAI_API_KEY');
+  } else if (model.startsWith('deepseek-') || model === 'deepseek') {
+    provider = 'deepseek';
+    apiKey = settings.deepseek_api_key || Deno.env.get('DEEPSEEK_API_KEY');
   }
 
   console.log(`Calling LLM: provider=${provider}, model=${model}`);
@@ -331,6 +359,36 @@ async function callLLM(
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Mistral API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  }
+
+  // DeepSeek
+  if (provider === 'deepseek') {
+    if (!apiKey) throw new Error('DeepSeek API key not configured');
+
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model || 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 4000,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`DeepSeek API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();

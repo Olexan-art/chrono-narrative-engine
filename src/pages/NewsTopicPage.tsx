@@ -107,21 +107,25 @@ export default function NewsTopicPage() {
 
   const dateLocale = language === "en" ? enUS : language === "pl" ? pl : uk;
 
-  // ── total news count (real count, no limit, 24-hour cache) ────────────────
-  const { data: totalNewsCount = 0 } = useQuery<number>({
-    queryKey: ["topic-news-count", topic],
+  // ── combined RPC: total_count + news_daily_views + entity_daily_views ──────
+  // Single DB call instead of 3 separate queries; no waterfall dependency on newsIds
+  const { data: viewsSummary } = useQuery({
+    queryKey: ['topic-views-summary', topic],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from("news_rss_items")
-        .select("*", { count: "estimated", head: true })
-        .contains("themes", [topic]);
+      const { data, error } = await (supabase as any).rpc('get_topic_views_summary', { p_topic: topic });
       if (error) throw error;
-      return count ?? 0;
+      return data as {
+        total_count: number;
+        news_daily_views: { date: string; views: number }[];
+        entity_daily_views: { date: string; views: number }[];
+      };
     },
     enabled: !!topic,
-    staleTime: 1000 * 60 * 60 * 24,
-    gcTime: 1000 * 60 * 60 * 24,
+    staleTime: 1000 * 60 * 30, // 30 min — daily view counts don't change per-minute
+    gcTime: 1000 * 60 * 60,
   });
+
+  const totalNewsCount = viewsSummary?.total_count ?? 0;
 
   // ── admin-edited topic meta (description + SEO texts) ────────────────
   const { data: topicMeta } = useQuery<{
@@ -281,56 +285,9 @@ export default function NewsTopicPage() {
       }));
   }, [newsItems, entityCountByNewsId, language]);
 
-  // ── daily views for news in this topic (sum of daily_views.entity_type='news') ──
-  const { data: newsDailyViews = [] } = useQuery({
-    queryKey: ['topic-news-daily-views', topic, newsIds.length],
-    queryFn: async () => {
-      if (!newsIds.length) return [];
-      const { data, error } = await supabase
-        .from('daily_views')
-        .select('view_date, views, entity_id')
-        .eq('entity_type', 'news')
-        .in('entity_id', newsIds)
-        .order('view_date', { ascending: true });
-
-      if (error || !data) return [];
-
-      const byDate: Record<string, number> = {};
-      for (const row of data) {
-        byDate[row.view_date] = (byDate[row.view_date] || 0) + (row.views || 0);
-      }
-
-      return Object.entries(byDate).map(([date, views]) => ({ date, views }));
-    },
-    enabled: newsIds.length > 0,
-    staleTime: 1000 * 60 * 5,
-  });
-
-  // ── daily views for wiki entities that appear in this topic's news ──
-  const { data: entityDailyViews = [] } = useQuery({
-    queryKey: ['topic-entity-daily-views', topic, newsIds.length],
-    queryFn: async () => {
-      const entityIds = Array.from(new Set(entityLinks.map(l => l.wiki_entity?.id).filter(Boolean)));
-      if (!entityIds.length) return [];
-      const { data, error } = await supabase
-        .from('daily_views')
-        .select('view_date, views, entity_id')
-        .eq('entity_type', 'wiki')
-        .in('entity_id', entityIds)
-        .order('view_date', { ascending: true });
-
-      if (error || !data) return [];
-
-      const byDate: Record<string, number> = {};
-      for (const row of data) {
-        byDate[row.view_date] = (byDate[row.view_date] || 0) + (row.views || 0);
-      }
-
-      return Object.entries(byDate).map(([date, views]) => ({ date, views }));
-    },
-    enabled: entityLinks.length > 0,
-    staleTime: 1000 * 60 * 5,
-  });
+  // Derived from RPC result (no separate queries needed)
+  const newsDailyViews = viewsSummary?.news_daily_views ?? [];
+  const entityDailyViews = viewsSummary?.entity_daily_views ?? [];
 
   /** Hero image – first news with an image */
   const heroImage = useMemo(

@@ -476,9 +476,10 @@ export default function NewsArticlePage() {
     mutationFn: async () => {
       if (!article) throw new Error('No article');
 
+      const selectedModelObj = availableModels.find(m => m.value === selectedModel);
       const result = await callEdgeFunction<{ success: boolean; content: string; error?: string }>(
         'retell-news',
-        { newsId: article.id, model: selectedModel }
+        { newsId: article.id, model: selectedModel, provider: selectedModelObj?.provider }
       );
 
       if (!result.success) {
@@ -573,9 +574,10 @@ export default function NewsArticlePage() {
     mutationFn: async () => {
       if (!article) throw new Error('No article');
 
+      const selectedScoreModelObj = availableModels.find(m => m.value === selectedScoreModel);
       const result = await callEdgeFunction<{ success: boolean; data: any; error?: string }>(
         'score-news-source',
-        { newsId: article.id, model: selectedScoreModel }
+        { newsId: article.id, model: selectedScoreModel, provider: selectedScoreModelObj?.provider }
       );
 
       if (!result.success) {

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Activity, AlertCircle, RefreshCw, Timer, Zap, TrendingUp } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -206,20 +206,7 @@ export default function AdminDashboardPage() {
             <QuickDashboard password={password} />
 
             {/* Retell Queue Stats - найважливіший блок */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Activity className="w-5 h-5" />
-                        Retell Queue (Автоматична обробка)
-                    </CardTitle>
-                    <CardDescription>
-                        Система автоматично обробляє 20 новин кожні 10 хвилин
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <RetellQueueStats password={password} />
-                </CardContent>
-            </Card>
+            <RetellQueueStats password={password} />
 
             {/* Швидкий доступ */}
             <Card>
