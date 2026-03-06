@@ -372,14 +372,12 @@ serve(async (req) => {
                         } catch (_) { }
 
                         // Still trigger analysis & wiki for deepseek-fallback items
-                        const itemCountryCodeFb = (newsItem.country?.code || countryCode || 'us').toLowerCase();
                         const fullContentFb = (newsItem.content || newsItem.title || '').slice(0, 3000);
                         pendingTasks.push(
                             fetch(`${supabaseUrl}/functions/v1/generate-news-analysis`, {
                                 method: 'POST',
                                 headers: { 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
-                                // ZAI is 429-limited here, use DeepSeek for analysis
-                                body: JSON.stringify({ newsId: newsItem.id, newsTitle: newsItem.title, newsContent: fullContentFb, model: 'deepseek-chat', skipVerification: true })
+                                body: JSON.stringify({ newsId: newsItem.id, newsTitle: newsItem.title, newsContent: fullContentFb, model: llm_model || 'GLM-4.7-Flash', skipVerification: true })
                             }).catch(e => console.warn('[zai-fb] generate-news-analysis error:', e))
                         );
                         pendingTasks.push(
@@ -432,8 +430,7 @@ serve(async (req) => {
                         fetch(`${supabaseUrl}/functions/v1/generate-news-analysis`, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
-                            // Use DeepSeek for analysis — ZAI was just used for retell and may be rate-limited
-                            body: JSON.stringify({ newsId: newsItem.id, newsTitle: newsItem.title, newsContent: fullContent, model: 'deepseek-chat', skipVerification: true })
+                            body: JSON.stringify({ newsId: newsItem.id, newsTitle: newsItem.title, newsContent: fullContent, model: llm_model || 'GLM-4.7-Flash', skipVerification: true })
                         }).catch(e => console.warn('[zai] generate-news-analysis error:', e))
                     );
                     pendingTasks.push(
