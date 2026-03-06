@@ -4,107 +4,91 @@ import { cn } from "@/lib/utils";
 export function Logo({ className }: { className?: string }) {
     return (
         <div className={cn("flex flex-col select-none relative group", className)}>
-            <div className="flex items-center gap-1 leading-none relative">
-                <span className="font-sans font-black text-2xl tracking-tighter text-foreground transition-all duration-300 group-hover:animate-glitch-1">
-                    Braven
+            {/* Holographic glow background */}
+            <div className="absolute -inset-3 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-pink-500/20 rounded-lg blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:animate-rainbow-pulse"></div>
+            
+            <div className="flex items-center gap-1 leading-none relative z-10">
+                <span className="font-sans font-black text-2xl tracking-tighter relative group-hover:animate-wave-text">
+                    <span className="relative inline-block bg-gradient-to-br from-foreground via-foreground to-foreground group-hover:from-cyan-400 group-hover:via-purple-400 group-hover:to-pink-400 bg-clip-text text-transparent transition-all duration-700 drop-shadow-[0_0_8px_rgba(139,92,246,0)] group-hover:drop-shadow-[0_0_8px_rgba(139,92,246,0.5)]">
+                        Braven
+                    </span>
                 </span>
                 <span className="font-sans font-black text-2xl tracking-tighter relative">
-                    {/* Main text */}
-                    <span className="relative inline-block text-primary group-hover:animate-glitch-2">
+                    {/* Main holographic text */}
+                    <span className="relative inline-block bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] group-hover:animate-shimmer-rainbow bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(var(--primary-rgb),0.3)] group-hover:drop-shadow-[0_0_15px_rgba(var(--primary-rgb),0.8)] transition-all duration-300 group-hover:scale-110">
                         Now
                     </span>
-                    {/* Glitch layers */}
-                    <span className="absolute top-0 left-0 text-cyan-500 opacity-0 group-hover:opacity-70 group-hover:animate-glitch-layer-1" aria-hidden="true">
-                        Now
-                    </span>
-                    <span className="absolute top-0 left-0 text-orange-500 opacity-0 group-hover:opacity-70 group-hover:animate-glitch-layer-2" aria-hidden="true">
+                    {/* Neon glow effect */}
+                    <span className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent opacity-0 group-hover:opacity-50 group-hover:animate-neon-flicker blur-[1px]" aria-hidden="true">
                         Now
                     </span>
                 </span>
             </div>
-            <span className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground uppercase opacity-80 pl-[2px] relative transition-all duration-300 group-hover:opacity-100 group-hover:tracking-[0.3em] group-hover:animate-flicker">
+            <span className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground uppercase opacity-80 pl-[2px] relative z-10 transition-all duration-500 group-hover:opacity-100 group-hover:tracking-[0.35em] group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-cyan-400/80 group-hover:via-purple-400/80 group-hover:to-pink-400/80 group-hover:bg-clip-text">
                 Brave New World
             </span>
             
             <style>{`
-                @keyframes glitch-1 {
-                    0%, 100% { transform: translate(0); }
-                    20% { transform: translate(-2px, 1px); }
-                    40% { transform: translate(2px, -1px); }
-                    60% { transform: translate(-1px, 2px); }
-                    80% { transform: translate(1px, -2px); }
+                @keyframes rainbow-pulse {
+                    0%, 100% {
+                        background-position: 0% 50%;
+                        opacity: 0.6;
+                    }
+                    50% {
+                        background-position: 100% 50%;
+                        opacity: 1;
+                    }
                 }
                 
-                @keyframes glitch-2 {
-                    0%, 100% { transform: translate(0); opacity: 1; }
-                    10% { transform: translate(-3px, 0); }
-                    20% { transform: translate(3px, 0); }
-                    30% { transform: translate(0, 2px); }
-                    40% { transform: translate(0, -2px); }
-                    50% { transform: translate(-2px, 1px); opacity: 0.9; }
-                    60% { transform: translate(2px, -1px); opacity: 0.95; }
-                    70% { transform: translate(-1px, 2px); }
-                    80% { transform: translate(1px, -2px); }
-                    90% { transform: translate(0); opacity: 1; }
+                @keyframes shimmer-rainbow {
+                    0% {
+                        background-position: 0% center;
+                        filter: hue-rotate(0deg);
+                    }
+                    50% {
+                        background-position: 100% center;
+                        filter: hue-rotate(20deg);
+                    }
+                    100% {
+                        background-position: 200% center;
+                        filter: hue-rotate(0deg);
+                    }
                 }
                 
-                @keyframes glitch-layer-1 {
-                    0%, 100% { transform: translate(0); clip-path: inset(0 0 0 0); }
-                    10% { transform: translate(-3px, 2px); clip-path: inset(10% 0 60% 0); }
-                    20% { transform: translate(2px, -1px); clip-path: inset(40% 0 20% 0); }
-                    30% { transform: translate(-2px, 3px); clip-path: inset(70% 0 5% 0); }
-                    40% { transform: translate(3px, -2px); clip-path: inset(5% 0 80% 0); }
-                    50% { transform: translate(-1px, 1px); clip-path: inset(60% 0 30% 0); }
-                    60% { transform: translate(2px, 2px); clip-path: inset(20% 0 65% 0); }
-                    70% { transform: translate(-3px, -1px); clip-path: inset(50% 0 40% 0); }
-                    80% { transform: translate(1px, 3px); clip-path: inset(15% 0 75% 0); }
-                    90% { transform: translate(0); clip-path: inset(0 0 0 0); }
+                @keyframes neon-flicker {
+                    0%, 100% { opacity: 0.3; }
+                    10% { opacity: 0.5; }
+                    20% { opacity: 0.3; }
+                    30% { opacity: 0.6; }
+                    40% { opacity: 0.4; }
+                    50% { opacity: 0.7; }
+                    60% { opacity: 0.3; }
+                    70% { opacity: 0.5; }
+                    80% { opacity: 0.4; }
+                    90% { opacity: 0.6; }
                 }
                 
-                @keyframes glitch-layer-2 {
-                    0%, 100% { transform: translate(0); clip-path: inset(0 0 0 0); }
-                    15% { transform: translate(3px, -2px); clip-path: inset(30% 0 40% 0); }
-                    25% { transform: translate(-2px, 2px); clip-path: inset(60% 0 10% 0); }
-                    35% { transform: translate(2px, 1px); clip-path: inset(5% 0 70% 0); }
-                    45% { transform: translate(-3px, -2px); clip-path: inset(80% 0 5% 0); }
-                    55% { transform: translate(1px, -1px); clip-path: inset(25% 0 55% 0); }
-                    65% { transform: translate(-2px, 2px); clip-path: inset(45% 0 35% 0); }
-                    75% { transform: translate(3px, 1px); clip-path: inset(65% 0 15% 0); }
-                    85% { transform: translate(-1px, -2px); clip-path: inset(10% 0 85% 0); }
-                    95% { transform: translate(0); clip-path: inset(0 0 0 0); }
+                @keyframes wave-text {
+                    0%, 100% { transform: translateY(0); }
+                    25% { transform: translateY(-2px); }
+                    75% { transform: translateY(2px); }
                 }
                 
-                @keyframes flicker {
-                    0%, 100% { opacity: 1; }
-                    10% { opacity: 0.8; }
-                    20% { opacity: 1; }
-                    30% { opacity: 0.9; }
-                    40% { opacity: 1; }
-                    50% { opacity: 0.85; }
-                    60% { opacity: 1; }
-                    70% { opacity: 0.95; }
-                    80% { opacity: 1; }
-                    90% { opacity: 0.9; }
+                .animate-rainbow-pulse {
+                    animation: rainbow-pulse 3s ease-in-out infinite;
+                    background-size: 200% 200%;
                 }
                 
-                .animate-glitch-1 {
-                    animation: glitch-1 0.8s ease-in-out infinite;
+                .animate-shimmer-rainbow {
+                    animation: shimmer-rainbow 4s linear infinite;
                 }
                 
-                .animate-glitch-2 {
-                    animation: glitch-2 0.6s ease-in-out infinite;
+                .animate-neon-flicker {
+                    animation: neon-flicker 1.5s ease-in-out infinite;
                 }
                 
-                .animate-glitch-layer-1 {
-                    animation: glitch-layer-1 0.5s steps(2) infinite;
-                }
-                
-                .animate-glitch-layer-2 {
-                    animation: glitch-layer-2 0.4s steps(2) infinite;
-                }
-                
-                .animate-flicker {
-                    animation: flicker 2s ease-in-out infinite;
+                .animate-wave-text {
+                    animation: wave-text 2s ease-in-out infinite;
                 }
             `}</style>
         </div>
