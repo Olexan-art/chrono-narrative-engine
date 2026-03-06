@@ -334,10 +334,21 @@ export function OriginalSourceBlock({
                   href={sourceUrl} 
                   target="_blank" 
                   rel="noopener noreferrer nofollow"
-                  className="inline-flex items-center gap-1.5 mt-3 text-xs text-primary hover:underline"
+                  className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white px-6 py-3 rounded-lg text-base font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/50 overflow-hidden mt-4"
                 >
-                  <ExternalLink className="w-3 h-3" />
-                  {readMoreLabel}
+                  <span className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></span>
+                  {logoUrl && (
+                    <img
+                      src={logoUrl}
+                      alt=""
+                      className="w-8 h-8 relative z-10 rounded bg-white/10 p-1 group-hover:scale-110 transition-transform duration-300"
+                    />
+                  )}
+                  <span className="relative z-10 flex flex-col items-start">
+                    <span className="text-base font-semibold">{readMoreLabel}</span>
+                    {domain && <span className="text-xs opacity-75 font-normal">{domain}</span>}
+                  </span>
+                  <ExternalLink className="w-5 h-5 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
                 </a>
               </>
             )}
