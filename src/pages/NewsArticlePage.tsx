@@ -1089,7 +1089,7 @@ export default function NewsArticlePage() {
                   href={article.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-primary hover:underline text-sm"
+                  className="inline-flex items-center gap-2 bg-primary text-white hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   <ExternalLink className="w-4 h-4" />
                   {t('news.read_original')}
