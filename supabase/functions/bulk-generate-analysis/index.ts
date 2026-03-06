@@ -42,6 +42,8 @@ serve(async (req) => {
 
     const results = { processed: 0, success: 0, failed: 0, skipped: 0, errors: [] as string[] };
 
+    const tasks: Promise<void>[] = [];
+
     for (const item of (items || [])) {
       const newsContent = (item.content || item.title || '').slice(0, 3000);
       if (!newsContent) {
@@ -55,41 +57,55 @@ serve(async (req) => {
       // Choose model based on llm_provider or override
       let itemModel = model;
       if (model === 'auto') {
-        itemModel = item.llm_provider === 'zai' ? 'GLM-4.7-Flash' : 'deepseek-chat';
+        itemModel = item.llm_provider === 'zai' ? (item.llm_model || 'GLM-4.7-Flash') : (item.llm_model || 'deepseek-chat');
       }
 
-      try {
-        console.log(`[bulk-generate-analysis] Processing ${item.id} (${item.llm_provider}) with ${itemModel}`);
-        const resp = await fetch(`${supabaseUrl}/functions/v1/generate-news-analysis`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            newsId: item.id,
-            newsTitle: item.title,
-            newsContent,
-            model: itemModel,
-            skipVerification: true, // skip 2nd LLM call to keep each item fast (~15s)
-          }),
-        });
+      const task = (async () => {
+        try {
+          console.log(`[bulk-generate-analysis] Processing ${item.id} (${item.llm_provider}) with ${itemModel}`);
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 45000); // 45s per item timeout
+          const resp = await fetch(`${supabaseUrl}/functions/v1/generate-news-analysis`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              newsId: item.id,
+              newsTitle: item.title,
+              newsContent,
+              model: itemModel,
+              skipVerification: true,
+            }),
+            signal: controller.signal,
+          });
+          clearTimeout(timer);
 
-        if (resp.ok) {
-          results.success++;
-          console.log(`[bulk-generate-analysis] ✓ ${item.id}`);
-        } else {
-          const errText = await resp.text();
+          if (resp.ok) {
+            results.success++;
+            console.log(`[bulk-generate-analysis] ✓ ${item.id}`);
+          } else {
+            const errText = await resp.text();
+            results.failed++;
+            results.errors.push(`${item.id}: HTTP ${resp.status} — ${errText.slice(0, 100)}`);
+            console.error(`[bulk-generate-analysis] ✗ ${item.id}: HTTP ${resp.status} — ${errText.slice(0, 100)}`);
+          }
+        } catch (e) {
           results.failed++;
-          results.errors.push(`${item.id}: HTTP ${resp.status} — ${errText.slice(0, 100)}`);
-          console.error(`[bulk-generate-analysis] ✗ ${item.id}: HTTP ${resp.status} — ${errText.slice(0, 100)}`);
+          results.errors.push(`${item.id}: ${e instanceof Error ? e.message : String(e)}`);
+          console.error(`[bulk-generate-analysis] ✗ ${item.id}: ${e}`);
         }
-      } catch (e) {
-        results.failed++;
-        results.errors.push(`${item.id}: ${e instanceof Error ? e.message : String(e)}`);
-        console.error(`[bulk-generate-analysis] ✗ ${item.id}: ${e}`);
-      }
+      })();
+
+      tasks.push(task);
     }
+
+    // Run all items in parallel, cap total wait at 55s (within 60s function timeout)
+    await Promise.race([
+      Promise.allSettled(tasks),
+      new Promise(r => setTimeout(r, 55000)),
+    ]);
 
     console.log(`[bulk-generate-analysis] Done: ${JSON.stringify(results)}`);
 

@@ -128,6 +128,15 @@ verify_jwt = false
 [functions.analyze-narratives]
 verify_jwt = false
 
+[functions.generate-news-analysis]
+verify_jwt = false
+
+[functions.bulk-generate-analysis]
+verify_jwt = false
+
+[functions.bulk-retell-news-deepseek]
+verify_jwt = false
+
 [functions.score-news-source]
 enabled = true
 verify_jwt = true
