@@ -1092,9 +1092,22 @@ export default function NewsArticlePage() {
                   className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white px-6 py-3 rounded-lg text-base font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/50 overflow-hidden"
                 >
                   <span className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></span>
-                  <ExternalLink className="w-5 h-5 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                  {article.url && (() => {
+                    try {
+                      const domain = new URL(article.url).hostname;
+                      return (
+                        <img
+                          src={getLogoUrl(domain, 32)}
+                          alt=""
+                          className="w-8 h-8 relative z-10 rounded bg-white/10 p-1 group-hover:scale-110 transition-transform duration-300"
+                        />
+                      );
+                    } catch {
+                      return null;
+                    }
+                  })()}
                   <span className="relative z-10 flex flex-col items-start">
-                    <span className="text-sm font-medium opacity-90">{t('news.read_original')}</span>
+                    <span className="text-base font-semibold">Read full article at source</span>
                     {article.url && (() => {
                       try {
                         const domain = new URL(article.url).hostname.replace('www.', '');
@@ -1104,6 +1117,7 @@ export default function NewsArticlePage() {
                       }
                     })()}
                   </span>
+                  <ExternalLink className="w-5 h-5 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
                 </a>
 
                 {/* Share to Twitter/X button */}
