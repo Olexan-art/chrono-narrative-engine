@@ -1089,10 +1089,21 @@ export default function NewsArticlePage() {
                   href={article.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-primary text-white hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white px-6 py-3 rounded-lg text-base font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/50 overflow-hidden"
                 >
-                  <ExternalLink className="w-4 h-4" />
-                  {t('news.read_original')}
+                  <span className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></span>
+                  <ExternalLink className="w-5 h-5 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+                  <span className="relative z-10 flex flex-col items-start">
+                    <span className="text-sm font-medium opacity-90">{t('news.read_original')}</span>
+                    {article.url && (() => {
+                      try {
+                        const domain = new URL(article.url).hostname.replace('www.', '');
+                        return <span className="text-xs opacity-75 font-normal">{domain}</span>;
+                      } catch {
+                        return null;
+                      }
+                    })()}
+                  </span>
                 </a>
 
                 {/* Share to Twitter/X button */}
