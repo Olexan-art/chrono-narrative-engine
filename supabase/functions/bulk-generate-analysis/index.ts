@@ -22,14 +22,50 @@ serve(async (req) => {
     const limit = body.limit || 20;
     const hoursBack = body.hours_back || 24;
     const model = body.model || 'deepseek-chat'; // default: DeepSeek (more reliable for batch)
+    const cacheOnly = body.cache_only === true; // only refresh cache, skip analysis generation
     const hoursAgo = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
 
-    console.log(`[bulk-generate-analysis] Starting: limit=${limit}, hours_back=${hoursBack}, model=${model}`);
+    console.log(`[bulk-generate-analysis] Starting: limit=${limit}, hours_back=${hoursBack}, model=${model}, cache_only=${cacheOnly}`);
+
+    // cache_only mode: refresh cache for items that already have analysis
+    if (cacheOnly) {
+      const { data: items, error: fetchErr } = await supabase
+        .from('news_rss_items')
+        .select('id, slug, country:news_countries(code)')
+        .gte('llm_processed_at', hoursAgo)
+        .not('llm_processed_at', 'is', null)
+        .not('news_analysis', 'is', null)
+        .order('llm_processed_at', { ascending: false })
+        .limit(limit);
+
+      if (fetchErr) throw fetchErr;
+
+      const adminPass = Deno.env.get('ADMIN_PASSWORD');
+      const tasks = (items || [])
+        .filter(item => item.slug && (item.country as any)?.code)
+        .map(item => {
+          const cc = (item.country as any).code.toLowerCase();
+          const cacheUrl = `${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(`/news/${cc}/${item.slug}`)}&password=${adminPass}`;
+          return fetch(cacheUrl, { headers: { 'Authorization': `Bearer ${supabaseKey}` } })
+            .then(r => ({ id: item.id, ok: r.ok }))
+            .catch(e => ({ id: item.id, ok: false, err: String(e) }));
+        });
+
+      const cacheResults = await Promise.race([
+        Promise.all(tasks),
+        new Promise<any[]>(r => setTimeout(() => r([]), 55000)),
+      ]);
+      const ok = (cacheResults as any[]).filter(r => r.ok).length;
+      console.log(`[bulk-generate-analysis] cache_only: refreshed ${ok}/${(items||[]).length} pages`);
+      return new Response(JSON.stringify({ success: true, cache_refreshed: ok, total: (items||[]).length }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
     // Find items that need analysis (retelled but missing news_analysis)
     const { data: items, error: fetchErr } = await supabase
       .from('news_rss_items')
-      .select('id, title, content, llm_provider, llm_model, llm_processed_at')
+      .select('id, title, content, slug, llm_provider, llm_model, llm_processed_at, country:news_countries(code)')
       .gte('llm_processed_at', hoursAgo)
       .not('llm_processed_at', 'is', null)
       .is('news_analysis', null)
@@ -85,6 +121,14 @@ serve(async (req) => {
           if (resp.ok) {
             results.success++;
             console.log(`[bulk-generate-analysis] ✓ ${item.id}`);
+            // Refresh cache so Cloudflare/SSR serves updated HTML with analysis
+            if (item.slug && (item.country as any)?.code) {
+              const cc = (item.country as any).code.toLowerCase();
+              const adminPass = Deno.env.get('ADMIN_PASSWORD');
+              const cacheUrl = `${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(`/news/${cc}/${item.slug}`)}&password=${adminPass}`;
+              fetch(cacheUrl, { headers: { 'Authorization': `Bearer ${supabaseKey}` } })
+                .catch(e => console.warn(`[bulk-generate-analysis] cache refresh warn: ${e}`));
+            }
           } else {
             const errText = await resp.text();
             results.failed++;
