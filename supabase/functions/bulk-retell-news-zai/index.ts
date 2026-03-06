@@ -379,7 +379,7 @@ serve(async (req) => {
                                 method: 'POST',
                                 headers: { 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
                                 // ZAI is 429-limited here, use DeepSeek for analysis
-                                body: JSON.stringify({ newsId: newsItem.id, newsTitle: newsItem.title, newsContent: fullContentFb, model: 'deepseek-chat' })
+                                body: JSON.stringify({ newsId: newsItem.id, newsTitle: newsItem.title, newsContent: fullContentFb, model: 'deepseek-chat', skipVerification: true })
                             }).catch(e => console.warn('[zai-fb] generate-news-analysis error:', e))
                         );
                         pendingTasks.push(
@@ -432,7 +432,8 @@ serve(async (req) => {
                         fetch(`${supabaseUrl}/functions/v1/generate-news-analysis`, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ newsId: newsItem.id, newsTitle: newsItem.title, newsContent: fullContent, model: llm_model || 'GLM-4.7-Flash' })
+                            // Use DeepSeek for analysis — ZAI was just used for retell and may be rate-limited
+                            body: JSON.stringify({ newsId: newsItem.id, newsTitle: newsItem.title, newsContent: fullContent, model: 'deepseek-chat', skipVerification: true })
                         }).catch(e => console.warn('[zai] generate-news-analysis error:', e))
                     );
                     pendingTasks.push(

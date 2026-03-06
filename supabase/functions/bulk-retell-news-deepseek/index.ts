@@ -318,7 +318,7 @@ serve(async (req) => {
                         fetch(`${supabaseUrl}/functions/v1/generate-news-analysis`, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ newsId: newsItem.id, newsTitle: newsItem.title, newsContent: fullContent, model: llm_model || 'deepseek-chat' })
+                            body: JSON.stringify({ newsId: newsItem.id, newsTitle: newsItem.title, newsContent: fullContent, model: llm_model || 'deepseek-chat', skipVerification: true })
                         }).catch(e => console.warn('[deepseek] generate-news-analysis error:', e))
                     );
                     pendingTasks.push(
