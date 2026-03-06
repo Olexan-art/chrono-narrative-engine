@@ -7,14 +7,13 @@ import { HomeTopicsBanner, HomeTrending14dBanner } from "@/components/home/HomeT
 import { LatestUsaNews } from "@/components/home/LatestUsaNews";
 import { LatestUsaNewsSimple } from "@/components/home/LatestUsaNewsSimple";
 import { HolidayTimeline } from "@/components/home/HolidayTimeline";
+import { SourcesCarousel } from "@/components/home/SourcesCarousel";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 // Lazy load below-the-fold sections to reduce main-thread work
 const OutrageInkSection = lazy(() => import("@/components/home/OutrageInkSection").then(m => ({ default: m.OutrageInkSection })));
-const TrendingWikiEntities = lazy(() => import("@/components/home/TrendingWikiEntities").then(m => ({ default: m.TrendingWikiEntities })));
 const StructureSection = lazy(() => import("@/components/home/StructureSection").then(m => ({ default: m.StructureSection })));
 const CountryNewsSection = lazy(() => import("@/components/home/CountryNewsSection").then(m => ({ default: m.CountryNewsSection })));
-const InfiniteNewsFeed = lazy(() => import("@/components/home/InfiniteNewsFeed").then(m => ({ default: m.InfiniteNewsFeed })));
 
 export default function Index() {
   const { language } = useLanguage();
@@ -64,19 +63,16 @@ export default function Index() {
           {/* Outrage Ink Section - above Trending */}
           <OutrageInkSection />
 
-          {/* Trending Wiki Entities (12h) */}
-          <TrendingWikiEntities />
-
           {/* Structure Explainer */}
           <StructureSection />
 
           {/* News by Country - 6 per country */}
           <CountryNewsSection />
-
-          {/* Paginated News Feed */}
-          <InfiniteNewsFeed />
         </Suspense>
       </main>
+
+      {/* Sources Carousel - above Footer */}
+      <SourcesCarousel />
 
       {/* Footer */}
       <Footer />
