@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { uk, enUS, pl } from "date-fns/locale";
 import { Link } from "react-router-dom";
-import { ArrowRight, Clock, Newspaper } from "lucide-react";
+import { ArrowRight, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -71,12 +71,12 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
 
   if (isLoading) {
     return (
-      <section className="py-8 border-b border-border">
+      <section className="py-4 border-b border-cyan-500/20">
         <div className="container mx-auto px-4">
-          <Skeleton className="h-8 w-48 mb-4" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Skeleton className="h-4 w-24 mb-2" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {Array.from({ length: 20 }, (_, i) => (
-              <Skeleton key={i} className="h-[104px]" />
+              <Skeleton key={i} className="h-16" />
             ))}
           </div>
         </div>
@@ -87,31 +87,28 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
   if (usaNews.length === 0) return null;
 
   return (
-    <section className="py-8 border-b border-border">
+    <section className="py-4 border-b border-cyan-500/20">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🇺🇸</span>
-            <div>
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Newspaper className="w-4 h-4 text-muted-foreground" />
-                {language === 'uk' ? 'Останні новини США' : language === 'pl' ? 'Najnowsze wiadomości USA' : 'Latest USA News'}
-              </h2>
-              <span className="text-xs text-muted-foreground">
-                {usaNews.length} {language === 'uk' ? 'новин' : language === 'pl' ? 'wiadomości' : 'articles'}
-              </span>
-            </div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 bg-cyan-400 animate-digital-blink" />
+            <h2 className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-bold">
+              {language === 'uk' ? 'Новини США' : language === 'pl' ? 'USA' : 'USA News'}
+            </h2>
+            <span className="text-[9px] font-mono text-muted-foreground">
+              {usaNews.length}
+            </span>
           </div>
           <Link 
             to="/news/us" 
-            className="text-xs text-primary hover:underline flex items-center gap-1"
+            className="text-[9px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5"
           >
-            {language === 'uk' ? 'Усі новини' : language === 'pl' ? 'Wszystkie' : 'View all'}
-            <ArrowRight className="w-3 h-3" />
+            {language === 'uk' ? 'Усі' : language === 'pl' ? 'Wszystkie' : 'All'}
+            <ArrowRight className="w-2.5 h-2.5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {usaNews.map((item, idx) => {
             const localizedTitle = language === 'en' 
               ? (item.title_en || item.title)
@@ -121,15 +118,15 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
               <Link
                 key={item.id}
                 to={`/news/us/${item.slug}`}
-                className="group flex items-start gap-3 p-3 rounded-lg border border-border hover:border-primary/30 hover:bg-muted/30 transition-all animate-fade-in"
-                style={{ animationDelay: `${idx * 50}ms` }}
+                className="group flex items-start gap-2 p-2 border border-cyan-500/20 hover:border-cyan-500/40 bg-cyan-500/5 hover:bg-cyan-500/10 transition-all"
+                style={{ animationDelay: `${idx * 30}ms` }}
               >
                 {item.image_url ? (
                   <OptimizedImage 
                     src={item.image_url} 
                     alt="" 
-                    className="w-16 h-16 object-cover rounded shrink-0"
-                    containerClassName="w-16 h-16 shrink-0 rounded"
+                    className="w-12 h-12 object-cover shrink-0"
+                    containerClassName="w-12 h-12 shrink-0"
                     onError={() => {}}
                     fallbackSrc=""
                   />
@@ -138,29 +135,29 @@ export const LatestUsaNewsSimple = memo(function LatestUsaNewsSimple({ excludeId
                   <NewsLogoMosaic 
                     feedName={(item as any).news_rss_feeds?.name}
                     sourceUrl={(item as any).url}
-                    className="w-16 h-16 shrink-0 rounded"
+                    className="w-12 h-12 shrink-0"
                     logoSize="sm"
                   />
                 )}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">
+                  <h3 className="text-[11px] font-mono leading-tight line-clamp-2 group-hover:text-cyan-400 transition-colors">
                     {localizedTitle}
                   </h3>
-                  <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                    {item.category && (
-                      <span className="px-1.5 py-0.5 bg-secondary rounded text-secondary-foreground">
-                        {item.category}
+                  <div className="flex items-center gap-1.5 mt-1 text-[9px] text-muted-foreground font-mono">
+                    {item.published_at && (
+                      <span className="flex items-center gap-0.5">
+                        <Clock className="w-2 h-2" />
+                        {format(new Date(item.published_at), 'HH:mm', { locale: dateLocale })}
                       </span>
                     )}
-                    {item.published_at && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5" />
-                        {format(new Date(item.published_at), 'HH:mm', { locale: dateLocale })}
+                    {item.category && (
+                      <span className="text-cyan-500/60">
+                        {item.category}
                       </span>
                     )}
                   </div>
                   {/* Voting buttons */}
-                  <div className="mt-2" onClick={(e) => e.preventDefault()}>
+                  <div className="mt-1" onClick={(e) => e.preventDefault()}>
                     <NewsVoteCompact 
                       newsId={item.id} 
                       likes={item.likes || 0} 
