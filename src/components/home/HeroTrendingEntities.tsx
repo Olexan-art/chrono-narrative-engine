@@ -100,9 +100,9 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 max-w-md">
         {[1, 2, 3].map(i => (
-          <div key={i} className="rounded-xl overflow-hidden border border-border/50 bg-card/50">
+          <div key={i} className="rounded-lg overflow-hidden border border-border/50 bg-card/50">
             <Skeleton className="w-full aspect-square" />
           </div>
         ))}
@@ -115,7 +115,7 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
   }
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-3 gap-2 max-w-md">
       {trendingEntities.map((entity, idx) => {
         const name = language === 'en' && entity.name_en ? entity.name_en : entity.name;
         const wikiUrl = language === 'en' && entity.wiki_url_en ? entity.wiki_url_en : entity.wiki_url;
@@ -126,14 +126,14 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
           <div key={entity.id} className="relative group animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
             <Link
               to={`/wiki/${entity.slug || entity.id}`}
-              className={`block rounded-xl overflow-hidden border bg-card/50 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.2)] ${
+              className={`block rounded-lg overflow-hidden border bg-card/50 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.2)] ${
                 idx === 0 && topNarrative
                   ? 'border-primary/40 shadow-[0_0_20px_hsl(var(--primary)/0.15)]'
                   : 'border-border/50 hover:border-primary/40'
               }`}
             >
               {/* Rank badge - floating top left */}
-              <div className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs font-bold flex items-center justify-center shadow-lg backdrop-blur-sm border border-white/20">
+              <div className="absolute top-1.5 left-1.5 z-10 w-5 h-5 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground text-[10px] font-bold flex items-center justify-center shadow-lg backdrop-blur-sm border border-white/20">
                 {idx + 1}
               </div>
 
@@ -142,7 +142,7 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
                 {entity.image_url ? (
                   <>
                     <img
-                      src={getOptimizedUrl(entity.image_url, 256)}
+                      src={getOptimizedUrl(entity.image_url, 200)}
                       alt={name}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
@@ -152,30 +152,30 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/50 to-muted">
                     {entity.entity_type === 'person' ? (
-                      <User className="w-12 h-12 text-muted-foreground/50" />
+                      <User className="w-8 h-8 text-muted-foreground/50" />
                     ) : (
-                      <Building2 className="w-12 h-12 text-muted-foreground/50" />
+                      <Building2 className="w-8 h-8 text-muted-foreground/50" />
                     )}
                   </div>
                 )}
                 
                 {/* Sentiment badge - top right for #1 */}
                 {idx === 0 && sStyle && (
-                  <div className={`absolute top-2 right-2 inline-flex items-center gap-1 px-2 py-1 rounded-full ${sStyle.bg} ${sStyle.border} border backdrop-blur-md animate-in fade-in duration-500`}>
-                    <span className="text-xs">{sStyle.icon}</span>
-                    <span className={`text-[10px] font-bold uppercase ${sStyle.text}`}>{sStyle.label}</span>
+                  <div className={`absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full ${sStyle.bg} ${sStyle.border} border backdrop-blur-md animate-in fade-in duration-500`}>
+                    <span className="text-[10px]">{sStyle.icon}</span>
+                    <span className={`text-[9px] font-bold uppercase ${sStyle.text}`}>{sStyle.label}</span>
                   </div>
                 )}
 
                 {/* Entity name and stats - bottom overlay */}
-                <div className="absolute bottom-0 left-0 right-0 p-3 space-y-1">
-                  <h4 className="font-semibold text-sm text-white line-clamp-1 drop-shadow-lg">
+                <div className="absolute bottom-0 left-0 right-0 p-2 space-y-0.5">
+                  <h4 className="font-semibold text-xs text-white line-clamp-1 drop-shadow-lg">
                     {name}
                   </h4>
-                  <div className="flex items-center gap-1.5">
-                    <TrendingUp className="w-3 h-3 text-primary drop-shadow-lg" />
-                    <span className="text-[11px] text-white/90 font-medium drop-shadow-lg">
-                      {entity.mentionCount} {language === 'uk' ? 'згадок' : language === 'pl' ? 'wzmianek' : 'mentions'}
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="w-2.5 h-2.5 text-primary drop-shadow-lg" />
+                    <span className="text-[10px] text-white/90 font-medium drop-shadow-lg">
+                      {entity.mentionCount}
                     </span>
                   </div>
                 </div>
@@ -187,9 +187,9 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="absolute bottom-2 right-2 z-10 p-1.5 rounded-full bg-card/80 backdrop-blur-md border border-border/50 text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/30 transition-all duration-300 opacity-0 group-hover:opacity-100"
+                className="absolute bottom-1.5 right-1.5 z-10 p-1 rounded-full bg-card/80 backdrop-blur-md border border-border/50 text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/30 transition-all duration-300 opacity-0 group-hover:opacity-100"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ExternalLink className="w-3 h-3" />
               </a>
             </Link>
 
@@ -197,15 +197,15 @@ export const HeroTrendingEntities = memo(function HeroTrendingEntities() {
             {idx === 0 && topNarrative?.analysis && (() => {
               const a = topNarrative.analysis as any;
               return (
-                <div className="mt-2 p-2.5 rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 via-card/80 to-accent/5 backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-700">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <BrainCircuit className="w-3 h-3 text-primary animate-pulse" />
-                    <span className="text-[10px] font-mono text-primary uppercase tracking-wider">
+                <div className="mt-1.5 p-2 rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 via-card/80 to-accent/5 backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-700">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <BrainCircuit className="w-2.5 h-2.5 text-primary animate-pulse" />
+                    <span className="text-[9px] font-mono text-primary uppercase tracking-wider">
                       {language === 'uk' ? 'Наратив' : 'Narrative'} {topNarrative.year_month}
                     </span>
                   </div>
                   {a.narrative_summary && (
-                    <p className="text-[10px] text-muted-foreground italic line-clamp-2 leading-relaxed">
+                    <p className="text-[9px] text-muted-foreground italic line-clamp-2 leading-relaxed">
                       {a.narrative_summary}
                     </p>
                   )}
