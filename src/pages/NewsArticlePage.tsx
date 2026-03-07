@@ -39,6 +39,7 @@ import { NewsEntityGraphBlock } from "@/components/news/NewsEntityGraphBlock";
 import { NewsRetellingBlock } from "@/components/news/NewsRetellingBlock";
 import { NewsVerifiedBadgeBlock } from "@/components/news/NewsVerifiedBadgeBlock";
 import { NewsEvidenceBlock } from "@/components/news/NewsEvidenceBlock";
+import { NewsSourceScoringWidget } from "@/components/news/NewsSourceScoringWidget";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -1598,9 +1599,9 @@ export default function NewsArticlePage() {
                 )}
 
                 {/* News Source Scoring Widget */}
-                {(article as any)?.source_scoring && (article as any)?.source_scoring?.html && (
+                {(article as any)?.source_scoring && (
                   <div className="mt-4 pt-4 border-t border-border w-full overflow-x-auto">
-                    <div dangerouslySetInnerHTML={{ __html: (article as any).source_scoring.html }} />
+                    <NewsSourceScoringWidget scoring={(article as any).source_scoring} />
                   </div>
                 )}
               </CardContent>
