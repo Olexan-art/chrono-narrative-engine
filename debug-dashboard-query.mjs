@@ -28,7 +28,7 @@ const key = process.env.SUPABASE_SERVICE_ROLE_KEY; // Use service key for testin
 console.log('🔍 Перевірка query який використовує dashboard...\n');
 
 // Same query as dashboard
-const response = await fetch(`${url}/rest/v1/news_rss_items?select=id,url,title,slug,source_scoring,updated_at,country:news_countries(code)&source_scoring=not.is.null&order=updated_at.desc&limit=5`, {
+const response = await fetch(`${url}/rest/v1/news_rss_items?select=id,url,title,slug,source_scoring,llm_processed_at,country:news_countries(code)&source_scoring=not.is.null&order=llm_processed_at.desc&limit=5`, {
   headers: {
     'apikey': key,
     'Authorization': `Bearer ${key}`,

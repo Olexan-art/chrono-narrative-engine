@@ -47,7 +47,7 @@ function QuickDashboard({ password }: { password: string }) {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('news_rss_items')
-                .select('id, url, title, slug, source_scoring, llm_processed_at, country:news_countries(code)')
+                .select('id, url, title, slug, source_scoring, llm_processed_at, published_at, country:news_countries(code)')
                 .not('source_scoring', 'is', null)
                 .order('llm_processed_at', { ascending: false })
                 .limit(50);
@@ -330,6 +330,9 @@ function QuickDashboard({ password }: { password: string }) {
                                     const status = scoring?.verification_status || 'Unknown';
                                     const countryCode = item.country?.code?.toLowerCase() || 'us';
                                     const newsUrl = `/news/${countryCode}/${item.slug}`;
+                                    const publishedDate = item.published_at ? new Date(item.published_at) : null;
+                                    const dateStr = publishedDate ? publishedDate.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+                                    const timeStr = publishedDate ? publishedDate.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '';
                                     
                                     return (
                                         <div key={i} className="flex justify-between items-center text-xs border-b border-purple-500/10 pb-2 hover:bg-purple-500/5 px-2 py-1 rounded transition-colors">
@@ -342,6 +345,11 @@ function QuickDashboard({ password }: { password: string }) {
                                                 >
                                                     {item.title}
                                                 </a>
+                                                {publishedDate && (
+                                                    <div className="text-[10px] text-muted-foreground mt-0.5">
+                                                        {dateStr} о {timeStr}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-2 ml-4 shrink-0">
                                                 <Badge 
