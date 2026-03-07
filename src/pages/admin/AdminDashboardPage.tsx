@@ -269,6 +269,56 @@ function QuickDashboard({ password }: { password: string }) {
                         </div>
                     </div>
 
+                    {/* LLM Providers Schedule */}
+                    <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Розклад LLM провайдерів</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/5 border border-green-500/20">
+                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium text-green-500 text-sm">Z.AI</span>
+                                        <Badge variant="outline" className="text-[10px] border-green-500/30">glm-4-flash</Badge>
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground mt-1">Кожні 30 хвилин (00, 30)</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-violet-500/5 border border-violet-500/20">
+                                <div className="w-2 h-2 rounded-full bg-violet-500"></div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium text-violet-500 text-sm">Gemini</span>
+                                        <Badge variant="outline" className="text-[10px] border-violet-500/30">1.5-flash</Badge>
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground mt-1">Кожну годину о :15</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium text-blue-500 text-sm">DeepSeek</span>
+                                        <Badge variant="outline" className="text-[10px] border-blue-500/30">deepseek-chat</Badge>
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground mt-1">Кожну годину о :30</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
+                                <div className="w-2 h-2 rounded-full bg-cyan-500"></div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium text-cyan-500 text-sm">OpenAI</span>
+                                        <Badge variant="outline" className="text-[10px] border-cyan-500/30">gpt-4o-mini</Badge>
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground mt-1">Кожні 3 години о :00</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Recent Scores */}
                     <div className="space-y-3">
                         <h4 className="text-sm font-medium text-muted-foreground">Останні 10 оцінок</h4>
