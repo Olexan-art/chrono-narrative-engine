@@ -297,6 +297,11 @@ serve(async (req) => {
 
     // Auto-select mode: find latest news with full retelling and analysis
     if (!actualNewsId && auto_select) {
+      // Select the freshest news items successfully processed by deep-analyst cron:
+      // 1. Has Ukrainian retelling (content IS NOT NULL)
+      // 2. Has deep analysis from deep-analyst (news_analysis IS NOT NULL)
+      // 3. Hasn't been scored yet (source_scoring IS NULL)
+      // 4. Ordered by llm_processed_at to get the most recently analyzed news
       const { data, error } = await supabase
         .from("news_rss_items")
         .select("id, url, title, original_content, content, description, slug, country:news_countries(code)")
@@ -413,25 +418,40 @@ ${textToAnalyze ? textToAnalyze.substring(0, 10000) : "No content provided."}`;
 
     const { error: updateError } = await supabase
       .from("news_rss_items")
-      .update({ source_scoring: sourceScoring })
+      .update({ 
+        source_scoring: sourceScoring,
+        source_scoring_at: new Date().toISOString()
+      })
       .eq("id", actualNewsId);
 
     if (updateError) {
       throw updateError;
     }
 
-    // Refresh cache for search bots
+    // Refresh cache for search bots to make scoring visible
     try {
       const itemSlug = (newsItem as any).slug;
       const itemCountry = ((newsItem as any).country?.code || 'us').toLowerCase();
       if (itemSlug) {
         const adminPass = Deno.env.get('ADMIN_PASSWORD');
-        await fetch(
-          `${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(`/news/${itemCountry}/${itemSlug}`)}&password=${adminPass}`,
-          { headers: { 'Authorization': `Bearer ${supabaseServiceKey}` } }
-        );
+        const cacheUrl = `${supabaseUrl}/functions/v1/cache-pages?action=refresh-single&path=${encodeURIComponent(`/news/${itemCountry}/${itemSlug}`)}&password=${adminPass}`;
+        
+        console.log(`Refreshing cache for: /news/${itemCountry}/${itemSlug}`);
+        const cacheResponse = await fetch(cacheUrl, { 
+          headers: { 'Authorization': `Bearer ${supabaseServiceKey}` } 
+        });
+        
+        if (cacheResponse.ok) {
+          const cacheResult = await cacheResponse.json();
+          console.log('Cache refresh successful:', cacheResult);
+        } else {
+          console.error('Cache refresh failed:', cacheResponse.status, await cacheResponse.text());
+        }
       }
-    } catch (_) { /* non-critical */ }
+    } catch (cacheError) {
+      // Non-critical - don't fail the whole operation if cache refresh fails
+      console.error('Cache refresh error:', cacheError);
+    }
 
     return new Response(JSON.stringify({ success: true, scoring: sourceScoring }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

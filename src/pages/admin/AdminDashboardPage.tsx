@@ -49,9 +49,9 @@ function QuickDashboard({ password }: { password: string }) {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('news_rss_items')
-                .select('id, url, title, slug, source_scoring, llm_processed_at, published_at, country:news_countries(code)')
+                .select('id, url, title, slug, source_scoring, source_scoring_at, llm_processed_at, published_at, country:news_countries(code)')
                 .not('source_scoring', 'is', null)
-                .order('llm_processed_at', { ascending: false })
+                .order('source_scoring_at', { ascending: false, nullsFirst: false })
                 .limit(50);
 
             if (error) throw error;
@@ -410,8 +410,11 @@ function QuickDashboard({ password }: { password: string }) {
                                     const countryCode = item.country?.code?.toLowerCase() || 'us';
                                     const newsUrl = `/news/${countryCode}/${item.slug}`;
                                     const publishedDate = item.published_at ? new Date(item.published_at) : null;
+                                    const scoringDate = item.source_scoring_at ? new Date(item.source_scoring_at) : null;
                                     const dateStr = publishedDate ? publishedDate.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
                                     const timeStr = publishedDate ? publishedDate.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '';
+                                    const scoringDateStr = scoringDate ? scoringDate.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+                                    const scoringTimeStr = scoringDate ? scoringDate.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '';
                                     
                                     return (
                                         <div key={i} className="flex justify-between items-center text-xs border-b border-purple-500/10 pb-2 hover:bg-purple-500/5 px-2 py-1 rounded transition-colors">
@@ -426,7 +429,12 @@ function QuickDashboard({ password }: { password: string }) {
                                                 </a>
                                                 {publishedDate && (
                                                     <div className="text-[10px] text-muted-foreground mt-0.5">
-                                                        {dateStr} о {timeStr}
+                                                        📰 {dateStr} о {timeStr}
+                                                    </div>
+                                                )}
+                                                {scoringDate && (
+                                                    <div className="text-[10px] text-purple-500/70 mt-0.5">
+                                                        ⭐ Скорінг: {scoringDateStr} о {scoringTimeStr}
                                                     </div>
                                                 )}
                                             </div>
