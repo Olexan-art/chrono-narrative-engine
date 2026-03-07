@@ -21,7 +21,7 @@ SELECT cron.schedule(
     select net.http_post(
       url:='https://tuledxqigzufkecztnlo.supabase.co/functions/v1/score-news-source',
       headers:='{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDg0NTI4OCwiZXhwIjoyMDg2NDIxMjg4fQ.wHlFsEnF5zVGhIaJBBShxrOY7TFmxBjafPzqNrBXOU4"}'::jsonb,
-      body:='{"auto_select":true,"model":"glm-4-flash","provider":"zai"}'::jsonb
+      body:='{"auto_select":true,"model":"GLM-4.7-Flash","provider":"zai"}'::jsonb
     );
   $$
 );
@@ -34,7 +34,7 @@ SELECT cron.schedule(
     select net.http_post(
       url:='https://tuledxqigzufkecztnlo.supabase.co/functions/v1/score-news-source',
       headers:='{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1bGVkeHFpZ3p1ZmtlY3p0bmxvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDg0NTI4OCwiZXhwIjoyMDg2NDIxMjg4fQ.wHlFsEnF5zVGhIaJBBShxrOY7TFmxBjafPzqNrBXOU4"}'::jsonb,
-      body:='{"auto_select":true,"model":"gemini-1.5-flash","provider":"gemini"}'::jsonb
+      body:='{"auto_select":true,"model":"gemini-2.5-flash","provider":"gemini"}'::jsonb
     );
   $$
 );

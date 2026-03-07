@@ -244,8 +244,6 @@ serve(async (req) => {
   try {
     const { newsId, news_item_id, model, provider: explicitProvider, auto_select } = await req.json();
 
-    const actualNewsId = newsId || news_item_id;
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -260,6 +258,7 @@ serve(async (req) => {
 
     let newsItem: any;
     let fetchError: any;
+    let actualNewsId = newsId || news_item_id;
 
     // Auto-select mode: find latest news with full retelling and analysis
     if (!actualNewsId && auto_select) {
@@ -275,6 +274,7 @@ serve(async (req) => {
       
       newsItem = data;
       fetchError = error;
+      if (data) actualNewsId = data.id; // Update actualNewsId with selected news
     } else {
       // Manual mode: fetch by ID
       if (!actualNewsId) {

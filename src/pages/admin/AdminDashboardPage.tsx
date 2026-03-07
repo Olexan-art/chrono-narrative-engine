@@ -278,7 +278,7 @@ function QuickDashboard({ password }: { password: string }) {
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium text-green-500 text-sm">Z.AI</span>
-                                        <Badge variant="outline" className="text-[10px] border-green-500/30">glm-4-flash</Badge>
+                                        <Badge variant="outline" className="text-[10px] border-green-500/30">GLM-4.7-Flash</Badge>
                                     </div>
                                     <p className="text-[10px] text-muted-foreground mt-1">Кожні 30 хвилин (00, 30)</p>
                                 </div>
@@ -289,7 +289,7 @@ function QuickDashboard({ password }: { password: string }) {
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium text-violet-500 text-sm">Gemini</span>
-                                        <Badge variant="outline" className="text-[10px] border-violet-500/30">1.5-flash</Badge>
+                                        <Badge variant="outline" className="text-[10px] border-violet-500/30">2.5-flash</Badge>
                                     </div>
                                     <p className="text-[10px] text-muted-foreground mt-1">Кожну годину о :15</p>
                                 </div>
