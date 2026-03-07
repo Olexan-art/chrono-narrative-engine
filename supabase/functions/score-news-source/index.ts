@@ -297,14 +297,36 @@ serve(async (req) => {
 
     // Auto-select mode: find latest news with full retelling and analysis
     if (!actualNewsId && auto_select) {
+      // First, check how many scorings were created in the last 24 hours
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      
+      const { count } = await supabase
+        .from("news_rss_items")
+        .select("id", { count: 'exact', head: true })
+        .not('source_scoring', 'is', null)
+        .gte('source_scoring_at', oneDayAgo);
+      
+      console.log(`Scorings in last 24h: ${count}/20`);
+      
+      // If we already scored 20 news items today, skip
+      if (count !== null && count >= 20) {
+        return new Response(JSON.stringify({ 
+          message: "Daily limit reached",
+          scorings_today: count,
+          limit: 20
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
       // Select the freshest news items successfully processed by deep-analyst cron:
       // 1. Has Ukrainian retelling (content IS NOT NULL)
       // 2. Has deep analysis from deep-analyst (news_analysis IS NOT NULL)
       // 3. Hasn't been scored yet (source_scoring IS NULL)
-      // 4. Published in last 3 hours (fresh news only, ~10 items)
+      // 4. Published in last 24 hours (fresh news only)
       // 5. Ordered by llm_processed_at to get the most recently analyzed news
-      
-      const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+      // 6. Daily limit: max 20 scorings per 24h
       
       const { data, error } = await supabase
         .from("news_rss_items")
@@ -312,7 +334,7 @@ serve(async (req) => {
         .not('content', 'is', null) // has Ukrainian retelling
         .not('news_analysis', 'is', null) // has analysis
         .is('source_scoring', null) // hasn't been scored yet
-        .gte('published_at', threeHoursAgo) // only news from last 3 hours
+        .gte('published_at', oneDayAgo) // only news from last 24 hours
         .order('llm_processed_at', { ascending: false })
         .limit(1)
         .single();
