@@ -1,13 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-import { Activity, AlertCircle, RefreshCw, Timer, Zap, TrendingUp, Target } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Activity, AlertCircle, RefreshCw, Timer, Zap, TrendingUp, Target, Settings } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Link } from "react-router-dom";
 import { callEdgeFunction } from "@/lib/api";
 import RetellQueueStats from "@/components/admin/RetellQueueStats";
 import { useAdminStore } from "@/stores/adminStore";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // Швидка версія дашборду тільки з критичною статистикою
 function QuickDashboard({ password }: { password: string }) {
@@ -56,6 +58,42 @@ function QuickDashboard({ password }: { password: string }) {
             return data || [];
         },
         refetchInterval: 60000,
+    });
+
+    // Fetch source scoring settings
+    const { data: settings } = useQuery({
+        queryKey: ['source-scoring-settings'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('settings')
+                .select('source_scoring_enabled, source_scoring_zai_enabled, source_scoring_gemini_enabled, source_scoring_deepseek_enabled, source_scoring_openai_enabled')
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        refetchInterval: 60000,
+    });
+
+    const queryClient = useQueryClient();
+
+    // Mutation to update settings
+    const updateSettingsMutation = useMutation({
+        mutationFn: async (updates: Record<string, boolean>) => {
+            const { error } = await supabase
+                .from('settings')
+                .update(updates)
+                .eq('id', 1);
+
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['source-scoring-settings'] });
+            toast.success('Налаштування збережено');
+        },
+        onError: (error: any) => {
+            toast.error('Помилка: ' + error.message);
+        },
     });
 
     // Calculate scoring statistics
@@ -269,12 +307,25 @@ function QuickDashboard({ password }: { password: string }) {
                         </div>
                     </div>
 
-                    {/* LLM Providers Schedule */}
+                    {/* LLM Providers Schedule with Settings */}
                     <div className="space-y-3">
-                        <h4 className="text-sm font-medium text-muted-foreground">Розклад LLM провайдерів</h4>
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium text-muted-foreground">Розклад LLM провайдерів</h4>
+                            <div className="flex items-center gap-2">
+                                <Settings className="w-3 h-3 text-muted-foreground" />
+                                <span className="text-[10px] text-muted-foreground">Всі крони</span>
+                                <Switch
+                                    checked={settings?.source_scoring_enabled ?? true}
+                                    onCheckedChange={(checked) => {
+                                        updateSettingsMutation.mutate({ source_scoring_enabled: checked });
+                                    }}
+                                    disabled={updateSettingsMutation.isPending}
+                                />
+                            </div>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/5 border border-green-500/20">
-                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                <div className={`w-2 h-2 rounded-full ${settings?.source_scoring_zai_enabled && settings?.source_scoring_enabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium text-green-500 text-sm">Z.AI</span>
@@ -282,10 +333,17 @@ function QuickDashboard({ password }: { password: string }) {
                                     </div>
                                     <p className="text-[10px] text-muted-foreground mt-1">Кожні 30 хвилин (00, 30)</p>
                                 </div>
+                                <Switch
+                                    checked={settings?.source_scoring_zai_enabled ?? true}
+                                    onCheckedChange={(checked) => {
+                                        updateSettingsMutation.mutate({ source_scoring_zai_enabled: checked });
+                                    }}
+                                    disabled={updateSettingsMutation.isPending || !settings?.source_scoring_enabled}
+                                />
                             </div>
                             
                             <div className="flex items-center gap-3 p-3 rounded-lg bg-violet-500/5 border border-violet-500/20">
-                                <div className="w-2 h-2 rounded-full bg-violet-500"></div>
+                                <div className={`w-2 h-2 rounded-full ${settings?.source_scoring_gemini_enabled && settings?.source_scoring_enabled ? 'bg-violet-500 animate-pulse' : 'bg-gray-400'}`}></div>
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium text-violet-500 text-sm">Gemini</span>
@@ -293,10 +351,17 @@ function QuickDashboard({ password }: { password: string }) {
                                     </div>
                                     <p className="text-[10px] text-muted-foreground mt-1">Кожну годину о :15</p>
                                 </div>
+                                <Switch
+                                    checked={settings?.source_scoring_gemini_enabled ?? true}
+                                    onCheckedChange={(checked) => {
+                                        updateSettingsMutation.mutate({ source_scoring_gemini_enabled: checked });
+                                    }}
+                                    disabled={updateSettingsMutation.isPending || !settings?.source_scoring_enabled}
+                                />
                             </div>
                             
                             <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
-                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                <div className={`w-2 h-2 rounded-full ${settings?.source_scoring_deepseek_enabled && settings?.source_scoring_enabled ? 'bg-blue-500 animate-pulse' : 'bg-gray-400'}`}></div>
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium text-blue-500 text-sm">DeepSeek</span>
@@ -304,10 +369,17 @@ function QuickDashboard({ password }: { password: string }) {
                                     </div>
                                     <p className="text-[10px] text-muted-foreground mt-1">Кожну годину о :30</p>
                                 </div>
+                                <Switch
+                                    checked={settings?.source_scoring_deepseek_enabled ?? true}
+                                    onCheckedChange={(checked) => {
+                                        updateSettingsMutation.mutate({ source_scoring_deepseek_enabled: checked });
+                                    }}
+                                    disabled={updateSettingsMutation.isPending || !settings?.source_scoring_enabled}
+                                />
                             </div>
                             
                             <div className="flex items-center gap-3 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
-                                <div className="w-2 h-2 rounded-full bg-cyan-500"></div>
+                                <div className={`w-2 h-2 rounded-full ${settings?.source_scoring_openai_enabled && settings?.source_scoring_enabled ? 'bg-cyan-500 animate-pulse' : 'bg-gray-400'}`}></div>
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium text-cyan-500 text-sm">OpenAI</span>
@@ -315,6 +387,13 @@ function QuickDashboard({ password }: { password: string }) {
                                     </div>
                                     <p className="text-[10px] text-muted-foreground mt-1">Кожні 3 години о :00</p>
                                 </div>
+                                <Switch
+                                    checked={settings?.source_scoring_openai_enabled ?? true}
+                                    onCheckedChange={(checked) => {
+                                        updateSettingsMutation.mutate({ source_scoring_openai_enabled: checked });
+                                    }}
+                                    disabled={updateSettingsMutation.isPending || !settings?.source_scoring_enabled}
+                                />
                             </div>
                         </div>
                     </div>

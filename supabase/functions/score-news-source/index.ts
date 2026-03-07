@@ -256,6 +256,41 @@ serve(async (req) => {
 
     if (!settings) throw new Error('Settings not found');
 
+    // Check if source scoring is enabled globally
+    if (settings.source_scoring_enabled === false) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Source scoring is disabled in settings',
+        skipped: true 
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Determine provider and check if it's enabled
+    const requestedProvider = explicitProvider || (model ? (
+      model.toLowerCase().includes('glm') ? 'zai' :
+      model.toLowerCase().includes('gemini') ? 'gemini' :
+      model.toLowerCase().includes('deepseek') ? 'deepseek' :
+      model.toLowerCase().includes('gpt') ? 'openai' :
+      null
+    ) : null);
+
+    if (requestedProvider) {
+      const providerEnabledField = `source_scoring_${requestedProvider}_enabled`;
+      if (settings[providerEnabledField] === false) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: `Source scoring with ${requestedProvider.toUpperCase()} is disabled in settings`,
+          skipped: true 
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     let newsItem: any;
     let fetchError: any;
     let actualNewsId = newsId || news_item_id;
