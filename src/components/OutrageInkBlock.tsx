@@ -68,7 +68,7 @@ export function OutrageInkBlock({
   ];
 
   const getStylePrompt = (style: string, title: string): string => {
-    const basePrompt = `Create a satirical political caricature/cartoon about this news without any text or labels: "${title}".`;
+    const basePrompt = `Create a satirical political satirical cartoon/caricature for this news story (based on the headline and Key Takeaways, Context & Background) without any text or captions: "${title}".`;
     const styleConfig = styleOptions.find(s => s.value === style);
     const stylePrompt = styleConfig?.prompt || 'sharp editorial cartoon, exaggerated features, stark contrast, minimalist background';
     return `${basePrompt} Style: ${stylePrompt}`;
