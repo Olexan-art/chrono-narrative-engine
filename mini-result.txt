@@ -1,0 +1,2 @@
+Stats 24h: Z.AI=26  DeepSeek=7  Total=33
+All providers: {"deepseek-fallback":7,"zai":26}

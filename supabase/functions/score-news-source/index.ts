@@ -242,16 +242,9 @@ serve(async (req) => {
   }
 
   try {
-    const { newsId, news_item_id, model, provider: explicitProvider } = await req.json();
+    const { newsId, news_item_id, model, provider: explicitProvider, auto_select } = await req.json();
 
     const actualNewsId = newsId || news_item_id;
-
-    if (!actualNewsId) {
-      return new Response(JSON.stringify({ error: "newsId is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -265,11 +258,41 @@ serve(async (req) => {
 
     if (!settings) throw new Error('Settings not found');
 
-    const { data: newsItem, error: fetchError } = await supabase
-      .from("news_rss_items")
-      .select("id, url, title, original_content, content, description, slug, country:news_countries(code)")
-      .eq("id", actualNewsId)
-      .single();
+    let newsItem: any;
+    let fetchError: any;
+
+    // Auto-select mode: find latest news with full retelling and analysis
+    if (!actualNewsId && auto_select) {
+      const { data, error } = await supabase
+        .from("news_rss_items")
+        .select("id, url, title, original_content, content, description, slug, country:news_countries(code)")
+        .not('content', 'is', null) // has retelling (content_en)
+        .not('news_analysis', 'is', null) // has analysis
+        .is('source_scoring', null) // hasn't been scored yet
+        .order('llm_processed_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      newsItem = data;
+      fetchError = error;
+    } else {
+      // Manual mode: fetch by ID
+      if (!actualNewsId) {
+        return new Response(JSON.stringify({ error: "newsId is required when auto_select is not enabled" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("news_rss_items")
+        .select("id, url, title, original_content, content, description, slug, country:news_countries(code)")
+        .eq("id", actualNewsId)
+        .single();
+      
+      newsItem = data;
+      fetchError = error;
+    }
 
     if (fetchError || !newsItem) {
       return new Response(JSON.stringify({ error: "News item not found", details: fetchError }), {

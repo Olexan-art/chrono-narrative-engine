@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Activity, AlertCircle, RefreshCw, Timer, Zap, TrendingUp } from "lucide-react";
+import { Activity, AlertCircle, RefreshCw, Timer, Zap, TrendingUp, Target } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { callEdgeFunction } from "@/lib/api";
 import RetellQueueStats from "@/components/admin/RetellQueueStats";
 import { useAdminStore } from "@/stores/adminStore";
+import { supabase } from "@/integrations/supabase/client";
 
 // Швидка версія дашборду тільки з критичною статистикою
 function QuickDashboard({ password }: { password: string }) {
@@ -39,6 +40,22 @@ function QuickDashboard({ password }: { password: string }) {
         },
         refetchInterval: 60000,
         enabled: !!password,
+    });
+
+    const { data: scoringStats } = useQuery({
+        queryKey: ['source-scoring-stats'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('news_rss_items')
+                .select('id, url, title, slug, source_scoring, country:news_countries(code)')
+                .not('source_scoring', 'is', null)
+                .order('updated_at', { ascending: false })
+                .limit(10);
+
+            if (error) throw error;
+            return data || [];
+        },
+        refetchInterval: 60000,
     });
 
     if (!queueStats) {
@@ -145,7 +162,63 @@ function QuickDashboard({ password }: { password: string }) {
                             Логи DeepSeek (Останні результати)
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                  
+
+            {/* Source Scoring Stats */}
+            <Card className="bg-purple-500/5 border-purple-500/20">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                        <Target className="w-4 h-4 text-purple-500" />
+                        Source Scoring (Останні оцінки)
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-2">
+                        {scoringStats && scoringStats.length > 0 ? (
+                            scoringStats.map((item: any, i) => {
+                                const scoring = item.source_scoring?.json;
+                                const overall = scoring?.scores?.overall || 0;
+                                const status = scoring?.verification_status || 'Unknown';
+                                const confidence = scoring?.confidence || 0;
+                                const countryCode = item.country?.code?.toLowerCase() || 'us';
+                                const newsUrl = `/news/${countryCode}/${item.slug}`;
+                                
+                                return (
+                                    <div key={i} className="flex justify-between items-center text-xs border-b border-purple-500/10 pb-2">
+                                        <div className="flex-1 min-w-0">
+                                            <a 
+                                                href={newsUrl} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="text-purple-500 hover:underline truncate block"
+                                            >
+                                                {item.title}
+                                            </a>
+                                        </div>
+                                        <div className="flex items-center gap-2 ml-4 shrink-0">
+                                            <Badge 
+                                                variant="outline" 
+                                                className={`text-[10px] ${
+                                                    overall >= 90 ? 'border-green-500 text-green-500' :
+                                                    overall >= 70 ? 'border-blue-500 text-blue-500' :
+                                                    'border-orange-500 text-orange-500'
+                                                }`}
+                                            >
+                                                Score: {overall}
+                                            </Badge>
+                                            <Badge variant="outline" className="text-[10px] border-purple-500/30">
+                                                {status}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <p className="text-xs text-muted-foreground py-4 text-center">Немає оцінок джерел</p>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>  <CardContent>
                         <div className="space-y-2">
                             {recentStats?.filter(r => r.provider === 'deepseek').length > 0 ? (
                                 recentStats.filter(r => r.provider === 'deepseek').map((log, i) => (

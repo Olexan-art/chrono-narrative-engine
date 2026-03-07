@@ -1,0 +1,14 @@
+url=https://tuledxqigzufkecztnlo.supabase.co anonKey=eyJhbGciOiJIUzI1NiIs...
+bErr=null
+BEFORE (pending items found: 3):
+  f4408dcf-1ab9-4d2a-9f65-0e7692ddbf64: key_points=NULL  llm_provider=null
+  a184b787-7505-4541-b9f6-27e597dda631: key_points=NULL  llm_provider=null
+  2ad2962e-2af2-468d-8be2-3092b9a29704: key_points=NULL  llm_provider=null
+
+Calling bulk-retell-news-zai...
+CRASH: Unexpected end of JSON input SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:6433:19)
+    at successSteps (node:internal/deps/undici/undici:6414:27)
+    at readAllBytes (node:internal/deps/undici/undici:5380:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)

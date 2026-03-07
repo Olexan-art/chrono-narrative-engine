@@ -1,0 +1,1 @@
+{"sql":"ALTER TABLE news_rss_items ADD COLUMN IF NOT EXISTS llm_provider text, ADD COLUMN IF NOT EXISTS llm_model text, ADD COLUMN IF NOT EXISTS llm_processed_at timestamptz;"}

@@ -1,0 +1,18 @@
+﻿node.exe : Initialising login role...
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Initialising login role...:String) [], RemoteExcept 
+   ion
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Connecting to remote database...
+Skipping migration chrono-narrative-engine.code-workspace... (file name must match pattern "<time
+stamp>_name.sql")
+Do you want to push these migrations to the remote database?
+ ΓÇó 20260304100000_fix_cron_config_rls.sql
+ ΓÇó 20260304225446_add_llm_tracking_columns.sql
+
+ [Y/n] Applying migration 20260304100000_fix_cron_config_rls.sql...
+Applying migration 20260304225446_add_llm_tracking_columns.sql...
+Finished supabase db push.
