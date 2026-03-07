@@ -189,7 +189,7 @@ export function NewsSourceScoringWidget({ scoring }: SourceScoringProps) {
           </motion.div>
 
           {/* Main Grid - Score Ring & Metrics */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <div className="grid grid-cols-1 gap-8 mb-8">
             {/* Source Scoring Ring - Redesigned */}
             <motion.div 
               variants={floatVariants}
@@ -479,7 +479,7 @@ export function NewsSourceScoringWidget({ scoring }: SourceScoringProps) {
           {(data.key_claims?.length || data.evidence?.length) && (
             <motion.div 
               variants={floatVariants}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+              className="grid grid-cols-1 gap-6"
             >
               {/* Key Claims */}
               {data.key_claims && data.key_claims.length > 0 && (
