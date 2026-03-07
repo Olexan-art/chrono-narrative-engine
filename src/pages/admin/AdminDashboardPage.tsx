@@ -47,16 +47,32 @@ function QuickDashboard({ password }: { password: string }) {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('news_rss_items')
-                .select('id, url, title, slug, source_scoring, country:news_countries(code)')
+                .select('id, url, title, slug, source_scoring, updated_at, country:news_countries(code)')
                 .not('source_scoring', 'is', null)
                 .order('updated_at', { ascending: false })
-                .limit(10);
+                .limit(50);
 
             if (error) throw error;
             return data || [];
         },
         refetchInterval: 60000,
     });
+
+    // Calculate scoring statistics
+    const scoringDistribution = scoringStats?.reduce((acc: any, item: any) => {
+        const overall = item.source_scoring?.json?.scores?.overall || 0;
+        if (overall >= 90) acc.excellent++;
+        else if (overall >= 80) acc.high++;
+        else if (overall >= 70) acc.normal++;
+        else acc.low++;
+        acc.total++;
+        acc.avgScore += overall;
+        return acc;
+    }, { excellent: 0, high: 0, normal: 0, low: 0, total: 0, avgScore: 0 }) || { excellent: 0, high: 0, normal: 0, low: 0, total: 0, avgScore: 0 };
+
+    if (scoringDistribution.total > 0) {
+        scoringDistribution.avgScore = Math.round(scoringDistribution.avgScore / scoringDistribution.total);
+    }
 
     if (!queueStats) {
         return (
@@ -77,7 +93,7 @@ function QuickDashboard({ password }: { password: string }) {
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Черга */}
                 <Card className="bg-primary/5 border-primary/20">
                     <CardContent className="pt-6">
@@ -126,6 +142,23 @@ function QuickDashboard({ password }: { password: string }) {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Source Scoring статистика */}
+                <Card className="bg-purple-500/5 border-purple-500/20">
+                    <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Source Scoring</p>
+                                <p className="text-4xl font-bold text-purple-500">{scoringDistribution.total}</p>
+                            </div>
+                            <Target className="w-10 h-10 text-purple-500/30" />
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                            <Badge variant="outline" className="text-[10px] border-purple-500/30">Avg: {scoringDistribution.avgScore}</Badge>
+                            <Badge variant="outline" className="text-[10px] border-green-500/30">{scoringDistribution.excellent} ★★★</Badge>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -162,63 +195,7 @@ function QuickDashboard({ password }: { password: string }) {
                             Логи DeepSeek (Останні результати)
                         </CardTitle>
                     </CardHeader>
-                  
-
-            {/* Source Scoring Stats */}
-            <Card className="bg-purple-500/5 border-purple-500/20">
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                        <Target className="w-4 h-4 text-purple-500" />
-                        Source Scoring (Останні оцінки)
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-2">
-                        {scoringStats && scoringStats.length > 0 ? (
-                            scoringStats.map((item: any, i) => {
-                                const scoring = item.source_scoring?.json;
-                                const overall = scoring?.scores?.overall || 0;
-                                const status = scoring?.verification_status || 'Unknown';
-                                const confidence = scoring?.confidence || 0;
-                                const countryCode = item.country?.code?.toLowerCase() || 'us';
-                                const newsUrl = `/news/${countryCode}/${item.slug}`;
-                                
-                                return (
-                                    <div key={i} className="flex justify-between items-center text-xs border-b border-purple-500/10 pb-2">
-                                        <div className="flex-1 min-w-0">
-                                            <a 
-                                                href={newsUrl} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="text-purple-500 hover:underline truncate block"
-                                            >
-                                                {item.title}
-                                            </a>
-                                        </div>
-                                        <div className="flex items-center gap-2 ml-4 shrink-0">
-                                            <Badge 
-                                                variant="outline" 
-                                                className={`text-[10px] ${
-                                                    overall >= 90 ? 'border-green-500 text-green-500' :
-                                                    overall >= 70 ? 'border-blue-500 text-blue-500' :
-                                                    'border-orange-500 text-orange-500'
-                                                }`}
-                                            >
-                                                Score: {overall}
-                                            </Badge>
-                                            <Badge variant="outline" className="text-[10px] border-purple-500/30">
-                                                {status}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        ) : (
-                            <p className="text-xs text-muted-foreground py-4 text-center">Немає оцінок джерел</p>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>  <CardContent>
+                    <CardContent>
                         <div className="space-y-2">
                             {recentStats?.filter(r => r.provider === 'deepseek').length > 0 ? (
                                 recentStats.filter(r => r.provider === 'deepseek').map((log, i) => (
@@ -235,6 +212,113 @@ function QuickDashboard({ password }: { password: string }) {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Source Scoring Block */}
+            <Card className="bg-purple-500/5 border-purple-500/20">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Target className="w-5 h-5 text-purple-500" />
+                        Source Scoring - Якість джерел
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {/* Distribution Chart */}
+                    <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Розподіл оцінок</h4>
+                        <div className="grid grid-cols-4 gap-3">
+                            <div className="text-center space-y-1">
+                                <div className="relative h-24 flex items-end justify-center">
+                                    <div 
+                                        className="w-full bg-green-500/20 border-2 border-green-500 rounded-t transition-all"
+                                        style={{ height: `${scoringDistribution.total > 0 ? (scoringDistribution.excellent / scoringDistribution.total) * 100 : 0}%` }}
+                                    />
+                                </div>
+                                <p className="text-2xl font-bold text-green-500">{scoringDistribution.excellent}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase">90+ Excellent</p>
+                            </div>
+                            <div className="text-center space-y-1">
+                                <div className="relative h-24 flex items-end justify-center">
+                                    <div 
+                                        className="w-full bg-blue-500/20 border-2 border-blue-500 rounded-t transition-all"
+                                        style={{ height: `${scoringDistribution.total > 0 ? (scoringDistribution.high / scoringDistribution.total) * 100 : 0}%` }}
+                                    />
+                                </div>
+                                <p className="text-2xl font-bold text-blue-500">{scoringDistribution.high}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase">80-89 High</p>
+                            </div>
+                            <div className="text-center space-y-1">
+                                <div className="relative h-24 flex items-end justify-center">
+                                    <div 
+                                        className="w-full bg-cyan-500/20 border-2 border-cyan-500 rounded-t transition-all"
+                                        style={{ height: `${scoringDistribution.total > 0 ? (scoringDistribution.normal / scoringDistribution.total) * 100 : 0}%` }}
+                                    />
+                                </div>
+                                <p className="text-2xl font-bold text-cyan-500">{scoringDistribution.normal}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase">70-79 Normal</p>
+                            </div>
+                            <div className="text-center space-y-1">
+                                <div className="relative h-24 flex items-end justify-center">
+                                    <div 
+                                        className="w-full bg-orange-500/20 border-2 border-orange-500 rounded-t transition-all"
+                                        style={{ height: `${scoringDistribution.total > 0 ? (scoringDistribution.low / scoringDistribution.total) * 100 : 0}%` }}
+                                    />
+                                </div>
+                                <p className="text-2xl font-bold text-orange-500">{scoringDistribution.low}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase">&lt;70 Low</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Recent Scores */}
+                    <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Останні 10 оцінок</h4>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {scoringStats && scoringStats.length > 0 ? (
+                                scoringStats.slice(0, 10).map((item: any, i) => {
+                                    const scoring = item.source_scoring?.json;
+                                    const overall = scoring?.scores?.overall || 0;
+                                    const status = scoring?.verification_status || 'Unknown';
+                                    const countryCode = item.country?.code?.toLowerCase() || 'us';
+                                    const newsUrl = `/news/${countryCode}/${item.slug}`;
+                                    
+                                    return (
+                                        <div key={i} className="flex justify-between items-center text-xs border-b border-purple-500/10 pb-2 hover:bg-purple-500/5 px-2 py-1 rounded transition-colors">
+                                            <div className="flex-1 min-w-0">
+                                                <a 
+                                                    href={newsUrl} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="text-purple-500 hover:underline truncate block font-medium"
+                                                >
+                                                    {item.title}
+                                                </a>
+                                            </div>
+                                            <div className="flex items-center gap-2 ml-4 shrink-0">
+                                                <Badge 
+                                                    variant="outline" 
+                                                    className={`text-[10px] font-bold ${
+                                                        overall >= 90 ? 'border-green-500 text-green-500 bg-green-500/10' :
+                                                        overall >= 80 ? 'border-blue-500 text-blue-500 bg-blue-500/10' :
+                                                        overall >= 70 ? 'border-cyan-500 text-cyan-500 bg-cyan-500/10' :
+                                                        'border-orange-500 text-orange-500 bg-orange-500/10'
+                                                    }`}
+                                                >
+                                                    {overall}
+                                                </Badge>
+                                                <Badge variant="outline" className="text-[10px] border-purple-500/30">
+                                                    {status}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <p className="text-xs text-muted-foreground py-8 text-center">Немає оцінок джерел. Cron запуститься о :30</p>
+                            )}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Швидкі дії */}
             <div className="flex flex-wrap gap-2">
