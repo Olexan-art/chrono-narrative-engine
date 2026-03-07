@@ -301,13 +301,18 @@ serve(async (req) => {
       // 1. Has Ukrainian retelling (content IS NOT NULL)
       // 2. Has deep analysis from deep-analyst (news_analysis IS NOT NULL)
       // 3. Hasn't been scored yet (source_scoring IS NULL)
-      // 4. Ordered by llm_processed_at to get the most recently analyzed news
+      // 4. Published in last 6 hours (fresh news only)
+      // 5. Ordered by llm_processed_at to get the most recently analyzed news
+      
+      const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+      
       const { data, error } = await supabase
         .from("news_rss_items")
         .select("id, url, title, original_content, content, description, slug, country:news_countries(code)")
         .not('content', 'is', null) // has Ukrainian retelling
         .not('news_analysis', 'is', null) // has analysis
         .is('source_scoring', null) // hasn't been scored yet
+        .gte('published_at', sixHoursAgo) // only news from last 6 hours
         .order('llm_processed_at', { ascending: false })
         .limit(1)
         .single();
