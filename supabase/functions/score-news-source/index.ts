@@ -265,8 +265,7 @@ serve(async (req) => {
       const { data, error } = await supabase
         .from("news_rss_items")
         .select("id, url, title, original_content, content, description, slug, country:news_countries(code)")
-        .not('content', 'is', null) // has retelling (content_en)
-        .not('retold_content', 'is', null) // has Ukrainian retelling
+        .not('content', 'is', null) // has Ukrainian retelling
         .not('news_analysis', 'is', null) // has analysis
         .is('source_scoring', null) // hasn't been scored yet
         .order('llm_processed_at', { ascending: false })
