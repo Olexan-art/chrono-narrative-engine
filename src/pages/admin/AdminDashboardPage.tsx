@@ -47,9 +47,9 @@ function QuickDashboard({ password }: { password: string }) {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('news_rss_items')
-                .select('id, url, title, slug, source_scoring, updated_at, country:news_countries(code)')
+                .select('id, url, title, slug, source_scoring, llm_processed_at, country:news_countries(code)')
                 .not('source_scoring', 'is', null)
-                .order('updated_at', { ascending: false })
+                .order('llm_processed_at', { ascending: false })
                 .limit(50);
 
             if (error) throw error;
