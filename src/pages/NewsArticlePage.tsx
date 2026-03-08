@@ -1024,15 +1024,18 @@ export default function NewsArticlePage() {
                   article={article}
                 />
 
-                {/* Mentioned Entities */}
-                {mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0 && (
-                  <NewsMentionedEntitiesBlock
-                    entities={[
-                      ...(mainEntityData.mainEntity ? [mainEntityData.mainEntity] : []),
-                      ...mainEntityData.relatedEntities.filter(e => e && e.id)
-                    ]}
-                  />
-                )}
+                {/* Mentioned Entities - Always show if there's a feed source */}
+                <NewsMentionedEntitiesBlock
+                  entities={
+                    mainEntityData?.relatedEntities && mainEntityData.relatedEntities.length > 0
+                      ? [
+                          ...(mainEntityData.mainEntity ? [mainEntityData.mainEntity] : []),
+                          ...mainEntityData.relatedEntities.filter(e => e && e.id)
+                        ]
+                      : []
+                  }
+                  feed={article.feed}
+                />
 
                 {/* Keywords Visual Display */}
                 {articleKeywords && articleKeywords.length > 0 && (
