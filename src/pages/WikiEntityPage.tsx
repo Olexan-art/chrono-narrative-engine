@@ -84,6 +84,11 @@ interface NewsItem {
   };
 }
 
+interface NewsWithLink extends NewsItem {
+  link_id: string;
+  manual_sentiment: string | null;
+}
+
 interface RelatedEntity {
   id: string;
   name: string;
@@ -358,6 +363,8 @@ export default function WikiEntityPage() {
       const { data, error } = await supabase
         .from('news_wiki_entities')
         .select(`
+          id,
+          manual_sentiment,
           news_item:news_rss_items(
             id, slug, title, title_en, description, description_en,
             image_url, published_at, themes, themes_en, keywords, country_id,
@@ -375,7 +382,12 @@ export default function WikiEntityPage() {
         .filter(d => d.news_item)
         .map(d => {
           const item = d.news_item as any;
-          return { ...item, country: item.country } as NewsItem;
+          return { 
+            ...item, 
+            country: item.country,
+            link_id: d.id,
+            manual_sentiment: d.manual_sentiment
+          } as NewsWithLink;
         });
     },
     enabled: !!entity?.id,
@@ -1059,6 +1071,23 @@ export default function WikiEntityPage() {
     },
     onError: (err: Error) => {
       toast.error('Помилка збереження зображення: ' + err.message);
+    },
+  });
+
+  const updateSentimentMutation = useMutation({
+    mutationFn: async ({ linkId, sentiment }: { linkId: string; sentiment: string | null }) => {
+      const { error } = await supabase
+        .from('news_wiki_entities')
+        .update({ manual_sentiment: sentiment === 'none' ? null : sentiment })
+        .eq('id', linkId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Наратив оновлено');
+      queryClient.invalidateQueries({ queryKey: ['entity-news-paginated', entity?.id, newsPage] });
+    },
+    onError: (err: Error) => {
+      toast.error('Помилка оновлення наративу: ' + err.message);
     },
   });
 
@@ -2652,11 +2681,14 @@ export default function WikiEntityPage() {
                   {paginatedNews.length > 0 ? (
                     <div className="space-y-4">
                       {paginatedNews.map((news) => (
-                        <Link
+                        <div
                           key={news.id}
-                          to={news.slug ? `/news/${news.country?.code?.toLowerCase()}/${news.slug}` : '#'}
-                          className="flex gap-4 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                          className="group relative flex gap-4 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
                         >
+                          <Link
+                            to={news.slug ? `/news/${news.country?.code?.toLowerCase()}/${news.slug}` : '#'}
+                            className="absolute inset-0 z-0"
+                          />
                           {news.image_url && (
                             <div className="relative inline-block flex-shrink-0">
                               <img
@@ -2685,7 +2717,28 @@ export default function WikiEntityPage() {
                               </p>
                             )}
                           </div>
-                        </Link>
+                          {isAdmin && (
+                            <div className="relative z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Select
+                                value={news.manual_sentiment || "none"}
+                                onValueChange={(value) => updateSentimentMutation.mutate({ linkId: news.link_id, sentiment: value })}
+                              >
+                                <SelectTrigger className="h-8 w-[130px] text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">
+                                    {news.manual_sentiment ? '✋ Авто' : 'Авто'}
+                                  </SelectItem>
+                                  <SelectItem value="positive">🟢 Позитив</SelectItem>
+                                  <SelectItem value="negative">🔴 Негатив</SelectItem>
+                                  <SelectItem value="neutral">⚪ Нейтральний</SelectItem>
+                                  <SelectItem value="mixed">🟡 Змішаний</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
                       ))}
 
                       {/* Pagination */}
