@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WikiEntityCard } from "@/components/WikiEntityCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -34,6 +35,7 @@ interface NewsWikiLink {
   id: string;
   match_term: string | null;
   match_source: string;
+  manual_sentiment: string | null;
   wiki_entity: WikiEntity;
 }
 
@@ -71,6 +73,7 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
           id,
           match_term,
           match_source,
+          manual_sentiment,
           wiki_entity:wiki_entities(
             id, wiki_id, entity_type, name, name_en,
             description, description_en, image_url,
@@ -90,6 +93,7 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
           id: d.id,
           match_term: d.match_term,
           match_source: d.match_source,
+          manual_sentiment: d.manual_sentiment,
           wiki_entity: d.wiki_entity as WikiEntity
         })) as NewsWikiLink[];
     },
@@ -206,6 +210,31 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Add error');
+    },
+  });
+
+  // Update sentiment mutation
+  const updateSentimentMutation = useMutation({
+    mutationFn: async ({ linkId, sentiment }: { linkId: string; sentiment: string | null }) => {
+      const { error } = await supabase
+        .from('news_wiki_entities')
+        .update({ manual_sentiment: sentiment })
+        .eq('id', linkId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(
+        language === 'uk'
+          ? 'Наратив оновлено'
+          : language === 'pl'
+            ? 'Narracja zaktualizowana'
+            : 'Narrative updated'
+      );
+      queryClient.invalidateQueries({ queryKey: ['news-wiki-entities', newsId] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Update error');
     },
   });
 
@@ -333,13 +362,24 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
                     showLink={true}
                   />
                   {/* Narrative indicator with summary & sentiment */}
-                  {entityNarratives[link.wiki_entity.id] && (() => {
-                    const narr = entityNarratives[link.wiki_entity.id] as any;
-                    let analysis = narr.analysis || narr;
-                    if (typeof analysis === 'string') {
-                      try { analysis = JSON.parse(analysis); } catch { }
+                  {(() => {
+                    // Use manual_sentiment if set by admin, otherwise use LLM sentiment from entityNarratives
+                    let sentiment = link.manual_sentiment || null;
+                    let summary = null;
+                    let isManual = !!link.manual_sentiment;
+                    
+                    if (!sentiment && entityNarratives[link.wiki_entity.id]) {
+                      const narr = entityNarratives[link.wiki_entity.id] as any;
+                      let analysis = narr.analysis || narr;
+                      if (typeof analysis === 'string') {
+                        try { analysis = JSON.parse(analysis); } catch { }
+                      }
+                      sentiment = (analysis.sentiment || 'neutral').toLowerCase();
+                      summary = analysis.narrative_summary;
                     }
-                    const sentiment = (analysis.sentiment || 'neutral').toLowerCase();
+                    
+                    if (!sentiment) return null;
+                    
                     const sentimentConfig: Record<string, { icon: string; bg: string; border: string; text: string }> = {
                       positive: { icon: '🟢', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-600' },
                       negative: { icon: '🔴', bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-600' },
@@ -347,7 +387,7 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
                       neutral: { icon: '⚪', bg: 'bg-muted', border: 'border-border', text: 'text-muted-foreground' },
                     };
                     const s = sentimentConfig[sentiment] || sentimentConfig.neutral;
-                    const summary = analysis.narrative_summary;
+                    
                     return (
                       <Link
                         to={`/wiki/${link.wiki_entity.slug || link.wiki_entity.id}`}
@@ -358,6 +398,11 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
                           <span className="text-[10px] font-mono font-semibold text-primary">
                             {language === 'uk' ? 'Наратив' : 'Narrative'}
                           </span>
+                          {isManual && (
+                            <span className="text-[9px] font-semibold text-orange-500" title={language === 'uk' ? 'Вручну встановлено' : 'Manually set'}>
+                              ✋
+                            </span>
+                          )}
                           <span className={`text-[9px] font-semibold uppercase ${s.text} ml-auto`}>
                             {s.icon} {sentiment}
                           </span>
@@ -372,6 +417,28 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
                   })()}
                   {isAdmin && (
                     <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Select
+                        value={link.manual_sentiment || "none"}
+                        onValueChange={(value) => {
+                          updateSentimentMutation.mutate({
+                            linkId: link.id,
+                            sentiment: value === "none" ? null : value
+                          });
+                        }}
+                      >
+                        <SelectTrigger className="h-6 w-20 text-[10px] bg-background/80 backdrop-blur">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none" className="text-xs">
+                            {language === 'uk' ? 'Авто' : 'Auto'}
+                          </SelectItem>
+                          <SelectItem value="positive" className="text-xs">🟢 {language === 'uk' ? 'Позитив' : 'Positive'}</SelectItem>
+                          <SelectItem value="negative" className="text-xs">🔴 {language === 'uk' ? 'Негатив' : 'Negative'}</SelectItem>
+                          <SelectItem value="neutral" className="text-xs">⚪ {language === 'uk' ? 'Нейтральний' : 'Neutral'}</SelectItem>
+                          <SelectItem value="mixed" className="text-xs">🟡 {language === 'uk' ? 'Змішаний' : 'Mixed'}</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Button
                         variant="ghost"
                         size="icon"
