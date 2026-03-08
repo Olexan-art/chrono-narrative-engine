@@ -8,6 +8,7 @@ import {
   Loader2, ExternalLink, Hash, BarChart2, Layers, Clock,
   ChevronRight, Image as ImageIcon, Globe, Flame
 } from "lucide-react";
+import { EntitySentimentBadge } from "@/components/EntitySentimentBadge";
 import { NewsScoreBadge, SourceScoring } from "@/components/news/NewsScoreBadge";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -196,7 +197,7 @@ export default function NewsTopicPage() {
           .from("news_wiki_entities")
           .select(`
             news_item_id,
-            wiki_entity:wiki_entities(id, name, name_en, entity_type, image_url, slug)
+            wiki_entity:wiki_entities(id, name, name_en, entity_type, image_url, slug, manual_sentiment)
           `)
           .in("news_item_id", chunk)
       );
@@ -990,14 +991,17 @@ export default function NewsTopicPage() {
                           className="group flex items-center gap-2.5 p-2 rounded-lg hover:bg-primary/5 transition-colors"
                         >
                           {entity.image_url ? (
-                            <img
-                              src={entity.image_url}
-                              alt={entity.name}
-                              className="w-9 h-9 rounded-full object-cover border border-border flex-shrink-0"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = "none";
-                              }}
-                            />
+                            <div className="relative inline-block flex-shrink-0">
+                              <img
+                                src={entity.image_url}
+                                alt={entity.name}
+                                className="w-9 h-9 rounded-full object-cover border border-border"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = "none";
+                                }}
+                              />
+                              <EntitySentimentBadge sentiment={(entity as any).manual_sentiment} className="w-4 h-4 top-0 right-0" />
+                            </div>
                           ) : (
                             <div className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold border ${ENTITY_TYPE_COLORS[entity.entity_type] || "border-border bg-secondary/40 text-muted-foreground"}`}>
                               {(entity.name_en || entity.name).charAt(0).toUpperCase()}

@@ -41,6 +41,7 @@ import { useTrackView } from '@/hooks/useTrackView';
 import { getLogoUrl } from '@/lib/getLogoUrl';
 import { LLM_MODELS, LLMProvider } from "@/types/database";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EntitySentimentBadge } from "@/components/EntitySentimentBadge";
 
 interface WikiEntity {
   id: string;
@@ -1599,14 +1600,17 @@ export default function WikiEntityPage() {
                   <div className="md:w-64 flex-shrink-0 relative group">
                     {/* Topic overlay removed from image — moved to info block */}
                     {entity.image_url ? (
-                      <img
-                        src={entity.image_url}
-                        alt={name}
-                        className="w-full h-64 md:h-full object-cover"
-                        fetchPriority="high"
-                        loading="eager"
-                        decoding="async"
-                      />
+                      <div className="relative inline-block w-full">
+                        <img
+                          src={entity.image_url}
+                          alt={name}
+                          className="w-full h-64 md:h-full object-cover"
+                          fetchPriority="high"
+                          loading="eager"
+                          decoding="async"
+                        />
+                        <EntitySentimentBadge sentiment={entity.manual_sentiment} className="w-10 h-10 top-2 right-2" />
+                      </div>
                     ) : (
                       <div className="w-full h-64 bg-muted flex items-center justify-center">
                         {getEntityIcon(entity.entity_type)}

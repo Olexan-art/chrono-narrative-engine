@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { EntitySentimentBadge } from "@/components/EntitySentimentBadge";
 
 interface WikiEntityWithNews {
   entity: {
@@ -18,6 +19,7 @@ interface WikiEntityWithNews {
     image_url: string | null;
     wiki_url: string;
     wiki_url_en: string | null;
+    manual_sentiment?: string | null;
   };
   mentionCount: number;
   news: Array<{
@@ -40,7 +42,7 @@ async function fetchTrendingEntities(hoursAgo: number): Promise<WikiEntityWithNe
       created_at,
       wiki_entity:wiki_entities(
         id, name, name_en, description, description_en, 
-        image_url, wiki_url, wiki_url_en
+        image_url, wiki_url, wiki_url_en, manual_sentiment
       ),
       news_item:news_rss_items(
         id, title, title_en, slug, country_id
@@ -153,14 +155,17 @@ export const TrendingWikiEntities = memo(function TrendingWikiEntities() {
         <CardContent className="p-0">
           <div className="flex items-start gap-3 p-3">
             {item.entity.image_url && (
-              <img
-                src={getOptimizedUrl(item.entity.image_url, 128)}
-                alt={name}
-                className="w-16 h-16 object-cover rounded-lg shrink-0"
-                loading="lazy"
-                width={64}
-                height={64}
-              />
+              <div className="relative inline-block flex-shrink-0">
+                <img
+                  src={getOptimizedUrl(item.entity.image_url, 128)}
+                  alt={name}
+                  className="w-16 h-16 object-cover rounded-lg"
+                  loading="lazy"
+                  width={64}
+                  height={64}
+                />
+                <EntitySentimentBadge sentiment={item.entity.manual_sentiment} />
+              </div>
             )}
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-1">

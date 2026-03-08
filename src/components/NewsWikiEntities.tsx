@@ -28,6 +28,7 @@ interface WikiEntity {
   extract: string | null;
   extract_en: string | null;
   slug?: string | null;
+  manual_sentiment?: string | null;
 }
 
 interface NewsWikiLink {
@@ -74,7 +75,8 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
           wiki_entity:wiki_entities(
             id, wiki_id, entity_type, name, name_en,
             description, description_en, image_url,
-            wiki_url, wiki_url_en, extract, extract_en, slug
+            wiki_url, wiki_url_en, extract, extract_en, slug,
+            manual_sentiment
           )
         `)
         .eq('news_item_id', newsId);

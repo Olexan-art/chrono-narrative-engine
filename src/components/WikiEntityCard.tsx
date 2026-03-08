@@ -3,6 +3,7 @@ import { ExternalLink, Building2, User, Globe, TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { EntitySentimentBadge } from "@/components/EntitySentimentBadge";
 
 interface WikiEntity {
   id: string;
@@ -17,6 +18,7 @@ interface WikiEntity {
   wiki_url_en: string | null;
   extract: string | null;
   extract_en: string | null;
+  manual_sentiment?: string | null;
 }
 
 export interface WikiEntityCardProps {
@@ -77,11 +79,14 @@ export function WikiEntityCard({ entity, compact = false, showLink = false }: Wi
         className="flex items-center gap-3 p-3 rounded-xl glass-effect hover-lift border-glow"
       >
         {entity.image_url ? (
-          <img
-            src={entity.image_url}
-            alt={name}
-            className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-          />
+          <div className="relative inline-block flex-shrink-0">
+            <img
+              src={entity.image_url}
+              alt={name}
+              className="w-12 h-12 rounded-lg object-cover"
+            />
+            <EntitySentimentBadge sentiment={entity.manual_sentiment} />
+          </div>
         ) : (
           <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
             {getEntityIcon()}
@@ -109,11 +114,14 @@ export function WikiEntityCard({ entity, compact = false, showLink = false }: Wi
         <div className="flex gap-4">
           {/* Larger image */}
           {entity.image_url ? (
-            <img
-              src={entity.image_url}
-              alt={name}
-              className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
-            />
+            <div className="relative inline-block flex-shrink-0">
+              <img
+                src={entity.image_url}
+                alt={name}
+                className="w-24 h-24 rounded-lg object-cover"
+              />
+              <EntitySentimentBadge sentiment={entity.manual_sentiment} className="w-8 h-8" />
+            </div>
           ) : (
             <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
               {entity.entity_type === 'person' ? (
