@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Loader2, Search, Sparkles, X, Pencil, Plus, Check, Link2, BrainCircuit } from "lucide-react";
+import { Loader2, Search, Sparkles, X, Pencil, Plus, Check, Link2, BrainCircuit, Newspaper } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { WikiEntityCard } from "@/components/WikiEntityCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,15 +37,21 @@ interface NewsWikiLink {
   wiki_entity: WikiEntity;
 }
 
+interface Feed {
+  name?: string;
+  category?: string;
+}
+
 interface NewsWikiEntitiesProps {
   newsId: string;
   title?: string;
   keywords?: string[];
   showSearchButton?: boolean;
   entityNarratives?: Record<string, any>;
+  feed?: Feed;
 }
 
-export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = false, entityNarratives = {} }: NewsWikiEntitiesProps) {
+export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = false, entityNarratives = {}, feed }: NewsWikiEntitiesProps) {
   const { language } = useLanguage();
   const queryClient = useQueryClient();
   const { isAuthenticated: isAdmin } = useAdminStore();
@@ -397,6 +404,19 @@ export function NewsWikiEntities({ newsId, title, keywords, showSearchButton = f
                 ? 'Podmioty jeszcze nie zdefiniowane'
                 : 'No entities identified yet'}
           </p>
+        )}
+
+        {/* Source badge with orange color */}
+        {feed && feed.name && (
+          <div className="pt-2 border-t">
+            <Badge 
+              variant="outline" 
+              className="gap-1.5 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400 border-orange-300 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
+            >
+              <Newspaper className="w-3 h-3" />
+              {language === 'uk' ? 'Джерело' : language === 'pl' ? 'Źródło' : 'Source'}: {feed.name}
+            </Badge>
+          </div>
         )}
 
         {/* Add by URL form */}

@@ -1624,6 +1624,7 @@ export default function NewsArticlePage() {
               keywords={articleKeywords}
               showSearchButton
               entityNarratives={entityNarratives}
+              feed={article.feed}
             />
 
 
