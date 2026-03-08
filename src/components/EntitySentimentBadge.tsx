@@ -20,7 +20,7 @@ export function EntitySentimentBadge({ sentiment, className }: EntitySentimentBa
         return {
           icon: '🔴',
           bgColor: 'bg-red-500/90',
-          animation: 'animate-pulse'
+          animation: 'animate-bounce'
         };
       case 'neutral':
         return {
@@ -45,7 +45,7 @@ export function EntitySentimentBadge({ sentiment, className }: EntitySentimentBa
   return (
     <div
       className={cn(
-        "absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs backdrop-blur-sm shadow-lg z-10",
+        "absolute top-1 right-1 w-6 h-6 rounded-md flex items-center justify-center text-xs backdrop-blur-sm shadow-lg z-10 border border-white/20",
         config.bgColor,
         config.animation,
         className
