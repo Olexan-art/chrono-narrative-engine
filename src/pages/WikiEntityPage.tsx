@@ -60,6 +60,7 @@ interface WikiEntity {
   last_searched_at: string | null;
   slug: string | null;
   raw_data?: any;
+  manual_sentiment?: string | null;
 }
 
 interface NewsItem {
@@ -1088,6 +1089,23 @@ export default function WikiEntityPage() {
     },
     onError: (err: Error) => {
       toast.error('Помилка оновлення наративу: ' + err.message);
+    },
+  });
+
+  const updateEntitySentimentMutation = useMutation({
+    mutationFn: async (sentiment: string) => {
+      const { error } = await supabase
+        .from('wiki_entities')
+        .update({ manual_sentiment: sentiment === 'none' ? null : sentiment })
+        .eq('id', entity?.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Оцінку сутності оновлено');
+      queryClient.invalidateQueries({ queryKey: ['wiki-entity', entityId] });
+    },
+    onError: (err: Error) => {
+      toast.error('Помилка оновлення оцінки: ' + err.message);
     },
   });
 
@@ -3159,16 +3177,30 @@ export default function WikiEntityPage() {
                           {language === 'uk' ? 'Архів' : 'Archive'}
                         </CardTitle>
                         {isAdmin && (
-                          <Select value={selectedNarrativeModel} onValueChange={setSelectedNarrativeModel}>
-                            <SelectTrigger className="h-6 text-[10px] w-28">
-                              <SelectValue placeholder="Model" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {OPENAI_NARRATIVE_MODELS.map(m => (
-                                <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex gap-2">
+                            <Select value={entity?.manual_sentiment || 'none'} onValueChange={(v) => updateEntitySentimentMutation.mutate(v)}>
+                              <SelectTrigger className="h-6 text-[10px] w-24">
+                                <SelectValue placeholder="Оцінка" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none" className="text-xs">Авто</SelectItem>
+                                <SelectItem value="positive" className="text-xs">🟢 Позитив</SelectItem>
+                                <SelectItem value="negative" className="text-xs">🔴 Негатив</SelectItem>
+                                <SelectItem value="neutral" className="text-xs">⚪ Нейтральний</SelectItem>
+                                <SelectItem value="mixed" className="text-xs">🟡 Змішаний</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Select value={selectedNarrativeModel} onValueChange={setSelectedNarrativeModel}>
+                              <SelectTrigger className="h-6 text-[10px] w-28">
+                                <SelectValue placeholder="Model" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {OPENAI_NARRATIVE_MODELS.map(m => (
+                                  <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         )}
                       </div>
                     </CardHeader>
