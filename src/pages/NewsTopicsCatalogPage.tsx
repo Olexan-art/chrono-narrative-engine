@@ -82,8 +82,8 @@ export default function NewsTopicsCatalogPage() {
       }
       return (data || []) as TopicStat[];
     },
-    staleTime: 1000 * 60 * 30,
-    gcTime: 1000 * 60 * 60,
+    staleTime: 1000 * 60 * 60 * 6, // 6 hours - matches SSR cache TTL
+    gcTime: 1000 * 60 * 60 * 12,
   });
 
   const filtered = useMemo(() => {

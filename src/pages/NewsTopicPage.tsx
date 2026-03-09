@@ -122,8 +122,8 @@ export default function NewsTopicPage() {
       };
     },
     enabled: !!topic,
-    staleTime: 1000 * 60 * 30, // 30 min — daily view counts don't change per-minute
-    gcTime: 1000 * 60 * 60,
+    staleTime: 1000 * 60 * 60 * 6, // 6 hours - matches SSR cache TTL
+    gcTime: 1000 * 60 * 60 * 12,
   });
 
   const totalNewsCount = viewsSummary?.total_count ?? 0;
