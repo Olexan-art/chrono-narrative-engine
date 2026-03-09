@@ -8,7 +8,15 @@
 -- Function: Calls cache-topics-cron Edge Function to pre-warm SSR cache
 -- ============================================================================
 
-SELECT cron.unschedule('cache-topics-prewarm');
+-- Remove existing job if it exists (safe delete)
+DO $$
+BEGIN
+  PERFORM cron.unschedule('cache-topics-prewarm');
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Job doesn't exist, continue
+    NULL;
+END $$;
 
 SELECT cron.schedule(
   'cache-topics-prewarm',
