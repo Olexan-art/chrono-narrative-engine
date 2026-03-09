@@ -476,8 +476,8 @@ export default function NewsTopicPage() {
           <div className="lg:hidden mb-6">
             <Card className="border-primary/20">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Users className="w-4 h-4 text-primary" />
+                <CardTitle className="text-base md:text-lg flex items-center gap-2">
+                  <Users className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                   {language === "en" ? "Key Entities" : "Ключові сутності"}
                   <Badge variant="outline" className="ml-auto text-xs">
                     {entityStats.length}
@@ -510,10 +510,10 @@ export default function NewsTopicPage() {
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium leading-snug line-clamp-1 group-hover:text-primary transition-colors">
+                        <p className="text-sm md:text-base font-medium leading-snug line-clamp-1 group-hover:text-primary transition-colors">
                           {language === "en" && entity.name_en ? entity.name_en : entity.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs md:text-sm text-muted-foreground">
                           {ENTITY_TYPE_LABELS[entity.entity_type]?.[language === "en" ? "en" : "uk"] || entity.entity_type}
                           {" · "}{count} {language === "en" ? "news" : "новин"}
                         </p>
@@ -523,7 +523,7 @@ export default function NewsTopicPage() {
                   ))}
                 </div>
                 {entityStats.length > 5 && (
-                  <p className="text-xs text-center text-muted-foreground mt-3 pt-3 border-t border-border/40">
+                  <p className="text-sm text-center text-muted-foreground mt-3 pt-3 border-t border-border/40">
                     {language === "en" ? `+${entityStats.length - 5} more below` : `+${entityStats.length - 5} ще нижче`}
                   </p>
                 )}
@@ -566,7 +566,7 @@ export default function NewsTopicPage() {
                 </div>
               )}
               <CardContent className="p-5">
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
                   {language === "en"
                     ? (topicMeta?.description_en ||
                       `"${topic}" is a live news category on BraveNNow. We've collected ${totalNewsCount} articles from different countries, published over ${chartData.length} days. Each article is automatically linked to real-world entities — people, companies and organisations — so you can instantly see who is involved and click through to their full profiles. Right now this category is connected to ${entityStats.length} such entities.`)
@@ -598,8 +598,8 @@ export default function NewsTopicPage() {
 
             {/* ── Timeline with day groups (moved to left col) ── */}
             <section>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" />
+              <h2 className="text-xl md:text-2xl font-semibold mb-4 flex items-center gap-2">
+                <Clock className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                 {language === "en" ? "News Timeline" : "Таймлайн новин"}
                 <Badge variant="outline" className="ml-auto text-xs">
                   {newsItems.length}
@@ -627,11 +627,11 @@ export default function NewsTopicPage() {
                         {/* Day separator header — neon slash style */}
                         <div className="relative flex items-center gap-3 py-3 px-4 my-1">
                           <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-2 bg-background border-l-4 border-primary text-primary font-mono text-sm font-black px-4 py-1.5 uppercase tracking-[0.12em] shadow-[0_0_14px_hsl(var(--primary)/0.25)]">
-                              <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="inline-flex items-center gap-2 bg-background border-l-4 border-primary text-primary font-mono text-sm md:text-base font-black px-4 py-1.5 uppercase tracking-[0.12em] shadow-[0_0_14px_hsl(var(--primary)/0.25)]">
+                              <Calendar className="w-4 h-4 flex-shrink-0" />
                               {group.label}
                             </span>
-                            <span className="font-mono text-xs font-black text-primary/90 border border-primary/50 px-2 py-1 bg-primary/10 uppercase tracking-widest">
+                            <span className="font-mono text-xs md:text-sm font-black text-primary/90 border border-primary/50 px-2 py-1 bg-primary/10 uppercase tracking-widest">
                               {group.items.length}×
                             </span>
                           </div>
@@ -734,8 +734,8 @@ export default function NewsTopicPage() {
             {/* ── Caricature section ── */}
             {caricatures.length > 0 && (
               <section>
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <Flame className="w-5 h-5 text-orange-400" />
+                <h2 className="text-xl md:text-2xl font-semibold mb-4 flex items-center gap-2">
+                  <Flame className="w-5 h-5 md:w-6 md:h-6 text-orange-400" />
                   {language === "en" ? "Caricatures" : "Карикатури"}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -767,8 +767,8 @@ export default function NewsTopicPage() {
             {/* ── Charts ── */}
             {chartData.length > 1 && (
               <section className="space-y-6">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <BarChart2 className="w-5 h-5 text-primary" />
+                <h2 className="text-xl md:text-2xl font-semibold flex items-center gap-2">
+                  <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                   {language === "en" ? "Statistics by Date" : "Статистика по датах"}
                 </h2>
 
@@ -1028,8 +1028,8 @@ export default function NewsTopicPage() {
             <div className="sticky top-20">
               <Card className="border-primary/20">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Users className="w-4 h-4 text-primary" />
+                  <CardTitle className="text-base md:text-lg flex items-center gap-2">
+                    <Users className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                     {language === "en" ? "Key Entities" : "Ключові сутності"}
                     <Badge variant="outline" className="ml-auto text-xs">
                       {entityStats.length}
@@ -1073,10 +1073,10 @@ export default function NewsTopicPage() {
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium leading-snug line-clamp-1 group-hover:text-primary transition-colors">
+                            <p className="text-sm md:text-base font-medium leading-snug line-clamp-1 group-hover:text-primary transition-colors">
                               {language === "en" && entity.name_en ? entity.name_en : entity.name}
                             </p>
-                            <p className="text-[10px] text-muted-foreground">
+                            <p className="text-xs md:text-sm text-muted-foreground">
                               {ENTITY_TYPE_LABELS[entity.entity_type]?.[language === "en" ? "en" : "uk"] || entity.entity_type}
                               {" · "}{count} {language === "en" ? "news" : "новин"}
                             </p>

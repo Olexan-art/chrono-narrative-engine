@@ -141,11 +141,11 @@ export default function NewsTopicsCatalogPage() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Hash className="w-7 h-7 text-primary" />
-            <h1 className="text-3xl md:text-4xl font-bold text-glow">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-glow">
               {language === "en" ? "News Topics" : "Теми Новин"}
             </h1>
           </div>
-          <p className="text-muted-foreground max-w-xl">
+          <p className="text-base md:text-lg text-muted-foreground max-w-xl">
             {language === "en"
               ? "Explore all topics mentioned in news articles. Each topic has its own page with a timeline, entities, and statistics."
               : "Перегляньте всі теми, згадані в новинних статтях. Кожна тема має свою сторінку з таймлайном, сутностями та статистикою."}
@@ -157,14 +157,14 @@ export default function NewsTopicsCatalogPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8 p-4 rounded-lg bg-primary/5 border border-primary/20">
             <div className="flex items-center gap-2">
               <Hash className="w-4 h-4 text-primary" />
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm md:text-base text-muted-foreground">
                 {language === "en" ? "Total topics:" : "Всього тем:"}
               </span>
-              <span className="font-bold text-primary">{topicsData.length}</span>
+              <span className="font-bold text-base md:text-lg text-primary">{topicsData.length}</span>
             </div>
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-green-400" />
-              <span className="text-sm text-muted-foreground truncate">
+              <span className="text-sm md:text-base text-muted-foreground truncate">
                 {language === "en" ? "Most popular:" : "Найпопулярніша:"}
               </span>
               <span className="font-medium text-foreground truncate">{topicsData[0]?.topic}</span>
@@ -210,8 +210,8 @@ export default function NewsTopicsCatalogPage() {
             {/* Top topics – standard TopicTile cards */}
             {topTopics.length > 0 && !search && (
               <section className="mb-8">
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-primary" />
+                <h2 className="text-lg md:text-xl font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />
                   {language === "en" ? "Trending Topics" : "Популярні теми"}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -225,8 +225,8 @@ export default function NewsTopicsCatalogPage() {
             {/* Top Topics (7-20) — ranked list with article counts */}
             {topNextTopics.length > 0 && !search && (
               <section className="mb-8">
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-primary" />
+                <h2 className="text-lg md:text-xl font-semibold mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-primary" />
                   {language === "en" ? "Top Topics" : "Топ Теми"}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
