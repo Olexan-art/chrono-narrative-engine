@@ -8,10 +8,8 @@
 -- Function: Calls cache-topics-cron Edge Function to pre-warm SSR cache
 -- ============================================================================
 
--- Enable pg_cron extension if not already enabled
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-
 -- Remove existing job if it exists (safe delete)
+-- Note: pg_cron extension must be enabled via Supabase Dashboard > Database > Extensions
 DO $$
 BEGIN
   PERFORM cron.unschedule('cache-topics-prewarm');
