@@ -1578,7 +1578,7 @@ export default function WikiEntityPage() {
 
         <main className="container mx-auto px-4 py-8">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
+          <nav className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
             <Link to="/" className="hover:text-foreground">
               {language === 'uk' ? 'Головна' : 'Home'}
             </Link>
@@ -1604,12 +1604,12 @@ export default function WikiEntityPage() {
                         <img
                           src={entity.image_url}
                           alt={name}
-                          className="w-full h-64 md:h-full object-cover"
+                          className="w-full h-72 sm:h-80 md:h-full object-cover"
                           fetchPriority="high"
                           loading="eager"
                           decoding="async"
                         />
-                        <EntitySentimentBadge sentiment={entity.manual_sentiment} className="w-10 h-10 top-2 right-2" />
+                        <EntitySentimentBadge sentiment={entity.manual_sentiment} className="w-12 h-12 sm:w-10 sm:h-10 top-2 right-2" />
                       </div>
                     ) : (
                       <div className="w-full h-64 bg-muted flex items-center justify-center">
@@ -1748,7 +1748,7 @@ export default function WikiEntityPage() {
                         <div className="flex items-start justify-between gap-4 relative">
                           <div>
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              <Badge variant="secondary">
+                              <Badge variant="secondary" className="text-xs sm:text-sm px-2 py-1 sm:px-2 sm:py-1">
                                 {getEntityIcon(entity.entity_type)}
                                 <span className="ml-1">{entityTypeLabel}</span>
                               </Badge>
@@ -1774,9 +1774,9 @@ export default function WikiEntityPage() {
                                 );
                               })()}
                             </div>
-                            <h1 className="text-2xl font-bold">{name}</h1>
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">{name}</h1>
                             {description && (
-                              <p className="text-muted-foreground mt-1">{description}</p>
+                              <p className="text-sm sm:text-base md:text-lg text-muted-foreground mt-2">{description}</p>
                             )}
                           </div>
                           {/* Topic #1 overlay — top right of the info block */}
@@ -1850,14 +1850,14 @@ export default function WikiEntityPage() {
                         </div>
 
                         {/* Stats */}
-                        <div className="flex flex-wrap gap-4 mt-4 text-sm">
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Newspaper className="w-4 h-4" />
+                        <div className="flex flex-wrap gap-4 mt-4 text-sm sm:text-base">
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Newspaper className="w-5 h-5 md:w-4 md:h-4" />
                             <span>{totalMentions} {language === 'uk' ? 'новин' : 'news articles'}</span>
                           </div>
                           {caricatures.length > 0 && (
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <ImageIcon className="w-4 h-4" />
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <ImageIcon className="w-5 h-5 md:w-4 md:h-4" />
                               <span>{caricatures.length} {language === 'uk' ? 'карикатур' : 'caricatures'}</span>
                             </div>
                           )}
@@ -1877,20 +1877,20 @@ export default function WikiEntityPage() {
                             href={wikiUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
+                            className="inline-flex items-center gap-1.5 text-primary hover:underline text-sm sm:text-base"
                           >
-                            <ExternalLink className="w-3 h-3" />
+                            <ExternalLink className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                             Wikipedia
                           </a>
                         </div>
 
                         {/* Topics inline in hero */}
                         {sortedTopics.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-4">
+                          <div className="flex flex-wrap gap-2 mt-4">
                             {sortedTopics.slice(0, 6).map(([topic, count]) => {
                               const { icon, color } = getTopicIcon(topic);
                               return (
-                                <Badge key={topic} variant="outline" className={`text-xs gap-1 ${color}`}>
+                                <Badge key={topic} variant="outline" className={`text-xs sm:text-sm gap-1 px-2 py-1 ${color}`}>
                                   {icon}
                                   {topic}
                                   <span className="text-muted-foreground/70">({count})</span>
@@ -2693,8 +2693,8 @@ export default function WikiEntityPage() {
               {/* News Section with Pagination */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Newspaper className="w-5 h-5 text-primary" />
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl md:text-lg">
+                    <Newspaper className="w-5 h-5 sm:w-6 sm:h-6 md:w-5 md:h-5 text-primary" />
                     {language === 'uk' ? 'Новини з цією сутністю' : 'News featuring this entity'}
                     <span className="text-muted-foreground font-normal">({totalMentions})</span>
                   </CardTitle>
@@ -2705,7 +2705,7 @@ export default function WikiEntityPage() {
                       {paginatedNews.map((news) => (
                         <div
                           key={news.id}
-                          className="group relative flex gap-4 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                          className="group relative flex gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
                         >
                           <Link
                             to={news.slug ? `/news/${news.country?.code?.toLowerCase()}/${news.slug}` : '#'}
@@ -2716,25 +2716,25 @@ export default function WikiEntityPage() {
                               <img
                                 src={news.image_url}
                                 alt=""
-                                className="w-20 h-20 rounded object-cover"
+                                className="w-24 h-24 sm:w-28 sm:h-28 md:w-20 md:h-20 rounded-lg object-cover"
                               />
                               <NewsScoreBadge scoring={news.source_scoring} />
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span>{news.country?.flag}</span>
+                              <span className="text-lg md:text-base">{news.country?.flag}</span>
                               {news.published_at && (
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-xs sm:text-sm text-muted-foreground">
                                   {format(new Date(news.published_at), 'dd.MM.yyyy')}
                                 </span>
                               )}
                             </div>
-                            <h3 className="font-medium line-clamp-2">
+                            <h3 className="font-medium text-base sm:text-lg md:text-base line-clamp-2">
                               {language === 'en' && news.title_en ? news.title_en : news.title}
                             </h3>
                             {news.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                              <p className="text-sm sm:text-base md:text-sm text-muted-foreground line-clamp-2 mt-1">
                                 {language === 'en' && news.description_en ? news.description_en : news.description}
                               </p>
                             )}
@@ -2765,16 +2765,17 @@ export default function WikiEntityPage() {
 
                       {/* Pagination */}
                       {totalNewsPages > 1 && (
-                        <div className="flex items-center justify-center gap-2 pt-4">
+                        <div className="flex items-center justify-center gap-3 pt-4">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setNewsPage(p => Math.max(1, p - 1))}
                             disabled={newsPage === 1}
+                            className="h-9 sm:h-8"
                           >
-                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="w-5 h-5 sm:w-4 sm:h-4" />
                           </Button>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-sm sm:text-base text-muted-foreground font-medium">
                             {newsPage} / {totalNewsPages}
                           </span>
                           <Button
@@ -2782,14 +2783,15 @@ export default function WikiEntityPage() {
                             size="sm"
                             onClick={() => setNewsPage(p => Math.min(totalNewsPages, p + 1))}
                             disabled={newsPage === totalNewsPages}
+                            className="h-9 sm:h-8"
                           >
-                            <ChevronRight className="w-4 h-4" />
+                            <ChevronRight className="w-5 h-5 sm:w-4 sm:h-4" />
                           </Button>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground text-center py-8">
+                    <p className="text-sm sm:text-base text-muted-foreground text-center py-8">
                       {language === 'uk' ? 'Новин поки немає' : 'No news yet'}
                     </p>
                   )}
@@ -2803,11 +2805,11 @@ export default function WikiEntityPage() {
               {(isAdmin || infoCardContent) && (
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg">
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                       <Lightbulb className="w-5 h-5 text-primary" />
                       {language === 'uk' ? 'Інформаційна картка' : 'Information Card'}
                     </CardTitle>
-                    <CardDescription className="text-xs">
+                    <CardDescription className="text-xs sm:text-sm">
                       {language === 'uk'
                         ? 'Короткий AI-огляд сутності з відкритих джерел'
                         : 'Quick AI overview from open sources'}
@@ -2919,7 +2921,7 @@ export default function WikiEntityPage() {
               {/* Related Entities */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                     <Network className="w-5 h-5 text-primary" />
                     {language === 'uk' ? "Пов'язані сутності" : 'Related Entities'}
                   </CardTitle>
@@ -2939,10 +2941,10 @@ export default function WikiEntityPage() {
                               <img
                                 src={related.image_url}
                                 alt=""
-                                className="w-10 h-10 rounded-full object-cover"
+                                className="w-12 h-12 sm:w-10 sm:h-10 rounded-full object-cover"
                               />
                             ) : (
-                              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                              <div className="w-12 h-12 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center">
                                 {related.entity_type === 'person' ? (
                                   <User className="w-4 h-4" />
                                 ) : (
@@ -2951,10 +2953,10 @@ export default function WikiEntityPage() {
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm line-clamp-1">
+                              <p className="font-medium text-sm sm:text-base md:text-sm line-clamp-1">
                                 {language === 'en' && related.name_en ? related.name_en : related.name}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs sm:text-sm text-muted-foreground">
                                 {related.shared_news_count} {language === 'uk' ? 'спільних новин' : 'shared news'}
                               </p>
                             </div>
@@ -2963,7 +2965,7 @@ export default function WikiEntityPage() {
                       })}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground text-sm text-center py-4">
+                    <p className="text-sm sm:text-base text-muted-foreground text-center py-4">
                       {language === 'uk' ? "Пов'язаних сутностей не знайдено" : 'No related entities found'}
                     </p>
                   )}
@@ -2971,8 +2973,8 @@ export default function WikiEntityPage() {
                   {/* World Wide Web subsection - wiki-linked entities */}
                   {wikiLinkedEntities.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-border/50">
-                      <h4 className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">
-                        <Globe className="w-3.5 h-3.5" />
+                      <h4 className="flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">
+                        <Globe className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         World Wide Web
                       </h4>
                       <div className="space-y-2">
@@ -3057,20 +3059,20 @@ export default function WikiEntityPage() {
               {sortedTopics.length > 0 && (
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center gap-2 text-sm">
-                      <Tag className="w-4 h-4 text-primary" />
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base md:text-sm">
+                      <Tag className="w-4 h-4 sm:w-5 sm:h-5 md:w-4 md:h-4 text-primary" />
                       {language === 'uk' ? 'Теми' : 'Topics'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {sortedTopics.slice(0, 8).map(([topic, count]) => {
                         const { color } = getTopicIcon(topic);
                         return (
                           <Link key={topic} to={topicPath(topic)}>
                             <Badge
                               variant="outline"
-                              className={`text-xs cursor-pointer hover:opacity-80 transition-opacity ${color}`}
+                              className={`text-xs sm:text-sm cursor-pointer hover:opacity-80 transition-opacity ${color}`}
                             >
                               {topic}
                               <span className="ml-1 text-muted-foreground/70">({count})</span>
