@@ -44,5 +44,3 @@ SELECT
   command
 FROM cron.job 
 WHERE jobname = 'cache-topics-prewarm';
-
-COMMENT ON EXTENSION cron IS 'Topics cache cron job: Refreshes /topics and top 30 topic pages every 6 hours to ensure fast static delivery for all users.';
