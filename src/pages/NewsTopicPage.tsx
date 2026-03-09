@@ -22,6 +22,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { slugToTopic, topicPath } from "@/lib/topicSlug";
@@ -95,6 +97,81 @@ function formatChartDate(dateStr: string, lang: string): string {
   }
 }
 
+// Poisson distribution random generator (λ = lambda)
+function poissonRandom(lambda: number): number {
+  let L = Math.exp(-lambda);
+  let k = 0;
+  let p = 1;
+  do {
+    k++;
+    p *= Math.random();
+  } while (p > L);
+  return k - 1;
+}
+
+// Stochastic scaling with Monte-Carlo method using Poisson distribution
+function applyStochasticScaling(data: any[], key: string, maxTarget: number = 100000): any[] {
+  if (data.length === 0) return data;
+  
+  // Find current max
+  const currentMax = Math.max(...data.map(d => d[key] || 0));
+  if (currentMax === 0) return data;
+  
+  // Calculate scaling ratio
+  const scalingRatio = maxTarget / currentMax;
+  
+  return data.map(d => {
+    const originalValue = d[key] || 0;
+    if (originalValue === 0) return { ...d, [key]: 0 };
+    
+    // Use original value as lambda (mean) for Poisson distribution
+    const lambda = originalValue * scalingRatio;
+    const scaledValue = poissonRandom(lambda);
+    
+    // Add Gaussian noise for smoothness (±10% standard deviation)
+    const noise = (Math.random() - 0.5) * scaledValue * 0.1;
+    const finalValue = Math.max(0, Math.round(scaledValue + noise));
+    
+    return { ...d, [key]: finalValue };
+  });
+}
+
+// Gaussian kernel for KDE
+function gaussianKernel(x: number): number {
+  return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+}
+
+// Kernel Density Estimation (KDE) for smooth curves
+function applyKDE(data: any[], key: string, bandwidth: number = 0.5, maxTarget: number = 100000): any[] {
+  if (data.length < 2) return data;
+  
+  const n = data.length;
+  const result: any[] = [];
+  
+  // Current max for scaling
+  const currentMax = Math.max(...data.map(d => d[key] || 0));
+  if (currentMax === 0) return data;
+  
+  const scalingRatio = maxTarget / currentMax;
+  
+  for (let i = 0; i < n; i++) {
+    let densitySum = 0;
+    
+    for (let j = 0; j < n; j++) {
+      const valueJ = (data[j][key] || 0) * scalingRatio;
+      const distance = (i - j) / (n * bandwidth);
+      densitySum += gaussianKernel(distance) * valueJ;
+    }
+    
+    result.push({
+      ...data[i],
+      [key]: Math.round(Math.max(0, densitySum / n))
+    });
+  }
+  
+  return result;
+}
+
 // ─── component ──────────────────────────────────────────────────────────────
 
 export default function NewsTopicPage() {
@@ -105,6 +182,8 @@ export default function NewsTopicPage() {
 
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [timelineExpanded, setTimelineExpanded] = useState(false);
+  const [useStochasticScaling, setUseStochasticScaling] = useState(false);
+  const [useKDE, setUseKDE] = useState(false);
 
   const dateLocale = language === "en" ? enUS : language === "pl" ? pl : uk;
 
@@ -289,6 +368,54 @@ export default function NewsTopicPage() {
   // Derived from RPC result (no separate queries needed)
   const newsDailyViews = viewsSummary?.news_daily_views ?? [];
   const entityDailyViews = viewsSummary?.entity_daily_views ?? [];
+
+  // Transformed chart data with stochastic scaling or KDE
+  const transformedChartData = useMemo(() => {
+    let data = chartData;
+    
+    if (useStochasticScaling) {
+      // Apply Poisson-based Monte Carlo stochastic scaling to max 100,000
+      data = applyStochasticScaling(data, 'newsCount', 100000);
+      data = applyStochasticScaling(data, 'entityCount', 100000);
+    } else if (useKDE) {
+      // Apply Kernel Density Estimation for smooth curves
+      data = applyKDE(data, 'newsCount', 0.3, 100000);
+      data = applyKDE(data, 'entityCount', 0.3, 100000);
+    }
+    
+    return data;
+  }, [chartData, useStochasticScaling, useKDE]);
+
+  // Transformed views data
+  const transformedNewsViews = useMemo(() => {
+    const data = chartData.map(d => ({
+      ...d,
+      views: (newsDailyViews.find(v => v.date === d.date)?.views || 0)
+    }));
+    
+    if (useStochasticScaling) {
+      return applyStochasticScaling(data, 'views', 100000);
+    } else if (useKDE) {
+      return applyKDE(data, 'views', 0.3, 100000);
+    }
+    
+    return data;
+  }, [chartData, newsDailyViews, useStochasticScaling, useKDE]);
+
+  const transformedEntityViews = useMemo(() => {
+    const data = chartData.map(d => ({
+      ...d,
+      entityViews: (entityDailyViews.find(v => v.date === d.date)?.views || 0)
+    }));
+    
+    if (useStochasticScaling) {
+      return applyStochasticScaling(data, 'entityViews', 100000);
+    } else if (useKDE) {
+      return applyKDE(data, 'entityViews', 0.3, 100000);
+    }
+    
+    return data;
+  }, [chartData, entityDailyViews, useStochasticScaling, useKDE]);
 
   /** Hero image – first news with an image */
   const heroImage = useMemo(
@@ -767,10 +894,55 @@ export default function NewsTopicPage() {
             {/* ── Charts ── */}
             {chartData.length > 1 && (
               <section className="space-y-6">
-                <h2 className="text-xl md:text-2xl font-semibold flex items-center gap-2">
-                  <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-                  {language === "en" ? "Statistics by Date" : "Статистика по датах"}
-                </h2>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <h2 className="text-xl md:text-2xl font-semibold flex items-center gap-2">
+                    <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                    {language === "en" ? "Statistics by Date" : "Статистика по датах"}
+                  </h2>
+                  
+                  {/* Chart transformation controls */}
+                  <div className="flex items-center gap-6 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="stochastic-scaling"
+                        checked={useStochasticScaling}
+                        onCheckedChange={(checked) => {
+                          setUseStochasticScaling(checked);
+                          if (checked) setUseKDE(false);
+                        }}
+                      />
+                      <Label htmlFor="stochastic-scaling" className="text-xs sm:text-sm cursor-pointer">
+                        {language === "en" ? "Monte-Carlo" : "Монте-Карло"}
+                        <span className="ml-1 text-muted-foreground text-[10px]">
+                          ({language === "en" ? "Poisson" : "Пуассон"})
+                        </span>
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="kde"
+                        checked={useKDE}
+                        onCheckedChange={(checked) => {
+                          setUseKDE(checked);
+                          if (checked) setUseStochasticScaling(false);
+                        }}
+                      />
+                      <Label htmlFor="kde" className="text-xs sm:text-sm cursor-pointer">
+                        {language === "en" ? "Smooth KDE" : "Згладжування KDE"}
+                        <span className="ml-1 text-muted-foreground text-[10px]">
+                          ({language === "en" ? "Gaussian" : "Гауссове"})
+                        </span>
+                      </Label>
+                    </div>
+                    
+                    {(useStochasticScaling || useKDE) && (
+                      <Badge variant="secondary" className="text-[10px] font-mono">
+                        MAX: 100K
+                      </Badge>
+                    )}
+                  </div>
+                </div>
 
                 {/* Chart 1: News count per date */}
                 <Card className="border-primary/20">
@@ -782,12 +954,12 @@ export default function NewsTopicPage() {
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={240}>
-                      <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                      <BarChart data={transformedChartData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis
                           dataKey="label"
                           tick={{ fontSize: 10, fill: "#94a3b8" }}
-                          interval={Math.floor(chartData.length / 8)}
+                          interval={Math.floor(transformedChartData.length / 8)}
                         />
                         <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
                         <Tooltip
@@ -822,7 +994,7 @@ export default function NewsTopicPage() {
                     </CardHeader>
                     <CardContent>
                       <ResponsiveContainer width="100%" height={240}>
-                        <AreaChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                        <AreaChart data={transformedChartData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
                           <defs>
                             <linearGradient id="entityGrad" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.4} />
@@ -833,7 +1005,7 @@ export default function NewsTopicPage() {
                           <XAxis
                             dataKey="label"
                             tick={{ fontSize: 10, fill: "#94a3b8" }}
-                            interval={Math.floor(chartData.length / 8)}
+                            interval={Math.floor(transformedChartData.length / 8)}
                           />
                           <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
                           <Tooltip
@@ -872,10 +1044,7 @@ export default function NewsTopicPage() {
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={240}>
-                      <AreaChart data={chartData.map(d => ({
-                        ...d,
-                        views: (newsDailyViews.find(v => v.date === d.date)?.views || 0)
-                      }))} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                      <AreaChart data={transformedNewsViews} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
                         <defs>
                           <linearGradient id="newsViewsGrad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#f97316" stopOpacity={0.4} />
@@ -883,7 +1052,7 @@ export default function NewsTopicPage() {
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                        <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} interval={Math.floor(chartData.length / 8)} />
+                        <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} interval={Math.floor(transformedNewsViews.length / 8)} />
                         <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
                         <Tooltip formatter={(v) => [v, language === 'en' ? 'views' : 'переглядів']} contentStyle={{ background: "#0f1929", border: "1px solid rgba(249,115,22,0.3)", borderRadius: 8 }} />
                         <Area type="monotone" dataKey="views" stroke="#f97316" fill="url(#newsViewsGrad)" strokeWidth={2} />
@@ -902,10 +1071,7 @@ export default function NewsTopicPage() {
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={240}>
-                      <AreaChart data={chartData.map(d => ({
-                        ...d,
-                        entityViews: (entityDailyViews.find(v => v.date === d.date)?.views || 0)
-                      }))} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                      <AreaChart data={transformedEntityViews} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
                         <defs>
                           <linearGradient id="entityViewsGrad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.4} />
@@ -913,7 +1079,7 @@ export default function NewsTopicPage() {
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                        <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} interval={Math.floor(chartData.length / 8)} />
+                        <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} interval={Math.floor(transformedEntityViews.length / 8)} />
                         <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
                         <Tooltip formatter={(v) => [v, language === 'en' ? 'views' : 'переглядів']} contentStyle={{ background: "#0f1929", border: "1px solid rgba(96,165,250,0.3)", borderRadius: 8 }} />
                         <Area type="monotone" dataKey="entityViews" stroke="#60a5fa" fill="url(#entityViewsGrad)" strokeWidth={2} />
