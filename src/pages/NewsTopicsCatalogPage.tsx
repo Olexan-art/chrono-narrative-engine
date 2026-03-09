@@ -154,7 +154,7 @@ export default function NewsTopicsCatalogPage() {
 
         {/* Stats bar */}
         {!isLoading && topicsData && (
-          <div className="flex flex-wrap gap-4 mb-8 p-4 rounded-lg bg-primary/5 border border-primary/20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8 p-4 rounded-lg bg-primary/5 border border-primary/20">
             <div className="flex items-center gap-2">
               <Hash className="w-4 h-4 text-primary" />
               <span className="text-sm text-muted-foreground">
@@ -164,11 +164,11 @@ export default function NewsTopicsCatalogPage() {
             </div>
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-green-400" />
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground truncate">
                 {language === "en" ? "Most popular:" : "Найпопулярніша:"}
               </span>
-              <span className="font-medium text-foreground">{topicsData[0]?.topic}</span>
-              <span className="text-xs text-muted-foreground">({topicsData[0]?.count})</span>
+              <span className="font-medium text-foreground truncate">{topicsData[0]?.topic}</span>
+              <span className="text-xs text-muted-foreground flex-shrink-0">({topicsData[0]?.count})</span>
             </div>
           </div>
         )}
@@ -214,7 +214,7 @@ export default function NewsTopicsCatalogPage() {
                   <TrendingUp className="w-4 h-4 text-primary" />
                   {language === "en" ? "Trending Topics" : "Популярні теми"}
                 </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {topTopics.map(({ topic, count }, index) => (
                     <TopicTile key={topic} topic={topic} count={count} rank={index + 1} />
                   ))}
@@ -273,11 +273,11 @@ export default function NewsTopicsCatalogPage() {
                   <Link key={topic} to={topicPath(topic)}>
                     <Badge
                       variant="outline"
-                      className="font-mono text-xs px-3 py-1.5 cursor-pointer rounded-none uppercase tracking-wider border-white/10 hover:border-primary/60 hover:bg-primary/10 hover:text-primary transition-colors bg-transparent text-foreground/60"
+                      className="font-mono text-xs sm:text-xs px-3 py-2 cursor-pointer rounded-none uppercase tracking-wider border-white/10 hover:border-primary/60 hover:bg-primary/10 hover:text-primary transition-colors bg-transparent text-foreground/60"
                     >
                       <Tag className="w-3 h-3 mr-1.5 opacity-60" />
                       {topic}
-                      <span className="ml-1.5 text-muted-foreground text-xs">({count})</span>
+                      <span className="ml-1.5 text-muted-foreground text-[10px]">({count})</span>
                     </Badge>
                   </Link>
                 ))}

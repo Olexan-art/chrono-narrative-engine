@@ -450,22 +450,87 @@ export default function NewsTopicPage() {
         </div>
 
         {/* ── page title ── */}
-        <div className="flex flex-wrap items-center gap-3 mb-8">
-          <div className="flex items-center gap-2">
-            <Tag className="w-6 h-6 text-primary" />
-            <h1 className="text-3xl md:text-4xl font-bold text-glow">{topic}</h1>
+        <div className="space-y-3 mb-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Tag className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-glow">{topic}</h1>
+            </div>
           </div>
-          <Badge variant="secondary" className="text-sm px-3 py-1">
-            <Newspaper className="w-3.5 h-3.5 mr-1" />
-            {newsItems.length}{" "}
-            {language === "en" ? "articles" : "статей"}
-          </Badge>
-          <Badge variant="outline" className="text-sm px-3 py-1 border-primary/40 text-primary">
-            <Users className="w-3.5 h-3.5 mr-1" />
-            {entityStats.length}{" "}
-            {language === "en" ? "entities" : "сутностей"}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="text-xs sm:text-sm px-2 sm:px-3 py-1">
+              <Newspaper className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
+              {newsItems.length}{" "}
+              {language === "en" ? "articles" : "статей"}
+            </Badge>
+            <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-1 border-primary/40 text-primary">
+              <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
+              {entityStats.length}{" "}
+              {language === "en" ? "entities" : "сутностей"}
+            </Badge>
+          </div>
         </div>
+
+        {/* ── Mobile-first: Key Entities Preview (lg:hidden) ── */}
+        {entityStats.length > 0 && (
+          <div className="lg:hidden mb-6">
+            <Card className="border-primary/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Users className="w-4 h-4 text-primary" />
+                  {language === "en" ? "Key Entities" : "Ключові сутності"}
+                  <Badge variant="outline" className="ml-auto text-xs">
+                    {entityStats.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3">
+                <div className="grid grid-cols-1 gap-2">
+                  {entityStats.slice(0, 5).map(({ entity, count }) => (
+                    <Link
+                      key={entity.id}
+                      to={`/wiki/${entity.slug || entity.id}`}
+                      className="group flex items-center gap-3 p-2 rounded-lg hover:bg-primary/5 transition-colors border border-white/5"
+                    >
+                      {entity.image_url ? (
+                        <div className="relative inline-block flex-shrink-0">
+                          <img
+                            src={entity.image_url}
+                            alt={entity.name}
+                            className="w-10 h-10 rounded-full object-cover border border-border"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                          <EntitySentimentBadge sentiment={(entity as any).manual_sentiment} className="w-4 h-4 top-0 right-0" />
+                        </div>
+                      ) : (
+                        <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold border ${ENTITY_TYPE_COLORS[entity.entity_type] || "border-border bg-secondary/40 text-muted-foreground"}`}>
+                          {(entity.name_en || entity.name).charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug line-clamp-1 group-hover:text-primary transition-colors">
+                          {language === "en" && entity.name_en ? entity.name_en : entity.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {ENTITY_TYPE_LABELS[entity.entity_type]?.[language === "en" ? "en" : "uk"] || entity.entity_type}
+                          {" · "}{count} {language === "en" ? "news" : "новин"}
+                        </p>
+                      </div>
+                      <div className="w-2 h-2 rounded-full bg-primary/40 flex-shrink-0" />
+                    </Link>
+                  ))}
+                </div>
+                {entityStats.length > 5 && (
+                  <p className="text-xs text-center text-muted-foreground mt-3 pt-3 border-t border-border/40">
+                    {language === "en" ? `+${entityStats.length - 5} more below` : `+${entityStats.length - 5} ще нижче`}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* ── main 2 + 1 column grid ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -482,7 +547,7 @@ export default function NewsTopicPage() {
                   <img
                     src={heroImage}
                     alt={topic}
-                    className="w-full h-56 md:h-72 object-cover"
+                    className="w-full h-48 sm:h-56 md:h-64 lg:h-72 object-cover"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
                     }}
@@ -589,7 +654,7 @@ export default function NewsTopicPage() {
                                     <img
                                       src={n.image_url}
                                       alt=""
-                                      className="w-20 h-14 object-cover rounded border border-border group-hover:border-primary/40 transition-colors"
+                                      className="w-24 h-16 sm:w-28 sm:h-20 object-cover rounded border border-border group-hover:border-primary/40 transition-colors"
                                       onError={(e) => {
                                         (e.target as HTMLImageElement).parentElement!.style.display = "none";
                                       }}
@@ -600,7 +665,7 @@ export default function NewsTopicPage() {
 
                                 <div className="flex-1 min-w-0">
                                   {/* Country flag + time */}
-                                  <p className="text-[10px] text-muted-foreground font-mono mb-0.5 flex items-center gap-1">
+                                  <p className="text-[11px] sm:text-xs text-muted-foreground font-mono mb-1 flex items-center gap-1">
                                     {n.country?.flag && (
                                       <span className="text-sm leading-none">{n.country.flag}</span>
                                     )}
@@ -614,7 +679,7 @@ export default function NewsTopicPage() {
 
                                   {/* Title */}
                                   <Link to={url}>
-                                    <p className="text-sm font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors mb-1.5">
+                                    <p className="text-sm sm:text-base font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors mb-1.5">
                                       {getLocalTitle(n)}
                                     </p>
                                   </Link>
@@ -623,13 +688,13 @@ export default function NewsTopicPage() {
                                   {otherThemes.length > 0 && (
                                     <div className="flex flex-wrap gap-1">
                                       <Link to={topicPath(topic)}>
-                                        <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30 font-medium">
+                                        <span className="inline-block text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30 font-medium">
                                           {topic}
                                         </span>
                                       </Link>
                                       {otherThemes.slice(0, 3).map((t) => (
                                         <Link key={t} to={topicPath(t)}>
-                                          <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-secondary/60 text-secondary-foreground hover:bg-primary/10 hover:text-primary transition-colors">
+                                          <span className="inline-block text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded bg-secondary/60 text-secondary-foreground hover:bg-primary/10 hover:text-primary transition-colors">
                                             {t}
                                           </span>
                                         </Link>
@@ -673,7 +738,7 @@ export default function NewsTopicPage() {
                   <Flame className="w-5 h-5 text-orange-400" />
                   {language === "en" ? "Caricatures" : "Карикатури"}
                 </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {caricatures.map((c) => (
                     <button
                       key={c.id}
@@ -683,7 +748,7 @@ export default function NewsTopicPage() {
                       <img
                         src={c.image_url}
                         alt={c.title || "Caricature"}
-                        className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-48 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
                           (e.target as HTMLImageElement).parentElement!.style.display = "none";
                         }}
@@ -716,7 +781,7 @@ export default function NewsTopicPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={200}>
+                    <ResponsiveContainer width="100%" height={240}>
                       <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis
@@ -756,7 +821,7 @@ export default function NewsTopicPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <ResponsiveContainer width="100%" height={200}>
+                      <ResponsiveContainer width="100%" height={240}>
                         <AreaChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
                           <defs>
                             <linearGradient id="entityGrad" x1="0" y1="0" x2="0" y2="1">
@@ -806,7 +871,7 @@ export default function NewsTopicPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={200}>
+                    <ResponsiveContainer width="100%" height={240}>
                       <AreaChart data={chartData.map(d => ({
                         ...d,
                         views: (newsDailyViews.find(v => v.date === d.date)?.views || 0)
@@ -836,7 +901,7 @@ export default function NewsTopicPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={200}>
+                    <ResponsiveContainer width="100%" height={240}>
                       <AreaChart data={chartData.map(d => ({
                         ...d,
                         entityViews: (entityDailyViews.find(v => v.date === d.date)?.views || 0)
@@ -959,7 +1024,7 @@ export default function NewsTopicPage() {
               ║  RIGHT — 1 col            ║
               ║  Key Entities sidebar     ║
               ╚═══════════════════════════╝ */}
-          <div className="lg:col-span-1">
+          <div className="hidden lg:block lg:col-span-1">
             <div className="sticky top-20">
               <Card className="border-primary/20">
                 <CardHeader className="pb-3">
