@@ -8,6 +8,9 @@
 -- Function: Calls cache-topics-cron Edge Function to pre-warm SSR cache
 -- ============================================================================
 
+-- Enable pg_cron extension if not already enabled
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
 -- Remove existing job if it exists (safe delete)
 DO $$
 BEGIN
