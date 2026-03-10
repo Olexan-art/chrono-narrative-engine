@@ -41,6 +41,8 @@ import { useTrackView } from '@/hooks/useTrackView';
 import { getLogoUrl } from '@/lib/getLogoUrl';
 import { LLM_MODELS, LLMProvider } from "@/types/database";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { EntitySentimentBadge } from "@/components/EntitySentimentBadge";
 
 interface WikiEntity {
@@ -168,6 +170,79 @@ const TOPIC_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
 
 const NEWS_PER_PAGE = 70;
 
+// ── Mathematical scaling functions ──────────────────────────────────────────
+// Poisson distribution using Knuth's algorithm
+function poissonRandom(lambda: number): number {
+  const L = Math.exp(-lambda);
+  let k = 0;
+  let p = 1;
+  do {
+    k++;
+    p *= Math.random();
+  } while (p > L);
+  return k - 1;
+}
+
+// Apply stochastic scaling with Monte-Carlo method (Poisson distribution)
+function applyStochasticScaling<T extends Record<string, any>>(
+  data: T[],
+  key: keyof T,
+  maxTarget: number
+): T[] {
+  const currentMax = Math.max(...data.map(d => d[key] as number));
+  if (currentMax === 0) return data;
+
+  const scalingRatio = maxTarget / currentMax;
+
+  return data.map(item => {
+    const originalValue = item[key] as number;
+    const lambda = originalValue * scalingRatio;
+    const scaledValue = poissonRandom(lambda);
+    
+    // Add Gaussian noise (±10% standard deviation) for smoother appearance
+    const noise = (Math.random() - 0.5) * 2 * (scaledValue * 0.1);
+    const finalValue = Math.max(0, Math.round(scaledValue + noise));
+    
+    return { ...item, [key]: finalValue };
+  });
+}
+
+// Gaussian kernel for KDE
+function gaussianKernel(x: number): number {
+  return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+}
+
+// Apply Kernel Density Estimation with Gaussian kernels
+function applyKDE<T extends Record<string, any>>(
+  data: T[],
+  key: keyof T,
+  bandwidth: number,
+  maxTarget: number
+): T[] {
+  const n = data.length;
+  if (n === 0) return data;
+
+  const currentMax = Math.max(...data.map(d => d[key] as number));
+  if (currentMax === 0) return data;
+
+  const scalingRatio = maxTarget / currentMax;
+
+  return data.map((item, i) => {
+    let density = 0;
+    
+    for (let j = 0; j < n; j++) {
+      const distance = (i - j) / (n * bandwidth);
+      const valueJ = (data[j][key] as number) * scalingRatio;
+      density += gaussianKernel(distance) * valueJ;
+    }
+    
+    density = density / n;
+    const smoothedValue = Math.max(0, Math.round(density));
+    
+    return { ...item, [key]: smoothedValue };
+  });
+}
+
 // Default ZAI models (always available if ZAI_API_KEY is set)
 const ZAI_MODELS = LLM_MODELS.zai.text;
 
@@ -221,6 +296,10 @@ export default function WikiEntityPage() {
   const [mediaUploadTitle, setMediaUploadTitle] = useState("");
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Chart scaling state
+  const [useStochasticScaling, setUseStochasticScaling] = useState(true);
+  const [useKDE, setUseKDE] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -590,6 +669,16 @@ export default function WikiEntityPage() {
     },
     enabled: newsIds.length > 0,
   });
+
+  // Transformed daily views with scaling
+  const transformedDailyViews = useMemo(() => {
+    if (useStochasticScaling) {
+      return applyStochasticScaling(dailyViews, 'views', 100000);
+    } else if (useKDE) {
+      return applyKDE(dailyViews, 'views', 0.5, 100000);
+    }
+    return dailyViews;
+  }, [dailyViews, useStochasticScaling, useKDE]);
 
   // Extract topics from news
   const allTopics = paginatedNews.reduce((acc, news) => {
@@ -2270,9 +2359,46 @@ export default function WikiEntityPage() {
                 );
               })()}
 
+              {/* Views Chart Scaling Controls */}
+              {dailyViews.some(d => d.views > 0) && (
+                <div className="flex flex-wrap items-center gap-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="monte-carlo-wiki"
+                      checked={useStochasticScaling}
+                      onCheckedChange={(checked) => {
+                        setUseStochasticScaling(checked);
+                        if (checked) setUseKDE(false);
+                      }}
+                    />
+                    <Label htmlFor="monte-carlo-wiki" className="text-sm cursor-pointer">
+                      {language === 'uk' ? 'Монте-Карло (Пуассон)' : 'Monte-Carlo (Poisson)'}
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="kde-wiki"
+                      checked={useKDE}
+                      onCheckedChange={(checked) => {
+                        setUseKDE(checked);
+                        if (checked) setUseStochasticScaling(false);
+                      }}
+                    />
+                    <Label htmlFor="kde-wiki" className="text-sm cursor-pointer">
+                      {language === 'uk' ? 'Згладжування KDE (Гауссове)' : 'Smooth KDE (Gaussian)'}
+                    </Label>
+                  </div>
+                  {(useStochasticScaling || useKDE) && (
+                    <Badge variant="secondary" className="ml-auto">
+                      MAX: 100K
+                    </Badge>
+                  )}
+                </div>
+              )}
+
               {/* Views Chart */}
               {dailyViews.some(d => d.views > 0) && (
-                <EntityViewsChart data={dailyViews} />
+                <EntityViewsChart data={transformedDailyViews} />
               )}
 
 
