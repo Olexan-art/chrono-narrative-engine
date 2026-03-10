@@ -182,7 +182,7 @@ export default function NewsTopicPage() {
 
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [timelineExpanded, setTimelineExpanded] = useState(false);
-  const [useStochasticScaling, setUseStochasticScaling] = useState(false);
+  const [useStochasticScaling, setUseStochasticScaling] = useState(true);
   const [useKDE, setUseKDE] = useState(false);
 
   const dateLocale = language === "en" ? enUS : language === "pl" ? pl : uk;
