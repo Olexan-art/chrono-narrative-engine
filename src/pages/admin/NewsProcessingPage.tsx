@@ -13,6 +13,7 @@ import { LLM_MODELS } from '@/types/database';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { BulkRetellCronPanelEnhanced } from '@/components/admin/BulkRetellCronPanelEnhanced';
 import RetellQueueStats from '@/components/admin/RetellQueueStats';
+import { APINewsPanel } from '@/components/admin/APINewsPanel';
 import { useAdminStore } from '@/stores/adminStore';
 
 interface CronConfig {
@@ -1041,6 +1042,9 @@ export default function NewsProcessingPage({ password: propPassword }: { passwor
                     )}
                 </CardContent>
             </Card>
+
+            {/* API News Sources Section */}
+            <APINewsPanel password={password} />
 
             {/* News Retelling Section */}
             <Card>
