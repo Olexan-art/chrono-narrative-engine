@@ -50,19 +50,22 @@ export function APINewsPanel({ password }: Props) {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['api-news-stats'],
     queryFn: async () => {
+      // @ts-ignore - columns exist after migration, types not regenerated
       const { count: theNewsCount } = await supabase
         .from('news_rss_items')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('source_type', 'api_thenewsapi');
 
+      // @ts-ignore - columns exist after migration, types not regenerated
       const { count: gNewsCount } = await supabase
         .from('news_rss_items')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('source_type', 'api_gnews');
 
+      // @ts-ignore - columns exist after migration, types not regenerated
       const { count: scheduledCount } = await supabase
         .from('news_rss_items')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .not('scheduled_publish_at', 'is', null)
         .gte('scheduled_publish_at', new Date().toISOString());
 
@@ -80,6 +83,7 @@ export function APINewsPanel({ password }: Props) {
   const { data: recentNews = [], isLoading: newsLoading } = useQuery({
     queryKey: ['recent-api-news'],
     queryFn: async () => {
+      // @ts-ignore - columns exist after migration, types not regenerated
       const { data, error } = await supabase
         .from('news_rss_items')
         .select('id, title, description, url, image_url, published_at, scheduled_publish_at, source_type, fetched_at')
@@ -88,7 +92,7 @@ export function APINewsPanel({ password }: Props) {
         .limit(20);
 
       if (error) throw error;
-      return data as APINewsItem[];
+      return (data || []) as APINewsItem[];
     }
   });
 
