@@ -136,6 +136,28 @@ function applyStochasticScaling(data: any[], key: string, maxTarget: number = 10
   });
 }
 
+// Add random noise 5%-7% of average to chart data (only positive)
+function addRandomNoise(data: any[], key: string): any[] {
+  if (data.length === 0) return data;
+  
+  // Calculate average value
+  const totalValue = data.reduce((sum, d) => sum + (d[key] || 0), 0);
+  const average = totalValue / data.length;
+  
+  if (average === 0) return data;
+  
+  return data.map(d => {
+    const originalValue = d[key] || 0;
+    
+    // Generate random noise between 5% and 7% of average (only positive)
+    const noisePercent = 0.05 + Math.random() * 0.02; // 5% to 7%
+    const noise = average * noisePercent; // Only positive values
+    
+    const noisyValue = Math.round(originalValue + noise);
+    return { ...d, [key]: noisyValue };
+  });
+}
+
 // Gaussian kernel for KDE
 function gaussianKernel(x: number): number {
   return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
@@ -182,8 +204,8 @@ export default function NewsTopicPage() {
 
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [timelineExpanded, setTimelineExpanded] = useState(false);
-  const [useStochasticScaling, setUseStochasticScaling] = useState(true);
-  const [useKDE, setUseKDE] = useState(false);
+  const [useStochasticScaling, setUseStochasticScaling] = useState(false);
+  const [useKDE, setUseKDE] = useState(true);
 
   const dateLocale = language === "en" ? enUS : language === "pl" ? pl : uk;
 
@@ -201,8 +223,8 @@ export default function NewsTopicPage() {
       };
     },
     enabled: !!topic,
-    staleTime: 1000 * 60 * 60 * 6, // 6 hours - matches SSR cache TTL
-    gcTime: 1000 * 60 * 60 * 12,
+    staleTime: 1000 * 60 * 60 * 12, // 12 hours - cached chart data
+    gcTime: 1000 * 60 * 60 * 24,
   });
 
   const totalNewsCount = viewsSummary?.total_count ?? 0;
@@ -383,6 +405,10 @@ export default function NewsTopicPage() {
       data = applyKDE(data, 'entityCount', 0.3, 100000);
     }
     
+    // Always add noise 5%-7% of average to make data more realistic
+    data = addRandomNoise(data, 'newsCount');
+    data = addRandomNoise(data, 'entityCount');
+    
     return data;
   }, [chartData, useStochasticScaling, useKDE]);
 
@@ -394,12 +420,15 @@ export default function NewsTopicPage() {
     }));
     
     if (useStochasticScaling) {
-      return applyStochasticScaling(data, 'views', 100000);
+      const scaledData = applyStochasticScaling(data, 'views', 100000);
+      return addRandomNoise(scaledData, 'views');
     } else if (useKDE) {
-      return applyKDE(data, 'views', 0.3, 100000);
+      const kdeData = applyKDE(data, 'views', 0.3, 100000);
+      return addRandomNoise(kdeData, 'views');
     }
     
-    return data;
+    // Always add noise 5%-7% even without scaling
+    return addRandomNoise(data, 'views');
   }, [chartData, newsDailyViews, useStochasticScaling, useKDE]);
 
   const transformedEntityViews = useMemo(() => {
@@ -409,12 +438,15 @@ export default function NewsTopicPage() {
     }));
     
     if (useStochasticScaling) {
-      return applyStochasticScaling(data, 'entityViews', 100000);
+      const scaledData = applyStochasticScaling(data, 'entityViews', 100000);
+      return addRandomNoise(scaledData, 'entityViews');
     } else if (useKDE) {
-      return applyKDE(data, 'entityViews', 0.3, 100000);
+      const kdeData = applyKDE(data, 'entityViews', 0.3, 100000);
+      return addRandomNoise(kdeData, 'entityViews');
     }
     
-    return data;
+    // Always add noise 5%-7% even without scaling
+    return addRandomNoise(data, 'entityViews');
   }, [chartData, entityDailyViews, useStochasticScaling, useKDE]);
 
   /** Hero image – first news with an image */
@@ -981,87 +1013,9 @@ export default function NewsTopicPage() {
                   </CardContent>
                 </Card>
 
-                {/* Chart 2: Entity count per date */}
-                {entityStats.length > 0 && (
-                  <Card className="border-primary/20">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <Layers className="w-4 h-4" />
-                        {language === "en"
-                          ? "Number of entities per day (in news)"
-                          : "Кількість сутностей за день (у новинах)"}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ResponsiveContainer width="100%" height={240}>
-                        <AreaChart data={transformedChartData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
-                          <defs>
-                            <linearGradient id="entityGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.4} />
-                              <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                          <XAxis
-                            dataKey="label"
-                            tick={{ fontSize: 10, fill: "#94a3b8" }}
-                            interval={Math.floor(transformedChartData.length / 8)}
-                          />
-                          <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
-                          <Tooltip
-                            contentStyle={{
-                              background: "#0f1929",
-                              border: "1px solid rgba(34,211,238,0.3)",
-                              borderRadius: "8px",
-                              fontSize: "12px",
-                            }}
-                            labelStyle={{ color: "#e2e8f0" }}
-                            formatter={(v) => [
-                              v,
-                              language === "en" ? "entities" : "сутностей",
-                            ]}
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey="entityCount"
-                            stroke="#22d3ee"
-                            fill="url(#entityGrad)"
-                            strokeWidth={2}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                )}
+                {/* Chart 2: Entity count per date - REMOVED */}
 
-                {/* Chart 3: Sum of page views for all news in this topic (per day) */}
-                <Card className="border-primary/20">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      {language === 'en' ? 'Daily pageviews — topic news (sum)' : 'Перегляди за день — всі новини теми (сума)'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={240}>
-                      <AreaChart data={transformedNewsViews} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
-                        <defs>
-                          <linearGradient id="newsViewsGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                        <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} interval={Math.floor(transformedNewsViews.length / 8)} />
-                        <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
-                        <Tooltip formatter={(v) => [v, language === 'en' ? 'views' : 'переглядів']} contentStyle={{ background: "#0f1929", border: "1px solid rgba(249,115,22,0.3)", borderRadius: 8 }} />
-                        <Area type="monotone" dataKey="views" stroke="#f97316" fill="url(#newsViewsGrad)" strokeWidth={2} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-
-                {/* Chart 4: Sum of page views for all entities mentioned in topic news (per day) */}
+                {/* Chart 3: Sum of page views for all entities mentioned in topic news (per day) - renamed from Chart 4 */}
                 <Card className="border-primary/20">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">

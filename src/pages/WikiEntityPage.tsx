@@ -243,6 +243,28 @@ function applyKDE<T extends Record<string, any>>(
   });
 }
 
+// Add random noise 5%-7% of average to chart data (only positive)
+function addRandomNoise<T extends Record<string, any>>(data: T[], key: keyof T): T[] {
+  if (data.length === 0) return data;
+  
+  // Calculate average value
+  const totalValue = data.reduce((sum, d) => sum + ((d[key] as number) || 0), 0);
+  const average = totalValue / data.length;
+  
+  if (average === 0) return data;
+  
+  return data.map(d => {
+    const originalValue = (d[key] as number) || 0;
+    
+    // Generate random noise between 5% and 7% of average (only positive)
+    const noisePercent = 0.05 + Math.random() * 0.02; // 5% to 7%
+    const noise = average * noisePercent; // Only positive values
+    
+    const noisyValue = Math.round(originalValue + noise);
+    return { ...d, [key]: noisyValue };
+  });
+}
+
 // Default ZAI models (always available if ZAI_API_KEY is set)
 const ZAI_MODELS = LLM_MODELS.zai.text;
 
@@ -298,8 +320,8 @@ export default function WikiEntityPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Chart scaling state
-  const [useStochasticScaling, setUseStochasticScaling] = useState(true);
-  const [useKDE, setUseKDE] = useState(false);
+  const [useStochasticScaling, setUseStochasticScaling] = useState(false);
+  const [useKDE, setUseKDE] = useState(true);
 
   const queryClient = useQueryClient();
 
@@ -668,16 +690,22 @@ export default function WikiEntityPage() {
       }));
     },
     enabled: newsIds.length > 0,
+    staleTime: 1000 * 60 * 60 * 12, // 12 hours - cached chart data
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours garbage collection
   });
 
   // Transformed daily views with scaling
   const transformedDailyViews = useMemo(() => {
     if (useStochasticScaling) {
-      return applyStochasticScaling(dailyViews, 'views', 100000);
+      const scaledData = applyStochasticScaling(dailyViews, 'views', 100000);
+      return addRandomNoise(scaledData, 'views');
     } else if (useKDE) {
-      return applyKDE(dailyViews, 'views', 0.5, 100000);
+      const kdeData = applyKDE(dailyViews, 'views', 0.5, 100000);
+      return addRandomNoise(kdeData, 'views');
     }
-    return dailyViews;
+    
+    // Always add noise 5%-7% even without scaling
+    return addRandomNoise(dailyViews, 'views');
   }, [dailyViews, useStochasticScaling, useKDE]);
 
   // Extract topics from news
