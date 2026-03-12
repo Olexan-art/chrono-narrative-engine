@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
 
     if (path === "/sitemap") {
       // HTML sitemap page (critical for crawlers like Screaming Frog)
-      title = "Sitemap | Точка Синхронізації";
+      title = "Sitemap | BravenNow";
       description = "HTML sitemap with links to all major sections and content pages.";
 
       const [{ data: countries }, { data: newsItems }, { data: wikiEntities }] = await Promise.all([
@@ -299,7 +299,7 @@ Deno.serve(async (req) => {
       );
     } else if (path === "/news") {
       // News hub (/news)
-      title = "News | Точка Синхронізації";
+      title = "News | BravenNow";
       description = "AI-curated news by country.";
       const { data: countries } = await supabase
         .from("news_countries")
@@ -309,7 +309,7 @@ Deno.serve(async (req) => {
 
       html = generateNewsHubHTML(countries || [], lang);
     } else if (path === "/chapters") {
-      title = "Chapters | Точка Синхронізації";
+      title = "Chapters | BravenNow";
       description = "All chapters.";
 
       const { data: chapters } = await supabase
@@ -320,7 +320,7 @@ Deno.serve(async (req) => {
 
       html = generateChaptersIndexHTML(chapters || [], lang);
     } else if (path === "/volumes") {
-      title = "Volumes | Точка Синхронізації";
+      title = "Volumes | BravenNow";
       description = "All volumes.";
 
       const { data: volumes } = await supabase
@@ -471,7 +471,7 @@ Deno.serve(async (req) => {
       html = generateInkAbyssHTML(inkItems || [], lang);
     } else if (path === "/calendar" || path === "/read") {
       // Lightweight crawler-friendly index of recent dates
-      title = "Archive | Точка Синхронізації";
+      title = "Archive | BravenNow";
       description = "Browse recent dates.";
 
       const { data: datesRaw } = await supabase
@@ -546,7 +546,7 @@ Deno.serve(async (req) => {
         .order("number", { ascending: true });
 
       if (parts && parts.length > 0) {
-        title = `${date} | Точка Синхронізації`;
+        title = `${date} | BravenNow`;
         description = `${parts.length} ${parts.length === 1 ? "історія" : "історій"} за ${date}`;
         html = generateDateHTML(parts, date, lang, canonicalUrl);
       }
@@ -775,7 +775,7 @@ Deno.serve(async (req) => {
 
       if (country) {
         const countryName = country.name_en || country.name;
-        title = `${country.flag} ${countryName} News | Synchronization Point`;
+        title = `${country.flag} ${countryName} News | BravenNow`;
         description = `Latest news from ${countryName}. AI-curated news digest with retelling and character dialogues.`;
 
         html = generateNewsCountryHTML(newsItems || [], country, lang, canonicalUrl, otherCountriesNews);
@@ -961,7 +961,7 @@ Deno.serve(async (req) => {
         .order("number", { ascending: true });
 
       if (parts && parts.length > 0) {
-        title = `${date} | Точка Синхронізації`;
+        title = `${date} | BravenNow`;
         description = `${parts.length} ${parts.length === 1 ? "історія" : "історій"} за ${date}`;
 
         html = generateDateHTML(parts, date, lang, canonicalUrl);
