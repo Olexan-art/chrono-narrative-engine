@@ -5,16 +5,22 @@
   Content-Type: text/plain; charset=utf-8
   Cache-Control: public, max-age=86400
 
-# HTML files — always revalidate (no browser cache)
+# HTML files — always revalidate (no browser cache, no CDN cache)
 /
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache
   Expires: 0
+  CDN-Cache-Control: no-cache
+  Cloudflare-CDN-Cache-Control: no-cache
+  Surrogate-Control: no-store
 
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache
   Expires: 0
+  CDN-Cache-Control: no-cache
+  Cloudflare-CDN-Cache-Control: no-cache
+  Surrogate-Control: no-store
 
 # Hashed assets — immutable forever
 /assets/*
