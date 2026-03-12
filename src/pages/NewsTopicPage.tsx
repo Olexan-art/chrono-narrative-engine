@@ -158,6 +158,19 @@ function addRandomNoise(data: any[], key: string): any[] {
   });
 }
 
+// Normalize data to percentage (0-100)
+function normalizeToPercentage(data: any[], key: string): any[] {
+  if (data.length === 0) return data;
+  
+  const maxValue = Math.max(...data.map(d => d[key] || 0));
+  if (maxValue === 0) return data;
+  
+  return data.map(d => ({
+    ...d,
+    [key]: Math.round(((d[key] || 0) / maxValue) * 100)
+  }));
+}
+
 // Gaussian kernel for KDE
 function gaussianKernel(x: number): number {
   return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
@@ -405,9 +418,11 @@ export default function NewsTopicPage() {
       data = applyKDE(data, 'entityCount', 0.3, 100000);
     }
     
-    // Always add noise 5%-7% of average to make data more realistic
+    // Always add noise 5%-7% then normalize to percentage
     data = addRandomNoise(data, 'newsCount');
     data = addRandomNoise(data, 'entityCount');
+    data = normalizeToPercentage(data, 'newsCount');
+    data = normalizeToPercentage(data, 'entityCount');
     
     return data;
   }, [chartData, useStochasticScaling, useKDE]);
@@ -445,8 +460,9 @@ export default function NewsTopicPage() {
       return addRandomNoise(kdeData, 'entityViews');
     }
     
-    // Always add noise 5%-7% even without scaling
-    return addRandomNoise(data, 'entityViews');
+    // Always add noise 5%-7% then normalize to percentage
+    const finalData = addRandomNoise(data, 'entityViews');
+    return normalizeToPercentage(finalData, 'entityViews');
   }, [chartData, entityDailyViews, useStochasticScaling, useKDE]);
 
   /** Hero image – first news with an image */
@@ -993,7 +1009,12 @@ export default function NewsTopicPage() {
                           tick={{ fontSize: 10, fill: "#94a3b8" }}
                           interval={Math.floor(transformedChartData.length / 8)}
                         />
-                        <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
+                        <YAxis 
+                          tick={{ fontSize: 10, fill: "#94a3b8" }} 
+                          allowDecimals={false}
+                          tickFormatter={(value) => `${value}%`}
+                          domain={[0, 100]}
+                        />
                         <Tooltip
                           contentStyle={{
                             background: "#0f1929",
@@ -1003,7 +1024,7 @@ export default function NewsTopicPage() {
                           }}
                           labelStyle={{ color: "#e2e8f0" }}
                           formatter={(v) => [
-                            v,
+                            `${v}%`,
                             language === "en" ? "articles" : "статей",
                           ]}
                         />
@@ -1034,8 +1055,16 @@ export default function NewsTopicPage() {
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} interval={Math.floor(transformedEntityViews.length / 8)} />
-                        <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} allowDecimals={false} />
-                        <Tooltip formatter={(v) => [v, language === 'en' ? 'views' : 'переглядів']} contentStyle={{ background: "#0f1929", border: "1px solid rgba(96,165,250,0.3)", borderRadius: 8 }} />
+                        <YAxis 
+                          tick={{ fontSize: 10, fill: "#94a3b8" }} 
+                          allowDecimals={false}
+                          tickFormatter={(value) => `${value}%`}
+                          domain={[0, 100]}
+                        />
+                        <Tooltip 
+                          formatter={(v) => [`${v}%`, language === 'en' ? 'views' : 'переглядів']} 
+                          contentStyle={{ background: "#0f1929", border: "1px solid rgba(96,165,250,0.3)", borderRadius: 8 }} 
+                        />
                         <Area type="monotone" dataKey="entityViews" stroke="#60a5fa" fill="url(#entityViewsGrad)" strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>

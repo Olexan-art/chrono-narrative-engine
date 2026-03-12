@@ -50,6 +50,8 @@ export function EntityViewsChart({ data }: Props) {
                 tick={{ fontSize: 11 }}
                 className="text-muted-foreground"
                 allowDecimals={false}
+                tickFormatter={(value) => `${value}%`}
+                domain={[0, 100]}
               />
               <Tooltip 
                 contentStyle={{ 
@@ -58,7 +60,7 @@ export function EntityViewsChart({ data }: Props) {
                   borderRadius: '8px'
                 }}
                 labelStyle={{ color: 'hsl(var(--foreground))' }}
-                formatter={(value: number) => [value, language === 'uk' ? 'Переглядів' : 'Views']}
+                formatter={(value: number) => [`${value}%`, language === 'uk' ? 'Переглядів' : 'Views']}
               />
               <Area 
                 type="monotone" 

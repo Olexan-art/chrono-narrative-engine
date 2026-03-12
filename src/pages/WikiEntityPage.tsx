@@ -265,6 +265,19 @@ function addRandomNoise<T extends Record<string, any>>(data: T[], key: keyof T):
   });
 }
 
+// Normalize data to percentage (0-100)
+function normalizeToPercentage<T extends Record<string, any>>(data: T[], key: keyof T): T[] {
+  if (data.length === 0) return data;
+  
+  const maxValue = Math.max(...data.map(d => (d[key] as number) || 0));
+  if (maxValue === 0) return data;
+  
+  return data.map(d => ({
+    ...d,
+    [key]: Math.round(((d[key] as number || 0) / maxValue) * 100)
+  }));
+}
+
 // Default ZAI models (always available if ZAI_API_KEY is set)
 const ZAI_MODELS = LLM_MODELS.zai.text;
 
@@ -704,8 +717,9 @@ export default function WikiEntityPage() {
       return addRandomNoise(kdeData, 'views');
     }
     
-    // Always add noise 5%-7% even without scaling
-    return addRandomNoise(dailyViews, 'views');
+    // Always add noise 5%-7% then normalize to percentage
+    const finalData = addRandomNoise(dailyViews, 'views');
+    return normalizeToPercentage(finalData, 'views');
   }, [dailyViews, useStochasticScaling, useKDE]);
 
   // Extract topics from news
