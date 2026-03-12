@@ -1557,6 +1557,200 @@ function generateFullDocument(opts: {
   <!-- Prebuilt Tailwind stylesheet -->
   <link rel="stylesheet" href="/tailwind.css">
 
+  <!-- Custom minimal styling -->
+  <style>
+    :root {
+      --background: 222.2 84% 4.9%;
+      --foreground: 210 40% 98%;
+      --card: 222.2 84% 4.9%;
+      --card-foreground: 210 40% 98%;
+      --popover: 222.2 84% 4.9%;
+      --popover-foreground: 210 40% 98%;
+      --primary: 217.2 91.2% 59.8%;
+      --primary-foreground: 222.2 84% 4.9%;
+      --secondary: 217.2 32.6% 17.5%;
+      --secondary-foreground: 210 40% 98%;
+      --muted: 217.2 32.6% 17.5%;
+      --muted-foreground: 215 20.2% 65.1%;
+      --accent: 217.2 32.6% 17.5%;
+      --accent-foreground: 210 40% 98%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 210 40% 98%;
+      --border: 217.2 32.6% 17.5%;
+      --input: 217.2 32.6% 17.5%;
+      --ring: 224.3 76.3% 94.0%;
+    }
+    
+    body {
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+      font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+      line-height: 1.6;
+    }
+    
+    h1 { 
+      font-size: 2.5rem; 
+      font-weight: 800; 
+      line-height: 1.2; 
+      margin: 0 0 1rem 0;
+      color: hsl(var(--foreground));
+    }
+    
+    h2 { 
+      font-size: 1.75rem; 
+      font-weight: 700; 
+      line-height: 1.3; 
+      margin: 2rem 0 1rem 0;
+      color: hsl(var(--foreground));
+      border-bottom: 1px solid hsl(var(--border));
+      padding-bottom: 0.5rem;
+    }
+    
+    h3 { 
+      font-size: 1.25rem; 
+      font-weight: 600; 
+      margin: 1.5rem 0 0.75rem 0;
+      color: hsl(var(--foreground));
+    }
+    
+    p { 
+      margin: 0.75rem 0; 
+      color: hsl(var(--muted-foreground));
+    }
+    
+    a {
+      color: hsl(var(--primary));
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    
+    a:hover {
+      color: hsl(var(--primary-foreground));
+      text-decoration: underline;
+    }
+    
+    ul, ol {
+      margin: 1rem 0;
+      padding-left: 1.5rem;
+    }
+    
+    li {
+      margin: 0.5rem 0;
+      color: hsl(var(--muted-foreground));
+    }
+    
+    li a {
+      font-weight: 500;
+    }
+    
+    .meta {
+      font-size: 0.875rem;
+      color: hsl(var(--muted-foreground));
+      opacity: 0.8;
+      margin-left: 0.5rem;
+    }
+    
+    .category {
+      font-size: 0.75rem;
+      background: hsl(var(--secondary));
+      color: hsl(var(--secondary-foreground));
+      padding: 0.125rem 0.375rem;
+      border-radius: 0.25rem;
+      margin-left: 0.5rem;
+    }
+    
+    section {
+      margin: 2.5rem 0;
+      padding: 1.5rem;
+      background: hsl(var(--card));
+      border-radius: 0.75rem;
+      border: 1px solid hsl(var(--border));
+    }
+    
+    nav {
+      margin: 2rem 0;
+      padding: 1rem;
+      background: hsl(var(--muted));
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+    }
+    
+    nav a {
+      margin: 0 0.5rem;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+    
+    header {
+      border-bottom: 1px solid hsl(var(--border));
+      padding: 1rem 0;
+      margin-bottom: 2rem;
+    }
+    
+    footer {
+      border-top: 1px solid hsl(var(--border));
+      padding: 2rem 0;
+      margin-top: 4rem;
+      text-align: center;
+      color: hsl(var(--muted-foreground));
+      font-size: 0.875rem;
+    }
+
+    /* Latest Stories special styling */
+    h2:has(+ ul[itemscope][itemtype*="ItemList"]) {
+      background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-size: 2rem;
+      font-weight: 900;
+    }
+    
+    ul[itemscope][itemtype*="ItemList"] {
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin: 1rem 0 2rem 0;
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    ul[itemscope][itemtype*="ItemList"] > li {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid hsl(var(--border));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    ul[itemscope][itemtype*="ItemList"] > li:last-child {
+      border-bottom: none;
+    }
+    
+    ul[itemscope][itemtype*="ItemList"] a {
+      font-weight: 600;
+      font-size: 1.1rem;
+      flex: 1;
+    }
+    
+    @media (max-width: 768px) {
+      h1 { font-size: 2rem; }
+      h2 { font-size: 1.5rem; }
+      .container { padding: 0 0.75rem; }
+      section { padding: 1rem; margin: 1.5rem 0; }
+      ul[itemscope][itemtype*="ItemList"] > li {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+      }
+    }
+  </style>
+
   <!-- Noscript: content stays visible -->
   <noscript>
     <style>.js-redirect-notice { display: none; }</style>
