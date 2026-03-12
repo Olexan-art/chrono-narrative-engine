@@ -1209,6 +1209,7 @@ Deno.serve(async (req) => {
       path,
       faqItems,
       keyPointsList: parsedKeyPoints,
+      latestStoriesParts: path === "/" ? latestParts : undefined,
     });
 
     // TTL per path type — matches TTL_RULES in cloudflare-worker.js
@@ -1454,8 +1455,9 @@ function generateFullDocument(opts: {
   path: string;
   faqItems?: { question: string; answer: string }[];
   keyPointsList?: string[];
+  latestStoriesParts?: any[];
 }) {
-  const { title, description, image, canonicalUrl, lang, content, path, faqItems, keyPointsList } = opts;
+  const { title, description, image, canonicalUrl, lang, content, path, faqItems, keyPointsList, latestStoriesParts } = opts;
   const BASE_URL = "https://bravennow.com";
 
   const jsonLd = {
@@ -1500,6 +1502,20 @@ function generateFullDocument(opts: {
       "@type": "ListItem",
       "position": index + 1,
       "name": point
+    }))
+  } : null;
+
+  const latestStoriesJsonLd = latestStoriesParts && latestStoriesParts.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "ItemList", 
+    "name": "Latest Stories",
+    "description": "Latest published stories from BravenNow",
+    "itemListElement": latestStoriesParts.map((part, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "url": `${BASE_URL}/read/${part.date}/${part.number}`,
+      "name": part.title_en || part.title,
+      "datePublished": part.date
     }))
   } : null;
 
@@ -1553,6 +1569,7 @@ function generateFullDocument(opts: {
   <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
   ${faqJsonLd ? `<script type="application/ld+json">${JSON.stringify(faqJsonLd)}</script>` : ""}
   ${itemListJsonLd ? `<script type="application/ld+json">${JSON.stringify(itemListJsonLd)}</script>` : ""}
+  ${latestStoriesJsonLd ? `<script type="application/ld+json">${JSON.stringify(latestStoriesJsonLd)}</script>` : ""}
   
   <!-- Prebuilt Tailwind stylesheet -->
   <link rel="stylesheet" href="/tailwind.css">
