@@ -12,10 +12,13 @@ import { useAdminStore } from "@/stores/adminStore";
 import { supabase } from "@/integrations/supabase/client";
 
 interface NewsAnalysisData {
+  key_takeaways?: string[];
   why_it_matters?: string;
   context_background?: string[];
   what_happens_next?: string;
   faq?: Array<{ question: string; answer: string }>;
+  mentioned_entities?: string[];
+  source?: string;
   generated_at?: string;
 }
 
@@ -150,6 +153,30 @@ export function NewsAnalysisBlock({ newsId, newsTitle, newsContent, className = 
       {/* Display analysis if available */}
       {analysisData && (
         <div className="space-y-6">
+          {/* Key Takeaways */}
+          {analysisData.key_takeaways && analysisData.key_takeaways.length > 0 && (
+            <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-transparent">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-emerald-500" />
+                  {language === 'en' ? 'Key Takeaways' :
+                   language === 'pl' ? 'Kluczowe wnioski' :
+                   'Ключові висновки'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {analysisData.key_takeaways.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm">
+                      <span className="text-emerald-500 mt-1 flex-shrink-0">•</span>
+                      <span className="leading-relaxed">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Why it matters */}
           {analysisData.why_it_matters && (
             <Card className="border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-transparent">
@@ -240,6 +267,48 @@ export function NewsAnalysisBlock({ newsId, newsTitle, newsContent, className = 
                     </div>
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Mentioned Entities */}
+          {analysisData.mentioned_entities && analysisData.mentioned_entities.length > 0 && (
+            <Card className="border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-transparent">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <span className="w-4 h-4 text-cyan-500">🏢</span>
+                  {language === 'en' ? 'Mentioned Entities' :
+                   language === 'pl' ? 'Wymienione podmioty' :
+                   'Згадані суб\'єкти'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {analysisData.mentioned_entities.map((entity, idx) => (
+                    <Badge key={idx} variant="secondary" className="bg-cyan-500/10 border-cyan-500/30 text-cyan-700 hover:bg-cyan-500/20">
+                      {entity}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Source */}
+          {analysisData.source && (
+            <Card className="border-slate-500/30 bg-gradient-to-br from-slate-500/10 to-transparent">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <span className="w-4 h-4 text-slate-500">📰</span>
+                  {language === 'en' ? 'Source' :
+                   language === 'pl' ? 'Źródło' :
+                   'Джерело'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {analysisData.source}
+                </p>
               </CardContent>
             </Card>
           )}

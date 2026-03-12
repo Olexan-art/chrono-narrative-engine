@@ -15,10 +15,13 @@ interface AnalysisRequest {
 }
 
 interface NewsAnalysis {
+  key_takeaways?: string[];
   why_it_matters?: string;
   context_background?: string[];
   what_happens_next?: string;
   faq?: Array<{ question: string; answer: string }>;
+  mentioned_entities?: string[];
+  source?: string;
 }
 
 interface VerificationCard {
@@ -68,13 +71,16 @@ serve(async (req) => {
 
 You must respond ONLY with valid JSON in the following structure:
 {
+  "key_takeaways": ["takeaway 1", "takeaway 2", "takeaway 3"] (3-5 most important points from the article),
   "why_it_matters": "3-5 sentences explaining why this news is important and who it affects",
   "context_background": ["fact 1", "fact 2", "fact 3", "etc"] (3-7 bullet points with historical context),
   "what_happens_next": "Forecast of upcoming events, dates, or developments (if applicable)",
   "faq": [
     {"question": "question 1", "answer": "answer in 2-3 sentences"},
     {"question": "question 2", "answer": "answer in 2-3 sentences"}
-  ] (3-6 Q&A pairs)
+  ] (3-6 Q&A pairs),
+  "mentioned_entities": ["entity 1", "entity 2", "entity 3"] (key people, organizations, locations mentioned),
+  "source": "Brief description of the original source and its credibility"
 }
 
 IMPORTANT: Your response must be pure JSON, no markdown formatting, no code blocks, no explanations outside JSON.`;
@@ -114,7 +120,7 @@ Provide comprehensive analysis in JSON format as specified.`;
     }
 
     // Validate structure
-    if (!analysis.why_it_matters && !analysis.context_background && !analysis.what_happens_next && !analysis.faq) {
+    if (!analysis.key_takeaways && !analysis.why_it_matters && !analysis.context_background && !analysis.what_happens_next && !analysis.faq && !analysis.mentioned_entities) {
       throw new Error('Analysis response missing all required fields');
     }
 
