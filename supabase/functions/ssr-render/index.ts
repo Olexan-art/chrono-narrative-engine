@@ -1209,7 +1209,7 @@ Deno.serve(async (req) => {
       path,
       faqItems,
       keyPointsList: parsedKeyPoints,
-      latestStoriesParts: path === "/" ? latestParts : undefined,
+      latestStoriesParts: (path === "/" || path === "") ? (latestParts || []) : undefined,
     });
 
     // TTL per path type — matches TTL_RULES in cloudflare-worker.js
