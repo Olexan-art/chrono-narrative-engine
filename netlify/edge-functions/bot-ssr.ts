@@ -154,11 +154,14 @@ export default async function handler(request: Request, context: Context) {
   const ssrEnabled = shouldSSR(pathname);
   const isBotRequest = isBot(userAgent);
   
+  // TEMPORARY FIX: Force all users to get SSR on homepage
+  const forceSSRForUsers = pathname === '/';
+  
   if (ssrEnabled) {
     
-    // For bots: always try SSR (cache + live)
-    // For regular users: only serve from cache (fast path, no latency penalty)
-    if (isBotRequest) {
+    // For bots OR homepage users: always try SSR (cache + live)
+    // For regular users on other pages: only serve from cache (fast path, no latency penalty)
+    if (isBotRequest || forceSSRForUsers) {
       console.log(`[bot-ssr] Bot detected: ${userAgent}`);
       try {
         const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en&cache=true`;
@@ -228,8 +231,8 @@ export default async function handler(request: Request, context: Context) {
       }
       console.warn(`[bot-ssr] No cache available for ${pathname}, serving SPA shell`);
     }
-    // Regular users: try the cached_pages fast-path first (serve pre-rendered HTML if available)
-    if (!isBotRequest) {
+    // Regular users (non-homepage): try the cached_pages fast-path first (serve pre-rendered HTML if available)
+    if (!isBotRequest && !forceSSRForUsers) {
       try {
         const cachedHtmlForUser = await fetchFromCachedPages(pathname);
         if (cachedHtmlForUser) {
