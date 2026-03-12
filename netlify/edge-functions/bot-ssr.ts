@@ -147,6 +147,57 @@ export default async function handler(request: Request, context: Context) {
     return context.next();
   }
 
+  // HOMEPAGE FIX: Force full SSR for homepage regardless of user type
+  if (pathname === '/') {
+    try {
+      console.log(`[bot-ssr] HOMEPAGE: Forcing SSR for ${userAgent.substring(0,50)}...`);
+      const ssrUrl = `${SSR_ENDPOINT}?path=${encodeURIComponent(pathname)}&lang=en&cache=true`;
+      const ssrResponse = await fetch(ssrUrl, {
+        headers: {
+          'User-Agent': userAgent,
+          'Accept': 'text/html',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      });
+
+      if (ssrResponse.ok) {
+        const html = await ssrResponse.text();
+        console.log(`[bot-ssr] HOMEPAGE: SSR success, length=${html.length}`);
+        return new Response(html, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'public, max-age=3600',
+            'X-SSR-Source': 'homepage-forced-ssr',
+            'X-Worker-Version': 'v2026.02.25-homepage-fix',
+          },
+        });
+      } else {
+        console.error(`[bot-ssr] HOMEPAGE: SSR failed with ${ssrResponse.status}`);
+      }
+    } catch (error) {
+      console.error(`[bot-ssr] HOMEPAGE: SSR error:`, error);
+    }
+    
+    // Fallback for homepage: try cache
+    const cachedHtml = await fetchFromCachedPages(pathname);
+    if (cachedHtml?.html) {
+      console.log(`[bot-ssr] HOMEPAGE: Serving cached version`);
+      return new Response(cachedHtml.html, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'public, max-age=300',
+          'X-SSR-Source': 'homepage-cached-fallback',
+          'X-Worker-Version': 'v2026.02.25-homepage-fix',
+        },
+      });
+    }
+    
+    console.warn(`[bot-ssr] HOMEPAGE: No cache available, falling through to SPA`);
+  }
+
   // Serve SSR for ALL users on SSR-able paths (not just bots).
   // This ensures correct canonical URLs and content for users with JS disabled.
   // The SSR page contains a JS redirect that sends real users to the SPA,
