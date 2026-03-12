@@ -29,7 +29,7 @@ import { EntityViewsChart } from "@/components/EntityViewsChart";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { EntityLinkedContent } from "@/components/EntityLinkedContent";
 import { EntityIntersectionGraph } from "@/components/EntityIntersectionGraph";
-import { EntityGhostlyGraph } from "@/components/EntityGhostlyGraph";
+
 import { EntityCyberpunkGraph } from "@/components/EntityCyberpunkGraph";
 import { AdminTextSelectionPopover } from "@/components/AdminTextSelectionPopover";
 import { supabase } from "@/integrations/supabase/client";
@@ -168,7 +168,7 @@ const TOPIC_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
   'media': { icon: <Megaphone className="w-5 h-5" />, color: 'text-pink-500' },
 };
 
-const NEWS_PER_PAGE = 70;
+const NEWS_PER_PAGE = 10;
 
 // ── Mathematical scaling functions ──────────────────────────────────────────
 // Poisson distribution using Knuth's algorithm
@@ -270,7 +270,7 @@ export default function WikiEntityPage() {
   const [selectedSections, setSelectedSections] = useState<Set<string>>(new Set());
   const [newsPage, setNewsPage] = useState(1);
   const [selectedCaricature, setSelectedCaricature] = useState<CaricatureLightbox | null>(null);
-  const [graphVariant, setGraphVariant] = useState<'tree' | 'ghostly' | 'cyberpunk'>('cyberpunk');
+  const [graphVariant, setGraphVariant] = useState<'tree' | 'cyberpunk'>('cyberpunk');
   const [narrativeAnalyses, setNarrativeAnalyses] = useState<Record<string, any>>({});
   const [analyzingMonth, setAnalyzingMonth] = useState<string | null>(null);
   const [expandedNarrativeMonths, setExpandedNarrativeMonths] = useState<Set<string>>(new Set());
@@ -2424,15 +2424,7 @@ export default function WikiEntityPage() {
                       <Network className="w-3.5 h-3.5" />
                       {language === 'uk' ? 'Дерево' : 'Tree'}
                     </Button>
-                    <Button
-                      variant={graphVariant === 'ghostly' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setGraphVariant('ghostly')}
-                      className="gap-1.5 text-xs"
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                      {language === 'uk' ? 'Примарні' : 'Ghostly'}
-                    </Button>
+
                   </div>
                   {graphVariant === 'cyberpunk' ? (
                     <EntityCyberpunkGraph
@@ -2469,24 +2461,7 @@ export default function WikiEntityPage() {
                       feedSources={feedSources.slice(0, 6).map(f => ({ id: f.id, name: f.name, favicon: f.favicon }))}
                       wikiLinkedIds={new Set(wikiLinkedEntities.map(w => w.id))}
                     />
-                  ) : (
-                    <EntityGhostlyGraph
-                      mainEntity={{
-                        id: entity.id,
-                        slug: entity.slug,
-                        name: entity.name,
-                        name_en: entity.name_en,
-                        description: entity.description,
-                        description_en: entity.description_en,
-                        image_url: entity.image_url,
-                        entity_type: entity.entity_type,
-                        shared_news_count: totalMentions,
-                      }}
-                      relatedEntities={[...relatedEntities, ...wikiLinkedEntities.filter(w => !relatedEntities.some(r => r.id === w.id))]}
-                      secondaryConnections={secondaryConnections}
-                      wikiLinkedIds={new Set(wikiLinkedEntities.map(w => w.id))}
-                    />
-                  )}
+                  ) : null}
                 </>
               )}
 

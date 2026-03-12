@@ -54,6 +54,13 @@ function getHexagonPath(cx: number, cy: number, r: number): string {
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ') + 'Z';
 }
 
+function getLineTier(count: number): 'weak' | 'moderate' | 'strong' | 'intense' {
+  if (count >= 100) return 'intense';
+  if (count >= 50) return 'strong';
+  if (count >= 10) return 'moderate';
+  return 'weak';
+}
+
 function getOctagonPath(cx: number, cy: number, r: number): string {
   const points: [number, number][] = [];
   for (let i = 0; i < 8; i++) {
@@ -471,11 +478,15 @@ export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryCon
               if (!pos) return null;
               const isHovered = hoveredNode === entity.id;
               const isWikiLink = wikiLinkedIds?.has(entity.id);
-              const lineWidth = isWikiLink ? 1 : 1 + (entity.shared_news_count / maxCount) * 3;
-              const lineColor = isWikiLink 
-                ? (isHovered ? "hsl(var(--chart-2))" : "hsl(var(--chart-2))")
-                : (isHovered ? "hsl(var(--chart-4))" : "hsl(var(--primary))");
-
+              const tier = isWikiLink ? 'wiki' : getLineTier(entity.shared_news_count);
+              const tierConfig = ({
+                wiki:     { dash: '3 6 1 6', width: 1,   opacity: 0.30, color: 'hsl(var(--chart-2))' },
+                weak:     { dash: '3 9',     width: 0.8,  opacity: 0.18, color: 'hsl(var(--muted-foreground))' },
+                moderate: { dash: '7 5',     width: 1.5,  opacity: 0.38, color: 'hsl(var(--primary))' },
+                strong:   { dash: '9 2',     width: 2.2,  opacity: 0.58, color: 'hsl(var(--primary))' },
+                intense:  { dash: 'none',    width: 3.2,  opacity: 0.78, color: 'hsl(var(--chart-4))' },
+              } as const)[tier];
+              const lineColor = isHovered ? 'hsl(var(--chart-4))' : tierConfig.color;
               const pathStr = `M ${cx} ${cy} L ${pos.x} ${pos.y}`;
 
               return (
@@ -483,16 +494,16 @@ export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryCon
                   {/* Glow */}
                   <line x1={cx} y1={cy} x2={pos.x} y2={pos.y}
                     stroke={lineColor}
-                    strokeWidth={lineWidth + 4}
-                    opacity={isHovered ? 0.2 : 0.04}
+                    strokeWidth={tierConfig.width + 4}
+                    opacity={isHovered ? 0.25 : 0.04}
                   />
                   {/* Main line */}
                   <line x1={cx} y1={cy} x2={pos.x} y2={pos.y}
                     stroke={lineColor}
-                    strokeWidth={isHovered ? lineWidth + 1 : lineWidth}
-                    opacity={isHovered ? 0.9 : isWikiLink ? 0.3 : 0.2 + (entity.shared_news_count / maxCount) * 0.4}
-                    strokeDasharray={isWikiLink ? "3 6 1 6" : (isHovered ? "none" : "6 4")}
-                    className={isHovered ? "" : "data-stream"}
+                    strokeWidth={isHovered ? tierConfig.width + 1.5 : tierConfig.width}
+                    opacity={isHovered ? 0.9 : tierConfig.opacity}
+                    strokeDasharray={isHovered ? 'none' : tierConfig.dash}
+                    className={isHovered ? '' : 'data-stream'}
                     style={{ animationDelay: `${index * 0.1}s` }}
                   />
                   {/* Data packet */}
@@ -723,6 +734,42 @@ export function EntityCyberpunkGraph({ mainEntity, relatedEntities, secondaryCon
             )}
           </div>
         </TooltipProvider>
+
+        {/* Legend */}
+        <div className="mt-5 pt-4 border-t border-[hsl(var(--chart-4))]/20">
+          <p className="text-[10px] font-mono text-[hsl(var(--chart-4))]/60 uppercase tracking-widest mb-3">// LEGEND</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-2 gap-x-4 text-[11px] font-mono text-muted-foreground">
+            {/* Line tiers */}
+            <div className="flex items-center gap-2">
+              <svg width="36" height="8"><line x1="0" y1="4" x2="36" y2="4" stroke="hsl(var(--muted-foreground))" strokeWidth="0.8" strokeDasharray="3 9"/></svg>
+              <span>{language === 'uk' ? '1–9 спільних' : '1–9 shared'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg width="36" height="8"><line x1="0" y1="4" x2="36" y2="4" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeDasharray="7 5"/></svg>
+              <span>{language === 'uk' ? '10–49 спільних' : '10–49 shared'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg width="36" height="8"><line x1="0" y1="4" x2="36" y2="4" stroke="hsl(var(--primary))" strokeWidth="2.2" strokeDasharray="9 2"/></svg>
+              <span>{language === 'uk' ? '50–99 спільних' : '50–99 shared'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg width="36" height="8"><line x1="0" y1="4" x2="36" y2="4" stroke="hsl(var(--chart-4))" strokeWidth="3.2"/></svg>
+              <span>{language === 'uk' ? '100+ спільних' : '100+ shared'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg width="36" height="8"><line x1="0" y1="4" x2="36" y2="4" stroke="hsl(var(--chart-2))" strokeWidth="1" strokeDasharray="3 6 1 6"/></svg>
+              <span>{language === 'uk' ? 'Вікі-зв\'язок' : 'Wiki link'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg width="16" height="16"><polygon points="8,1 15,5 15,11 8,15 1,11 1,5" fill="none" stroke="hsl(var(--chart-4))" strokeWidth="1.5"/></svg>
+              <span>{language === 'uk' ? 'Вузол (гексагон)' : 'Node (hexagon)'}</span>
+            </div>
+            <div className="flex items-center gap-2 col-span-2 sm:col-span-3">
+              <svg width="16" height="16"><rect x="2" y="2" width="12" height="12" rx="2" fill="hsl(var(--chart-4))" opacity="0.8" transform="rotate(45 8 8)"/></svg>
+              <span>{language === 'uk' ? 'Значок кількості спільних новин (на вузлі)' : 'Shared news count badge (on node)'}</span>
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

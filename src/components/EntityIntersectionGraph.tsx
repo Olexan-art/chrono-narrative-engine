@@ -128,6 +128,13 @@ function calculateTreePositions(entityCount: number, containerWidth: number, con
   return positions;
 }
 
+function getLineTier(count: number): 'weak' | 'moderate' | 'strong' | 'intense' {
+  if (count >= 100) return 'intense';
+  if (count >= 50) return 'strong';
+  if (count >= 10) return 'moderate';
+  return 'weak';
+}
+
 function getTreeConnectionPath(
   fromX: number, fromY: number, 
   toX: number, toY: number,
@@ -649,8 +656,13 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               if (!pos) return null;
               
               const isHovered = hoveredNode === entity.id;
-              const lineWidth = getLineWidth(entity.shared_news_count);
-              const opacity = getOpacity(entity.shared_news_count, isHovered);
+              const tier = getLineTier(entity.shared_news_count);
+              const treeTierConfig = ({
+                weak:     { dash: '12 7', width: 1.5, opacity: 0.35, stroke: 'url(#treeLineGradient)' },
+                moderate: { dash: '8 4',  width: 2.5, opacity: 0.55, stroke: 'url(#treeLineGradient)' },
+                strong:   { dash: '4 2',  width: 3.5, opacity: 0.75, stroke: 'url(#treeLineGradient)' },
+                intense:  { dash: 'none', width: 5,   opacity: 0.90, stroke: 'url(#treeLineGradientHover)' },
+              } as const)[tier];
               const pathId = `path-${entity.id}`;
               const path = getTreeConnectionPath(rootX, rootY + 55, pos.x, pos.y - 22, 0.45);
               
@@ -663,8 +675,8 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                   <path
                     d={path}
                     fill="none"
-                    stroke={isHovered ? "hsl(var(--accent))" : "hsl(var(--primary))"}
-                    strokeWidth={lineWidth + (isHovered ? 10 : 5)}
+                    stroke={isHovered ? 'hsl(var(--accent))' : 'hsl(var(--primary))'}
+                    strokeWidth={treeTierConfig.width + (isHovered ? 10 : 5)}
                     strokeOpacity={isHovered ? 0.3 : 0.08}
                     strokeLinecap="round"
                     className="transition-all duration-200"
@@ -674,11 +686,11 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
                     id={pathId}
                     d={path}
                     fill="none"
-                    stroke={isHovered ? "url(#treeLineGradientHover)" : "url(#treeLineGradient)"}
-                    strokeWidth={isHovered ? lineWidth + 2 : lineWidth}
-                    strokeOpacity={opacity}
+                    stroke={isHovered ? 'url(#treeLineGradientHover)' : treeTierConfig.stroke}
+                    strokeWidth={isHovered ? treeTierConfig.width + 2 : treeTierConfig.width}
+                    strokeOpacity={isHovered ? 1 : treeTierConfig.opacity}
                     strokeLinecap="round"
-                    strokeDasharray={isHovered ? "none" : "10 5"}
+                    strokeDasharray={isHovered ? 'none' : treeTierConfig.dash}
                     className={`transition-all duration-200 ${!isHovered ? 'tree-line' : ''}`}
                     style={{ animationDelay: `${index * 0.08}s` }}
                   />
@@ -1083,6 +1095,45 @@ export function EntityIntersectionGraph({ mainEntity, relatedEntities, secondary
               }
             </p>
           )}
+        </div>
+
+        {/* Legend */}
+        <div className="mt-5 pt-4 border-t border-border/50">
+          <p className="text-xs text-muted-foreground font-medium mb-3">{language === 'uk' ? 'Позначення' : 'Legend'}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-2 gap-x-4 text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <svg width="36" height="8"><path d="M0 4 C9 4 27 4 36 4" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeDasharray="12 7"/></svg>
+              <span>{language === 'uk' ? '1–9 спільних' : '1–9 shared'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg width="36" height="8"><path d="M0 4 C9 4 27 4 36 4" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.5" strokeDasharray="8 4"/></svg>
+              <span>{language === 'uk' ? '10–49 спільних' : '10–49 shared'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg width="36" height="8"><path d="M0 4 C9 4 27 4 36 4" fill="none" stroke="hsl(var(--primary))" strokeWidth="3.5" strokeDasharray="4 2"/></svg>
+              <span>{language === 'uk' ? '50–99 спільних' : '50–99 shared'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg width="36" height="8"><path d="M0 4 C9 4 27 4 36 4" fill="none" stroke="hsl(var(--accent))" strokeWidth="5"/></svg>
+              <span>{language === 'uk' ? '100+ спільних' : '100+ shared'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg width="36" height="8"><line x1="0" y1="4" x2="36" y2="4" stroke="hsl(var(--muted-foreground))" strokeWidth="1.5" strokeDasharray="5 5"/></svg>
+              <span>{language === 'uk' ? 'Вторинний зв\'язок' : 'Secondary link'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg width="16" height="16"><polygon points="8,1 15,5 15,11 8,15 1,11 1,5" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5"/></svg>
+              <span>{language === 'uk' ? 'Вузол (гексагон)' : 'Node (hexagon)'}</span>
+            </div>
+            <div className="flex items-center gap-2 col-span-2 sm:col-span-3">
+              <svg width="16" height="16"><polygon points="8,1 15,5 15,11 8,15 1,11 1,5" fill="hsl(var(--primary))" opacity="0.8"/></svg>
+              <span>{language === 'uk' ? 'Значок кількості спільних новин (на вузлі)' : 'Shared news count badge (on node)'}</span>
+            </div>
+            <div className="flex items-center gap-2 col-span-2 sm:col-span-3">
+              <svg width="16" height="16"><rect x="3" y="3" width="10" height="10" rx="2" fill="hsl(var(--primary))" opacity="0.25" stroke="hsl(var(--primary))" strokeWidth="1.5"/></svg>
+              <span>{language === 'uk' ? 'Перший рівень — найбільш пов\'язані сутності' : 'First level — most connected entities'}</span>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

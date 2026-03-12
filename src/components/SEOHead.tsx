@@ -66,7 +66,7 @@ export function SEOHead({
     result.push({
       '@context': 'https://schema.org',
       '@type': 'Organization',
-      name: 'Synchronization Point',
+      name: 'BravenNow',
       alternateName: 'Точка Синхронізації',
       description: 'AI-powered narrative generation system that transforms real-world news into science fiction stories',
       url: BASE_URL,
@@ -89,12 +89,12 @@ export function SEOHead({
       inLanguage: langCode,
       author: {
         '@type': 'Organization',
-        name: 'Synchronization Point AI',
+        name: 'BravenNow',
         url: BASE_URL,
       },
       publisher: {
         '@type': 'Organization',
-        name: 'Точка Синхронізації',
+        name: 'BravenNow',
         logo: { '@type': 'ImageObject', url: `${BASE_URL}/favicon.png` },
       },
       keywords: keywords.join(', '),
@@ -168,7 +168,7 @@ export function SEOHead({
       <meta property="og:locale" content={locale} />
       {resolvedUrl && <meta property="og:url" content={resolvedUrl} />}
       {image && <meta property="og:image" content={image} />}
-      <meta property="og:site_name" content="Synchronization Point" />
+      <meta property="og:site_name" content="BravenNow" />
 
       {/* Twitter */}
       <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
@@ -188,7 +188,7 @@ export function SEOHead({
       <meta name="ai:summary" content={description} />
       <meta name="ai:content_type" content={type === 'article' ? 'narrative_story' : 'website'} />
       <meta name="ai:language" content={language} />
-      <meta name="application-name" content="Synchronization Point" />
+      <meta name="application-name" content="BravenNow" />
       <meta name="generator" content="Lovable AI" />
 
       {/* Dublin Core */}

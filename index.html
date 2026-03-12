@@ -45,18 +45,18 @@
       href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=optional" />
   </noscript>
 
-  <title>Synchronization Point - Smart News, Real News</title>
+  <title>BravenNow | Brave New World</title>
   <meta name="description"
-    content="A book that writes itself. An archivist structures the chaos of human history through the lens of news, generating daily stories from real-world news." />
-  <meta name="author" content="Synchronization Point" />
-  <meta name="keywords" content="AI, science fiction, news, narrative, story, Ukraine, generated, book, archivist" />
+    content="Brave New World — A book that writes itself through smart news based on real news events." />
+  <meta name="author" content="BravenNow" />
+  <meta name="keywords" content="AI, science fiction, news, narrative, Ukraine, наукова фантастика, новини, ШІ, BravenNow" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Synchronization Point" />
-  <meta property="og:title" content="Synchronization Point - Smart News, Real News" />
+  <meta property="og:site_name" content="BravenNow" />
+  <meta property="og:title" content="BravenNow | Brave New World" />
   <meta property="og:description"
-    content="A book that writes itself. An archivist structures the chaos of human history through the lens of news, generating daily stories from real-world news." />
+    content="Brave New World — A book that writes itself through smart news based on real news events." />
   <meta property="og:image" content="https://bravennow.com/favicon.png" />
   <meta property="og:url" content="https://bravennow.com/" />
   <meta property="og:locale" content="en_US" />
@@ -65,10 +65,10 @@
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:site" content="@SyncPoint" />
-  <meta name="twitter:title" content="Synchronization Point - Smart News, Real News" />
+  <meta name="twitter:site" content="@BravenNow" />
+  <meta name="twitter:title" content="BravenNow | Brave New World" />
   <meta name="twitter:description"
-    content="A book that writes itself. An archivist structures the chaos of human history through the lens of news, generating daily stories from real-world news." />
+    content="Brave New World — A book that writes itself through smart news based on real news events." />
   <meta name="twitter:image" content="https://bravennow.com/favicon.png" />
 
   <!-- Robots -->
@@ -83,19 +83,22 @@
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
-        "name": "Synchronization Point",
-        "alternateName": "Точка Синхронізації",
+        "name": "BravenNow",
+        "alternateName": ["Brave New World", "Точка Синхронізації"],
         "url": "https://bravennow.com",
-        "description": "A book that writes itself. An archivist structures the chaos of human history through the lens of news, generating daily stories from real-world news.",
+        "description": "Brave New World — A book that writes itself through smart news based on real news events.",
         "inLanguage": ["en", "uk", "pl"],
         "potentialAction": {
           "@type": "SearchAction",
-          "target": "https://bravennow.com/search?q={search_term_string}",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://bravennow.com/calendar?q={search_term_string}"
+          },
           "query-input": "required name=search_term_string"
         },
         "publisher": {
           "@type": "Organization",
-          "name": "Synchronization Point",
+          "name": "BravenNow",
           "logo": {
             "@type": "ImageObject",
             "url": "https://bravennow.com/favicon.png"

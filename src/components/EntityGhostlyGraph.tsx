@@ -222,14 +222,6 @@ export function EntityGhostlyGraph({ mainEntity, relatedEntities, secondaryConne
             <div className="p-2.5 rounded-xl bg-gradient-to-br from-secondary/20 to-primary/20 border border-secondary/20">
               <Share2 className="w-5 h-5 text-secondary" />
             </div>
-            <div>
-              <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text block">
-                {language === 'uk' ? 'Примарні зв\'язки' : 'Ghostly Connections'}
-              </span>
-              <span className="text-xs text-muted-foreground font-normal">
-                {language === 'uk' ? '3 кола впливу' : '3 circles of influence'}
-              </span>
-            </div>
           </CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="gap-1.5 bg-primary/10 border-primary/30 px-3 py-1">
