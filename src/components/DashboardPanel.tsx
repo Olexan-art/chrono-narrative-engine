@@ -8,15 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Loader2, BookOpen, FileText, Users, Globe, TrendingUp, Eye,
-  Sparkles, Clock, ShieldCheck, Activity,
+  Sparkles, Clock, Activity,
   ArrowUpRight, BarChart3, Library, Search, Bot, AlertCircle
 } from "lucide-react";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, Legend, RadarChart,
-  PolarGrid, PolarAngleAxis, Radar, Cell, PieChart, Pie,
+  AreaChart, Area, Legend,
+  Cell, PieChart, Pie,
   LineChart, Line, ReferenceLine
 } from "recharts";
 import { callEdgeFunction } from "@/lib/api";
@@ -46,7 +46,6 @@ export function DashboardPanel({ password }: Props) {
           counts: any,
           lifecycle: any[],
           performance: any[],
-          seo: any,
           countriesStats: any[],
           recentWiki: any[],
           recentNews: any[]
@@ -226,16 +225,9 @@ export function DashboardPanel({ password }: Props) {
   const stats = dashboardData?.counts;
   const lifecycle = dashboardData?.lifecycle || [];
   const performance = dashboardData?.performance || [];
-  const seo = dashboardData?.seo || {};
   const recentWiki = dashboardData?.recentWiki || [];
   const recentNews = dashboardData?.recentNews || [];
   const countriesStats = dashboardData?.countriesStats || [];
-
-  const seoRadarData = [
-    { subject: 'Частини (SEO)', A: seo.partsCoverage, fullMark: 100 },
-    { subject: 'Новини (Slug)', A: seo.newsCoverage, fullMark: 100 },
-    { subject: 'Вікі (Slug)', A: seo.wikiCoverage, fullMark: 100 },
-  ];
 
   return (
     <div className="space-y-8 pb-12">
@@ -257,68 +249,6 @@ export function DashboardPanel({ password }: Props) {
             <p className="text-xs text-muted-foreground mt-1">
               Оброблено AI <span className="text-cyan-500">{stats?.generations}</span> разів
             </p>
-          </CardContent>
-        </Card>
-
-        <Card className="cosmic-card overflow-hidden group">
-          <CardHeader className="pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex justify-between">
-              SEO Покриття
-              <ShieldCheck className="w-4 h-4 text-green-500 opacity-50 group-hover:opacity-100 transition-opacity" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold font-mono">{seo.partsCoverage}%</div>
-            <div className="w-full bg-muted h-1 rounded-full mt-2 overflow-hidden">
-              <div
-                className="bg-green-500 h-full transition-all duration-1000"
-                style={{ width: `${seo.partsCoverage}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 🎯 SEO Health */}
-        <Card className="cosmic-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-green-500" />
-              SEO Здоров'я
-            </CardTitle>
-            <CardDescription>Покриття мета-даними за типами контенту</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center">
-            <div className="h-[280px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={seoRadarData}>
-                  <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                  <PolarAngleAxis dataKey="subject" className="text-[10px] uppercase font-mono" />
-                  <Radar
-                    name="SEO"
-                    dataKey="A"
-                    stroke="#10b981"
-                    fill="#10b981"
-                    fillOpacity={0.6}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="grid grid-cols-1 w-full gap-2 mt-4">
-              <div className="flex justify-between items-center text-xs p-2 rounded bg-muted/20">
-                <span className="text-muted-foreground">Parts (Description):</span>
-                <span className="font-mono font-bold text-green-500">{seo.partsCoverage}%</span>
-              </div>
-              <div className="flex justify-between items-center text-xs p-2 rounded bg-muted/20">
-                <span className="text-muted-foreground">News (Slugs):</span>
-                <span className="font-mono font-bold text-cyan-500">{seo.newsCoverage}%</span>
-              </div>
-              <div className="flex justify-between items-center text-xs p-2 rounded bg-muted/20">
-                <span className="text-muted-foreground">Wiki (Slugs):</span>
-                <span className="font-mono font-bold text-amber-500">{seo.wikiCoverage}%</span>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>

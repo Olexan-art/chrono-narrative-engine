@@ -2054,8 +2054,7 @@ serve(async (req: Request) => {
             .select('duration_ms')
             .eq('operation', 'retell-news')
             .contains('metadata', { country_code: country_code.toLowerCase() })
-            .gte('created_at', timeRanges.h24.toISOString())
-            .limit(1000);
+            .gte('created_at', timeRanges.h24.toISOString());
 
           if (durations && durations.length > 0) {
             const sum = durations.reduce((s: number, r: any) => s + (r.duration_ms || 0), 0);
@@ -2549,8 +2548,7 @@ serve(async (req: Request) => {
           .select('path, status_code, response_time_ms, cache_status, created_at, bot_type')
           .ilike('bot_type', '%google%')
           .gte('created_at', pastDate.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(5000);
+          .order('created_at', { ascending: false });
 
         // Build timeline buckets
         const bucketMap = new Map<string, { time: string; count: number }>();
@@ -2690,8 +2688,7 @@ serve(async (req: Request) => {
           .select('path, status_code, response_time_ms, cache_status, created_at, bot_type')
           .ilike('bot_type', '%bing%')
           .gte('created_at', bbPastDate.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(5000);
+          .order('created_at', { ascending: false });
 
         const bbBucketMap = new Map<string, { time: string; count: number }>();
         for (let i = 0; i < bbBucketCount; i++) {
@@ -2801,8 +2798,7 @@ serve(async (req: Request) => {
           .select('path, status_code, response_time_ms, cache_status, created_at, bot_type')
           .eq('bot_category', 'ai')
           .gte('created_at', llmPastDate.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(5000);
+          .order('created_at', { ascending: false });
 
         const llmBucketMap = new Map<string, { time: string; count: number }>();
         for (let i = 0; i < llmBucketCount; i++) {
