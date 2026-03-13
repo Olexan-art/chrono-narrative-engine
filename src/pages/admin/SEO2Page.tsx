@@ -1,0 +1,485 @@
+import { useState, useEffect, useRef } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { useAdminStore } from "@/stores/adminStore";
+import { adminAction } from "@/lib/api";
+import { toast } from "sonner";
+import { Activity, Eye, EyeOff, Copy } from "lucide-react";
+
+const METRICS = [
+  { key: "seo", label: "SEO", icon: "🔍", color: "#00ff88" },
+  { key: "readability", label: "Читабельність", icon: "📖", color: "#00cfff" },
+  { key: "engagement", label: "Залученість", icon: "⚡", color: "#ff9900" },
+  { key: "keywords", label: "Ключові слова", icon: "🎯", color: "#ff4dff" },
+  { key: "cta", label: "Заклик до дії", icon: "🚀", color: "#ff3355" },
+  { key: "structure", label: "Структура", icon: "🏗️", color: "#aaff00" },
+];
+
+interface AnimatedScoreProps {
+  value: number;
+  color: string;
+}
+
+function AnimatedScore({ value, color }: AnimatedScoreProps) {
+  const [display, setDisplay] = useState(0);
+  
+  useEffect(() => {
+    let start = 0;
+    const end = value;
+    if (start === end) return;
+    const duration = 900;
+    const step = (end - start) / (duration / 16);
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= end) { start = end; clearInterval(timer); }
+      setDisplay(Math.round(start));
+    }, 16);
+    return () => clearInterval(timer);
+  }, [value]);
+
+  const r = 28, cx = 36, cy = 36;
+  const circ = 2 * Math.PI * r;
+  const dash = (display / 100) * circ;
+
+  return (
+    <div className="relative w-18 h-18">
+      <svg width="72" height="72">
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
+        <circle
+          cx={cx} cy={cy} r={r} fill="none"
+          stroke={color} strokeWidth="5"
+          strokeDasharray={`${dash} ${circ}`}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${cx} ${cy})`}
+          style={{ transition: "stroke-dasharray 0.05s", filter: `drop-shadow(0 0 4px ${color})` }}
+        />
+      </svg>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 font-mono text-sm font-bold"
+           style={{ color }}>
+        {display}
+      </div>
+    </div>
+  );
+}
+
+interface ScoreCardProps {
+  metric: typeof METRICS[0];
+  score: number;
+  issues: string[];
+}
+
+function ScoreCard({ metric, score, issues }: ScoreCardProps) {
+  const [open, setOpen] = useState(false);
+  
+  return (
+    <Card 
+      className="cursor-pointer hover:shadow-lg transition-all duration-300"
+      onClick={() => setOpen(!open)}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center gap-4">
+          <AnimatedScore value={score} color={metric.color} />
+          <div className="flex-1">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              {metric.icon} {metric.label}
+            </div>
+            <Progress value={score} className="h-2 mb-2" />
+            <div className="text-xs">
+              {score >= 75 ? (
+                <Badge variant="default" className="bg-green-500/10 text-green-500 border-green-500/20">
+                  ✓ Добре
+                </Badge>
+              ) : score >= 50 ? (
+                <Badge variant="outline" className="border-yellow-500/50 text-yellow-500">
+                  ⚠ Потребує уваги
+                </Badge>
+              ) : (
+                <Badge variant="destructive" className="bg-red-500/10 text-red-500">
+                  ✗ Критично
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="text-muted-foreground">
+            {open ? "▲" : "▼"}
+          </div>
+        </div>
+        {open && issues?.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-border">
+            {issues.map((issue, i) => (
+              <div key={i} className="text-xs text-muted-foreground py-1 flex gap-2">
+                <span style={{ color: metric.color }}>›</span>
+                <span>{issue}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface TypewriterTextProps {
+  text: string;
+  speed?: number;
+}
+
+function TypewriterText({ text, speed = 12 }: TypewriterTextProps) {
+  const [displayed, setDisplayed] = useState("");
+  const ref = useRef(0);
+  
+  useEffect(() => {
+    setDisplayed("");
+    ref.current = 0;
+    if (!text) return;
+    const timer = setInterval(() => {
+      ref.current++;
+      setDisplayed(text.slice(0, ref.current));
+      if (ref.current >= text.length) clearInterval(timer);
+    }, speed);
+    return () => clearInterval(timer);
+  }, [text, speed]);
+  
+  return (
+    <span>
+      {displayed}
+      <span className={`${displayed.length < text?.length ? 'opacity-100' : 'opacity-0'} text-green-500`}>
+        █
+      </span>
+    </span>
+  );
+}
+
+export default function SEO2Page() {
+  const { password } = useAdminStore();
+  const [content, setContent] = useState("");
+  const [url, setUrl] = useState("");
+  const [tab, setTab] = useState<"paste" | "url">("paste");
+  const [loading, setLoading] = useState(false);
+  const [phase, setPhase] = useState("");
+  const [scores, setScores] = useState<any>(null);
+  const [improved, setImproved] = useState<string>("");
+  const [improvements, setImprovements] = useState<string[]>([]);
+  const [activeView, setActiveView] = useState<"scores" | "improved">("scores");
+  const [error, setError] = useState("");
+  const [selectedLLM, setSelectedLLM] = useState("anthropic:claude-3-5-sonnet-20241022");
+
+  // Available LLM providers from admin
+  const llmOptions = [
+    { value: "anthropic:claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet" },
+    { value: "openai:gpt-4o", label: "GPT-4o" },
+    { value: "openai:gpt-4o-mini", label: "GPT-4o Mini" },
+    { value: "gemini:gemini-1.5-pro-002", label: "Gemini 1.5 Pro" },
+    { value: "gemini:gemini-1.5-flash-002", label: "Gemini 1.5 Flash" },
+    { value: "deepseek:deepseek-chat", label: "DeepSeek Chat" },
+    { value: "zai:glm-4-plus", label: "Z.AI GLM-4 Plus" }
+  ];
+
+  const totalScore = scores
+    ? Math.round(Object.values(scores).reduce((s: number, m: any) => s + m.score, 0) / METRICS.length)
+    : null;
+
+  async function analyze() {
+    if (!content.trim() && !url.trim()) return;
+    setLoading(true);
+    setScores(null);
+    setImproved("");
+    setImprovements([]);
+    setError("");
+    setActiveView("scores");
+
+    try {
+      // Phase 1: Score
+      setPhase("Сканування сторінки...");
+      await new Promise(r => setTimeout(r, 600));
+      setPhase("Оцінювання метрик SEO та залученості...");
+
+      const pageText = tab === "url"
+        ? `URL сторінки: ${url}\n(Проаналізуй типовий контент для такого URL)`
+        : content;
+
+      const [provider, model] = selectedLLM.split(':');
+      
+      const scoreResult = await adminAction('generateLLMContent', password, {
+        provider,
+        model,
+        system: `Ти — експерт з SEO та оптимізації трафіку. Аналізуй контент сторінки і повертай ТІЛЬКИ JSON, без markdown, без тексту до/після. Формат:
+{
+  "seo": {"score": число 0-100, "issues": ["рядок","рядок"]},
+  "readability": {"score": число 0-100, "issues": ["рядок"]},
+  "engagement": {"score": число 0-100, "issues": ["рядок"]},
+  "keywords": {"score": число 0-100, "issues": ["рядок"]},
+  "cta": {"score": число 0-100, "issues": ["рядок"]},
+  "structure": {"score": число 0-100, "issues": ["рядок"]}
+}
+Кожна метрика: реальна оцінка + 2-3 конкретні проблеми або поради. Відповідай українською.`,
+        messages: [{ role: 'user', content: `Проаналізуй цей контент:\n\n${pageText.slice(0, 3000)}` }]
+      });
+
+      if (!scoreResult.success) {
+        throw new Error(scoreResult.error || 'Failed to analyze content');
+      }
+
+      const rawScore = scoreResult.content;
+      const parsed = JSON.parse(rawScore.replace(/```json|```/g, "").trim());
+      setScores(parsed);
+
+      // Phase 2: Improve
+      setPhase("Генерація покращеного контенту...");
+      await new Promise(r => setTimeout(r, 400));
+
+      const improveResult = await adminAction('generateLLMContent', password, {
+        provider,
+        model,
+        system: `Ти — копірайтер-експерт з SEO. Повертай ТІЛЬКИ JSON без markdown:
+{
+  "improved_content": "повний покращений текст",
+  "improvements": ["зміна 1","зміна 2","зміна 3","зміна 4","зміна 5"]
+}
+Покращений текст має: сильний заголовок H1, мета-опис, ключові слова, чіткі підзаголовки, заклик до дії, оптимальну довжину. Відповідай українською.`,
+        messages: [{ role: 'user', content: `Покращи цей контент для максимального трафіку:\n\n${pageText.slice(0, 2000)}` }]
+      });
+
+      if (!improveResult.success) {
+        throw new Error(improveResult.error || 'Failed to improve content');
+      }
+
+      const rawImp = improveResult.content;
+      const parsedImp = JSON.parse(rawImp.replace(/```json|```/g, "").trim());
+      setImproved(parsedImp.improved_content);
+      setImprovements(parsedImp.improvements || []);
+      setPhase("");
+      
+      toast.success("Аналіз завершено успішно!");
+    } catch (e: any) {
+      setError("Помилка аналізу: " + (e.message || "Перевірте контент та спробуйте ще раз"));
+      setPhase("");
+      toast.error("Помилка аналізу");
+    }
+    setLoading(false);
+  }
+
+  async function copyToClipboard() {
+    if (!improved) return;
+    try {
+      await navigator.clipboard.writeText(improved);
+      toast.success("Контент скопійовано в буфер обміну");
+    } catch (e) {
+      toast.error("Не вдалося скопіювати");
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">SEO2 - Рушій оптимізації сторінок</h2>
+          <p className="text-muted-foreground">AI-аналіз • Автоматична оптимізація • Збільшення органічного трафіку</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${loading ? 'bg-green-500 animate-pulse' : 'bg-muted'}`} />
+          <span className="text-xs text-muted-foreground">Traffic Engine v2.0</span>
+        </div>
+      </div>
+
+      {/* LLM Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Налаштування LLM</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 items-end">
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-2 block">LLM Провайдер</label>
+              <Select value={selectedLLM} onValueChange={setSelectedLLM}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Оберіть LLM" />
+                </SelectTrigger>
+                <SelectContent>
+                  {llmOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Input Area */}
+      <Card>
+        <CardHeader>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "paste" | "url")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="paste">📋 Вставити контент</TabsTrigger>
+              <TabsTrigger value="url">🔗 URL сторінки</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </CardHeader>
+        <CardContent>
+          {tab === "paste" ? (
+            <Textarea
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              placeholder="Вставте текст сторінки, HTML або контент для аналізу…
+
+Наприклад: заголовок, опис продукту, статтю, лендінг…"
+              className="min-h-32 resize-none"
+            />
+          ) : (
+            <Input
+              value={url}
+              onChange={e => setUrl(e.target.value)}
+              placeholder="https://example.com/page"
+            />
+          )}
+
+          <Button
+            onClick={analyze}
+            disabled={loading || (!content.trim() && !url.trim())}
+            className="w-full mt-4"
+            size="lg"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2 animate-pulse">
+                <Activity className="w-4 h-4" />
+                {phase || "Аналіз..."}
+              </span>
+            ) : (
+              "▶ Проаналізувати та покращити"
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <div className="text-destructive text-sm">{error}</div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Results */}
+      {scores && (
+        <div className="space-y-6">
+          {/* Total Score Banner */}
+          <Card className={`border-2 ${
+            totalScore! >= 75 ? 'border-green-500/20 bg-green-500/5' : 
+            totalScore! >= 50 ? 'border-yellow-500/20 bg-yellow-500/5' :
+            'border-red-500/20 bg-red-500/5'
+          }`}>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-6">
+                <AnimatedScore 
+                  value={totalScore!} 
+                  color={totalScore! >= 75 ? "#00ff88" : totalScore! >= 50 ? "#ff9900" : "#ff3355"} 
+                />
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold">Загальна оцінка сторінки</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {totalScore! >= 75 ? "🟢 Сторінка добре оптимізована" : 
+                     totalScore! >= 50 ? "🟡 Є значний потенціал для зростання" : 
+                     "🔴 Потребує суттєвої оптимізації"}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={activeView === "scores" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveView("scores")}
+                  >
+                    📊 Оцінки
+                  </Button>
+                  <Button
+                    variant={activeView === "improved" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveView("improved")}
+                    disabled={!improved}
+                  >
+                    ✨ Покращений
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {activeView === "scores" && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {METRICS.map(m => (
+                  <ScoreCard 
+                    key={m.key} 
+                    metric={m} 
+                    score={scores[m.key]?.score ?? 0} 
+                    issues={scores[m.key]?.issues ?? []} 
+                  />
+                ))}
+              </div>
+
+              {improvements.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm text-cyan-400 tracking-wider">
+                      ✦ АВТОМАТИЧНІ ПОКРАЩЕННЯ
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {improvements.map((imp, i) => (
+                      <div key={i} className="flex gap-3 py-2 border-b border-border last:border-0">
+                        <div className="w-6 h-6 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-xs font-bold text-green-500 mt-0.5">
+                          {i + 1}
+                        </div>
+                        <div className="text-sm text-muted-foreground flex-1">{imp}</div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+
+          {activeView === "improved" && improved && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <CardTitle className="text-sm text-cyan-400 tracking-wider">
+                  ✦ ПОКРАЩЕНИЙ КОНТЕНТ
+                </CardTitle>
+                <Button onClick={copyToClipboard} variant="outline" size="sm" className="gap-2">
+                  <Copy className="w-4 h-4" />
+                  Копіювати
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                  <TypewriterText text={improved} speed={8} />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!scores && !loading && (
+        <Card className="border-dashed">
+          <CardContent className="text-center py-12">
+            <div className="text-4xl mb-4 opacity-30">⬡</div>
+            <div className="text-muted-foreground">Вставте контент або введіть URL для аналізу</div>
+            <div className="text-xs text-muted-foreground mt-2">
+              SEO · Читабельність · Ключові слова · Структура · CTA
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

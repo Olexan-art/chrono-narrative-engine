@@ -322,6 +322,155 @@ serve(async (req: Request) => {
         }
       }
 
+      case 'generateLLMContent': {
+        const { provider, model, system, messages } = data;
+        if (!provider || !model || !system || !messages) {
+          return new Response(
+            JSON.stringify({ error: 'Provider, model, system prompt, and messages are required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        try {
+          // Get settings for API keys
+          const { data: settings } = await supabase
+            .from('settings')
+            .select('openai_api_key, anthropic_api_key, gemini_api_key, zai_api_key, mistral_api_key, deepseek_api_key')
+            .single();
+
+          if (!settings) {
+            return new Response(
+              JSON.stringify({ success: false, error: 'Settings not found' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          let content = '';
+          const allMessages = [{ role: 'system', content: system }, ...messages];
+
+          if (provider === 'openai') {
+            const apiKey = settings.openai_api_key || Deno.env.get('OPENAI_API_KEY');
+            if (!apiKey) throw new Error('OpenAI API key not configured');
+            
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: model,
+                messages: allMessages,
+                max_tokens: 4000
+              })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) throw new Error(`OpenAI API error: ${data.error?.message || 'Unknown error'}`);
+            content = data.choices[0]?.message?.content || '';
+            
+          } else if (provider === 'anthropic') {
+            const apiKey = settings.anthropic_api_key || Deno.env.get('ANTHROPIC_API_KEY');
+            if (!apiKey) throw new Error('Anthropic API key not configured');
+            
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: model,
+                system: system,
+                messages: messages,
+                max_tokens: 4000
+              })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) throw new Error(`Anthropic API error: ${data.error?.message || 'Unknown error'}`);
+            content = data.content?.[0]?.text || '';
+            
+          } else if (provider === 'gemini') {
+            const apiKey = settings.gemini_api_key || Deno.env.get('GEMINI_API_KEY');
+            if (!apiKey) throw new Error('Gemini API key not configured');
+            
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: system + '\n\n' + messages[0]?.content || '' }] }],
+                generationConfig: { maxOutputTokens: 4000 }
+              })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) throw new Error(`Gemini API error: ${data.error?.message || 'Unknown error'}`);
+            content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            
+          } else if (provider === 'zai') {
+            const apiKey = settings.zai_api_key || Deno.env.get('ZAI_API_KEY');
+            if (!apiKey) throw new Error('Z.AI API key not configured');
+            
+            const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: model,
+                messages: allMessages,
+                max_tokens: 4000
+              })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) throw new Error(`Z.AI API error: ${data.error?.message || 'Unknown error'}`);
+            content = data.choices?.[0]?.message?.content || '';
+            
+          } else if (provider === 'deepseek') {
+            const apiKey = settings.deepseek_api_key || Deno.env.get('DEEPSEEK_API_KEY');
+            if (!apiKey) throw new Error('DeepSeek API key not configured');
+            
+            const response = await fetch('https://api.deepseek.com/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: model,
+                messages: allMessages,
+                max_tokens: 4000
+              })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) throw new Error(`DeepSeek API error: ${data.error?.message || 'Unknown error'}`);
+            content = data.choices?.[0]?.message?.content || '';
+            
+          } else {
+            return new Response(
+              JSON.stringify({ success: false, error: `Unsupported provider: ${provider}` }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          return new Response(
+            JSON.stringify({ success: true, content }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+
+        } catch (e) {
+          return new Response(
+            JSON.stringify({ success: false, error: e instanceof Error ? e.message : 'Unknown error' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
       case 'getCronConfigs': {
         const { data: configs, error } = await supabase
           .from('cron_job_configs')

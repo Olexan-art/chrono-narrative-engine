@@ -26,6 +26,7 @@ import { NewsArchivePanel } from "@/components/NewsArchivePanel";
 import { SitemapManagementPanel } from "@/components/SitemapManagementPanel";
 import { SEOAuditPanel } from "@/components/SEOAuditPanel";
 import { SEOSettingsPanel } from "@/components/SEOSettingsPanel";
+import SEO2Page from "@/pages/admin/SEO2Page";
 
 
 import { BotErrorsPanel } from "@/components/BotErrorsPanel";
@@ -888,6 +889,10 @@ export default function AdminPage() {
               <Search className="w-4 h-4 text-purple-500" />
               SEO
             </TabsTrigger>
+            <TabsTrigger value="seo2" className="gap-2">
+              <Activity className="w-4 h-4 text-cyan-500" />
+              SEO2
+            </TabsTrigger>
             <TabsTrigger value="cron" className="gap-2">
               <Clock className="w-4 h-4 text-green-500" />
               Cron
@@ -1071,6 +1076,10 @@ export default function AdminPage() {
               <SEOSettingsPanel password={password} />
               <SEOAuditPanel password={password} />
             </div>
+          </TabsContent>
+
+          <TabsContent value="seo2" className="mt-6">
+            <SEO2Page />
           </TabsContent>
 
 
