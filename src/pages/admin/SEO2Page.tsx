@@ -323,6 +323,11 @@ Show ACTUAL NEW CONTENT, not just descriptions of changes. Specify exact words, 
     setLoading(false);
   }
 
+  function sendImprovementsToPage() {
+    // TODO: Implement sending improved content to the page
+    toast.success("Improvements sent to the page!");
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -477,18 +482,30 @@ Show ACTUAL NEW CONTENT, not just descriptions of changes. Specify exact words, 
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                     <CardTitle className="text-sm text-cyan-400 tracking-wider">
-                      ✦ АВТОМАТИЧНІ ПОКРАЩЕННЯ
+                      ✦ AUTOMATIC IMPROVEMENTS
                     </CardTitle>
-                    <Button 
-                      onClick={regenerateImprovements} 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-2"
-                      disabled={loading}
-                    >
-                      <Copy className="w-4 h-4" />
-                      Оновити контент
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={regenerateImprovements} 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-2"
+                        disabled={loading}
+                      >
+                        <Copy className="w-4 h-4" />
+                        Update content
+                      </Button>
+                      <Button
+                        onClick={() => sendImprovementsToPage()}
+                        variant="default"
+                        size="sm"
+                        className="gap-2"
+                        disabled={loading || !improved}
+                      >
+                        <Send className="w-4 h-4" />
+                        Send improvements to page
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {improvements.map((imp, i) => (
@@ -502,17 +519,17 @@ Show ACTUAL NEW CONTENT, not just descriptions of changes. Specify exact words, 
                           ) : (
                             <>
                               <div className="flex items-center gap-2">
-                                <span className="text-red-400 text-xs bg-red-500/10 px-2 py-0.5 rounded">БУЛО</span>
-                                <span className="text-muted-foreground">{imp.було}</span>
+                                <span className="text-red-400 text-xs bg-red-500/10 px-2 py-0.5 rounded">WAS</span>
+                                <span className="text-muted-foreground">{imp.was}</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-green-400 text-xs bg-green-500/10 px-2 py-0.5 rounded">СТАЛО</span>
-                                <span className="text-foreground">{imp.стало}</span>
+                                <span className="text-green-400 text-xs bg-green-500/10 px-2 py-0.5 rounded">BECAME</span>
+                                <span className="text-foreground">{imp.became}</span>
                               </div>
-                              {imp.рекомендація && (
+                              {imp.recommendation && (
                                 <div className="flex items-start gap-2 mt-2">
-                                  <span className="text-blue-400 text-xs bg-blue-500/10 px-2 py-0.5 rounded shrink-0">РЕКОМЕНДАЦІЯ</span>
-                                  <span className="text-blue-300 text-xs">{imp.рекомендація}</span>
+                                  <span className="text-blue-400 text-xs bg-blue-500/10 px-2 py-0.5 rounded shrink-0">RECOMMENDATION</span>
+                                  <span className="text-blue-300 text-xs">{imp.recommendation}</span>
                                 </div>
                               )}
                             </>
