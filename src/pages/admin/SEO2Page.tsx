@@ -291,17 +291,17 @@ export default function SEO2Page() {
       const improveResult = await adminAction('generateLLMContent', password, {
         provider,
         model,
-        system: `Ти — копірайтер-експерт з SEO. Повертай ТІЛЬКИ JSON без markdown:
+        system: `You are an expert SEO copywriter. Return ONLY JSON, no markdown:
 {
-  "improved_content": "повний покращений текст",
-  "improvements": [{"було": "опис поточного стану", "стало": "опис покращення з КОНКРЕТНИМИ прикладами", "рекомендація": "конкретні дії для впровадження"}, {"було": "...", "стало": "...", "рекомендація": "..."}]
+  "improved_content": "full improved text",
+  "improvements": [{"was": "current state description", "became": "improvement description with SPECIFIC examples", "recommendation": "concrete actions to implement"}, {"was": "...", "became": "...", "recommendation": "..."}]
 }
-Покращений текст має: сильний заголовок H1, мета-опис, ключові слова, чіткі підзаголовки, заклик до дії, оптимальну довжину. У improvements обов'язково:
-- БУЛО: конкретна проблема/недолік
-- СТАЛО: ПОКАЗУЙ САМЕ НОВИЙ КОНТЕНТ! Приклади: "Додано заголовок H1: 'Як обрати кращий товар в Києві 2024'" або "Додано мета-опис: 'Купуй якісні товари з доставкою, знижки до 50%'" або "Переписано абзац: 'Наша компанія понад 10 років допомагає клієнтам...'"
-- РЕКОМЕНДАЦІЯ: покрокові дії
-Показуй САМЕ НОВИЙ КОНТЕНТ! Відповідай українською.`,
-        messages: [{ role: 'user', content: `Покращи цей контент для максимального трафіку:\n\n${pageText.slice(0, 2000)}` }]
+Improved content must have: strong H1 headline, meta description, keywords, clear subheadings, call to action, optimal length. In improvements, always:
+- WAS: specific problem/deficiency
+- BECAME: SHOW THE ACTUAL NEW CONTENT! Examples: "Added H1 headline: 'How to Choose the Best Product in London 2026'" or "Added meta description: 'Buy quality products with delivery, discounts up to 50%'" or "Rewritten paragraph: 'Our company has been helping clients for over 10 years...'
+- RECOMMENDATION: step-by-step actions
+Show ACTUAL NEW CONTENT, not just descriptions of changes. Specify exact words, phrases, headlines. Answer in English.`,
+        messages: [{ role: 'user', content: `Improve this content for maximum traffic:\n\n${pageText.slice(0, 2000)}` }]
       });
 
       if (!improveResult.success) {
