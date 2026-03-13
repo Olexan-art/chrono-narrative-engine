@@ -209,17 +209,17 @@ export default function SEO2Page() {
       const scoreResult = await adminAction('generateLLMContent', password, {
         provider,
         model,
-        system: `Ти — експерт з SEO та оптимізації трафіку. Аналізуй контент сторінки і повертай ТІЛЬКИ JSON, без markdown, без тексту до/після. Формат:
+        system: `You are an expert in SEO and traffic optimization. Analyze the page content and return ONLY JSON, no markdown, no before/after text. Format:
 {
-  "seo": {"score": число 0-100, "issues": ["рядок","рядок"]},
-  "readability": {"score": число 0-100, "issues": ["рядок"]},
-  "engagement": {"score": число 0-100, "issues": ["рядок"]},
-  "keywords": {"score": число 0-100, "issues": ["рядок"]},
-  "cta": {"score": число 0-100, "issues": ["рядок"]},
-  "structure": {"score": число 0-100, "issues": ["рядок"]}
+  "seo": {"score": number 0-100, "issues": ["string","string"]},
+  "readability": {"score": number 0-100, "issues": ["string"]},
+  "engagement": {"score": number 0-100, "issues": ["string"]},
+  "keywords": {"score": number 0-100, "issues": ["string"]},
+  "cta": {"score": number 0-100, "issues": ["string"]},
+  "structure": {"score": number 0-100, "issues": ["string"]}
 }
-Кожна метрика: реальна оцінка + 2-3 конкретні проблеми або поради. Відповідай українською.`,
-        messages: [{ role: 'user', content: `Проаналізуй цей контент:\n\n${pageText.slice(0, 3000)}` }]
+Each metric: real score + 2-3 specific problems or tips. Answer in English.`,
+        messages: [{ role: 'user', content: `Analyze this content:\n\n${pageText.slice(0, 3000)}` }]
       });
 
       if (!scoreResult.success) {
@@ -237,17 +237,17 @@ export default function SEO2Page() {
       const improveResult = await adminAction('generateLLMContent', password, {
         provider,
         model,
-        system: `Ти — копірайтер-експерт з SEO. Повертай ТІЛЬКИ JSON без markdown:
+        system: `You are an expert SEO copywriter. Return ONLY JSON, no markdown:
 {
-  "improved_content": "повний покращений текст",
-  "improvements": [{"було": "опис поточного стану", "стало": "опис покращення з КОНКРЕТНИМИ прикладами", "рекомендація": "конкретні дії для впровадження"}, {"було": "...", "стало": "...", "рекомендація": "..."}]
+  "improved_content": "full improved text",
+  "improvements": [{"was": "current state description", "became": "improvement description with SPECIFIC examples", "recommendation": "concrete actions to implement"}, {"was": "...", "became": "...", "recommendation": "..."}]
 }
-Покращений текст має: сильний заголовок H1, мета-опис, ключові слова, чіткі підзаголовки, заклик до дії, оптимальну довжину. У improvements обов'язково:
-- БУЛО: конкретна проблема/недолік
-- СТАЛО: ПОКАЗУЙ САМЕ НОВИЙ КОНТЕНТ! Приклади: "Додано заголовок H1: 'Як обрати кращий товар в Києві 2024'" або "Додано мета-опис: 'Купуй якісні товари з доставкою, знижки до 50%'" або "Переписано абзац: 'Наша компанія понад 10 років допомагає клієнтам...'"
-- РЕКОМЕНДАЦІЯ: покрокові дії
-Показуй САМЕ НОВИЙ КОНТЕНТ! Відповідай українською.`,
-        messages: [{ role: 'user', content: `Покращи цей контент для максимального трафіку:\n\n${pageText.slice(0, 2000)}` }]
+Improved content must have: strong H1 headline, meta description, keywords, clear subheadings, call to action, optimal length. In improvements, always:
+- WAS: specific problem/deficiency
+- BECAME: SHOW THE ACTUAL NEW CONTENT! Examples: "Added H1 headline: 'How to Choose the Best Product in London 2026'" or "Added meta description: 'Buy quality products with delivery, discounts up to 50%'" or "Rewritten paragraph: 'Our company has been helping clients for over 10 years...'
+- RECOMMENDATION: step-by-step actions
+Show ACTUAL NEW CONTENT, not just descriptions of changes. Specify exact words, phrases, headlines. Answer in English.`,
+        messages: [{ role: 'user', content: `Improve this content for maximum traffic:\n\n${pageText.slice(0, 2000)}` }]
       });
 
       if (!improveResult.success) {
