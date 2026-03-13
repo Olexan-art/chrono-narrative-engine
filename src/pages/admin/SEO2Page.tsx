@@ -175,8 +175,8 @@ export default function SEO2Page() {
     { value: "anthropic:claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet" },
     { value: "openai:gpt-4o", label: "GPT-4o" },
     { value: "openai:gpt-4o-mini", label: "GPT-4o Mini" },
-    { value: "gemini:gemini-1.5-pro-002", label: "Gemini 1.5 Pro" },
-    { value: "gemini:gemini-1.5-flash-002", label: "Gemini 1.5 Flash" },
+    { value: "gemini:gemini-1.5-pro", label: "Gemini 1.5 Pro" },
+    { value: "gemini:gemini-1.5-flash", label: "Gemini 1.5 Flash" },
     { value: "deepseek:deepseek-chat", label: "DeepSeek Chat" },
     { value: "zai:glm-4-plus", label: "Z.AI GLM-4 Plus" }
   ];

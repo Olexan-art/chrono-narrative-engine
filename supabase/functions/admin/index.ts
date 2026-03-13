@@ -396,7 +396,10 @@ serve(async (req: Request) => {
             const apiKey = settings.gemini_api_key || Deno.env.get('GEMINI_API_KEY');
             if (!apiKey) throw new Error('Gemini API key not configured');
             
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+            // Use correct Gemini model format
+            const geminiModel = model.replace('gemini-', '');
+            
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
