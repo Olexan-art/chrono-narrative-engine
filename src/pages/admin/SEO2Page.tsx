@@ -324,7 +324,9 @@ Show ACTUAL NEW CONTENT, not just descriptions of changes. Specify exact words, 
   }
 
   function sendImprovementsToPage() {
-    // TODO: Implement sending improved content to the page
+    // Оновлюємо контент сторінки на покращений
+    setContent(improved);
+    setActiveView("improved");
     toast.success("Improvements sent to the page!");
   }
 
