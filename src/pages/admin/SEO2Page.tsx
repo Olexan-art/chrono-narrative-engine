@@ -165,7 +165,7 @@ export default function SEO2Page() {
   const [phase, setPhase] = useState("");
   const [scores, setScores] = useState<any>(null);
   const [improved, setImproved] = useState<string>("");
-  const [improvements, setImprovements] = useState<string[]>([]);
+  const [improvements, setImprovements] = useState<(string | { було: string; стало: string })[]>([]);
   const [activeView, setActiveView] = useState<"scores" | "improved">("scores");
   const [error, setError] = useState("");
   const [selectedLLM, setSelectedLLM] = useState("anthropic:claude-3-5-sonnet-20241022");
@@ -240,9 +240,9 @@ export default function SEO2Page() {
         system: `Ти — копірайтер-експерт з SEO. Повертай ТІЛЬКИ JSON без markdown:
 {
   "improved_content": "повний покращений текст",
-  "improvements": ["зміна 1","зміна 2","зміна 3","зміна 4","зміна 5"]
+  "improvements": [{"було": "опис поточного стану", "стало": "опис покращення"}, {"було": "...", "стало": "..."}]
 }
-Покращений текст має: сильний заголовок H1, мета-опис, ключові слова, чіткі підзаголовки, заклик до дії, оптимальну довжину. Відповідай українською.`,
+Покращений текст має: сильний заголовок H1, мета-опис, ключові слова, чіткі підзаголовки, заклик до дії, оптимальну довжину. У improvements вказуй конкретні зміни у форматі було/стало. Відповідай українською.`,
         messages: [{ role: 'user', content: `Покращи цей контент для максимального трафіку:\n\n${pageText.slice(0, 2000)}` }]
       });
 
@@ -434,11 +434,26 @@ export default function SEO2Page() {
                   </CardHeader>
                   <CardContent>
                     {improvements.map((imp, i) => (
-                      <div key={i} className="flex gap-3 py-2 border-b border-border last:border-0">
-                        <div className="w-6 h-6 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-xs font-bold text-green-500 mt-0.5">
+                      <div key={i} className="flex gap-3 py-3 border-b border-border last:border-0">
+                        <div className="w-6 h-6 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-xs font-bold text-green-500 mt-0.5 shrink-0">
                           {i + 1}
                         </div>
-                        <div className="text-sm text-muted-foreground flex-1">{imp}</div>
+                        <div className="text-sm flex-1 space-y-1">
+                          {typeof imp === 'string' ? (
+                            <div className="text-muted-foreground">{imp}</div>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-2">
+                                <span className="text-red-400 text-xs bg-red-500/10 px-2 py-0.5 rounded">БУЛО</span>
+                                <span className="text-muted-foreground">{imp.було}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-400 text-xs bg-green-500/10 px-2 py-0.5 rounded">СТАЛО</span>
+                                <span className="text-foreground">{imp.стало}</span>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </CardContent>
