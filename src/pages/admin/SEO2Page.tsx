@@ -165,7 +165,7 @@ export default function SEO2Page() {
   const [phase, setPhase] = useState("");
   const [scores, setScores] = useState<any>(null);
   const [improved, setImproved] = useState<string>("");
-  const [improvements, setImprovements] = useState<(string | { було: string; стало: string })[]>([]);
+  const [improvements, setImprovements] = useState<(string | { було: string; стало: string; рекомендація?: string })[]>([]);
   const [activeView, setActiveView] = useState<"scores" | "improved">("scores");
   const [error, setError] = useState("");
   const [selectedLLM, setSelectedLLM] = useState("anthropic:claude-3-5-sonnet-20241022");
@@ -240,9 +240,13 @@ export default function SEO2Page() {
         system: `Ти — копірайтер-експерт з SEO. Повертай ТІЛЬКИ JSON без markdown:
 {
   "improved_content": "повний покращений текст",
-  "improvements": [{"було": "опис поточного стану", "стало": "опис покращення"}, {"було": "...", "стало": "..."}]
+  "improvements": [{"було": "опис поточного стану", "стало": "опис покращення з деталями", "рекомендація": "конкретні дії для впровадження"}, {"було": "...", "стало": "...", "рекомендація": "..."}]
 }
-Покращений текст має: сильний заголовок H1, мета-опис, ключові слова, чіткі підзаголовки, заклик до дії, оптимальну довжину. У improvements вказуй конкретні зміни у форматі було/стало. Відповідай українською.`,
+Покращений текст має: сильний заголовок H1, мета-опис, ключові слова, чіткі підзаголовки, заклик до дії, оптимальну довжину. У improvements детально описуй:
+- БУЛО: конкретна проблема/недолік
+- СТАЛО: яким має бути після покращення
+- РЕКОМЕНДАЦІЯ: покрокові дії для впровадження
+Вказуй конкретні слова, фрази, структуру. Відповідай українською.`,
         messages: [{ role: 'user', content: `Покращи цей контент для максимального трафіку:\n\n${pageText.slice(0, 2000)}` }]
       });
 
@@ -273,6 +277,50 @@ export default function SEO2Page() {
     } catch (e) {
       toast.error("Не вдалося скопіювати");
     }
+  }
+
+  async function regenerateImprovements() {
+    if (!pageText.trim() || loading) return;
+    
+    setLoading(true);
+    setPhase("Оновлення автоматичних покращень...");
+    
+    try {
+      await new Promise(r => setTimeout(r, 300));
+      
+      const improveResult = await adminAction('generateLLMContent', password, {
+        provider,
+        model,
+        system: `Ти — копірайтер-експерт з SEO. Повертай ТІЛЬКИ JSON без markdown:
+{
+  "improved_content": "повний покращений текст",
+  "improvements": [{"було": "опис поточного стану", "стало": "опис покращення з деталями", "рекомендація": "конкретні дії для впровадження"}, {"було": "...", "стало": "...", "рекомендація": "..."}]
+}
+Покращений текст має: сильний заголовок H1, мета-опис, ключові слова, чіткі підзаголовки, заклик до дії, оптимальну довжину. У improvements детально описуй:
+- БУЛО: конкретна проблема/недолік
+- СТАЛО: яким має бути після покращення
+- РЕКОМЕНДАЦІЯ: покрокові дії для впровадження
+Вказуй конкретні слова, фрази, структуру. Відповідай українською.`,
+        messages: [{ role: 'user', content: `Покращи цей контент для максимального трафіку:\n\n${pageText.slice(0, 2000)}` }]
+      });
+
+      if (!improveResult.success) {
+        throw new Error(improveResult.error || 'Failed to regenerate improvements');
+      }
+
+      const rawImp = improveResult.content;
+      const parsedImp = JSON.parse(rawImp.replace(/```json|```/g, "").trim());
+      setImproved(parsedImp.improved_content);
+      setImprovements(parsedImp.improvements || []);
+      setPhase("");
+      
+      toast.success("Покращення оновлено!");
+    } catch (e: any) {
+      setError("Помилка оновлення: " + (e.message || "Спробуйте ще раз"));
+      setPhase("");
+      toast.error("Помилка оновлення");
+    }
+    setLoading(false);
   }
 
   return (
@@ -427,10 +475,20 @@ export default function SEO2Page() {
 
               {improvements.length > 0 && (
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                     <CardTitle className="text-sm text-cyan-400 tracking-wider">
                       ✦ АВТОМАТИЧНІ ПОКРАЩЕННЯ
                     </CardTitle>
+                    <Button 
+                      onClick={regenerateImprovements} 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-2"
+                      disabled={loading}
+                    >
+                      <Copy className="w-4 h-4" />
+                      Оновити контент
+                    </Button>
                   </CardHeader>
                   <CardContent>
                     {improvements.map((imp, i) => (
@@ -451,6 +509,12 @@ export default function SEO2Page() {
                                 <span className="text-green-400 text-xs bg-green-500/10 px-2 py-0.5 rounded">СТАЛО</span>
                                 <span className="text-foreground">{imp.стало}</span>
                               </div>
+                              {imp.рекомендація && (
+                                <div className="flex items-start gap-2 mt-2">
+                                  <span className="text-blue-400 text-xs bg-blue-500/10 px-2 py-0.5 rounded shrink-0">РЕКОМЕНДАЦІЯ</span>
+                                  <span className="text-blue-300 text-xs">{imp.рекомендація}</span>
+                                </div>
+                              )}
                             </>
                           )}
                         </div>
