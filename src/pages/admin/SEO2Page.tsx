@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAdminStore } from "@/stores/adminStore";
 import { adminAction } from "@/lib/api";
 import { toast } from "sonner";
-import { Activity, Eye, EyeOff, Copy } from "lucide-react";
+import { Activity, Eye, EyeOff, Copy, Send } from "lucide-react";
 
 const METRICS = [
   { key: "seo", label: "SEO", icon: "🔍", color: "#00ff88" },
@@ -165,7 +165,7 @@ export default function SEO2Page() {
   const [phase, setPhase] = useState("");
   const [scores, setScores] = useState<any>(null);
   const [improved, setImproved] = useState<string>("");
-  const [improvements, setImprovements] = useState<(string | { було: string; стало: string; рекомендація?: string })[]>([]);
+  const [improvements, setImprovements] = useState<(string | { було?: string; стало?: string; рекомендація?: string; was?: string; became?: string; recommendation?: string })[]>([]);
   const [activeView, setActiveView] = useState<"scores" | "improved">("scores");
   const [error, setError] = useState("");
   const [selectedLLM, setSelectedLLM] = useState("anthropic:claude-3-5-sonnet-20241022");
@@ -520,16 +520,16 @@ Show ACTUAL NEW CONTENT, not just descriptions of changes. Specify exact words, 
                             <>
                               <div className="flex items-center gap-2">
                                 <span className="text-red-400 text-xs bg-red-500/10 px-2 py-0.5 rounded">WAS</span>
-                                <span className="text-muted-foreground">{imp.was}</span>
+                                <span className="text-muted-foreground">{imp.was || imp.було}</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-green-400 text-xs bg-green-500/10 px-2 py-0.5 rounded">BECAME</span>
-                                <span className="text-foreground">{imp.became}</span>
+                                <span className="text-foreground">{imp.became || imp.стало}</span>
                               </div>
-                              {imp.recommendation && (
+                              {(imp.recommendation || imp.рекомендація) && (
                                 <div className="flex items-start gap-2 mt-2">
                                   <span className="text-blue-400 text-xs bg-blue-500/10 px-2 py-0.5 rounded shrink-0">RECOMMENDATION</span>
-                                  <span className="text-blue-300 text-xs">{imp.recommendation}</span>
+                                  <span className="text-blue-300 text-xs">{imp.recommendation || imp.рекомендація}</span>
                                 </div>
                               )}
                             </>
